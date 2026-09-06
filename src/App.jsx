@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { MultySlotsModal } from "./components/MultySlots";
+import Pannel from "./components/Pannel";
 // 1. 通用卡片容器组件：只关心外壳样式，不关心内部装什么内容
 function CardContainer({ title, children }) {
   return (
@@ -41,7 +43,6 @@ function ModalLayout({ isOpen = false, children }) {
       <div
         className="modal-container"
         style={{
-          display: "flex",
           flexDirection: "row",
           justifyContent: "center",
           alignItems: "center",
@@ -59,7 +60,7 @@ function ModalLayout({ isOpen = false, children }) {
 
 // 3. 父组件：灵活使用 CardContainer 包裹不同的结构
 export default function App() {
-  const [isOpen, setIsOpen] = useState(true);
+  const [isOpen, setIsOpen] = useState(false);
   return (
     <div>
       <h2>组件组合示例</h2>
@@ -97,6 +98,15 @@ export default function App() {
       <ModalLayout isOpen={false}>
         <button className="hidden-modal">隐藏 modal</button>
       </ModalLayout>
+
+      <MultySlotsModal></MultySlotsModal>
+
+      <Pannel></Pannel>
+      <Pannel header={<h1> M1 Header</h1>}></Pannel>
+      <Pannel
+        header={<h1> M1 Header</h1>}
+        extra={<button type="">刷新</button>}
+      ></Pannel>
     </div>
   );
 }
