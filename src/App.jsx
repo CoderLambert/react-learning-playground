@@ -1,57 +1,56 @@
 // 1. 定义
-function UserStatus({ isLoggedIn, unreadCount }) {
-  return (
-    <div className="status-panel">
-      {/* 1. 三元运算符：二选一 */}
-      <h2>{isLoggedIn ? "欢迎回来，开发者！" : "请先登录"}</h2>
 
-      {/* 2. 逻辑与 &&：满足条件才渲染 */}
-      {isLoggedIn && unreadCount > 0 && (
-        <p style={{ color: "orange", fontWeight: "bold" }}>
-          你有 {unreadCount} 条未读消息
-        </p>
-      )}
+const PRODUCTS = [
+  { id: "p1", name: "苹果", price: "$1", isFruit: true },
+  { id: "p2", name: "大蒜", price: "$2", isFruit: false },
+  { id: "p3", name: "香蕉", price: "$3", isFruit: true },
+];
+
+const INITIAL_TASKS = [
+  { id: "t1", title: "完成阶段 1 学习" },
+  { id: "t2", title: "复习 React 渲染原理" },
+  { id: "t3", title: "提交代码作业" },
+];
+
+function ShoppingList() {
+  return (
+    <div>
+      <h2>水果与蔬菜清单</h2>
+      <ul>
+        {PRODUCTS.map((product) => (
+          <li
+            key={product.id} // ✅ 使用数据自带的稳定性唯一 ID 作为 key
+            style={{ color: product.isFruit ? "magenta" : "darkgreen" }}
+          >
+            {product.name} - {product.price}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
 
-function BadgeList({ isVIP, score }) {
+function TaskList() {
   return (
-    <>
-      <section>
-        <button> 通过</button>
-        <button> 拒绝</button>
-      </section>
-      <section>
-        {isVIP ? <span> 最贵的vip用户</span> : <span> 普通用户</span>}
+    <div>
+      {INITIAL_TASKS.map((task, index) => (
+        <li key={index}>
+          <input type="text" name="test-input" placeholder="输入备注" />
 
-        <hr />
-        {score > 80 && (
-          <span style={{ color: "green", background: "red" }}> 优秀</span>
-        )}
-
-        <hr />
-        {score && <span>有分数</span>}
-        {/* ✅ 显式返回 null，React 遇到 null 什么都不会渲染 */}
-        {score ? <span>有分数</span> : <span>分数不存在</span>}
-      </section>
-    </>
+          <h2>{task.title}</h2>
+        </li>
+      ))}
+    </div>
   );
 }
 
 export default function App() {
   return (
     <>
-      <h1>条件渲染演示</h1>
-      {/* 登录状态展示 */}
-      <UserStatus isLoggedIn={true} unreadCount={5} />
-      <hr />
-      {/* 未登录状态展示 */}
-      <UserStatus isLoggedIn={false} unreadCount={0} />
+      <h1> list 渲染与 key 的深层原理</h1>
 
-      <BadgeList isVIP={true} score={81}></BadgeList>
-      <BadgeList isVIP={false} score={80}></BadgeList>
-      <BadgeList isVIP={false} score={0}></BadgeList>
+      <ShoppingList></ShoppingList>
+      <TaskList></TaskList>
     </>
   );
 }
