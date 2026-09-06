@@ -23,7 +23,7 @@ const skills = [
   },
 ];
 
-function skillList({ skills }) {
+function SkillList({ skills }) {
   return (
     <ul>
       {skills.map((skill, index) => {
@@ -46,7 +46,7 @@ export default function App() {
       <h4>test</h4>
       {/* 3. 像 HTML 标签一样嵌套使用子组件 */}
       <ProfileCard />
-      <skillList skills={skills}></skillList>
+      <SkillList skills={skills}></SkillList>
     </div>
   );
 }
