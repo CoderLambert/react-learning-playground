@@ -1,0 +1,100 @@
+:root {
+  --color-bg: #fff;
+  --color-surface: #faf9fc;
+  --color-surface-raised: #fff;
+  --color-text: #24202b;
+  --color-text-muted: #6b6375;
+  --color-border: #e5e4e7;
+  --color-border-strong: #cbc7d2;
+  --color-primary: #8f2de2;
+  --color-primary-hover: #7420be;
+  --color-primary-soft: rgba(170, 59, 255, 0.1);
+  --color-primary-border: rgba(170, 59, 255, 0.32);
+  --color-success: #137a4b;
+  --color-success-soft: #e9f7ef;
+  --color-warning: #996000;
+  --color-warning-soft: #fff6df;
+  --color-error: #b42318;
+  --color-error-soft: #fff0ee;
+  --color-code-bg: #f4f3ec;
+  --font-sans: system-ui, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Consolas, monospace;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-pill: 999px;
+  --shadow-card: 0 8px 24px rgba(31, 23, 45, 0.08);
+  --shadow-focus: 0 0 0 3px rgba(170, 59, 255, 0.24);
+
+  color: var(--color-text);
+  background: var(--color-bg);
+  font: 16px/1.45 var(--font-sans);
+  font-synthesis: none;
+  letter-spacing: 0.01em;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #16171d;
+    --color-surface: #1c1d25;
+    --color-surface-raised: #24252f;
+    --color-text: #f3f4f6;
+    --color-text-muted: #b4b1bd;
+    --color-border: #363743;
+    --color-border-strong: #505160;
+    --color-primary: #c084fc;
+    --color-primary-hover: #d2a1ff;
+    --color-primary-soft: rgba(192, 132, 252, 0.16);
+    --color-primary-border: rgba(192, 132, 252, 0.38);
+    --color-success: #6ee7a0;
+    --color-success-soft: #123a28;
+    --color-warning: #f4c76a;
+    --color-warning-soft: #3b2c0d;
+    --color-error: #ff9b91;
+    --color-error-soft: #4a201c;
+    --color-code-bg: #1f2028;
+    --shadow-card: 0 8px 24px rgba(0, 0, 0, 0.22);
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--color-bg);
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+::selection {
+  background: var(--color-primary-soft);
+  color: var(--color-text);
+}
