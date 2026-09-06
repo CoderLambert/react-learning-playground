@@ -1,52 +1,29 @@
-// 1. 定义一个子组件（注意首字母大写）
-function ProfileCard() {
+// 1. 定义
+function UserStatus({ isLoggedIn, unreadCount }) {
   return (
-    <div className="card">
-      <h2>开发者名片</h2>
-      <p>状态：正在学习 React 声明式 UI</p>
+    <div className="status-panel">
+      {/* 1. 三元运算符：二选一 */}
+      <h2>{isLoggedIn ? "欢迎回来，开发者！" : "请先登录"}</h2>
+
+      {/* 2. 逻辑与 &&：满足条件才渲染 */}
+      {isLoggedIn && unreadCount > 0 && (
+        <p style={{ color: "orange", fontWeight: "bold" }}>
+          你有 {unreadCount} 条未读消息
+        </p>
+      )}
     </div>
   );
 }
 
-const skills = [
-  {
-    title: "产品设计",
-    desc: "技能描述",
-  },
-  {
-    title: "产品设计2",
-    desc: "技能描述",
-  },
-  {
-    title: "产品设计",
-    desc: "技能描述",
-  },
-];
-
-function SkillList({ skills }) {
-  return (
-    <ul>
-      {skills.map((skill, index) => {
-        return (
-          <li key={index}>
-            <h2>{skill.title}</h2>
-            <span>{skill.desc}</span>
-          </li>
-        );
-      })}
-    </ul>
-  );
-}
-
-// 2. 导出根组件
 export default function App() {
   return (
-    <div>
-      <h1>我的 React 应用</h1>
-      <h4>test</h4>
-      {/* 3. 像 HTML 标签一样嵌套使用子组件 */}
-      <ProfileCard />
-      <SkillList skills={skills}></SkillList>
-    </div>
+    <>
+      <h1>条件渲染演示</h1>
+      {/* 登录状态展示 */}
+      <UserStatus isLoggedIn={true} unreadCount={5} />
+      <hr />
+      {/* 未登录状态展示 */}
+      <UserStatus isLoggedIn={false} unreadCount={0} />
+    </>
   );
 }
