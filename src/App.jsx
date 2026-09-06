@@ -35,16 +35,10 @@ function ProductCard({ title = "暂无标题", price, discount = 1, tags = [] })
     <>
       <div style={{ margin: "20px", border: "1px solid gray" }}>
         {title} 实际售价： {price * discount}
-        {/* {  tags.map((tag)=>( */}
-        {/**/}
-        {/*     <span key={tag} style={{ border: "1px solid black", marginLeft: "16px" }}> */}
-        {/*       {tag} */}
-        {/*     </span> */}
-        {/* )} */}
         {tags.map((tag) => (
           <span
             key={tag}
-            style={{ border: "1px solid black", marginLeft: "8px" }}
+            style={{ border: "1px solid black", marginLeft: "16px" }}
           >
             {tag}
           </span>
