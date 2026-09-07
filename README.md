@@ -1,16 +1,23 @@
-# React + Vite
+# React Learning Playground
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+用于学习 React 的本地测试与实验代码，基于 React 19 和 Vite 构建。
 
-Currently, two official plugins are available:
+当前包含 Props、Children 插槽、具名多插槽、组件组合以及 React 渲染队列等练习 Demo。
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## 本地运行
 
-## React Compiler
+```bash
+npm install
+npm run dev
+```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+常用命令：
 
-## Expanding the Oxlint configuration
+```bash
+npm run lint
+npm run build
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+## 项目说明
+
+这是一个学习用途的 playground，不是面向生产部署的完整应用。各个练习模块位于 `src/demos` 和 `src/components`。
