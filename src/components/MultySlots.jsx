@@ -66,7 +66,7 @@ function DefaultModalFooter({ onConfirm, onClose }) {
 }
 
 // 🟢 2. 通用 Modal 组件设计
-function ProductionModal({
+export function ProductionModal({
   isOpen,
   onClose,
   onConfirm,
