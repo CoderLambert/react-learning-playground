@@ -1,0 +1,26 @@
+{
+  "workspace": "/home/lambert/study/react-study/unit1-env-init/react-init",
+  "manifest": [
+    {
+      "path": "README.md",
+      "bytes": 893,
+      "codepoints": 557,
+      "lines": 39,
+      "sha256": "d9468b9b189bf41032cbfc01af9ab161071a2fb503466c1240b50abf5c04d2fb"
+    },
+    {
+      "path": "PRD-react-learning-platform.md",
+      "bytes": 14320,
+      "codepoints": 6634,
+      "lines": 491,
+      "sha256": "7a278fafe8d4675b3df6c441444274c98fa64ba87ff81a3dfb33861338134a4d"
+    },
+    {
+      "path": "DESIGN-react-learning-platform.md",
+      "bytes": 24741,
+      "codepoints": 14125,
+      "lines": 744,
+      "sha256": "e5c739b066bccb3214326967b74a15ac93c284cade09df6847806e24130af240"
+    }
+  ]
+}

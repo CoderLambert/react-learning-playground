@@ -1,0 +1,4 @@
+PASS: Git-owned workspace rejects Knowledge backend request with owner-mismatch 409; Knowledge handler not called
+PASS: claiming as primary makes Knowledge replace Git workspace ownership (not an additive integration)
+PASS: unclaimed folder workspace also rejects Knowledge provider request
+LIMIT: registry-only test, mocked providers/path inspection; no browser/federation/service deployment performed

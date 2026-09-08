@@ -1,0 +1,26 @@
+// Review-only probe of installed private implementation; NOT production integration.
+import assert from 'node:assert/strict';
+import { pathToFileURL } from 'node:url';
+const base = process.env.PI_WEB_PACKAGE || '/home/lambert/.local/share/mise/installs/node/26.7.0/lib/node_modules/@jmfederico/pi-web';
+const { WorkspaceProviderRegistry } = await import(pathToFileURL(`${base}/dist/server/workspaces/workspaceProviderRegistry.js`));
+const project = { id: 'probe-project', name: 'Probe', path: '/tmp' };
+const listed = [{ key: 'main', path: '/tmp', label: 'Main', isMain: true }];
+let knowledgeRequests = 0;
+const git = { pluginId: 'git', moduleRevision: 'r1', provider: { fallback: true, probe: async () => 'claim', list: async () => listed, request: async () => ({ owner: 'git' }) } };
+const knowledge = { pluginId: 'knowledge', moduleRevision: 'r1', provider: { probe: async () => 'pass', list: async () => listed, request: async () => { knowledgeRequests++; return { owner: 'knowledge' }; } } };
+const registry = new WorkspaceProviderRegistry({ contributions: [git, knowledge], logger: { warn() {} }, pathInspector: async () => true });
+const resolution = await registry.resolve(project);
+assert.equal(resolution.ownerPluginId, 'git');
+const request = { pluginId: 'knowledge', moduleRevision: 'r1', project, workspaceId: resolution.workspaces[0].id, operation: 'health', input: {} };
+await assert.rejects(registry.request(request), (err) => err.code === 'owner-mismatch' && err.statusCode === 409);
+assert.equal(knowledgeRequests, 0);
+console.log('PASS: Git-owned workspace rejects Knowledge backend request with owner-mismatch 409; Knowledge handler not called');
+const ownerKnowledge = { ...knowledge, provider: { ...knowledge.provider, probe: async () => 'claim' } };
+const takeover = new WorkspaceProviderRegistry({ contributions: [git, ownerKnowledge], logger: { warn() {} }, pathInspector: async () => true });
+assert.equal((await takeover.resolve(project)).ownerPluginId, 'knowledge');
+console.log('PASS: claiming as primary makes Knowledge replace Git workspace ownership (not an additive integration)');
+const plain = new WorkspaceProviderRegistry({ contributions: [knowledge], logger: { warn() {} }, pathInspector: async () => true });
+const folder = await plain.resolve(project);
+await assert.rejects(plain.request({ ...request, workspaceId: folder.workspaces[0].id }), (err) => err.code === 'owner-mismatch');
+console.log('PASS: unclaimed folder workspace also rejects Knowledge provider request');
+console.log('LIMIT: registry-only test, mocked providers/path inspection; no browser/federation/service deployment performed');
