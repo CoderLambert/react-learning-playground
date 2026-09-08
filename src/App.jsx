@@ -1,14 +1,11 @@
 import { useState } from "react";
 import "./App.css";
-import { PropsBasicsDemo } from "./demos/PropsBasicsDemo";
-import { ChildrenSlotDemo } from "./demos/ChildrenSlotDemo";
-import { MultiSlotsDemo } from "./demos/MultiSlotsDemo";
+import { demos } from "./demos";
 import { TestQueue } from "./components/TestQueue";
+
 const TABS = [
   { id: "all", label: "🌟 全部功能总览" },
-  { id: "props", label: "📌 1. Props 基础与解构" },
-  { id: "children", label: "📦 2. Children 默认插槽" },
-  { id: "multi-slots", label: "🧩 3. 具名多插槽客制化" },
+  ...demos.map(({ id, label }) => ({ id, label })),
 ];
 
 export default function App() {
@@ -39,17 +36,18 @@ export default function App() {
 
       {/* 动态内容渲染 */}
       <main className="demo-card-wrapper">
-        {activeTab === "props" && <PropsBasicsDemo />}
-        {activeTab === "children" && <ChildrenSlotDemo />}
-        {activeTab === "multi-slots" && <MultiSlotsDemo />}
+        {demos.map(({ id, Component }) =>
+          activeTab === id ? <Component key={id} /> : null,
+        )}
 
         {activeTab === "all" && (
           <div>
-            <PropsBasicsDemo />
-            <hr className="demo-divider" />
-            <ChildrenSlotDemo />
-            <hr className="demo-divider" />
-            <MultiSlotsDemo />
+            {demos.map(({ id, Component }, index) => (
+              <div key={id}>
+                {index > 0 && <hr className="demo-divider" />}
+                <Component />
+              </div>
+            ))}
           </div>
         )}
         <TestQueue></TestQueue>
