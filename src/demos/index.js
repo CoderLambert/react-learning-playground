@@ -2,6 +2,7 @@ import { PropsBasicsDemo } from "./PropsBasicsDemo";
 import { ChildrenSlotDemo } from "./ChildrenSlotDemo";
 import { MultiSlotsDemo } from "./MultiSlotsDemo";
 import { StateDryDemo } from "./StateDryDemo";
+import { LiftingStateUpDemo } from "./LiftingStateUpDemo";
 // @demo-imports
 
 export const demos = [
@@ -24,6 +25,11 @@ export const demos = [
     id: "state-dry",
     label: "🧪 状态干净原则",
     Component: StateDryDemo,
+  },
+  {
+    id: "lifting-state-up",
+    label: "🧪 状态提升",
+    Component: LiftingStateUpDemo,
   },
   // @demo-entries
 ];
