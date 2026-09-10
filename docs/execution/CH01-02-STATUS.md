@@ -30,10 +30,20 @@
   - 实验：可编辑任务列表先输入行内 State，再 reorder/remove，对比 index key 与 stable id 的组件身份匹配
   - 工程边界：支持排序、插入、删除或行内局部 State 的真实列表必须使用稳定业务身份
   - 内容依据：React 官方 `Rendering Lists`
-- [ ] 01-07 Prop Drilling 与 Composition / Context 边界复查
-  - 已发现：当前 `PropDrillingDemo.jsx` 将 prop drilling 直接定义为“反模式”，并写成“官方首选推荐：组件组合”，表述过度绝对化；下一轮需改成基于深度、复用性、数据所有权和消费范围的权衡说明。
+- [x] 01-07 Prop Drilling 与 Composition / Context 边界复查
+  - 更新：`src/demos/PropDrillingDemo.jsx`
+  - 修正：不再把 prop drilling 一概定义为反模式，不再把 Composition 表述为无条件“官方首选”
+  - 心智模型：先判断 State ownership / 消费范围 / 组件职责，再选择显式 Props、Composition 或 Context
+  - 可观察实验：修改同一份 `user`，对比三种传递路径在中间组件接口上的差异
+  - 正确边界：Props 保持显式数据流；中间层本质为布局容器时可考虑 children/slot；多个远距离消费者需要同一信息时再考虑 Context
+  - 反模式：仅凭“传了两三层”机械引入 Context；仅凭层数判断架构方案
+  - 内容依据：React 官方 `Passing Data Deeply with Context` 的 “Before you use context” 与 useContext 文档
+  - Demo 注册：已有且已复核
+  - CodeViewer `?raw`：已有 `PropDrillingDemo.jsx?raw` 且已复核
 
-Chapter 01 Gate：**未执行**。本章尚有 `01-07` 复查未完成，按任务规则不得提前标记 lint/build/preview 通过。
+Chapter 01 内容：**COMPLETE**。
+
+Chapter 01 Gate：**BLOCKED / PENDING**。按照任务规则，本章必须在可执行工作区真实运行 `npm run lint`、`npm run build`、`npm run preview` smoke test，全部通过后才能标记章节完成、提交 chapter completion commit，并进入 Chapter 02。
 
 ### Chapter 02 — 事件、State 与渲染模型
 
@@ -48,18 +58,29 @@ Chapter 02 Gate：**未执行**。
 
 ## 本轮验证记录
 
-- GitHub 分支修改：PASS
-- `ConditionalRenderingDemo.jsx` 创建并注册：PASS（静态检查）
-- `RenderingListsKeyDemo.jsx` 创建并注册：PASS（静态检查）
-- `?raw` CodeViewer 注册：PASS（静态检查）
-- `npm run lint`：PENDING（Chapter 01 完成后执行）
-- `npm run build`：PENDING（Chapter 01 完成后执行）
-- `npm run preview` smoke test：PENDING（Chapter 01 完成后执行）
+- 远端分支 HEAD 检查：PASS（本轮开始时 `fd2937cc4cf4ad35fa2bae702c4c89befd4486d4`）
+- `PropDrillingDemo.jsx` 边界修正：PASS（GitHub 写入）
+- Demo 注册：PASS（静态检查，`src/demos/index.js` 已注册 `PropDrillingDemo`）
+- `?raw` CodeViewer 注册：PASS（静态检查，`PropDrillingDemo.jsx?raw` 已注册）
+- React 官方当前文档校准：PASS
+- `npm run lint`：PENDING（无可执行仓库工作树）
+- `npm run build`：PENDING（无可执行仓库工作树）
+- `npm run preview` smoke test：PENDING（无可执行仓库工作树）
 
 ## 运行环境说明
 
-当前自动执行环境没有可直接使用的仓库本地工作树，因此本轮只能完成 GitHub 侧静态写入与注册核对。章节 Gate 到达时必须优先尝试可用的工作树 / CI；若仍不可用，不得把章节标记为 DONE，也不得伪造验证结果。
+当前自动执行环境仍未发现可直接使用的 `react-learning-playground` 本地工作树。本轮通过 GitHub 仓库连接能力完成了 01-07 的代码修正与静态注册核对，但 GitHub contents API 不能替代真实 Node/Vite 工作区执行 lint/build/preview。
+
+因此严格停在 Chapter 01 Gate：不得把 Chapter 01 标记为质量门禁 PASS，不得进入 Chapter 02，也不得创建“Chapter 01 complete”提交或后续 PR 完成声明。
 
 ## 下一步
 
-完成 `01-07 Prop Drilling 与 Composition / Context 边界复查`，修正过度绝对化表述；随后立即执行 Chapter 01 的 lint/build/preview 质量门禁。只有 Gate PASS 后才进入 Chapter 02。
+一旦存在可执行本地工作区，立即在 `learn/ch01-02-ui-render` 上运行（依赖缺失时先 `npm ci`）：
+
+```bash
+npm run lint
+npm run build
+npm run preview
+```
+
+完成聚焦模式、连续阅读、搜索、CodeViewer、交互、Console 与窄屏基础 smoke test；全部 PASS 后再标记 Chapter 01 完成并进入 02-01。
