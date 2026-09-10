@@ -7,6 +7,7 @@ import { ControlledUncontrolledDemo } from "./ControlledUncontrolledDemo";
 import { LiftingStateUpDemo } from "./LiftingStateUpDemo";
 import { PreservingResettingStateDemo } from "./PreservingResettingStateDemo";
 import { StateReducerDemo } from "./StateReducerDemo";
+import { ContextPropagationDemo } from "./ContextPropagationDemo";
 import { UseReduceWithContextDemo } from "./UseReduceWithContextDemo";
 import { UseRefDemo } from "./UseRefDemo";
 import { UseEffectCorrectUsageDemo } from "./UseEffectCorrectUsageDemo";
@@ -28,6 +29,7 @@ import controlledUncontrolledRaw from "./ControlledUncontrolledDemo.jsx?raw";
 import liftingStateUpRaw from "./LiftingStateUpDemo.jsx?raw";
 import preservingResettingStateRaw from "./PreservingResettingStateDemo.jsx?raw";
 import stateReducerRaw from "./StateReducerDemo.jsx?raw";
+import contextPropagationRaw from "./ContextPropagationDemo.jsx?raw";
 import useReduceWithContextRaw from "./UseReduceWithContextDemo.jsx?raw";
 import useRefRaw from "./UseRefDemo.jsx?raw";
 import useEffectCorrectUsageRaw from "./UseEffectCorrectUsageDemo.jsx?raw";
@@ -135,6 +137,15 @@ export const demos = [
     description: "将更新逻辑集中为纯函数 Reducer，规范复杂状态与行为审计",
     Component: StateReducerDemo,
     files: [{ name: "StateReducerDemo.jsx", code: stateReducerRaw }],
+  },
+  {
+    id: "context-propagation",
+    label: "Context 更新传播模型",
+    category: "state",
+    badge: "订阅",
+    description: "可视化 useContext 订阅、Provider value 更新传播，以及 memo 与 Context 的真实边界",
+    Component: ContextPropagationDemo,
+    files: [{ name: "ContextPropagationDemo.jsx", code: contextPropagationRaw }],
   },
   {
     id: "use-reduce-with-context",
