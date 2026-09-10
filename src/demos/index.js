@@ -12,6 +12,7 @@ import { NotNeedEffectDemo } from "./NotNeedEffectDemo";
 import { LifecycleOfReactiveEffectsDemo } from "./LifecycleOfReactiveEffectsDemo";
 import { RenderVsDomUpdateDemo } from "./RenderVsDomUpdateDemo";
 import { ReferenceEqualityDemo } from "./ReferenceEqualityDemo";
+import { ReactMemoDemo } from "./ReactMemoDemo";
 
 // 源码原始字符串（Vite ?raw 原生支持）
 import propsBasicsRaw from "./PropsBasicsDemo.jsx?raw";
@@ -37,6 +38,7 @@ import notNeedEffectRaw from "./NotNeedEffectDemo.jsx?raw";
 import lifecycleRaw from "./LifecycleOfReactiveEffectsDemo.jsx?raw";
 import renderVsDomUpdateRaw from "./RenderVsDomUpdateDemo.jsx?raw";
 import referenceEqualityRaw from "./ReferenceEqualityDemo.jsx?raw";
+import reactMemoRaw from "./ReactMemoDemo.jsx?raw";
 
 // @demo-imports
 
@@ -206,6 +208,17 @@ export const demos = [
     Component: ReferenceEqualityDemo,
     files: [
       { name: "ReferenceEqualityDemo.jsx", code: referenceEqualityRaw },
+    ],
+  },
+  {
+    id: "react-memo",
+    label: "React.memo 命中与失效",
+    category: "performance",
+    badge: "优化",
+    description: "对比 primitive、新对象与稳定对象 props，观察 memo 的命中条件和 identity 陷阱",
+    Component: ReactMemoDemo,
+    files: [
+      { name: "ReactMemoDemo.jsx", code: reactMemoRaw },
     ],
   },
   // @demo-entries
