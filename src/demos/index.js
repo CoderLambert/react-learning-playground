@@ -10,6 +10,7 @@ import { UseRefDemo } from "./UseRefDemo";
 import { UseEffectCorrectUsageDemo } from "./UseEffectCorrectUsageDemo";
 import { NotNeedEffectDemo } from "./NotNeedEffectDemo";
 import { LifecycleOfReactiveEffectsDemo } from "./LifecycleOfReactiveEffectsDemo";
+import { UrlStateDemo } from "./UrlStateDemo";
 
 // 源码原始字符串（Vite ?raw 原生支持）
 import propsBasicsRaw from "./PropsBasicsDemo.jsx?raw";
@@ -33,6 +34,7 @@ import useRefRaw from "./UseRefDemo.jsx?raw";
 import useEffectCorrectUsageRaw from "./UseEffectCorrectUsageDemo.jsx?raw";
 import notNeedEffectRaw from "./NotNeedEffectDemo.jsx?raw";
 import lifecycleRaw from "./LifecycleOfReactiveEffectsDemo.jsx?raw";
+import urlStateRaw from "./UrlStateDemo.jsx?raw";
 
 // @demo-imports
 
@@ -40,6 +42,7 @@ export const CATEGORIES = [
   { id: "components", name: "组件通信与插槽", icon: "🧩" },
   { id: "state", name: "状态管理与演进", icon: "⚡" },
   { id: "effects", name: "Hooks 与副作用深度", icon: "🎣" },
+  { id: "routing", name: "Router 与页面状态", icon: "🧭" },
 ];
 
 export const demos = [
@@ -179,6 +182,17 @@ export const demos = [
     Component: LifecycleOfReactiveEffectsDemo,
     files: [
       { name: "LifecycleOfReactiveEffectsDemo.jsx", code: lifecycleRaw },
+    ],
+  },
+  {
+    id: "url-state",
+    label: "URL 状态与 Search Params",
+    category: "routing",
+    badge: "核心",
+    description: "把 URL 作为可分享、可刷新、可前进后退的页面状态来源，区分 Route Params 与 Search Params",
+    Component: UrlStateDemo,
+    files: [
+      { name: "UrlStateDemo.jsx", code: urlStateRaw },
     ],
   },
   // @demo-entries
