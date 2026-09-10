@@ -12,6 +12,7 @@ import { NotNeedEffectDemo } from "./NotNeedEffectDemo";
 import { LifecycleOfReactiveEffectsDemo } from "./LifecycleOfReactiveEffectsDemo";
 import { UrlStateDemo } from "./UrlStateDemo";
 import { NestedRoutesDemo } from "./NestedRoutesDemo";
+import { NavigationBoundaryDemo } from "./NavigationBoundaryDemo";
 
 // 源码原始字符串（Vite ?raw 原生支持）
 import propsBasicsRaw from "./PropsBasicsDemo.jsx?raw";
@@ -37,6 +38,7 @@ import notNeedEffectRaw from "./NotNeedEffectDemo.jsx?raw";
 import lifecycleRaw from "./LifecycleOfReactiveEffectsDemo.jsx?raw";
 import urlStateRaw from "./UrlStateDemo.jsx?raw";
 import nestedRoutesRaw from "./NestedRoutesDemo.jsx?raw";
+import navigationBoundaryRaw from "./NavigationBoundaryDemo.jsx?raw";
 
 // @demo-imports
 
@@ -206,6 +208,17 @@ export const demos = [
     Component: NestedRoutesDemo,
     files: [
       { name: "NestedRoutesDemo.jsx", code: nestedRoutesRaw },
+    ],
+  },
+  {
+    id: "navigation-boundary",
+    label: "Navigation 与 Route Boundary",
+    category: "routing",
+    badge: "导航",
+    description: "区分声明式链接与程序式导航，可视化 history push/replace/back/forward 与 Not Found 边界",
+    Component: NavigationBoundaryDemo,
+    files: [
+      { name: "NavigationBoundaryDemo.jsx", code: navigationBoundaryRaw },
     ],
   },
   // @demo-entries
