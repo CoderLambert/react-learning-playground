@@ -1,11 +1,26 @@
+import { useEffect } from "react";
+
 /**
- * 演示：children 弹窗遮罩与条件渲染模式
- * 
- * 核心设计思想：
- * 1. 条件渲染：!isOpen 时显式返回 null，避免在页面中生成无意义的不可见 DOM。
- * 2. 内容定制：遮罩与居中结构由组件固化，弹窗内部展示内容通过 {children} 灵活传入。
+ * ModalLayout 弹窗外壳组件
+ * 演示：children 弹窗遮罩、条件渲染与副作用键盘监听闭环
  */
-export function ModalLayout({ isOpen = false, onClose, children }) {
+export function ModalLayout({ isOpen = false, onClose, title, children }) {
+  // 监听 ESC 键自动关闭弹窗
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape" && onClose) {
+        onClose();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   return (
@@ -13,45 +28,71 @@ export function ModalLayout({ isOpen = false, onClose, children }) {
       style={{
         position: "fixed",
         inset: 0,
-        backgroundColor: "rgba(0, 0, 0, 0.45)",
-        backdropFilter: "blur(2px)",
+        backgroundColor: "rgba(15, 23, 42, 0.5)",
+        backdropFilter: "blur(4px)",
         display: "flex",
         justifyContent: "center",
         alignItems: "center",
         zIndex: 1000,
+        padding: "16px",
+        animation: "fadeIn 0.15s ease",
       }}
       onClick={onClose}
     >
       <div
         style={{
-          width: "480px",
-          maxWidth: "90%",
-          background: "#ffffff",
-          borderRadius: "12px",
-          padding: "24px",
-          boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+          width: "500px",
+          maxWidth: "100%",
+          backgroundColor: "var(--bg-surface)",
+          borderRadius: "var(--radius-lg)",
+          boxShadow: "var(--shadow-xl)",
+          border: "1px solid var(--border-color)",
+          overflow: "hidden",
           position: "relative",
+          animation: "scaleUp 0.15s ease",
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        {onClose && (
-          <button
-            onClick={onClose}
+        {/* 头部标题与关闭按钮 */}
+        {(title || onClose) && (
+          <div
             style={{
-              position: "absolute",
-              top: "12px",
-              right: "12px",
-              background: "transparent",
-              border: "none",
-              fontSize: "18px",
-              color: "#94a3b8",
-              cursor: "pointer",
+              padding: "16px 20px",
+              borderBottom: "1px solid var(--border-color)",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
             }}
           >
-            ✕
-          </button>
+            <h3 style={{ margin: 0, fontSize: "16px", fontWeight: "700", color: "var(--text-main)" }}>
+              {title || "提示"}
+            </h3>
+            {onClose && (
+              <button
+                onClick={onClose}
+                aria-label="关闭弹窗"
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  fontSize: "18px",
+                  lineHeight: 1,
+                  color: "var(--text-subtle)",
+                  cursor: "pointer",
+                  padding: "4px",
+                  borderRadius: "var(--radius-xs)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  transition: "color var(--transition-fast)",
+                }}
+              >
+                ✕
+              </button>
+            )}
+          </div>
         )}
-        {children}
+
+        <div style={{ padding: "20px" }}>{children}</div>
       </div>
     </div>
   );

@@ -1,92 +1,108 @@
-import { useState } from "react";
+/**
+ * 生产级具名多插槽组件 (ProductionModal)
+ * 
+ * 核心三态插槽协议设计规范：
+ * 1. 显式隐藏：slotProp === false => 返回 null，不渲染该区域，不占用 DOM 结构
+ * 2. 局部覆盖：slotProp !== undefined => 渲染调用者传入的内容 (string | JSX | Component)
+ * 3. 回退默认：slotProp === undefined => 渲染内置默认预设模板
+ */
 
-// 🔴 1. 抽取默认模版：保持主组件纯洁，便于复用与维护
-function DefaultModalHeader({ titleText, onClose }) {
+// 默认模版 1：头部
+export function DefaultModalHeader({ titleText = "系统提示", onClose }) {
   return (
     <div
       style={{
         display: "flex",
         justifyContent: "space-between",
         alignItems: "center",
-        borderBottom: "1px solid #eee",
-        paddingBottom: "8px",
+        padding: "16px 20px",
+        borderBottom: "1px solid var(--border-color)",
       }}
     >
-      <h3 style={{ margin: 0 }}>{titleText || "系统提示"}</h3>
-      <button
-        onClick={onClose}
-        style={{
-          border: "none",
-          background: "transparent",
-          cursor: "pointer",
-          fontSize: "16px",
-        }}
-      >
-        ✕
-      </button>
+      <h3 style={{ margin: 0, fontSize: "16px", fontWeight: "700", color: "var(--text-main)" }}>
+        {titleText}
+      </h3>
+      {onClose && (
+        <button
+          onClick={onClose}
+          aria-label="关闭"
+          style={{
+            border: "none",
+            background: "transparent",
+            cursor: "pointer",
+            fontSize: "18px",
+            color: "var(--text-subtle)",
+            padding: "2px",
+            lineHeight: 1,
+          }}
+        >
+          ✕
+        </button>
+      )}
     </div>
   );
 }
 
-function DefaultModalFooter({ onConfirm, onClose }) {
+// 默认模版 2：底部操作栏
+export function DefaultModalFooter({ onConfirm, onClose, confirmText = "确认", cancelText = "取消" }) {
   return (
     <div
       style={{
         display: "flex",
         justifyContent: "flex-end",
-        gap: "8px",
-        paddingTop: "12px",
-        borderTop: "1px solid #eee",
+        gap: "10px",
+        padding: "14px 20px",
+        borderTop: "1px solid var(--border-color)",
+        backgroundColor: "var(--bg-surface-secondary)",
       }}
     >
-      <button
-        onClick={onClose}
-        style={{
-          padding: "6px 12px",
-          borderRadius: "4px",
-          border: "1px solid #ccc",
-        }}
-      >
-        取消
+      <button className="btn btn-secondary btn-sm" onClick={onClose}>
+        {cancelText}
       </button>
-      <button
-        onClick={onConfirm}
-        style={{
-          padding: "6px 12px",
-          borderRadius: "4px",
-          background: "#1890ff",
-          color: "#fff",
-          border: "none",
-        }}
-      >
-        确认
+      <button className="btn btn-primary btn-sm" onClick={onConfirm}>
+        {confirmText}
       </button>
     </div>
   );
 }
 
-// 🟢 2. 通用 Modal 组件设计
+// 核心多插槽 Modal 组件
 export function ProductionModal({
   isOpen,
   onClose,
   onConfirm,
-  title, // 具名插槽 1：可传 string | JSX | false
-  footer, // 具名插槽 2：可传 JSX | false
+  title, // 具名插槽 1：string | JSX | false
+  footer, // 具名插槽 2：JSX | false
   children, // 主插槽：弹窗主体
 }) {
-  if (!isOpen) return null; // 显式返回 null 避免生成 DOM[cite: 3, 5]
+  if (!isOpen) return null;
 
-  // 💡 核心渲染逻辑：判断插槽传参
+  // 三态插槽判定
   const renderHeader = () => {
-    if (title === false) return null; // 显式隐藏
-    if (title !== undefined) return title; // 用户自定义重写
-    return <DefaultModalHeader titleText="默认通知" onClose={onClose} />; // 回退默认模版
+    if (title === false) return null;
+    if (title !== undefined) {
+      // 支持直接传字符串或自定义 JSX
+      return typeof title === "string" ? (
+        <DefaultModalHeader titleText={title} onClose={onClose} />
+      ) : (
+        <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--border-color)" }}>
+          {title}
+        </div>
+      );
+    }
+    return <DefaultModalHeader titleText="系统通知" onClose={onClose} />;
   };
 
   const renderFooter = () => {
-    if (footer === false) return null; // 显式隐藏
-    if (footer !== undefined) return footer; // 用户自定义重写
-    return <DefaultModalFooter onConfirm={onConfirm} onClose={onClose} />; // 回退默认模版
+    if (footer === false) return null;
+    if (footer !== undefined) {
+      return (
+        <div style={{ padding: "14px 20px", borderTop: "1px solid var(--border-color)" }}>
+          {footer}
+        </div>
+      );
+    }
+    return <DefaultModalFooter onConfirm={onConfirm} onClose={onClose} />;
   };
 
   return (
@@ -94,106 +110,34 @@ export function ProductionModal({
       style={{
         position: "fixed",
         inset: 0,
-        background: "rgba(0,0,0,0.5)",
+        backgroundColor: "rgba(15, 23, 42, 0.5)",
+        backdropFilter: "blur(4px)",
         display: "flex",
         justifyContent: "center",
         alignItems: "center",
+        zIndex: 1000,
+        padding: "16px",
       }}
+      onClick={onClose}
     >
       <div
         style={{
-          background: "#fff",
-          padding: "20px",
-          borderRadius: "8px",
-          width: "400px",
-          display: "flex",
-          flexDirection: "column",
-          gap: "12px",
+          width: "460px",
+          maxWidth: "100%",
+          backgroundColor: "var(--bg-surface)",
+          borderRadius: "var(--radius-lg)",
+          boxShadow: "var(--shadow-xl)",
+          border: "1px solid var(--border-color)",
+          overflow: "hidden",
         }}
+        onClick={(e) => e.stopPropagation()}
       >
         {renderHeader()}
-        <div className="modal-body">{children}</div>
+        <div style={{ padding: "20px" }}>{children}</div>
         {renderFooter()}
       </div>
     </div>
   );
 }
 
-// 🔵 3. 各种消费场景演示
-export function MultySlotsModal() {
-  const [modalType, setModalType] = useState(null);
-
-  const closeModal = () => setModalType(null);
-
-  return (
-    <div style={{ padding: "20px" }}>
-      <h2>生产级多插槽 Modal 模式演示</h2>
-      <div style={{ display: "flex", gap: "10px" }}>
-        <button onClick={() => setModalType("default")}>1. 全默认模版</button>
-        <button onClick={() => setModalType("custom-title")}>
-          2. 局部覆盖标题
-        </button>
-        <button onClick={() => setModalType("custom-footer")}>
-          3. 局部覆盖底部
-        </button>
-        <button onClick={() => setModalType("no-footer")}>4. 隐藏底部</button>
-      </div>
-
-      {/* 场景 1：完全零配置，使用默认 Header 和默认 Footer */}
-      <ProductionModal
-        isOpen={modalType === "default"}
-        onClose={closeModal}
-        onConfirm={() => {
-          alert("触发默认确认功能");
-          closeModal();
-        }}
-      >
-        <p>这是简单的消息提醒，标题和底部均走组件默认样式。</p>
-      </ProductionModal>
-
-      {/* 场景 2：局部覆盖 Header，Footer 依然走默认 */}
-      <ProductionModal
-        isOpen={modalType === "custom-title"}
-        title={<h3 style={{ margin: 0, color: "red" }}>⚠️ 严重危险警告</h3>}
-        onClose={closeModal}
-        onConfirm={closeModal}
-      >
-        <p>此操作将永久删除数据，且无法恢复！</p>
-      </ProductionModal>
-
-      {/* 场景 3：Header 走默认，局部覆盖 Footer（替换为单个“我知道了”按钮） */}
-      <ProductionModal
-        isOpen={modalType === "custom-footer"}
-        onClose={closeModal}
-        footer={
-          <div style={{ textAlign: "center" }}>
-            <button
-              onClick={closeModal}
-              style={{
-                background: "#52c41a",
-                color: "#fff",
-                border: "none",
-                padding: "6px 20px",
-                borderRadius: "4px",
-              }}
-            >
-              我知道了
-            </button>
-          </div>
-        }
-      >
-        <p>您的个人资料已成功更新。</p>
-      </ProductionModal>
-
-      {/* 场景 4：显式隐藏 Footer（传入 false） */}
-      <ProductionModal
-        isOpen={modalType === "no-footer"}
-        title="纯展示内容"
-        footer={false}
-        onClose={closeModal}
-      >
-        <p>这个弹窗没有底部的按钮栏，适合纯富文本展示。</p>
-      </ProductionModal>
-    </div>
-  );
-}
+export default ProductionModal;

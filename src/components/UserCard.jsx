@@ -1,27 +1,82 @@
 /**
- * 演示：Props 基础读取与默认值解构
- * 
- * 核心原理：
- * 1. Props 是父组件传递给子组件的只读属性（输入参数）。
- * 2. 在组件参数中直接通过对象解构赋予默认值，如 role = "普通成员"。
+ * UserCard 组件
+ * 演示：Props 基础读取、参数默认值解构与纯函数渲染
  */
 export function UserCard({ name, role = "普通成员", isOnline }) {
+  // 生成用户名首字母头像
+  const initial = name ? name.trim().charAt(0).toUpperCase() : "?";
+
   return (
     <div
       style={{
-        border: "1px solid #e2e8f0",
-        borderRadius: "8px",
-        padding: "12px 16px",
-        margin: "10px 0",
-        backgroundColor: "#ffffff",
-        boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+        border: "1px solid var(--border-color)",
+        borderRadius: "var(--radius-md)",
+        padding: "16px",
+        backgroundColor: "var(--bg-surface)",
+        boxShadow: "var(--shadow-xs)",
+        transition: "all var(--transition-fast)",
+        display: "flex",
+        alignItems: "center",
+        gap: "14px",
       }}
     >
-      <h3 style={{ margin: "0 0 6px 0", fontSize: "16px", color: "#1e293b" }}>{name}</h3>
-      <p style={{ margin: "4px 0", color: "#64748b", fontSize: "14px" }}>身份：{role}</p>
-      <p style={{ margin: "4px 0", fontSize: "14px", color: isOnline ? "#16a34a" : "#94a3b8" }}>
-        状态：{isOnline ? "🟢 在线" : "⚪ 离线"}
-      </p>
+      {/* 头像与在线状态 */}
+      <div style={{ position: "relative" }}>
+        <div
+          style={{
+            width: "44px",
+            height: "44px",
+            borderRadius: "50%",
+            backgroundColor: "var(--color-primary-light)",
+            color: "var(--color-primary)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontWeight: "700",
+            fontSize: "18px",
+            border: "1px solid var(--color-primary-border)",
+          }}
+        >
+          {initial}
+        </div>
+        <span
+          style={{
+            position: "absolute",
+            bottom: "0",
+            right: "0",
+            width: "12px",
+            height: "12px",
+            borderRadius: "50%",
+            backgroundColor: isOnline ? "var(--color-success)" : "var(--text-subtle)",
+            border: "2px solid #fff",
+          }}
+          title={isOnline ? "在线" : "离线"}
+        />
+      </div>
+
+      {/* 用户信息 */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+          <h4 style={{ margin: 0, fontSize: "15px", color: "var(--text-main)", fontWeight: "600" }}>
+            {name}
+          </h4>
+          <span
+            style={{
+              fontSize: "11px",
+              padding: "1px 6px",
+              borderRadius: "var(--radius-xs)",
+              backgroundColor: "var(--bg-surface-secondary)",
+              color: "var(--text-muted)",
+              border: "1px solid var(--border-color)",
+            }}
+          >
+            {role}
+          </span>
+        </div>
+        <div style={{ fontSize: "12.5px", color: isOnline ? "var(--color-success-text)" : "var(--text-subtle)" }}>
+          {isOnline ? "🟢 当前在线" : "⚪ 离线"}
+        </div>
+      </div>
     </div>
   );
 }

@@ -1,22 +1,14 @@
 /**
- * 演示：具名多插槽组件设计模式（Panel 面板）
- * 
- * 核心三态插槽协议：
- * 1. 显式隐藏：prop === false => 返回 null，不渲染该插槽
- * 2. 局部覆盖：prop !== undefined => 渲染调用者传入的自定义 JSX / 内容
- * 3. 回退默认：prop === undefined => 渲染组件内预设的默认模板
+ * Pannel 面板组件
+ * 演示：具名多插槽组件设计模式（header / extra / children）
+ * 遵循三态插槽协议：false 显式隐藏、传入值覆盖、undefined 回退默认
  */
 
 export const DefaultPannelHeader = () => {
   return (
-    <div
-      style={{
-        fontWeight: "bold",
-        color: "#1e293b",
-        fontSize: "15px",
-      }}
-    >
-      📋 卡片面板
+    <div style={{ fontWeight: "700", color: "var(--text-main)", fontSize: "14.5px", display: "flex", alignItems: "center", gap: "6px" }}>
+      <span>📋</span>
+      <span>卡片面板</span>
     </div>
   );
 };
@@ -28,9 +20,9 @@ export const DefaultPannelExtra = () => {
         href="#more"
         onClick={(e) => {
           e.preventDefault();
-          alert("点击了默认 Extra: 查看更多");
+          alert("触发默认 Extra: 查看详情");
         }}
-        style={{ color: "#2563eb", textDecoration: "none" }}
+        style={{ color: "var(--color-primary)", fontWeight: "500" }}
       >
         查看更多 →
       </a>
@@ -56,12 +48,13 @@ export function Pannel({ header, extra, children }) {
   return (
     <div
       style={{
-        border: "1px solid #e2e8f0",
-        borderRadius: "8px",
-        backgroundColor: "#ffffff",
+        border: "1px solid var(--border-color)",
+        borderRadius: "var(--radius-md)",
+        backgroundColor: "var(--bg-surface)",
         margin: "12px 0",
         overflow: "hidden",
-        boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+        boxShadow: "var(--shadow-xs)",
+        transition: "box-shadow var(--transition-fast)",
       }}
     >
       {hasTopBar && (
@@ -70,9 +63,9 @@ export function Pannel({ header, extra, children }) {
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-            padding: "12px 16px",
-            borderBottom: "1px solid #f1f5f9",
-            backgroundColor: "#f8fafc",
+            padding: "12px 18px",
+            borderBottom: "1px solid var(--border-subtle)",
+            backgroundColor: "var(--bg-surface-secondary)",
           }}
         >
           <div className="pannel-header">{renderHeader()}</div>
@@ -80,8 +73,8 @@ export function Pannel({ header, extra, children }) {
         </div>
       )}
 
-      <div style={{ padding: "16px", color: "#334155" }} className="pannel-body">
-        {children || <span style={{ color: "#94a3b8", fontStyle: "italic" }}>暂无面板主体内容</span>}
+      <div style={{ padding: "18px", color: "var(--text-main)" }} className="pannel-body">
+        {children || <span style={{ color: "var(--text-subtle)", fontStyle: "italic" }}>暂无面板内容</span>}
       </div>
     </div>
   );

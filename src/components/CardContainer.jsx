@@ -1,36 +1,47 @@
 /**
- * 演示：children 基础插槽与容器组件模式
- * 
- * 核心设计思想：
- * 容器组件只关心外壳布局、边框与样式，不关心具体内容；
- * 内部通过 {children} 渲染调用者传入的任意 JSX 结构。
+ * CardContainer 容器组件
+ * 演示：children 基础默认插槽与组件组合模式 (Composition)
+ * 容器只负责结构包装、边框阴影与标题外壳，内部具体内容完全交由调用方定制
  */
-export function CardContainer({ title, children }) {
+export function CardContainer({ title, subtitle, extra, children }) {
   return (
     <div
       style={{
-        border: "1px solid #e2e8f0",
-        borderRadius: "8px",
-        padding: "16px",
-        margin: "12px 0",
-        backgroundColor: "#ffffff",
-        boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+        border: "1px solid var(--border-color)",
+        borderRadius: "var(--radius-md)",
+        backgroundColor: "var(--bg-surface)",
+        boxShadow: "var(--shadow-xs)",
+        overflow: "hidden",
+        transition: "box-shadow var(--transition-fast)",
       }}
     >
-      {title && (
-        <h3
+      {(title || extra) && (
+        <div
           style={{
-            margin: "0 0 12px 0",
-            paddingBottom: "8px",
-            borderBottom: "1px solid #f1f5f9",
-            color: "#1e293b",
-            fontSize: "16px",
+            padding: "14px 18px",
+            borderBottom: "1px solid var(--border-subtle)",
+            backgroundColor: "var(--bg-surface-secondary)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
           }}
         >
-          {title}
-        </h3>
+          <div>
+            {title && (
+              <h4 style={{ margin: 0, fontSize: "15px", color: "var(--text-main)", fontWeight: "600" }}>
+                {title}
+              </h4>
+            )}
+            {subtitle && (
+              <p style={{ margin: "2px 0 0 0", fontSize: "12px", color: "var(--text-subtle)" }}>
+                {subtitle}
+              </p>
+            )}
+          </div>
+          {extra && <div>{extra}</div>}
+        </div>
       )}
-      <div className="card-body">{children}</div>
+      <div style={{ padding: "18px" }}>{children}</div>
     </div>
   );
 }
