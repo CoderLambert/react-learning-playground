@@ -11,6 +11,7 @@ import { UseEffectCorrectUsageDemo } from "./UseEffectCorrectUsageDemo";
 import { NotNeedEffectDemo } from "./NotNeedEffectDemo";
 import { LifecycleOfReactiveEffectsDemo } from "./LifecycleOfReactiveEffectsDemo";
 import { RenderVsDomUpdateDemo } from "./RenderVsDomUpdateDemo";
+import { ReferenceEqualityDemo } from "./ReferenceEqualityDemo";
 
 // 源码原始字符串（Vite ?raw 原生支持）
 import propsBasicsRaw from "./PropsBasicsDemo.jsx?raw";
@@ -35,6 +36,7 @@ import useEffectCorrectUsageRaw from "./UseEffectCorrectUsageDemo.jsx?raw";
 import notNeedEffectRaw from "./NotNeedEffectDemo.jsx?raw";
 import lifecycleRaw from "./LifecycleOfReactiveEffectsDemo.jsx?raw";
 import renderVsDomUpdateRaw from "./RenderVsDomUpdateDemo.jsx?raw";
+import referenceEqualityRaw from "./ReferenceEqualityDemo.jsx?raw";
 
 // @demo-imports
 
@@ -193,6 +195,17 @@ export const demos = [
     Component: RenderVsDomUpdateDemo,
     files: [
       { name: "RenderVsDomUpdateDemo.jsx", code: renderVsDomUpdateRaw },
+    ],
+  },
+  {
+    id: "reference-equality",
+    label: "Reference Equality 引用身份",
+    category: "performance",
+    badge: "基础",
+    description: "用 Object.is 对比对象、数组、函数跨 Render 的 identity，理解 memo 与 Hook dependencies 的基础",
+    Component: ReferenceEqualityDemo,
+    files: [
+      { name: "ReferenceEqualityDemo.jsx", code: referenceEqualityRaw },
     ],
   },
   // @demo-entries
