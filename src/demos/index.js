@@ -13,6 +13,7 @@ import { LifecycleOfReactiveEffectsDemo } from "./LifecycleOfReactiveEffectsDemo
 import { ControlledFormDemo } from "./ControlledFormDemo";
 import { FormDataModelingDemo } from "./FormDataModelingDemo";
 import { FormActionDemo } from "./FormActionDemo";
+import { ActionStateFormStatusDemo } from "./ActionStateFormStatusDemo";
 
 // 源码原始字符串（Vite ?raw 原生支持）
 import propsBasicsRaw from "./PropsBasicsDemo.jsx?raw";
@@ -39,6 +40,7 @@ import lifecycleRaw from "./LifecycleOfReactiveEffectsDemo.jsx?raw";
 import controlledFormRaw from "./ControlledFormDemo.jsx?raw";
 import formDataModelingRaw from "./FormDataModelingDemo.jsx?raw";
 import formActionRaw from "./FormActionDemo.jsx?raw";
+import actionStateFormStatusRaw from "./ActionStateFormStatusDemo.jsx?raw";
 
 // @demo-imports
 
@@ -219,6 +221,17 @@ export const demos = [
     Component: FormActionDemo,
     files: [
       { name: "FormActionDemo.jsx", code: formActionRaw },
+    ],
+  },
+  {
+    id: "action-state-form-status",
+    label: "useActionState + useFormStatus",
+    category: "forms",
+    badge: "状态",
+    description: "Action 结果状态、previousState、isPending 与表单后代组件读取 pending/data",
+    Component: ActionStateFormStatusDemo,
+    files: [
+      { name: "ActionStateFormStatusDemo.jsx", code: actionStateFormStatusRaw },
     ],
   },
   // @demo-entries
