@@ -3,6 +3,7 @@ import { ChildrenSlotDemo } from "./ChildrenSlotDemo";
 import { MultiSlotsDemo } from "./MultiSlotsDemo";
 import { PropDrillingDemo } from "./PropDrillingDemo";
 import { StateDryDemo } from "./StateDryDemo";
+import { ControlledUncontrolledDemo } from "./ControlledUncontrolledDemo";
 import { LiftingStateUpDemo } from "./LiftingStateUpDemo";
 import { StateReducerDemo } from "./StateReducerDemo";
 import { UseReduceWithContextDemo } from "./UseReduceWithContextDemo";
@@ -11,21 +12,18 @@ import { UseEffectCorrectUsageDemo } from "./UseEffectCorrectUsageDemo";
 import { NotNeedEffectDemo } from "./NotNeedEffectDemo";
 import { LifecycleOfReactiveEffectsDemo } from "./LifecycleOfReactiveEffectsDemo";
 
-// 源码原始字符串（Vite ?raw 原生支持）
 import propsBasicsRaw from "./PropsBasicsDemo.jsx?raw";
 import userCardRaw from "../components/UserCard.jsx?raw";
 import productCardRaw from "../components/ProductCard.jsx?raw";
-
 import childrenSlotRaw from "./ChildrenSlotDemo.jsx?raw";
 import cardContainerRaw from "../components/CardContainer.jsx?raw";
 import modalLayoutRaw from "../components/ModalLayout.jsx?raw";
-
 import multiSlotsRaw from "./MultiSlotsDemo.jsx?raw";
 import multySlotsComponentRaw from "../components/MultySlots.jsx?raw";
 import pannelRaw from "../components/Pannel.jsx?raw";
-
 import propDrillingRaw from "./PropDrillingDemo.jsx?raw";
 import stateDryRaw from "./StateDryDemo.jsx?raw";
+import controlledUncontrolledRaw from "./ControlledUncontrolledDemo.jsx?raw";
 import liftingStateUpRaw from "./LiftingStateUpDemo.jsx?raw";
 import stateReducerRaw from "./StateReducerDemo.jsx?raw";
 import useReduceWithContextRaw from "./UseReduceWithContextDemo.jsx?raw";
@@ -89,20 +87,25 @@ export const demos = [
     badge: "解耦",
     description: "对比逐层透传 (Drilling)、组件组合 (Children) 与 Context API",
     Component: PropDrillingDemo,
-    files: [
-      { name: "PropDrillingDemo.jsx", code: propDrillingRaw },
-    ],
+    files: [{ name: "PropDrillingDemo.jsx", code: propDrillingRaw }],
   },
   {
     id: "state-dry",
-    label: "状态干净原则 (DRY)",
+    label: "State 结构设计与单一数据源",
     category: "state",
     badge: "核心",
-    description: "避免在 State 中冗余存储计算值，单一数据源与衍生状态实践",
+    description: "避免矛盾、冗余、重复与过深 State，通过派生计算和扁平化降低同步风险",
     Component: StateDryDemo,
-    files: [
-      { name: "StateDryDemo.jsx", code: stateDryRaw },
-    ],
+    files: [{ name: "StateDryDemo.jsx", code: stateDryRaw }],
+  },
+  {
+    id: "controlled-uncontrolled",
+    label: "受控与非受控组件",
+    category: "state",
+    badge: "所有权",
+    description: "从组件 API 理解 State ownership：value + onChange 与 defaultValue 的边界",
+    Component: ControlledUncontrolledDemo,
+    files: [{ name: "ControlledUncontrolledDemo.jsx", code: controlledUncontrolledRaw }],
   },
   {
     id: "lifting-state-up",
@@ -111,9 +114,7 @@ export const demos = [
     badge: "协同",
     description: "兄弟组件状态共享、受控输入与向最近共同祖先提升",
     Component: LiftingStateUpDemo,
-    files: [
-      { name: "LiftingStateUpDemo.jsx", code: liftingStateUpRaw },
-    ],
+    files: [{ name: "LiftingStateUpDemo.jsx", code: liftingStateUpRaw }],
   },
   {
     id: "state-reducer",
@@ -122,20 +123,16 @@ export const demos = [
     badge: "架构",
     description: "将更新逻辑集中为纯函数 Reducer，规范复杂状态与行为审计",
     Component: StateReducerDemo,
-    files: [
-      { name: "StateReducerDemo.jsx", code: stateReducerRaw },
-    ],
+    files: [{ name: "StateReducerDemo.jsx", code: stateReducerRaw }],
   },
   {
     id: "use-reduce-with-context",
     label: "Reducer + Context 双通道优化",
     category: "state",
     badge: "进阶",
-    description: "拆分 State 与 Dispatch 独立上下文，彻底规避无效重新渲染",
+    description: "拆分 State 与 Dispatch 上下文，缩小只消费 dispatch 节点的更新范围",
     Component: UseReduceWithContextDemo,
-    files: [
-      { name: "UseReduceWithContextDemo.jsx", code: useReduceWithContextRaw },
-    ],
+    files: [{ name: "UseReduceWithContextDemo.jsx", code: useReduceWithContextRaw }],
   },
   {
     id: "use-ref",
@@ -144,9 +141,7 @@ export const demos = [
     badge: "引用",
     description: "DOM 访问、可变值持久化与纯函数渲染期的引用安全守则",
     Component: UseRefDemo,
-    files: [
-      { name: "UseRefDemo.jsx", code: useRefRaw },
-    ],
+    files: [{ name: "UseRefDemo.jsx", code: useRefRaw }],
   },
   {
     id: "use-effect-correct-usage",
@@ -155,9 +150,7 @@ export const demos = [
     badge: "同步",
     description: "与外部系统同步、定时器与事件监听的清理函数 (Cleanup) 闭环",
     Component: UseEffectCorrectUsageDemo,
-    files: [
-      { name: "UseEffectCorrectUsageDemo.jsx", code: useEffectCorrectUsageRaw },
-    ],
+    files: [{ name: "UseEffectCorrectUsageDemo.jsx", code: useEffectCorrectUsageRaw }],
   },
   {
     id: "not-need-effect",
@@ -166,9 +159,7 @@ export const demos = [
     badge: "避坑",
     description: "官方避坑指南：衍生数据计算、用户事件触发与依赖同步陷阱",
     Component: NotNeedEffectDemo,
-    files: [
-      { name: "NotNeedEffectDemo.jsx", code: notNeedEffectRaw },
-    ],
+    files: [{ name: "NotNeedEffectDemo.jsx", code: notNeedEffectRaw }],
   },
   {
     id: "lifecycle-of-reactive-effects",
@@ -177,9 +168,7 @@ export const demos = [
     badge: "深度",
     description: "响应式值追踪、依赖闭环、使用 Ref 与函数式更新解耦依赖",
     Component: LifecycleOfReactiveEffectsDemo,
-    files: [
-      { name: "LifecycleOfReactiveEffectsDemo.jsx", code: lifecycleRaw },
-    ],
+    files: [{ name: "LifecycleOfReactiveEffectsDemo.jsx", code: lifecycleRaw }],
   },
   // @demo-entries
 ];
