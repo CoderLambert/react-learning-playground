@@ -5,6 +5,7 @@ import { PropDrillingDemo } from "./PropDrillingDemo";
 import { StateDryDemo } from "./StateDryDemo";
 import { ControlledUncontrolledDemo } from "./ControlledUncontrolledDemo";
 import { LiftingStateUpDemo } from "./LiftingStateUpDemo";
+import { PreservingResettingStateDemo } from "./PreservingResettingStateDemo";
 import { StateReducerDemo } from "./StateReducerDemo";
 import { UseReduceWithContextDemo } from "./UseReduceWithContextDemo";
 import { UseRefDemo } from "./UseRefDemo";
@@ -25,6 +26,7 @@ import propDrillingRaw from "./PropDrillingDemo.jsx?raw";
 import stateDryRaw from "./StateDryDemo.jsx?raw";
 import controlledUncontrolledRaw from "./ControlledUncontrolledDemo.jsx?raw";
 import liftingStateUpRaw from "./LiftingStateUpDemo.jsx?raw";
+import preservingResettingStateRaw from "./PreservingResettingStateDemo.jsx?raw";
 import stateReducerRaw from "./StateReducerDemo.jsx?raw";
 import useReduceWithContextRaw from "./UseReduceWithContextDemo.jsx?raw";
 import useRefRaw from "./UseRefDemo.jsx?raw";
@@ -115,6 +117,15 @@ export const demos = [
     description: "兄弟组件状态共享、受控输入与向最近共同祖先提升",
     Component: LiftingStateUpDemo,
     files: [{ name: "LiftingStateUpDemo.jsx", code: liftingStateUpRaw }],
+  },
+  {
+    id: "preserving-resetting-state",
+    label: "State 保留、重置与 key 身份",
+    category: "state",
+    badge: "身份",
+    description: "可视化 State 与 render tree 位置的绑定，以及 key 如何显式切换组件身份并重置子树",
+    Component: PreservingResettingStateDemo,
+    files: [{ name: "PreservingResettingStateDemo.jsx", code: preservingResettingStateRaw }],
   },
   {
     id: "state-reducer",
