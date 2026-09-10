@@ -14,6 +14,7 @@ import { RenderVsDomUpdateDemo } from "./RenderVsDomUpdateDemo";
 import { ReferenceEqualityDemo } from "./ReferenceEqualityDemo";
 import { ReactMemoDemo } from "./ReactMemoDemo";
 import { UseMemoDemo } from "./UseMemoDemo";
+import { UseCallbackDemo } from "./UseCallbackDemo";
 
 // 源码原始字符串（Vite ?raw 原生支持）
 import propsBasicsRaw from "./PropsBasicsDemo.jsx?raw";
@@ -41,6 +42,7 @@ import renderVsDomUpdateRaw from "./RenderVsDomUpdateDemo.jsx?raw";
 import referenceEqualityRaw from "./ReferenceEqualityDemo.jsx?raw";
 import reactMemoRaw from "./ReactMemoDemo.jsx?raw";
 import useMemoRaw from "./UseMemoDemo.jsx?raw";
+import useCallbackRaw from "./UseCallbackDemo.jsx?raw";
 
 // @demo-imports
 
@@ -232,6 +234,17 @@ export const demos = [
     Component: UseMemoDemo,
     files: [
       { name: "UseMemoDemo.jsx", code: useMemoRaw },
+    ],
+  },
+  {
+    id: "use-callback",
+    label: "useCallback 函数引用稳定",
+    category: "performance",
+    badge: "优化",
+    description: "联动 memo child 观察函数 prop identity，理解 useCallback 的命中条件、updater function 与真实边界",
+    Component: UseCallbackDemo,
+    files: [
+      { name: "UseCallbackDemo.jsx", code: useCallbackRaw },
     ],
   },
   // @demo-entries
