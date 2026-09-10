@@ -1,3 +1,4 @@
+import { ComponentJsxPureRenderDemo } from "./ComponentJsxPureRenderDemo";
 import { PropsBasicsDemo } from "./PropsBasicsDemo";
 import { ChildrenSlotDemo } from "./ChildrenSlotDemo";
 import { MultiSlotsDemo } from "./MultiSlotsDemo";
@@ -12,6 +13,7 @@ import { NotNeedEffectDemo } from "./NotNeedEffectDemo";
 import { LifecycleOfReactiveEffectsDemo } from "./LifecycleOfReactiveEffectsDemo";
 
 // 源码原始字符串（Vite ?raw 原生支持）
+import componentJsxPureRenderRaw from "./ComponentJsxPureRenderDemo.jsx?raw";
 import propsBasicsRaw from "./PropsBasicsDemo.jsx?raw";
 import userCardRaw from "../components/UserCard.jsx?raw";
 import productCardRaw from "../components/ProductCard.jsx?raw";
@@ -43,6 +45,17 @@ export const CATEGORIES = [
 ];
 
 export const demos = [
+  {
+    id: "component-jsx-pure-render",
+    label: "Component、JSX 与纯渲染",
+    category: "components",
+    badge: "基础",
+    description: "组件作为 UI 构建块、JSX 表达式、Fragment、组件树与纯渲染约束",
+    Component: ComponentJsxPureRenderDemo,
+    files: [
+      { name: "ComponentJsxPureRenderDemo.jsx", code: componentJsxPureRenderRaw },
+    ],
+  },
   {
     id: "props",
     label: "Props 基础与解构",
