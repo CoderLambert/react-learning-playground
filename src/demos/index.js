@@ -13,6 +13,7 @@ import { LifecycleOfReactiveEffectsDemo } from "./LifecycleOfReactiveEffectsDemo
 import { UrlStateDemo } from "./UrlStateDemo";
 import { NestedRoutesDemo } from "./NestedRoutesDemo";
 import { NavigationBoundaryDemo } from "./NavigationBoundaryDemo";
+import { RouteDataBoundaryDemo } from "./RouteDataBoundaryDemo";
 
 // 源码原始字符串（Vite ?raw 原生支持）
 import propsBasicsRaw from "./PropsBasicsDemo.jsx?raw";
@@ -39,6 +40,7 @@ import lifecycleRaw from "./LifecycleOfReactiveEffectsDemo.jsx?raw";
 import urlStateRaw from "./UrlStateDemo.jsx?raw";
 import nestedRoutesRaw from "./NestedRoutesDemo.jsx?raw";
 import navigationBoundaryRaw from "./NavigationBoundaryDemo.jsx?raw";
+import routeDataBoundaryRaw from "./RouteDataBoundaryDemo.jsx?raw";
 
 // @demo-imports
 
@@ -219,6 +221,17 @@ export const demos = [
     Component: NavigationBoundaryDemo,
     files: [
       { name: "NavigationBoundaryDemo.jsx", code: navigationBoundaryRaw },
+    ],
+  },
+  {
+    id: "route-data-boundary",
+    label: "Route Loader 数据边界",
+    category: "routing",
+    badge: "数据",
+    description: "可视化 route match → loader(params) → pending → loader data / nearest error boundary 的页面数据流程",
+    Component: RouteDataBoundaryDemo,
+    files: [
+      { name: "RouteDataBoundaryDemo.jsx", code: routeDataBoundaryRaw },
     ],
   },
   // @demo-entries
