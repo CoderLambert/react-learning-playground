@@ -15,6 +15,8 @@ import { ReferenceEqualityDemo } from "./ReferenceEqualityDemo";
 import { ReactMemoDemo } from "./ReactMemoDemo";
 import { UseMemoDemo } from "./UseMemoDemo";
 import { UseCallbackDemo } from "./UseCallbackDemo";
+import { ProfilerDemo } from "./ProfilerDemo";
+import { ReactCompilerDemo } from "./ReactCompilerDemo";
 
 // 源码原始字符串（Vite ?raw 原生支持）
 import propsBasicsRaw from "./PropsBasicsDemo.jsx?raw";
@@ -43,6 +45,8 @@ import referenceEqualityRaw from "./ReferenceEqualityDemo.jsx?raw";
 import reactMemoRaw from "./ReactMemoDemo.jsx?raw";
 import useMemoRaw from "./UseMemoDemo.jsx?raw";
 import useCallbackRaw from "./UseCallbackDemo.jsx?raw";
+import profilerRaw from "./ProfilerDemo.jsx?raw";
+import reactCompilerRaw from "./ReactCompilerDemo.jsx?raw";
 
 // @demo-imports
 
@@ -245,6 +249,28 @@ export const demos = [
     Component: UseCallbackDemo,
     files: [
       { name: "UseCallbackDemo.jsx", code: useCallbackRaw },
+    ],
+  },
+  {
+    id: "profiler",
+    label: "Profiler 先测量再优化",
+    category: "performance",
+    badge: "分析",
+    description: "用 Profiler actualDuration/baseDuration 观察 commit 成本，建立先定位瓶颈再优化的流程",
+    Component: ProfilerDemo,
+    files: [
+      { name: "ProfilerDemo.jsx", code: profilerRaw },
+    ],
+  },
+  {
+    id: "react-compiler",
+    label: "React Compiler 自动优化模型",
+    category: "performance",
+    badge: "Compiler",
+    description: "理解构建期自动 memoization、Rules of React、渐进采用与手工 memoization 的新边界",
+    Component: ReactCompilerDemo,
+    files: [
+      { name: "ReactCompilerDemo.jsx", code: reactCompilerRaw },
     ],
   },
   // @demo-entries
