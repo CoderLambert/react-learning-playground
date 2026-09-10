@@ -11,6 +11,8 @@ import { UseEffectCorrectUsageDemo } from "./UseEffectCorrectUsageDemo";
 import { NotNeedEffectDemo } from "./NotNeedEffectDemo";
 import { LifecycleOfReactiveEffectsDemo } from "./LifecycleOfReactiveEffectsDemo";
 import { ControlledFormDemo } from "./ControlledFormDemo";
+import { FormDataModelingDemo } from "./FormDataModelingDemo";
+import { FormActionDemo } from "./FormActionDemo";
 
 // 源码原始字符串（Vite ?raw 原生支持）
 import propsBasicsRaw from "./PropsBasicsDemo.jsx?raw";
@@ -35,6 +37,8 @@ import useEffectCorrectUsageRaw from "./UseEffectCorrectUsageDemo.jsx?raw";
 import notNeedEffectRaw from "./NotNeedEffectDemo.jsx?raw";
 import lifecycleRaw from "./LifecycleOfReactiveEffectsDemo.jsx?raw";
 import controlledFormRaw from "./ControlledFormDemo.jsx?raw";
+import formDataModelingRaw from "./FormDataModelingDemo.jsx?raw";
+import formActionRaw from "./FormActionDemo.jsx?raw";
 
 // @demo-imports
 
@@ -193,6 +197,28 @@ export const demos = [
     Component: ControlledFormDemo,
     files: [
       { name: "ControlledFormDemo.jsx", code: controlledFormRaw },
+    ],
+  },
+  {
+    id: "form-data-modeling",
+    label: "FormData 与提交状态建模",
+    category: "forms",
+    badge: "建模",
+    description: "非受控字段、提交时读取 FormData、get/getAll 与领域 payload 转换",
+    Component: FormDataModelingDemo,
+    files: [
+      { name: "FormDataModelingDemo.jsx", code: formDataModelingRaw },
+    ],
+  },
+  {
+    id: "form-action",
+    label: "React 19 form action / formAction",
+    category: "forms",
+    badge: "React 19",
+    description: "函数 action、按钮级 formAction、FormData 与异步 Action / Transition 提交模型",
+    Component: FormActionDemo,
+    files: [
+      { name: "FormActionDemo.jsx", code: formActionRaw },
     ],
   },
   // @demo-entries
