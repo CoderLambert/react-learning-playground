@@ -13,6 +13,7 @@ import { LifecycleOfReactiveEffectsDemo } from "./LifecycleOfReactiveEffectsDemo
 import { RenderVsDomUpdateDemo } from "./RenderVsDomUpdateDemo";
 import { ReferenceEqualityDemo } from "./ReferenceEqualityDemo";
 import { ReactMemoDemo } from "./ReactMemoDemo";
+import { UseMemoDemo } from "./UseMemoDemo";
 
 // 源码原始字符串（Vite ?raw 原生支持）
 import propsBasicsRaw from "./PropsBasicsDemo.jsx?raw";
@@ -39,6 +40,7 @@ import lifecycleRaw from "./LifecycleOfReactiveEffectsDemo.jsx?raw";
 import renderVsDomUpdateRaw from "./RenderVsDomUpdateDemo.jsx?raw";
 import referenceEqualityRaw from "./ReferenceEqualityDemo.jsx?raw";
 import reactMemoRaw from "./ReactMemoDemo.jsx?raw";
+import useMemoRaw from "./UseMemoDemo.jsx?raw";
 
 // @demo-imports
 
@@ -219,6 +221,17 @@ export const demos = [
     Component: ReactMemoDemo,
     files: [
       { name: "ReactMemoDemo.jsx", code: reactMemoRaw },
+    ],
+  },
+  {
+    id: "use-memo",
+    label: "useMemo 昂贵计算缓存",
+    category: "performance",
+    badge: "优化",
+    description: "对比缓存与直接计算，观察依赖变化、昂贵计算与稳定 identity 的真实使用边界",
+    Component: UseMemoDemo,
+    files: [
+      { name: "UseMemoDemo.jsx", code: useMemoRaw },
     ],
   },
   // @demo-entries
