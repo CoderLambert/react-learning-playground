@@ -10,6 +10,7 @@ import { UseRefDemo } from "./UseRefDemo";
 import { UseEffectCorrectUsageDemo } from "./UseEffectCorrectUsageDemo";
 import { NotNeedEffectDemo } from "./NotNeedEffectDemo";
 import { LifecycleOfReactiveEffectsDemo } from "./LifecycleOfReactiveEffectsDemo";
+import { ControlledFormDemo } from "./ControlledFormDemo";
 
 // 源码原始字符串（Vite ?raw 原生支持）
 import propsBasicsRaw from "./PropsBasicsDemo.jsx?raw";
@@ -33,6 +34,7 @@ import useRefRaw from "./UseRefDemo.jsx?raw";
 import useEffectCorrectUsageRaw from "./UseEffectCorrectUsageDemo.jsx?raw";
 import notNeedEffectRaw from "./NotNeedEffectDemo.jsx?raw";
 import lifecycleRaw from "./LifecycleOfReactiveEffectsDemo.jsx?raw";
+import controlledFormRaw from "./ControlledFormDemo.jsx?raw";
 
 // @demo-imports
 
@@ -40,6 +42,7 @@ export const CATEGORIES = [
   { id: "components", name: "组件通信与插槽", icon: "🧩" },
   { id: "state", name: "状态管理与演进", icon: "⚡" },
   { id: "effects", name: "Hooks 与副作用深度", icon: "🎣" },
+  { id: "forms", name: "Forms 与 React 19 Actions", icon: "📝" },
 ];
 
 export const demos = [
@@ -179,6 +182,17 @@ export const demos = [
     Component: LifecycleOfReactiveEffectsDemo,
     files: [
       { name: "LifecycleOfReactiveEffectsDemo.jsx", code: lifecycleRaw },
+    ],
+  },
+  {
+    id: "controlled-form",
+    label: "Controlled Form 与实时校验",
+    category: "forms",
+    badge: "基础",
+    description: "input / textarea / select / checkbox / radio 的受控数据流、派生校验与提交快照",
+    Component: ControlledFormDemo,
+    files: [
+      { name: "ControlledFormDemo.jsx", code: controlledFormRaw },
     ],
   },
   // @demo-entries
