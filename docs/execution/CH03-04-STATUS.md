@@ -10,10 +10,10 @@
 - [x] 03-02 Choosing State Structure — 已补充到 `StateDryDemo.jsx`
 - [x] 03-03 Controlled / Uncontrolled Component — 新增 `ControlledUncontrolledDemo.jsx`
 - [x] 03-04 Lifting State Up — 现有 `LiftingStateUpDemo.jsx`
-- [ ] 03-05 Preserving / Resetting State + key
+- [x] 03-05 Preserving / Resetting State + key — 新增 `PreservingResettingStateDemo.jsx`
 - [x] 03-06 useReducer — 现有 `StateReducerDemo.jsx`
-- [ ] 03-07 Context 更新传播模型 — 待复查/补充
-- [x] 03-08 Reducer + Context — 现有 `UseReduceWithContextDemo.jsx`，后续需要校正“拆分 Context 可彻底规避无效重新渲染”的过度表述
+- [x] 03-07 Context 更新传播模型 — 新增 `ContextPropagationDemo.jsx`
+- [x] 03-08 Reducer + Context — 现有 `UseReduceWithContextDemo.jsx`；导航描述已校正为“缩小只消费 dispatch 节点的更新范围”
 
 ### Chapter 04 — Ref、Effect 与 Escape Hatches
 
@@ -26,63 +26,64 @@
 - [ ] 04-07 Custom Hooks
 - [ ] 04-08 useLayoutEffect / useImperativeHandle / ref as prop
 
-## 本轮完成
+## 已完成内容
 
 ### 03-02 Choosing State Structure
 
-依据 React 官方 `Choosing the State Structure` 的五条原则补强现有 `StateDryDemo.jsx`：
-
-1. Group related state
-2. Avoid contradictions in state
-3. Avoid redundant state
-4. Avoid duplication in state
-5. Avoid deeply nested state
-
-实现内容：
-
-- 保留 `fullName` 渲染期派生实验，强调 redundant state 不需要 `Effect + setState` 同步。
-- 新增 `status = typing | sending | sent` 实验，对比多个 boolean 可能构造出“不可能状态”。
-- 保留并强化购物车 `selectedId` 方案，展示“保存实体 ID 而不是复制整条对象”的单一数据源模型。
-- 新增扁平化树数据实验，使用 `id -> entity` 映射 + `childIds`，演示只修改直接父关系即可删除节点关系。
-- 增加项目边界：不是要求所有 State 一律扁平化，而是在嵌套导致更新困难、重复数据和同步风险时再 normalization。
+依据 React 官方 `Choosing the State Structure` 五条原则补强 `StateDryDemo.jsx`：related / contradictory / redundant / duplicate / deeply nested state。保留派生数据、实体 ID 与 normalization 边界，避免为了教学把所有 State 机械扁平化。
 
 ### 03-03 Controlled / Uncontrolled Component
 
-新增 `src/demos/ControlledUncontrolledDemo.jsx`，以可复用 `Tabs` 组件而不是只用原生 input 解释 State ownership：
+新增 `ControlledUncontrolledDemo.jsx`，以 Tabs 组件 API 解释 State ownership：
 
-- 受控模式：`value + onChange`，父组件持有唯一事实来源。
-- 非受控模式：`defaultValue` 仅提供初始值，组件内部 `internalValue` 持有后续状态。
-- 可视化 `Parent state -> value -> Tabs -> onChange -> Parent setter -> next render` 数据流。
-- 增加真实项目选择边界：URL 同步、跨组件协调更适合 controlled；纯局部 UI 状态可以 uncontrolled。
-- 明确一次挂载期间不应随意在 controlled / uncontrolled 两种所有权模式之间切换。
-- 已注册到 `src/demos/index.js`，并注册 `ControlledUncontrolledDemo.jsx?raw` 供 CodeViewer 查看。
+- controlled：`value + onChange`，父组件持有唯一事实来源；
+- uncontrolled：`defaultValue` 仅负责初始化，后续由组件内部 State 持有；
+- URL 同步、跨组件协调等更适合 controlled；纯局部 UI 可用 uncontrolled；
+- 一次挂载期间不应随意切换 controlled / uncontrolled ownership 模式。
 
-同时校正了 `Reducer + Context` 在 `src/demos/index.js` 中“彻底规避无效重新渲染”的过度描述，改为更准确的“缩小只消费 dispatch 节点的更新范围”。
+### 03-05 Preserving / Resetting State + key
 
-## 官方依据
+新增 `PreservingResettingStateDemo.jsx`，使用聊天草稿场景直接观察组件身份：
 
-- React `Choosing the State Structure`
-- React `Sharing State Between Components`
-- React `Preserving and Resetting State`（下一任务）
+- 相同父级位置 + 相同 `Chat` 类型且没有变化的 key：切换 contact prop 后，`draft` State 默认保留；
+- `key={contact.id}` 改变时：React 将其视为不同组件身份，旧子树卸载，新子树挂载，内部 `draft` reset；
+- 强调 key 不只是列表 warning 工具，也不应使用随机 key 来“强制刷新”，否则会制造无意义 remount 与 State 丢失。
 
-## 验证记录
+该结论依据 React 官方 `Preserving and Resetting State`：State 与 render tree 中的位置关联，同位置同类型默认保留；改变 key 可以显式重置子树。
 
-当前 Chapter 03 尚未完成，因此章节 Gate 尚未执行。
+### 03-07 Context 更新传播模型
 
-- `npm run lint`: PENDING（Chapter 03 Gate）
-- `npm run build`: PENDING（Chapter 03 Gate）
-- `npm run preview`: PENDING（Chapter 03 Gate）
-- Console / focus mode / continuous mode / mobile smoke: PENDING（Chapter 03 Gate）
+新增 `ContextPropagationDemo.jsx`：
 
-尝试在当前执行环境通过 `git clone` 获取远端分支用于本地编译验证，但环境无法解析 `github.com`，因此本轮不能伪造本地 build 结果。新增文件已做静态代码审查；最终语法、ESLint、Vite 编译和运行时验证仍必须在 Chapter 03 Gate 实际执行并记录。
+- `useContext` 不仅取值，也建立对最近 Provider value 的订阅；
+- Provider value 改变后，读取该 Context 的后代获得最新值并重新渲染；
+- React 使用 `Object.is` 比较新旧 Context value；
+- `memo` 不会阻止 Context consumer 收到新的 Context value；
+- 不读取该 Context 的 memoized 节点可以避开与 Context 无关的父级更新；
+- 教学 render 计数显式记录实验预期路径，并明确声明不能代替 React DevTools Profiler。
+
+该结论依据 React 官方 `useContext` Reference。
+
+## Demo / CodeViewer 注册
+
+以下新增 Demo 已注册到 `src/demos/index.js`，并包含 `?raw` 源码：
+
+- `PreservingResettingStateDemo.jsx`
+- `ContextPropagationDemo.jsx`
+
+## Chapter 03 Gate
+
+Chapter 03 内容任务已覆盖，但**尚未标记章节完成**，因为质量门禁必须得到真实执行结果：
+
+- `npm run lint`: PENDING
+- `npm run build`: PENDING
+- `npm run preview`: PENDING
+- Console / focus mode / continuous mode / mobile smoke: PENDING
+
+当前 GitHub connector 可持续安全写入分支文件，但本执行环境没有可用仓库工作树来运行 npm 脚本。此前直接 `git clone` 也因执行环境 DNS 无法解析 `github.com` 失败，因此不能伪造 Gate 结果。在获得可执行工作树或可替代 CI 证据前，Chapter 03 保持“内容完成 / Gate 未完成”。
 
 ## 下一任务
 
-`03-05 Preserving / Resetting State + key`
+若后续运行环境可以执行仓库命令，优先完成 Chapter 03 Gate；Gate 通过后再进入 Chapter 04。
 
-目标：将 React “State 与 render tree 中的位置关联”可视化。建议使用聊天草稿场景：
-
-- same position + same component type -> State preserved
-- 切换联系人但组件仍位于同一位置 -> 草稿可能继续保留
-- 使用不同 `key` 标识联系人 -> React 视为不同组件身份并 reset State
-- 解释 `key` 不只是列表 warning，而是可以参与 State identity
+若仍无法执行 Gate，则不跨越质量门禁修改 Chapter 04，以遵守“每章通过 lint + build + preview 才进入下一章”的规则。
