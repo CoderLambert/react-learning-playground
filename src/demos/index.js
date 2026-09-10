@@ -11,6 +11,7 @@ import { UseEffectCorrectUsageDemo } from "./UseEffectCorrectUsageDemo";
 import { NotNeedEffectDemo } from "./NotNeedEffectDemo";
 import { LifecycleOfReactiveEffectsDemo } from "./LifecycleOfReactiveEffectsDemo";
 import { UrlStateDemo } from "./UrlStateDemo";
+import { NestedRoutesDemo } from "./NestedRoutesDemo";
 
 // 源码原始字符串（Vite ?raw 原生支持）
 import propsBasicsRaw from "./PropsBasicsDemo.jsx?raw";
@@ -35,6 +36,7 @@ import useEffectCorrectUsageRaw from "./UseEffectCorrectUsageDemo.jsx?raw";
 import notNeedEffectRaw from "./NotNeedEffectDemo.jsx?raw";
 import lifecycleRaw from "./LifecycleOfReactiveEffectsDemo.jsx?raw";
 import urlStateRaw from "./UrlStateDemo.jsx?raw";
+import nestedRoutesRaw from "./NestedRoutesDemo.jsx?raw";
 
 // @demo-imports
 
@@ -193,6 +195,17 @@ export const demos = [
     Component: UrlStateDemo,
     files: [
       { name: "UrlStateDemo.jsx", code: urlStateRaw },
+    ],
+  },
+  {
+    id: "nested-routes",
+    label: "Nested Routes 与 Outlet",
+    category: "routing",
+    badge: "架构",
+    description: "可视化父子 Route 匹配链、Outlet 插槽、Index Route 与无 path Layout Route 的职责边界",
+    Component: NestedRoutesDemo,
+    files: [
+      { name: "NestedRoutesDemo.jsx", code: nestedRoutesRaw },
     ],
   },
   // @demo-entries
