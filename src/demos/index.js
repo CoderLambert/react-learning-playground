@@ -10,6 +10,7 @@ import { UseRefDemo } from "./UseRefDemo";
 import { UseEffectCorrectUsageDemo } from "./UseEffectCorrectUsageDemo";
 import { NotNeedEffectDemo } from "./NotNeedEffectDemo";
 import { LifecycleOfReactiveEffectsDemo } from "./LifecycleOfReactiveEffectsDemo";
+import { CustomHooksDemo } from "./CustomHooksDemo";
 
 // 源码原始字符串（Vite ?raw 原生支持）
 import propsBasicsRaw from "./PropsBasicsDemo.jsx?raw";
@@ -33,6 +34,9 @@ import useRefRaw from "./UseRefDemo.jsx?raw";
 import useEffectCorrectUsageRaw from "./UseEffectCorrectUsageDemo.jsx?raw";
 import notNeedEffectRaw from "./NotNeedEffectDemo.jsx?raw";
 import lifecycleRaw from "./LifecycleOfReactiveEffectsDemo.jsx?raw";
+import customHooksRaw from "./CustomHooksDemo.jsx?raw";
+import useCounterRaw from "../hooks/useCounter.js?raw";
+import useDebouncedValueRaw from "../hooks/useDebouncedValue.js?raw";
 
 // @demo-imports
 
@@ -179,6 +183,19 @@ export const demos = [
     Component: LifecycleOfReactiveEffectsDemo,
     files: [
       { name: "LifecycleOfReactiveEffectsDemo.jsx", code: lifecycleRaw },
+    ],
+  },
+  {
+    id: "custom-hooks",
+    label: "自定义 Hook：逻辑复用与抽象",
+    category: "effects",
+    badge: "复用",
+    description: "复用状态逻辑而非共享 State，掌握自定义 Hook 的抽取边界、组合方式与副作用封装",
+    Component: CustomHooksDemo,
+    files: [
+      { name: "CustomHooksDemo.jsx", code: customHooksRaw },
+      { name: "useCounter.js", code: useCounterRaw },
+      { name: "useDebouncedValue.js", code: useDebouncedValueRaw },
     ],
   },
   // @demo-entries
