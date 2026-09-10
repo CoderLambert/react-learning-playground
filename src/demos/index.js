@@ -14,6 +14,7 @@ import { ControlledFormDemo } from "./ControlledFormDemo";
 import { FormDataModelingDemo } from "./FormDataModelingDemo";
 import { FormActionDemo } from "./FormActionDemo";
 import { ActionStateFormStatusDemo } from "./ActionStateFormStatusDemo";
+import { OptimisticUpdateDemo } from "./OptimisticUpdateDemo";
 
 // 源码原始字符串（Vite ?raw 原生支持）
 import propsBasicsRaw from "./PropsBasicsDemo.jsx?raw";
@@ -41,6 +42,7 @@ import controlledFormRaw from "./ControlledFormDemo.jsx?raw";
 import formDataModelingRaw from "./FormDataModelingDemo.jsx?raw";
 import formActionRaw from "./FormActionDemo.jsx?raw";
 import actionStateFormStatusRaw from "./ActionStateFormStatusDemo.jsx?raw";
+import optimisticUpdateRaw from "./OptimisticUpdateDemo.jsx?raw";
 
 // @demo-imports
 
@@ -232,6 +234,17 @@ export const demos = [
     Component: ActionStateFormStatusDemo,
     files: [
       { name: "ActionStateFormStatusDemo.jsx", code: actionStateFormStatusRaw },
+    ],
+  },
+  {
+    id: "optimistic-update",
+    label: "useOptimistic 成功收敛与失败回退",
+    category: "forms",
+    badge: "Optimistic",
+    description: "Action 期间的临时 optimistic state、服务器成功确认与失败自动回退",
+    Component: OptimisticUpdateDemo,
+    files: [
+      { name: "OptimisticUpdateDemo.jsx", code: optimisticUpdateRaw },
     ],
   },
   // @demo-entries
