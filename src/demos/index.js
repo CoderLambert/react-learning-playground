@@ -2,6 +2,8 @@ import { ComponentJsxPureRenderDemo } from "./ComponentJsxPureRenderDemo";
 import { PropsBasicsDemo } from "./PropsBasicsDemo";
 import { ChildrenSlotDemo } from "./ChildrenSlotDemo";
 import { MultiSlotsDemo } from "./MultiSlotsDemo";
+import { ConditionalRenderingDemo } from "./ConditionalRenderingDemo";
+import { RenderingListsKeyDemo } from "./RenderingListsKeyDemo";
 import { PropDrillingDemo } from "./PropDrillingDemo";
 import { StateDryDemo } from "./StateDryDemo";
 import { LiftingStateUpDemo } from "./LiftingStateUpDemo";
@@ -26,6 +28,8 @@ import multiSlotsRaw from "./MultiSlotsDemo.jsx?raw";
 import multySlotsComponentRaw from "../components/MultySlots.jsx?raw";
 import pannelRaw from "../components/Pannel.jsx?raw";
 
+import conditionalRenderingRaw from "./ConditionalRenderingDemo.jsx?raw";
+import renderingListsKeyRaw from "./RenderingListsKeyDemo.jsx?raw";
 import propDrillingRaw from "./PropDrillingDemo.jsx?raw";
 import stateDryRaw from "./StateDryDemo.jsx?raw";
 import liftingStateUpRaw from "./LiftingStateUpDemo.jsx?raw";
@@ -93,6 +97,28 @@ export const demos = [
       { name: "MultiSlotsDemo.jsx", code: multiSlotsRaw },
       { name: "ProductionModal.jsx", code: multySlotsComponentRaw },
       { name: "Pannel.jsx", code: pannelRaw },
+    ],
+  },
+  {
+    id: "conditional-rendering",
+    label: "条件渲染与业务四态",
+    category: "components",
+    badge: "分支",
+    description: "用 if、early return、三元表达式与 && 将 loading/empty/error/success 清晰映射为 UI",
+    Component: ConditionalRenderingDemo,
+    files: [
+      { name: "ConditionalRenderingDemo.jsx", code: conditionalRenderingRaw },
+    ],
+  },
+  {
+    id: "rendering-lists-key",
+    label: "列表渲染与 key 身份",
+    category: "components",
+    badge: "核心",
+    description: "通过可编辑列表排序实验理解 stable key、index key 与组件 State 身份匹配",
+    Component: RenderingListsKeyDemo,
+    files: [
+      { name: "RenderingListsKeyDemo.jsx", code: renderingListsKeyRaw },
     ],
   },
   {
