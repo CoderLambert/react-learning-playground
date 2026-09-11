@@ -51,20 +51,25 @@ This task intentionally does **not** edit `package.json` or introduce a competin
 2. each `@ts-expect-error` line continues to produce a real type error;
 3. an obsolete `@ts-expect-error` fails the typecheck so examples cannot silently drift.
 
-Until that shared gate exists, compile-time validation is **PENDING**, not claimed as PASS.
+The current `automation/content-contract-infra` branch has added `test:content`, but as of this run its `package.json` still has no `typescript` dependency and no `typecheck:samples` script. Compile-time sample validation therefore remains **PENDING** rather than silently being inferred from build success.
 
 ## Factual baseline
 
-Checked against current official React TypeScript guidance and React ref lifecycle documentation, plus TypeScript's official `@ts-expect-error` semantics.
+Checked against current official React TypeScript guidance and React ref lifecycle documentation, plus TypeScript's official `@ts-expect-error` semantics. The repository currently uses React `19.2.x` / `@types/react` `19.2.x`; the lesson deliberately prefers `ReactNode`, `ReactElement`, concrete DOM event/ref types, and caller-visible generic relationships instead of presenting `JSX.Element` as a general business-API type.
 
 ## Validation status
 
 - Repository/source inspection: PASS
 - Shared files (`package.json`, teaching infrastructure): unchanged by this task
 - Browser Demo/Note/Source contract review: PASS by inspection
+- `react-boundaries.tsx` `@ts-expect-error` placement review: PASS by inspection; each directive is directly attached to the expression intended to fail
+- `generic-patterns.tsx` generic relationship review: PASS by inspection; the invalid `Product → User` relationships are isolated behind `@ts-expect-error`
+- Exact branch-head `React Learning Verify` for `d2e3161d6dca542009a314d672ef83c39d9fb13c`: PASS
+- Exact branch-head `Workbench Integration Verify` for `d2e3161d6dca542009a314d672ef83c39d9fb13c`: PASS
 - `tsc` sample gate: PENDING shared infrastructure
-- Root lint/build/E2E: not executed by this connector-only run; no PASS claimed
+
+Passing root workflows are useful regression evidence for the runtime lesson, but they are **not** evidence that the `.tsx` sample contracts compile, because those workflows do not yet run the missing sample typecheck gate.
 
 ## Next
 
-After the shared typecheck gate lands, inspect its exact CI result. If green, perform one follow-up pass for any diagnostics revealed by strict compiler settings and then keep this PR focused on the lesson/sample scope.
+Wait for the content-infrastructure owner to land a real sample typecheck gate on its branch. Then inspect the exact compiler diagnostics under that gate, fix only task-owned sample issues if any, update this status with exact evidence, and keep this PR focused on the lesson/sample scope.
