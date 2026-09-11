@@ -33,7 +33,7 @@ test.describe("application shell", () => {
 
   test("searches titles, category names, and keywords and restores content when cleared", async ({ page }) => {
     await loadApp(page);
-    const search = page.getByRole("textbox", { name: "搜索知识点或关键词" });
+    const search = page.getByRole("searchbox", { name: "搜索知识点或关键词" });
     const navItems = page.locator("button.workbench-navigation-item");
     const fullCount = await navItems.count();
 
