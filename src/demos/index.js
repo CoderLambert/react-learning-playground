@@ -6,8 +6,11 @@ import { ConditionalRenderingDemo } from "./ConditionalRenderingDemo";
 import { RenderingListsKeyDemo } from "./RenderingListsKeyDemo";
 import { PropDrillingDemo } from "./PropDrillingDemo";
 import { StateDryDemo } from "./StateDryDemo";
+import { ControlledUncontrolledDemo } from "./ControlledUncontrolledDemo";
 import { LiftingStateUpDemo } from "./LiftingStateUpDemo";
+import { PreservingResettingStateDemo } from "./PreservingResettingStateDemo";
 import { StateReducerDemo } from "./StateReducerDemo";
+import { ContextPropagationDemo } from "./ContextPropagationDemo";
 import { UseReduceWithContextDemo } from "./UseReduceWithContextDemo";
 import { UseRefDemo } from "./UseRefDemo";
 import { UseEffectCorrectUsageDemo } from "./UseEffectCorrectUsageDemo";
@@ -39,8 +42,11 @@ import conditionalRenderingRaw from "./ConditionalRenderingDemo.jsx?raw";
 import renderingListsKeyRaw from "./RenderingListsKeyDemo.jsx?raw";
 import propDrillingRaw from "./PropDrillingDemo.jsx?raw";
 import stateDryRaw from "./StateDryDemo.jsx?raw";
+import controlledUncontrolledRaw from "./ControlledUncontrolledDemo.jsx?raw";
 import liftingStateUpRaw from "./LiftingStateUpDemo.jsx?raw";
+import preservingResettingStateRaw from "./PreservingResettingStateDemo.jsx?raw";
 import stateReducerRaw from "./StateReducerDemo.jsx?raw";
+import contextPropagationRaw from "./ContextPropagationDemo.jsx?raw";
 import useReduceWithContextRaw from "./UseReduceWithContextDemo.jsx?raw";
 import useRefRaw from "./UseRefDemo.jsx?raw";
 import useEffectCorrectUsageRaw from "./UseEffectCorrectUsageDemo.jsx?raw";
@@ -71,9 +77,7 @@ export const demos = [
     badge: "基础",
     description: "组件作为 UI 构建块、JSX 表达式、Fragment、组件树与纯渲染约束",
     Component: ComponentJsxPureRenderDemo,
-    files: [
-      { name: "ComponentJsxPureRenderDemo.jsx", code: componentJsxPureRenderRaw },
-    ],
+    files: [{ name: "ComponentJsxPureRenderDemo.jsx", code: componentJsxPureRenderRaw }],
   },
   {
     id: "props",
@@ -121,9 +125,7 @@ export const demos = [
     badge: "分支",
     description: "用 if、early return、三元表达式与 && 将 loading/empty/error/success 清晰映射为 UI",
     Component: ConditionalRenderingDemo,
-    files: [
-      { name: "ConditionalRenderingDemo.jsx", code: conditionalRenderingRaw },
-    ],
+    files: [{ name: "ConditionalRenderingDemo.jsx", code: conditionalRenderingRaw }],
   },
   {
     id: "rendering-lists-key",
@@ -132,9 +134,7 @@ export const demos = [
     badge: "核心",
     description: "通过可编辑列表排序实验理解 stable key、index key 与组件 State 身份匹配",
     Component: RenderingListsKeyDemo,
-    files: [
-      { name: "RenderingListsKeyDemo.jsx", code: renderingListsKeyRaw },
-    ],
+    files: [{ name: "RenderingListsKeyDemo.jsx", code: renderingListsKeyRaw }],
   },
   {
     id: "prop-drilling",
@@ -143,20 +143,25 @@ export const demos = [
     badge: "解耦",
     description: "对比逐层透传 (Drilling)、组件组合 (Children) 与 Context API",
     Component: PropDrillingDemo,
-    files: [
-      { name: "PropDrillingDemo.jsx", code: propDrillingRaw },
-    ],
+    files: [{ name: "PropDrillingDemo.jsx", code: propDrillingRaw }],
   },
   {
     id: "state-dry",
-    label: "状态干净原则 (DRY)",
+    label: "State 结构设计与单一数据源",
     category: "state",
     badge: "核心",
-    description: "避免在 State 中冗余存储计算值，单一数据源与衍生状态实践",
+    description: "避免矛盾、冗余、重复与过深 State，通过派生计算和扁平化降低同步风险",
     Component: StateDryDemo,
-    files: [
-      { name: "StateDryDemo.jsx", code: stateDryRaw },
-    ],
+    files: [{ name: "StateDryDemo.jsx", code: stateDryRaw }],
+  },
+  {
+    id: "controlled-uncontrolled",
+    label: "受控与非受控组件",
+    category: "state",
+    badge: "所有权",
+    description: "从组件 API 理解 State ownership：value + onChange 与 defaultValue 的边界",
+    Component: ControlledUncontrolledDemo,
+    files: [{ name: "ControlledUncontrolledDemo.jsx", code: controlledUncontrolledRaw }],
   },
   {
     id: "lifting-state-up",
@@ -165,9 +170,16 @@ export const demos = [
     badge: "协同",
     description: "兄弟组件状态共享、受控输入与向最近共同祖先提升",
     Component: LiftingStateUpDemo,
-    files: [
-      { name: "LiftingStateUpDemo.jsx", code: liftingStateUpRaw },
-    ],
+    files: [{ name: "LiftingStateUpDemo.jsx", code: liftingStateUpRaw }],
+  },
+  {
+    id: "preserving-resetting-state",
+    label: "State 保留、重置与 key 身份",
+    category: "state",
+    badge: "身份",
+    description: "可视化 State 与 render tree 位置的绑定，以及 key 如何显式切换组件身份并重置子树",
+    Component: PreservingResettingStateDemo,
+    files: [{ name: "PreservingResettingStateDemo.jsx", code: preservingResettingStateRaw }],
   },
   {
     id: "state-reducer",
@@ -176,20 +188,25 @@ export const demos = [
     badge: "架构",
     description: "将更新逻辑集中为纯函数 Reducer，规范复杂状态与行为审计",
     Component: StateReducerDemo,
-    files: [
-      { name: "StateReducerDemo.jsx", code: stateReducerRaw },
-    ],
+    files: [{ name: "StateReducerDemo.jsx", code: stateReducerRaw }],
+  },
+  {
+    id: "context-propagation",
+    label: "Context 更新传播模型",
+    category: "state",
+    badge: "订阅",
+    description: "可视化 useContext 订阅、Provider value 更新传播，以及 memo 与 Context 的真实边界",
+    Component: ContextPropagationDemo,
+    files: [{ name: "ContextPropagationDemo.jsx", code: contextPropagationRaw }],
   },
   {
     id: "use-reduce-with-context",
     label: "Reducer + Context 双通道优化",
     category: "state",
     badge: "进阶",
-    description: "拆分 State 与 Dispatch 独立上下文，缩小只消费 dispatch 节点的更新范围",
+    description: "拆分 State 与 Dispatch 上下文，缩小只消费 dispatch 节点的更新范围",
     Component: UseReduceWithContextDemo,
-    files: [
-      { name: "UseReduceWithContextDemo.jsx", code: useReduceWithContextRaw },
-    ],
+    files: [{ name: "UseReduceWithContextDemo.jsx", code: useReduceWithContextRaw }],
   },
   {
     id: "use-ref",
@@ -198,9 +215,7 @@ export const demos = [
     badge: "引用",
     description: "DOM 访问、可变值持久化与纯函数渲染期的引用安全守则",
     Component: UseRefDemo,
-    files: [
-      { name: "UseRefDemo.jsx", code: useRefRaw },
-    ],
+    files: [{ name: "UseRefDemo.jsx", code: useRefRaw }],
   },
   {
     id: "use-effect-correct-usage",
@@ -209,9 +224,7 @@ export const demos = [
     badge: "同步",
     description: "与外部系统同步、定时器与事件监听的清理函数 (Cleanup) 闭环",
     Component: UseEffectCorrectUsageDemo,
-    files: [
-      { name: "UseEffectCorrectUsageDemo.jsx", code: useEffectCorrectUsageRaw },
-    ],
+    files: [{ name: "UseEffectCorrectUsageDemo.jsx", code: useEffectCorrectUsageRaw }],
   },
   {
     id: "not-need-effect",
@@ -220,9 +233,7 @@ export const demos = [
     badge: "避坑",
     description: "官方避坑指南：衍生数据计算、用户事件触发与依赖同步陷阱",
     Component: NotNeedEffectDemo,
-    files: [
-      { name: "NotNeedEffectDemo.jsx", code: notNeedEffectRaw },
-    ],
+    files: [{ name: "NotNeedEffectDemo.jsx", code: notNeedEffectRaw }],
   },
   {
     id: "lifecycle-of-reactive-effects",
@@ -231,9 +242,7 @@ export const demos = [
     badge: "深度",
     description: "响应式值追踪、依赖闭环、使用 Ref 与函数式更新解耦依赖",
     Component: LifecycleOfReactiveEffectsDemo,
-    files: [
-      { name: "LifecycleOfReactiveEffectsDemo.jsx", code: lifecycleRaw },
-    ],
+    files: [{ name: "LifecycleOfReactiveEffectsDemo.jsx", code: lifecycleRaw }],
   },
   {
     id: "render-vs-dom-update",
@@ -242,9 +251,7 @@ export const demos = [
     badge: "核心",
     description: "用 MutationObserver 对照 Render 与 Commit，建立先测量再优化的性能心智模型",
     Component: RenderVsDomUpdateDemo,
-    files: [
-      { name: "RenderVsDomUpdateDemo.jsx", code: renderVsDomUpdateRaw },
-    ],
+    files: [{ name: "RenderVsDomUpdateDemo.jsx", code: renderVsDomUpdateRaw }],
   },
   {
     id: "reference-equality",
@@ -253,9 +260,7 @@ export const demos = [
     badge: "基础",
     description: "用 Object.is 对比对象、数组、函数跨 Render 的 identity，理解 memo 与 Hook dependencies 的基础",
     Component: ReferenceEqualityDemo,
-    files: [
-      { name: "ReferenceEqualityDemo.jsx", code: referenceEqualityRaw },
-    ],
+    files: [{ name: "ReferenceEqualityDemo.jsx", code: referenceEqualityRaw }],
   },
   {
     id: "react-memo",
@@ -264,9 +269,7 @@ export const demos = [
     badge: "优化",
     description: "对比 primitive、新对象与稳定对象 props，观察 memo 的命中条件和 identity 陷阱",
     Component: ReactMemoDemo,
-    files: [
-      { name: "ReactMemoDemo.jsx", code: reactMemoRaw },
-    ],
+    files: [{ name: "ReactMemoDemo.jsx", code: reactMemoRaw }],
   },
   {
     id: "use-memo",
@@ -275,9 +278,7 @@ export const demos = [
     badge: "优化",
     description: "对比缓存与直接计算，观察依赖变化、昂贵计算与稳定 identity 的真实使用边界",
     Component: UseMemoDemo,
-    files: [
-      { name: "UseMemoDemo.jsx", code: useMemoRaw },
-    ],
+    files: [{ name: "UseMemoDemo.jsx", code: useMemoRaw }],
   },
   {
     id: "use-callback",
@@ -286,9 +287,7 @@ export const demos = [
     badge: "优化",
     description: "联动 memo child 观察函数 prop identity，理解 useCallback 的命中条件、updater function 与真实边界",
     Component: UseCallbackDemo,
-    files: [
-      { name: "UseCallbackDemo.jsx", code: useCallbackRaw },
-    ],
+    files: [{ name: "UseCallbackDemo.jsx", code: useCallbackRaw }],
   },
   {
     id: "profiler",
@@ -297,9 +296,7 @@ export const demos = [
     badge: "分析",
     description: "用 Profiler actualDuration/baseDuration 观察 commit 成本，建立先定位瓶颈再优化的流程",
     Component: ProfilerDemo,
-    files: [
-      { name: "ProfilerDemo.jsx", code: profilerRaw },
-    ],
+    files: [{ name: "ProfilerDemo.jsx", code: profilerRaw }],
   },
   {
     id: "react-compiler",
@@ -308,9 +305,7 @@ export const demos = [
     badge: "Compiler",
     description: "理解构建期自动 memoization、Rules of React、渐进采用与手工 memoization 的新边界",
     Component: ReactCompilerDemo,
-    files: [
-      { name: "ReactCompilerDemo.jsx", code: reactCompilerRaw },
-    ],
+    files: [{ name: "ReactCompilerDemo.jsx", code: reactCompilerRaw }],
   },
   // @demo-entries
 ];
