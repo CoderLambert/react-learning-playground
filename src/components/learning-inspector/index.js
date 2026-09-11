@@ -16,4 +16,6 @@ export const LEARNING_INSPECTOR_CONTRACT = Object.freeze({
   ]),
 });
 
+export { LearningInspector, clampInspectorWidth } from "./LearningInspector";
+export { useInspectorScrollMemory } from "./useInspectorScrollMemory";
 export { DEFAULT_INSPECTOR_STATE, INSPECTOR_TABS };
