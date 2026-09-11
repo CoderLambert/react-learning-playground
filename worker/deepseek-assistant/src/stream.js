@@ -1,5 +1,4 @@
 const encoder = new TextEncoder();
-const decoder = new TextDecoder();
 
 export function encodeEvent(event) {
   return encoder.encode(`${JSON.stringify(event)}\n`);
@@ -23,47 +22,79 @@ export function parseDeepSeekChunk(line) {
 export function normalizeDeepSeekStream(upstreamBody) {
   if (!upstreamBody) throw new Error("DeepSeek response missing body");
 
+  let reader = null;
+  let cancelled = false;
+
   return new ReadableStream({
     async start(controller) {
-      controller.enqueue(encodeEvent({ type: "start" }));
-      const reader = upstreamBody.getReader();
+      const decoder = new TextDecoder();
+      reader = upstreamBody.getReader();
       let buffer = "";
       let finishReason = null;
       let usage = null;
 
+      const processLine = (line) => {
+        if (!line.trim()) return false;
+        const chunk = parseDeepSeekChunk(line.replace(/\r$/, ""));
+        if (!chunk) return false;
+        if (chunk.done) return true;
+        if (chunk.delta && !cancelled) {
+          controller.enqueue(encodeEvent({ type: "delta", text: chunk.delta }));
+        }
+        if (chunk.finishReason) finishReason = chunk.finishReason;
+        if (chunk.usage) usage = chunk.usage;
+        return false;
+      };
+
       try {
-        while (true) {
+        controller.enqueue(encodeEvent({ type: "start" }));
+
+        while (!cancelled) {
           const { done, value } = await reader.read();
           if (done) break;
           buffer += decoder.decode(value, { stream: true });
+
           let boundary;
           while ((boundary = buffer.indexOf("\n")) >= 0) {
-            const line = buffer.slice(0, boundary).replace(/\r$/, "");
+            const line = buffer.slice(0, boundary);
             buffer = buffer.slice(boundary + 1);
-            if (!line.trim()) continue;
-            const chunk = parseDeepSeekChunk(line);
-            if (!chunk) continue;
-            if (chunk.done) {
-              controller.enqueue(encodeEvent({ type: "done", finishReason, usage }));
-              controller.close();
+            if (processLine(line)) {
+              if (!cancelled) {
+                controller.enqueue(encodeEvent({ type: "done", finishReason, usage }));
+                controller.close();
+              }
               return;
             }
-            if (chunk.delta) controller.enqueue(encodeEvent({ type: "delta", text: chunk.delta }));
-            if (chunk.finishReason) finishReason = chunk.finishReason;
-            if (chunk.usage) usage = chunk.usage;
           }
         }
+
+        if (cancelled) return;
+
+        buffer += decoder.decode();
+        if (buffer.trim() && processLine(buffer)) {
+          controller.enqueue(encodeEvent({ type: "done", finishReason, usage }));
+          controller.close();
+          return;
+        }
+
         controller.enqueue(encodeEvent({ type: "done", finishReason, usage }));
         controller.close();
-      } catch (error) {
-        controller.enqueue(encodeEvent({ type: "error", message: "upstream stream failed" }));
-        controller.close();
+      } catch {
+        if (!cancelled) {
+          controller.enqueue(encodeEvent({ type: "error", message: "upstream stream failed" }));
+          controller.close();
+        }
       } finally {
-        reader.releaseLock();
+        reader?.releaseLock?.();
       }
     },
-    cancel(reason) {
-      upstreamBody.cancel?.(reason).catch?.(() => {});
+    async cancel(reason) {
+      cancelled = true;
+      try {
+        await reader?.cancel(reason);
+      } catch {
+        // Cancellation is best-effort; the downstream stream is already closed.
+      }
     },
   });
 }
