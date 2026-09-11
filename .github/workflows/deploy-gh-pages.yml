@@ -39,4 +39,8 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
       - name: Publish gh-pages branch
-        run: npx gh-pages -d dist -m "Deploy ${GITHUB_SHA}"
+        env:
+          GH_PAGES_TOKEN: ${{ github.token }}
+        run: |
+          git config --global url."https://x-access-token:${GH_PAGES_TOKEN}@github.com/".insteadOf "https://github.com/"
+          npx gh-pages -d dist -m "Deploy ${GITHUB_SHA}"
