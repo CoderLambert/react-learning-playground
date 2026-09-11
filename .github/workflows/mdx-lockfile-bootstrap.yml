@@ -5,16 +5,25 @@ on:
     branches:
       - integration/react-learning-workbench
 
+permissions:
+  contents: write
+
 jobs:
   lockfile:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: feat/mdx-runtime
       - uses: actions/setup-node@v4
         with:
           node-version: 24
       - run: npm install --package-lock-only
-      - uses: actions/upload-artifact@v4
-        with:
-          name: mdx-package-lock
-          path: package-lock.json
+      - name: Commit generated lockfile and remove bootstrap workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package-lock.json
+          git rm .github/workflows/mdx-lockfile-bootstrap.yml
+          git commit -m "chore: update lockfile for MDX runtime"
+          git push origin HEAD:feat/mdx-runtime
