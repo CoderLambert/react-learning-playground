@@ -1,0 +1,15 @@
+import{n as e,r as t}from"./index-CsY7VYFf.js";var n=t();function r(t){let r={code:`code`,h1:`h1`,li:`li`,p:`p`,ul:`ul`,...e(),...t.components},{AntiPattern:i,Boundary:o,DemoReference:s,Experiment:c,FurtherReading:l,MentalModel:u,Observation:d,Summary:f,Timeline:p}=r;return i||a(`AntiPattern`,!0),o||a(`Boundary`,!0),s||a(`DemoReference`,!0),c||a(`Experiment`,!0),l||a(`FurtherReading`,!0),u||a(`MentalModel`,!0),d||a(`Observation`,!0),f||a(`Summary`,!0),p||a(`Timeline`,!0),(0,n.jsxs)(n.Fragment,{children:[(0,n.jsx)(r.h1,{id:`navigation-boundary把跳转当成一次状态转换`,children:`Navigation Boundary：把“跳转”当成一次状态转换`}),`
+`,(0,n.jsx)(u,{title:`导航不是 click 后立即换 DOM`,children:(0,n.jsx)(r.p,{children:`客户端路由中的导航是一段异步状态转换：发起 intent、计算目标匹配、可能加载代码和数据、处理 redirect/error，最后 commit 新页面。用户在这段时间仍需要明确反馈，并且旧页面是否继续可交互要由产品语义决定。`})}),`
+`,(0,n.jsx)(p,{steps:[`用户点击 Link / 提交导航意图`,`Router 解析目标并开始 navigation`,`需要时加载 route module 与数据`,`pending UI / optimistic UI 表达进行中状态`,`成功后提交目标匹配；redirect 改写目标；错误进入相应 error boundary`]}),`
+`,(0,n.jsx)(c,{title:`区分导航 pending 与普通组件 loading`,children:(0,n.jsxs)(r.p,{children:[`触发中间 Demo 的慢导航，观察旧页面、导航指示器和最终页面。连续触发不同目标，判断 pending 状态属于哪次 navigation，而不是把所有异步工作都塞进全局 `,(0,n.jsx)(r.code,{children:`isLoading`}),`。`]})}),`
+`,(0,n.jsx)(s,{action:`触发慢导航并观察 pending/完成边界`,observe:`确认用户在导航期间知道系统正在做什么，且最终 URL 与页面一致。`}),`
+`,(0,n.jsx)(d,{children:(0,n.jsx)(r.p,{children:`导航 pending 是 Router 对“当前 location → 下一 location”的状态描述。它和某个组件内部 fetch 的 loading 不同：导航可能同时影响 URL、匹配树、数据请求、滚动恢复与历史记录。`})}),`
+`,(0,n.jsx)(i,{title:`每次导航都清空整屏`,children:(0,n.jsx)(r.p,{children:`无条件用全屏 spinner 替换已有页面会制造布局闪烁，也丢失用户上下文。更好的策略通常是保留稳定 shell，在真正变化的 route boundary 显示 pending；是否阻塞交互取决于业务一致性要求。`})}),`
+`,(0,n.jsx)(o,{title:`Transition 与 Router navigation 不等价`,children:(0,n.jsxs)(r.p,{children:[`React 的 `,(0,n.jsx)(r.code,{children:`startTransition`}),`/`,(0,n.jsx)(r.code,{children:`useTransition`}),`提供非阻塞更新优先级语义；Router 可以利用 React 并发能力，但导航状态、redirect、history 与 route data 仍由 Router/Framework 定义。不要用一个 `,(0,n.jsx)(r.code,{children:`useTransition`}),` 自制完整 Router 状态机。`]})}),`
+`,(0,n.jsx)(f,{children:(0,n.jsxs)(r.ul,{children:[`
+`,(0,n.jsx)(r.li,{children:`把导航理解为异步状态转换，而非瞬时页面替换。`}),`
+`,(0,n.jsx)(r.li,{children:`pending UI 应贴近真正变化的 route boundary。`}),`
+`,(0,n.jsx)(r.li,{children:`URL、history、redirect 和 route data 属于 Router 责任。`}),`
+`,(0,n.jsx)(r.li,{children:`React Transition 是渲染调度工具，不是导航协议。`}),`
+`]})}),`
+`,(0,n.jsx)(l,{items:[{label:`React Router: Pending UI`,href:`https://reactrouter.com/start/framework/pending-ui`},{label:`React: useTransition`,href:`https://react.dev/reference/react/useTransition`}]})]})}function i(t={}){let{wrapper:i}={...e(),...t.components};return i?(0,n.jsx)(i,{...t,children:(0,n.jsx)(r,{...t})}):r(t)}function a(e,t){throw Error(`Expected `+(t?`component`:`object`)+" `"+e+"` to be defined: you likely forgot to import, pass, or provide it.")}export{i as default};
