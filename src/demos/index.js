@@ -28,6 +28,10 @@ import { UseMemoDemo } from "./UseMemoDemo";
 import { UseCallbackDemo } from "./UseCallbackDemo";
 import { ProfilerDemo } from "./ProfilerDemo";
 import { ReactCompilerDemo } from "./ReactCompilerDemo";
+import { UrlStateDemo } from "./UrlStateDemo";
+import { NestedRoutesDemo } from "./NestedRoutesDemo";
+import { NavigationBoundaryDemo } from "./NavigationBoundaryDemo";
+import { RouteDataBoundaryDemo } from "./RouteDataBoundaryDemo";
 
 // 源码原始字符串（Vite ?raw 原生支持）
 import componentJsxPureRenderRaw from "./ComponentJsxPureRenderDemo.jsx?raw";
@@ -66,6 +70,10 @@ import useMemoRaw from "./UseMemoDemo.jsx?raw";
 import useCallbackRaw from "./UseCallbackDemo.jsx?raw";
 import profilerRaw from "./ProfilerDemo.jsx?raw";
 import reactCompilerRaw from "./ReactCompilerDemo.jsx?raw";
+import urlStateRaw from "./UrlStateDemo.jsx?raw";
+import nestedRoutesRaw from "./NestedRoutesDemo.jsx?raw";
+import navigationBoundaryRaw from "./NavigationBoundaryDemo.jsx?raw";
+import routeDataBoundaryRaw from "./RouteDataBoundaryDemo.jsx?raw";
 
 // @demo-imports
 
@@ -75,6 +83,7 @@ export const CATEGORIES = [
   { id: "effects", name: "Hooks 与副作用深度", icon: "🎣" },
   { id: "forms", name: "Forms 与 React 19 Actions", icon: "📝" },
   { id: "performance", name: "性能模型与优化", icon: "🚀" },
+  { id: "routing", name: "Router 与页面状态", icon: "🧭" },
 ];
 
 export const demos = [
@@ -108,5 +117,9 @@ export const demos = [
   { id: "use-callback", label: "useCallback 函数引用稳定", category: "performance", badge: "优化", description: "联动 memo child 观察函数 prop identity，理解 useCallback 的命中条件、updater function 与真实边界", Component: UseCallbackDemo, files: [{ name: "UseCallbackDemo.jsx", code: useCallbackRaw }] },
   { id: "profiler", label: "Profiler 先测量再优化", category: "performance", badge: "分析", description: "用 Profiler actualDuration/baseDuration 观察 commit 成本，建立先定位瓶颈再优化的流程", Component: ProfilerDemo, files: [{ name: "ProfilerDemo.jsx", code: profilerRaw }] },
   { id: "react-compiler", label: "React Compiler 自动优化模型", category: "performance", badge: "Compiler", description: "理解构建期自动 memoization、Rules of React、渐进采用与手工 memoization 的新边界", Component: ReactCompilerDemo, files: [{ name: "ReactCompilerDemo.jsx", code: reactCompilerRaw }] },
+  { id: "url-state", label: "URL 状态与 Search Params", category: "routing", badge: "核心", description: "把 URL 作为可分享、可刷新、可前进后退的页面状态来源，区分 Route Params 与 Search Params", Component: UrlStateDemo, files: [{ name: "UrlStateDemo.jsx", code: urlStateRaw }] },
+  { id: "nested-routes", label: "Nested Routes 与 Outlet", category: "routing", badge: "架构", description: "可视化父子 Route 匹配链、Outlet 插槽、Index Route 与无 path Layout Route 的职责边界", Component: NestedRoutesDemo, files: [{ name: "NestedRoutesDemo.jsx", code: nestedRoutesRaw }] },
+  { id: "navigation-boundary", label: "Navigation 与 Route Boundary", category: "routing", badge: "导航", description: "区分声明式链接与程序式导航，可视化 history push/replace/back/forward 与 Not Found 边界", Component: NavigationBoundaryDemo, files: [{ name: "NavigationBoundaryDemo.jsx", code: navigationBoundaryRaw }] },
+  { id: "route-data-boundary", label: "Route Loader 数据边界", category: "routing", badge: "数据", description: "可视化 route match → loader(params) → pending → loader data / nearest error boundary 的页面数据流程", Component: RouteDataBoundaryDemo, files: [{ name: "RouteDataBoundaryDemo.jsx", code: routeDataBoundaryRaw }] },
   // @demo-entries
 ];
