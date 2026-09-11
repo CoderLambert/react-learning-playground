@@ -50,4 +50,6 @@ MDX-specific validation on parent implementation `e5dc3814e5440cdac62be6bd2648fb
 
 The temporary validation workflow removed itself after a successful run and is not part of the final feature diff.
 
+A final exact-head standard regression run is required after validation-workflow cleanup/status-only changes so the final branch head itself has deterministic CI evidence before integration.
+
 The existing app is intentionally not wired to NoteViewer yet, so current E2E remains a regression gate rather than an Inspector/Notes UI test in this stream. Runtime wiring belongs to the integration worker.
