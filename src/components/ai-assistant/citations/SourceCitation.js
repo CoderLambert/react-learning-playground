@@ -44,6 +44,12 @@ function normalizePreview(preview) {
   return String(preview);
 }
 
+function isRangeOnlyLabel(label, lineLabel) {
+  const normalized = String(label ?? "").trim().replace(/–/g, "-");
+  const normalizedRange = String(lineLabel ?? "").replace(/–/g, "-");
+  return normalized && normalized.toLowerCase() === normalizedRange.toLowerCase();
+}
+
 export function createSourceCitationOpenPayload(citation) {
   const normalized = normalizeSourceCitation(citation);
   if (!normalized) return null;
@@ -63,6 +69,7 @@ export function SourceCitation({
   onOpen,
   disabled = false,
   className = "",
+  variant = "default",
 }) {
   const tooltipId = useId();
   const citation = normalizeSourceCitation({ fileName, startLine, endLine, label });
@@ -70,33 +77,58 @@ export function SourceCitation({
 
   const previewText = normalizePreview(preview);
   const lineLabel = formatSourceCitationLines(citation.startLine, citation.endLine);
-  const accessibleLabel = label
-    ? `${label}，打开源码 ${citation.fileName} ${lineLabel}`
-    : `打开源码 ${citation.fileName} ${lineLabel}`;
+  const interactive = typeof onOpen === "function" && !disabled;
+  const visibleLabel = label && !isRangeOnlyLabel(label, lineLabel)
+    ? String(label)
+    : citation.fileName;
+  const accessibleLabel = interactive
+    ? `${visibleLabel}，打开源码 ${citation.fileName} ${lineLabel}`
+    : `${visibleLabel}，源码片段 ${citation.fileName} ${lineLabel}`;
   const payload = createSourceCitationOpenPayload(citation);
+  const controlChildren = [
+    createElement("span", { key: "icon", className: "ai-source-citation-icon" }, createElement(FileIcon)),
+    createElement(
+      "span",
+      { key: "file", className: "ai-source-citation-file", dir: "ltr" },
+      visibleLabel,
+    ),
+    createElement("span", { key: "lines", className: "ai-source-citation-lines" }, lineLabel),
+  ];
+  const controlClassName = [
+    "ai-source-citation",
+    interactive ? "is-actionable" : "is-preview-only",
+    variant === "inline" ? "is-inline" : "",
+  ].filter(Boolean).join(" ");
+  const sharedControlProps = {
+    className: controlClassName,
+    title: `${citation.fileName}:${lineLabel}`,
+    "aria-label": accessibleLabel,
+    "aria-describedby": previewText ? tooltipId : undefined,
+  };
+  const control = interactive
+    ? createElement(
+        "button",
+        {
+          ...sharedControlProps,
+          type: "button",
+          disabled,
+          onClick: () => onOpen(payload),
+        },
+        controlChildren,
+      )
+    : createElement(
+        "span",
+        {
+          ...sharedControlProps,
+          tabIndex: previewText ? 0 : undefined,
+        },
+        controlChildren,
+      );
 
   return createElement(
     "span",
     { className: `ai-source-citation-wrap ${className}`.trim() },
-    createElement(
-      "button",
-      {
-        type: "button",
-        className: "ai-source-citation",
-        title: `${citation.fileName}:${lineLabel}`,
-        disabled,
-        "aria-label": accessibleLabel,
-        "aria-describedby": previewText ? tooltipId : undefined,
-        onClick: () => onOpen?.(payload),
-      },
-      createElement("span", { className: "ai-source-citation-icon" }, createElement(FileIcon)),
-      createElement(
-        "span",
-        { className: "ai-source-citation-file", dir: "ltr" },
-        label || citation.fileName,
-      ),
-      createElement("span", { className: "ai-source-citation-lines" }, lineLabel),
-    ),
+    control,
     previewText
       ? createElement(
           "span",
