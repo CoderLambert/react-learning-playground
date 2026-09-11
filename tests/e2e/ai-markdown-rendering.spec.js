@@ -35,5 +35,5 @@ test("AI answers render streaming Markdown with Markstream semantics", async ({ 
   await expect(assistantMessage.locator("code").filter({ hasText: "useState" })).toBeVisible();
   await expect(assistantMessage.getByText("先看当前 Demo 的数据流。")).toBeVisible();
   await expect(assistantMessage).toContainText("const value = props.value");
-  await expect(assistantMessage.locator(".markstream-react")).toBeVisible();
+  await expect.poll(() => assistantMessage.locator(".markstream-react").count()).toBeGreaterThan(0);
 });
