@@ -49,8 +49,7 @@ export function LifecycleOfReactiveEffectsDemo() {
 
   function handleSwitchRoom(nextRoom) {
     if (nextRoom === roomId) return;
-    addLog("error", `🔴 [Cleanup] 关闭房间 #${roomId} 的 Socket 同步`);
-    addLog("success", `🟢 [Setup] 建立房间 #${nextRoom} 的 Socket 同步`);
+    addLog("info", `🔁 请求从房间 #${roomId} 切换到 #${nextRoom}；提交后 Effect 将先清理旧连接，再建立新连接`);
     setRoomId(nextRoom);
     setMessages([]);
   }
@@ -114,9 +113,9 @@ export function LifecycleOfReactiveEffectsDemo() {
           </div>
 
           <div>
-            <div style={{ fontSize: "13px", fontWeight: "600", marginBottom: "8px", color: "var(--text-main)" }}>Effect 生命周期追踪</div>
+            <div style={{ fontSize: "13px", fontWeight: "600", marginBottom: "8px", color: "var(--text-main)" }}>同步行为日志</div>
             <div className="demo-console" style={{ height: "220px", maxHeight: "220px" }}>
-              <div className="demo-console-header"><span>SOCKET LIFECYCLE MONITOR</span><span>{lifecycleLogs.length} 条追踪</span></div>
+              <div className="demo-console-header"><span>SYNC BEHAVIOR LOG</span><span>{lifecycleLogs.length} 条记录</span></div>
               {lifecycleLogs.map((log, index) => <div key={`${log.time}-${index}`} className={`demo-console-log ${log.type}`}>[{log.time}] {log.text}</div>)}
             </div>
           </div>
