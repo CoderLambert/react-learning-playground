@@ -52,12 +52,32 @@ export function Summary({ title = "核心结论", items = [], children }) {
   return <TeachingBlock tone="summary" eyebrow="Summary" title={title}>{body}</TeachingBlock>;
 }
 
-export function Compare({ left, right, leftTitle = "错误模型", rightTitle = "推荐模型", children }) {
-  if (children && left == null && right == null) return <TeachingBlock eyebrow="对比">{children}</TeachingBlock>;
+function ItemList({ items }) {
+  if (items.length === 0) return null;
+  return <ul>{items.map((item, index) => <li key={`${index}-${String(item)}`}>{item}</li>)}</ul>;
+}
+
+export function Compare({
+  left,
+  right,
+  leftItems = [],
+  rightItems = [],
+  leftTitle = "错误模型",
+  rightTitle = "推荐模型",
+  children,
+}) {
+  const hasLegacyItems = leftItems.length > 0 || rightItems.length > 0;
+  if (children && left == null && right == null && !hasLegacyItems) {
+    return <TeachingBlock eyebrow="对比">{children}</TeachingBlock>;
+  }
+
+  const leftContent = left ?? <ItemList items={leftItems} />;
+  const rightContent = right ?? <ItemList items={rightItems} />;
+
   return (
     <section className="mdx-compare" aria-label="方案对比">
-      <article className="mdx-compare-pane mdx-compare-bad"><h3>{leftTitle}</h3><div>{left}</div></article>
-      <article className="mdx-compare-pane mdx-compare-good"><h3>{rightTitle}</h3><div>{right}</div></article>
+      <article className="mdx-compare-pane mdx-compare-bad"><h3>{leftTitle}</h3><div>{leftContent}</div></article>
+      <article className="mdx-compare-pane mdx-compare-good"><h3>{rightTitle}</h3><div>{rightContent}</div></article>
     </section>
   );
 }
