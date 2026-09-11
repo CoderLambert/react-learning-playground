@@ -1,0 +1,33 @@
+var e=`# 请求竞态、取消与 Optimistic Mutation
+
+<MentalModel title="请求和 Mutation 都有并发时间线">
+网络响应不保证按发起顺序返回。读取需要处理过期响应、取消与 query identity；写入需要处理 optimistic 临时状态、服务端确认、失败回滚和相关缓存失效。
+</MentalModel>
+
+<Experiment title="故意制造乱序与失败">
+在中间 Demo 快速切页/切条件制造两个并发请求，观察 Abort/race guard；再执行 optimistic mutation，并分别模拟成功与失败。
+</Experiment>
+<DemoReference action="快速切换请求并触发成功/失败 mutation" observe="旧响应不能覆盖新意图；optimistic 值必须最终 confirm 或 rollback。" />
+
+<Timeline steps={["用户产生新 query identity","取消旧请求或用 generation/race guard 忽略旧响应","最新请求写入对应 cache identity","mutation 前保存可回滚快照并应用 optimistic state","成功：用服务端结果收敛/失效相关 query","失败：回滚并暴露错误"]} />
+
+<AntiPattern title="只靠 loading boolean 管所有请求">
+多个 query、分页、mutation 并发时，一个全局 loading 无法表达真实状态。状态应绑定资源 identity，并区分读取、后台 refetch、mutation pending 与 error。
+</AntiPattern>
+
+<Boundary title="Abort 不等于业务竞态全部解决">
+服务端可能已收到请求，某些 Promise/库也未必完全可取消；客户端仍需保证旧结果不能覆盖新状态。Mutation 的幂等、冲突和服务端事务属于 API/领域设计，不是 React 能单独解决的。
+</Boundary>
+
+<Boundary title="Demo 不是 TanStack Query 实现">
+这里展示的是 cancellation、optimistic update、rollback、invalidation 的通用概念。TanStack Query 的 \`onMutate\`/mutation lifecycle、取消和缓存 API 请以当前官方版本为准，不要从 Demo 反推库 API。
+</Boundary>
+
+<Summary>
+- 请求身份与响应顺序必须解耦。
+- cancellation 与 race guard 是互补手段。
+- optimistic mutation 必须设计 confirm/rollback。
+- 成熟 server-state 库能统一这些生命周期，但不能替代领域一致性设计。
+</Summary>
+
+<FurtherReading items={[{label:"TanStack Query: Query Cancellation",href:"https://tanstack.com/query/latest/docs/framework/react/guides/query-cancellation"},{label:"TanStack Query: Optimistic Updates",href:"https://tanstack.com/query/latest/docs/framework/react/guides/optimistic-updates"},{label:"MDN: AbortController",href:"https://developer.mozilla.org/docs/Web/API/AbortController"}]} />`;export{e as default};

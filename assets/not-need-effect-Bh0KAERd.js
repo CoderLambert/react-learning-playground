@@ -1,0 +1,21 @@
+var e=`# You Might Not Need an Effect
+
+很多“同步 State”的 Effect 实际是在复制已有信息。能在 render 中计算的数据，不应再存一份 State 并用 Effect 维护一致性。
+
+<MentalModel title="先问：外部系统在哪里？">如果答案是“没有”，这段逻辑很可能不属于 Effect。React 已经会在 props/state 改变时重新 render，你可以直接计算派生值。</MentalModel>
+
+<Compare leftTitle="通常不需要 Effect" rightTitle="通常需要 Effect" leftItems={["根据 props/state 计算 fullName", "过滤/排序列表", "点击后发请求或提交", "用 key 重置子树"]} rightItems={["订阅浏览器/第三方 API", "连接 WebSocket", "控制非 React widget", "同步定时器或事件监听"]} />
+
+<Experiment title="删除同步链">
+在中间 Demo 比较“Effect 把派生值写回 State”和“render 直接计算”。连续修改输入，观察前者多一次 render/commit，并存在短暂旧值与依赖维护成本。
+</Experiment>
+
+<Observation>派生值直接计算把事实来源保持为一份；Effect + State 会形成“源 State → render → Effect → 第二份 State → 再 render”的链条。</Observation>
+
+<AntiPattern title="Effect 驱动内部数据流水线">多个 Effect 互相 setState 会让因果关系分散，并产生额外 render。把事件因果放回 handler，把可计算数据放回 render。</AntiPattern>
+
+<Boundary>昂贵计算与“是否需要 Effect”是两个问题。昂贵纯计算仍然是 render 逻辑；必要时再根据测量结果考虑 memoization。</Boundary>
+
+<Summary items={["无外部系统先不用 Effect", "派生数据在 render 计算", "用户动作在 handler 处理", "减少重复 State 与同步链"]} />
+
+<FurtherReading links={[{label:"React: You Might Not Need an Effect",href:"https://react.dev/learn/you-might-not-need-an-effect"}]} />`;export{e as default};

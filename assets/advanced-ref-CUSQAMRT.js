@@ -1,0 +1,21 @@
+var e=`# Layout Effect、Imperative Handle 与 React 19 ref-as-prop
+
+高级 Ref API 用于必须在浏览器布局或命令式接口边界工作的场景：同步测量布局、限制暴露给父级的 imperative API，以及把 ref 传给自定义组件。
+
+<MentalModel title="越接近 DOM 时序，越要缩小 escape hatch">\`useLayoutEffect\` 在浏览器重绘前运行并可能阻塞 paint；\`useImperativeHandle\` 只暴露必要命令；React 19 中函数组件可以把 \`ref\` 作为 prop 接收，\`forwardRef\` 主要是旧版本兼容边界。</MentalModel>
+
+<Timeline items={["render", "commit DOM", "useLayoutEffect 测量/同步布局", "browser paint", "useEffect（通常更晚）"]} />
+
+<Experiment title="测量与命令式控制">
+运行中间 Demo，比较普通 Effect 与 Layout Effect 的测量时机，并通过父组件 ref 调用子组件暴露的最小 imperative handle。观察父级并不需要拿到完整 DOM 节点。
+</Experiment>
+
+<Observation>\`useLayoutEffect\` 不是“更强的 useEffect”。它的同步执行会延迟 paint，应只用于必须在用户看到画面前完成的布局读取/修正。</Observation>
+
+<AntiPattern title="默认使用 useLayoutEffect">普通订阅、网络同步、日志等不需要阻塞 paint。也不要把整个 DOM 节点无条件暴露给父组件，优先暴露窄接口。</AntiPattern>
+
+<Boundary>Ref API 是命令式边界；能通过 props/state 表达的行为仍应保持声明式。库代码若需要兼容 React 18，应单独考虑 \`forwardRef\` 的版本策略。</Boundary>
+
+<Summary items={["Layout Effect 用于 paint 前布局工作", "imperative handle 缩小暴露面", "React 19 支持 ref 作为 prop", "escape hatch 应保持局部"]} />
+
+<FurtherReading links={[{label:"React: useLayoutEffect",href:"https://react.dev/reference/react/useLayoutEffect"},{label:"React: useImperativeHandle",href:"https://react.dev/reference/react/useImperativeHandle"},{label:"React: forwardRef",href:"https://react.dev/reference/react/forwardRef"}]} />`;export{e as default};

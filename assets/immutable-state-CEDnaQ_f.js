@@ -1,0 +1,30 @@
+var e=`# 对象 / 数组 State 不可变更新
+
+<MentalModel title="State 是一次 render 的只读快照，更新要创建下一份值">
+对象和数组在 JavaScript 中可变，但放入 React state 后应把它们视为只读。更新时创建新的对象/数组，并只替换真正变化的路径；这样旧 snapshot 保持可信，新旧引用也能准确表达“哪里发生了变化”。
+</MentalModel>
+
+<Experiment title="观察 mutation 与 copy 的引用差异">
+在中间 Demo 中执行 nested copy、append/remove/replace/sort，关注引用 identity 与 UI 更新。比较原地修改和复制后更新会给 React 留下什么信号。
+</Experiment>
+
+<DemoReference action="依次执行对象与数组更新操作" observe="检查哪些层级引用改变、哪些未变；排序前后是否先复制数组。" />
+
+<Flow items={["读取当前 snapshot", "计算需要变化的路径", "复制受影响容器", "写入新值", "setState 提交新的顶层引用"]} />
+
+<Boundary title="spread 是浅复制">
+\`{...obj}\` 和 \`[...arr]\` 只复制一层。修改嵌套对象时必须从变化节点一路复制到顶层；否则仍可能修改旧 snapshot 共享的对象。
+</Boundary>
+
+<AntiPattern title="先 mutate 再 set 回同一个引用">
+\`state.user.name = x; setState(state)\` 既破坏历史 snapshot，又可能因为顶层引用未变而让更新语义失真。数组的 \`push\`、\`splice\`、原地 \`sort\` 同理，应选择非变异操作或先复制。
+</AntiPattern>
+
+<Summary>
+- React state 中的对象/数组按只读值处理。
+- 更新只复制变化路径，但必须产生新的顶层引用。
+- spread 是浅复制，不会自动处理嵌套结构。
+- 不可变性保护 snapshot，也让引用比较具有意义。
+</Summary>
+
+<FurtherReading items={[{ label: "React: Updating Objects in State", href: "https://react.dev/learn/updating-objects-in-state" }, { label: "React: Updating Arrays in State", href: "https://react.dev/learn/updating-arrays-in-state" }]} />`;export{e as default};

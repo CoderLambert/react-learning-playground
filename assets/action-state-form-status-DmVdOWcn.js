@@ -1,0 +1,21 @@
+var e=`# useActionState + useFormStatus：拆开“结果状态”和“提交状态”
+
+\`useActionState\` 管理 Action 返回的状态与 pending；\`useFormStatus\` 让表单内部后代读取最近父 \`<form>\` 的提交状态与本次数据。
+
+<MentalModel title="一个管业务结果，一个管表单上下文">\`useActionState\` 返回 \`[state, dispatchAction, isPending]\`；作为 form action 使用时，Action 第一个参数是 previous state，第二个才是 FormData。\`useFormStatus\` 则从所在组件的父 form 读取 \`pending/data\` 等状态。</MentalModel>
+
+<Flow items={["form submit", "dispatchAction(previousState, formData)", "pending=true", "Action 返回 next state", "state 更新", "pending=false"]} />
+
+<Experiment title="观察 Submit 子组件">
+运行中间 Demo，提交表单并查看外层 Action state 与 Submit 子组件的 form status。注意 \`useFormStatus\` 必须在目标 form 的后代中调用，不能在渲染该 form 的同一组件里期待读取自身状态。
+</Experiment>
+
+<Observation>Action state 适合承载服务端/业务结果，例如字段错误或成功消息；pending 是过渡状态，不应复制成另一份手工 State。</Observation>
+
+<AntiPattern title="手工同步 isSubmitting">如果 Action API 已提供 pending，再用 Effect 维护第二份 \`isSubmitting\` 会制造竞争和重复事实来源。</AntiPattern>
+
+<Boundary>\`useFormStatus\` 是表单上下文 API，不是全局请求状态管理器；跨页面缓存和服务器状态仍应由相应数据层负责。</Boundary>
+
+<Summary items={["useActionState 管 Action 结果", "第一个 Action 参数是 previousState", "useFormStatus 读取父 form 状态", "避免复制 pending State"]} />
+
+<FurtherReading links={[{label:"React: useActionState",href:"https://react.dev/reference/react/useActionState"},{label:"React DOM: useFormStatus",href:"https://react.dev/reference/react-dom/hooks/useFormStatus"}]} />`;export{e as default};

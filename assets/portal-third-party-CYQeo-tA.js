@@ -1,0 +1,35 @@
+var e=`# Portal 与第三方 DOM 生命周期
+
+<MentalModel title="React Tree 与 DOM Tree 是两套结构">
+\`createPortal(children, domNode)\` 改变的是 DOM 放置位置，children 在 React Tree 中仍属于原父组件：Context 继续沿 React Tree 传播，事件也按 React Tree 冒泡。第三方 DOM 实例则应通过 ref + Effect 与 React 生命周期同步。
+</MentalModel>
+
+<Experiment title="跨 DOM 容器观察事件与生命周期">
+在中间 Demo 打开 Portal，点击 Portal 内元素观察父 React handler；再启停第三方实例，观察 setup/cleanup 日志。
+</Experiment>
+<DemoReference action="打开 Portal、触发事件并反复挂载第三方实例" observe="DOM 位置改变但 React 关系不变；第三方资源必须成对创建/销毁。" />
+
+<Compare>
+### Portal
+由 React 继续拥有子树，只改变宿主 DOM 位置。
+
+### 第三方 DOM 实例
+外部库拥有自己的命令式状态；React 用 Effect 建立同步边界，并在 cleanup 撤销监听、实例和资源。
+</Compare>
+
+<AntiPattern title="让 React 和第三方库同时写同一 DOM 子树">
+双重所有权容易产生 DOM 被覆盖、事件泄漏和 cleanup 不完整。给第三方库一个明确容器，让其拥有容器内部；React 管理容器本身和实例生命周期。
+</AntiPattern>
+
+<Boundary title="Portal 不自动提供 Modal 可访问性">
+Portal 只负责放置。Dialog 的 accessible name、focus trap、Escape、背景交互约束与焦点恢复仍需单独实现。
+</Boundary>
+
+<Summary>
+- Portal 改 DOM 位置，不改 React 父子关系。
+- Portal 事件按 React Tree 传播。
+- 第三方实例通过 ref + Effect setup/cleanup 集成。
+- 明确 DOM ownership，避免双方同时管理同一子树。
+</Summary>
+
+<FurtherReading items={[{label:"React: createPortal",href:"https://react.dev/reference/react-dom/createPortal"},{label:"React: Synchronizing with Effects",href:"https://react.dev/learn/synchronizing-with-effects"}]} />`;export{e as default};

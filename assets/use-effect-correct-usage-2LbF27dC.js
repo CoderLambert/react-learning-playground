@@ -1,0 +1,23 @@
+var e=`# useEffect：让 React 与外部系统保持同步
+
+Effect 的核心职责不是“State 变化后执行代码”，而是把 React 当前提交的状态同步到 React 之外的系统，并在下一次同步或卸载时撤销旧连接。
+
+<MentalModel title="Effect 是同步过程，不是生命周期回调">
+把每个 Effect 想成独立的 start/stop 协议：setup 根据当前 reactive values 建立同步；cleanup 撤销上一轮同步；依赖变化后先 cleanup 再用新值 setup。
+</MentalModel>
+
+<Timeline items={["render 计算 UI", "commit 更新 DOM", "Effect setup 与外部系统同步", "依赖变化", "旧 cleanup", "新 setup", "unmount 时最终 cleanup"]} />
+
+<Experiment title="观察 cleanup 闭环">
+运行中间 Demo 的定时器/事件监听实验，改变依赖并切换启用状态。重点看日志中 setup 与 cleanup 是否成对，以及旧监听是否在新同步前被移除。
+</Experiment>
+
+<Observation>开发环境 Strict Mode 可能额外执行一次 setup → cleanup → setup，用来暴露缺失 cleanup 的问题；正确 Effect 应能承受这个序列。</Observation>
+
+<AntiPattern title="把业务事件绕成 Effect">用户点击导致的提交、购买、通知等因果明确的动作，应在 Event Handler 中执行；不要先 setState 再让 Effect 猜测“发生了什么”。</AntiPattern>
+
+<Boundary>如果没有外部系统需要同步，先尝试在 render 中派生数据或在事件中直接处理。Effect 是 escape hatch，而不是默认的数据流工具。</Boundary>
+
+<Summary items={["Effect 同步外部系统", "cleanup 撤销上一轮同步", "依赖描述代码实际读取的 reactive values", "无外部系统时通常不需要 Effect"]} />
+
+<FurtherReading links={[{label:"React: Synchronizing with Effects",href:"https://react.dev/learn/synchronizing-with-effects"},{label:"React: useEffect",href:"https://react.dev/reference/react/useEffect"}]} />`;export{e as default};

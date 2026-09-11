@@ -1,0 +1,30 @@
+var e=`# Context 更新传播模型
+
+<MentalModel title="useContext 是对最近 Provider value 的订阅读取">
+Context 让深层组件无需逐层 props 就能读取最近 Provider 的 value。消费者不是“读取一次全局变量”；当对应 Context 的 Provider value 变化时，React 会让消费该 Context 的组件获得新值并重新计算。
+</MentalModel>
+
+<Experiment title="观察 Provider value 的传播范围">
+在中间 Demo 中更新 Context value，比较消费者、非消费者以及 memo 包裹组件的 render 日志，确认 memo 与 Context 的边界。
+</Experiment>
+
+<DemoReference action="更新 Provider 中不同字段并观察 render 日志" observe="识别哪些组件真正调用 useContext；确认 Context 更新能穿过 memo 到达消费者。" />
+
+<Flow items={["Provider 提供 value", "深层组件 useContext 读取最近 Provider", "Provider value 变化", "React 通知对应消费者", "消费者用新 Context 重新 render"]} />
+
+<Boundary title="memo 不能屏蔽组件自己消费的 Context 更新">
+\`memo\` 主要比较 props。若组件内部读取的 Context 改变，它仍需要重新 render 才能看到新值。优化 Context 应从 value 建模、Provider 边界和拆分 Context 入手，而不是只包 memo。
+</Boundary>
+
+<AntiPattern title="一个巨大 Context 承载所有高频状态">
+把互不相关且更新频率不同的数据塞进同一个 value，会扩大订阅耦合。先按领域和读写模式拆分；必要时再评估外部 store 的 selector 机制。
+</AntiPattern>
+
+<Summary>
+- Context 解决跨层依赖传递，不等于全局状态库。
+- 消费者订阅最近 Provider 的 value。
+- Context 更新可以让 memoized consumer 重新 render。
+- Provider/value 的边界设计决定传播成本和可维护性。
+</Summary>
+
+<FurtherReading items={[{ label: "React: Passing Data Deeply with Context", href: "https://react.dev/learn/passing-data-deeply-with-context" }, { label: "React: useContext", href: "https://react.dev/reference/react/useContext" }, { label: "React: memo", href: "https://react.dev/reference/react/memo" }]} />`;export{e as default};

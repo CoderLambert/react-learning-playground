@@ -1,0 +1,79 @@
+var e=`# State Snapshot、Batching 与 Update Queue
+
+<MentalModel title="一次 render 看到的是一张固定快照">
+组件函数每次执行都会得到当次 render 对应的 state 快照。事件处理函数闭包读取的也是这张快照；调用 \`setState\` 并不会改写当前这次函数执行中的变量，而是把下一次 render 所需的更新加入队列。
+</MentalModel>
+
+## 先预测，再点击 Demo
+
+<Experiment title="连续更新实验">
+在中间 Demo 中先观察当前计数值，然后分别执行“连续三次直接更新”和“连续三次 functional updater”。点击前先写下你预测的最终值与日志顺序。
+</Experiment>
+
+<DemoReference action="分别触发直接更新与 functional updater 的按钮" observe="比较 handler 内读取到的 state、最终 UI 值，以及 updater 的执行顺序。" />
+
+<Observation>
+同一个事件处理阶段里的多次更新通常会被 batching。\`setCount(count + 1)\` 三次都基于同一张 \`count\` 快照计算；\`setCount(c => c + 1)\` 则把三个变换依次放进 update queue，让后一个 updater 接收前一个 updater 的结果。
+</Observation>
+
+## 更新是怎样流动的
+
+<Timeline steps={[
+  "事件处理函数开始，读取当前 render 的 state snapshot",
+  "setState 调用把 replace update 或 updater function 加入队列",
+  "React 在合适的边界结束 batching，调度下一次 render",
+  "render 阶段按顺序处理 update queue，计算下一份 state",
+  "commit 阶段把必要的 DOM 变化应用到页面"
+]} />
+
+<Compare>
+### 直接值更新
+
+\`\`\`jsx
+setCount(count + 1)
+setCount(count + 1)
+setCount(count + 1)
+\`\`\`
+
+三行都读取当前 handler 闭包里的同一个 \`count\`。
+
+### Functional updater
+
+\`\`\`jsx
+setCount(c => c + 1)
+setCount(c => c + 1)
+setCount(c => c + 1)
+\`\`\`
+
+每个 updater 接收队列中前一步计算出的 pending state。
+</Compare>
+
+<AntiPattern title="把 setState 当作同步赋值">
+不要在调用 \`setState\` 后立即假设同一个事件处理函数中的 state 变量已经变化。需要基于前一个 state 连续计算时，使用 functional updater；需要响应新的 state 做外部同步时，应让后续 render / Effect 承担职责，而不是读取“刚 set 完”的旧快照。
+</AntiPattern>
+
+<Boundary title="Batching 不等于所有代码都延迟执行">
+事件处理函数本身仍按 JavaScript 同步执行。React batching 的重点是合并状态更新与 render 调度，而不是把普通 JavaScript 语句改造成异步。遇到 \`await\`、定时器、原生事件或不同 React 版本时，应基于实际边界理解批处理，而不是背诵“所有 setState 都会一起合并”。
+</Boundary>
+
+## 用一句话判断该写哪种更新
+
+<Flow items={[
+  "新值完全由当前事件参数决定 → 可以直接 setState(nextValue)",
+  "新值依赖同一个 state 的前一个 pending 值 → functional updater",
+  "多个 state 总是一起变化且规则复杂 → 考虑 reducer / 更好的 state model"
+]} />
+
+<Summary>
+- render 中的 state 是快照，不是可变盒子。
+- batching 让 React 在一个更新边界内集中处理多次 state 请求。
+- functional updater 表达的是“基于队列前值的变换”，不是语法偏好。
+- Trigger → Render → Commit 是理解 state 更新时序的主轴。
+</Summary>
+
+<FurtherReading items={[
+  { label: "React: State as a Snapshot", href: "https://react.dev/learn/state-as-a-snapshot" },
+  { label: "React: Queueing a Series of State Updates", href: "https://react.dev/learn/queueing-a-series-of-state-updates" },
+  { label: "React: Render and Commit", href: "https://react.dev/learn/render-and-commit" }
+]} />
+`;export{e as default};

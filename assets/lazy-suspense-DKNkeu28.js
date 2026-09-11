@@ -1,0 +1,21 @@
+var e=`# lazy + Suspense：把代码加载变成可声明的等待边界
+
+\`lazy\` 延迟加载组件模块；当组件代码尚未就绪时，它会 suspend，最近的 \`<Suspense>\` boundary 显示 fallback，模块加载完成后再 reveal 内容。
+
+<MentalModel title="lazy 决定代码何时请求，Suspense 决定等待时显示什么">Code splitting 是打包/加载边界；Suspense 是 UI 协调边界。两者组合后，加载状态不需要手工 \`isLoading\` 包裹 lazy module。</MentalModel>
+
+<Timeline items={["首次 render lazy component", "触发动态 import", "组件 suspend", "最近 Suspense fallback commit", "module resolve", "React retry render", "真实内容 reveal"]} />
+
+<Experiment title="观察首次与再次打开">
+运行中间 Demo 首次打开 LazyLessonPanel，记录 fallback；关闭再打开，观察模块通常已缓存，不再经历相同的首次代码加载过程。
+</Experiment>
+
+<Observation>\`lazy\` 应在模块顶层声明。若在组件 render 内创建新的 lazy component identity，可能导致重复初始化和 State 重置。</Observation>
+
+<AntiPattern title="把所有页面包进一个巨大 fallback">过大的 Suspense boundary 会让局部资源等待时隐藏过多已可用 UI。边界应匹配产品希望一起 reveal 的视觉单元。</AntiPattern>
+
+<Boundary>Suspense 能协调支持 Suspense 的资源；普通 Effect 中发起的 fetch 不会因为外面套了 Suspense 就自动被追踪。</Boundary>
+
+<Summary items={["lazy 延迟模块加载", "Suspense 提供等待 UI", "首次加载后模块会缓存", "边界按 reveal 体验设计"]} />
+
+<FurtherReading links={[{label:"React: lazy",href:"https://react.dev/reference/react/lazy"},{label:"React: Suspense",href:"https://react.dev/reference/react/Suspense"}]} />`;export{e as default};

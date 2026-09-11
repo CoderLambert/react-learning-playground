@@ -1,0 +1,21 @@
+var e=`# FormData：在提交边界读取浏览器表单快照
+
+\`FormData\` 可以从 \`<form>\` 收集成功控件的当前值，适合“不必让每次键入都进入 React State”的提交模型。
+
+<MentalModel title="浏览器先持有字段，提交时转换为领域数据">FormData 是传输层快照，不等于你的领域模型。先 \`get/getAll\` 读取，再显式完成 number、boolean、枚举和数组等类型转换与验证。</MentalModel>
+
+<Flow items={["用户编辑 DOM 字段", "submit", "new FormData(form)", "get/getAll/has", "转换 + 校验", "领域 payload"]} />
+
+<Experiment title="比较两种所有权">
+在中间 Demo 编辑非受控字段并提交，观察 React 无需为每次键入保存 State；再对比需要实时联动的字段，判断什么时候 controlled 更合适。
+</Experiment>
+
+<Observation>\`get()\` 只返回一个同名字段值；checkbox group / multi-select 等多值字段应使用 \`getAll()\`。FormData 的值还可能是 \`File\`，不能假设全部是 string。</Observation>
+
+<AntiPattern title="把 FormData 当类型安全领域对象">直接 \`Object.fromEntries(formData)\` 可能丢失重复键语义，也不会自动把字符串转换为业务类型。</AntiPattern>
+
+<Boundary>需要实时验证、条件 UI 或跨字段联动时，React State 仍然有价值。可以混合建模，不必在“全受控”和“全非受控”之间二选一。</Boundary>
+
+<Summary items={["FormData 是提交快照", "多值字段用 getAll", "提交边界做领域转换", "实时联动场景仍可用 controlled State"]} />
+
+<FurtherReading links={[{label:"MDN: FormData",href:"https://developer.mozilla.org/docs/Web/API/FormData"},{label:"React: form",href:"https://react.dev/reference/react-dom/components/form"}]} />`;export{e as default};

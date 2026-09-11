@@ -1,0 +1,21 @@
+var e=`# useOptimistic：在 Action pending 期间展示临时未来
+
+\`useOptimistic\` 让界面在 Action 尚未完成时先显示一个 optimistic state；Action 完成后，视图重新以传入的 canonical value 为基础收敛。
+
+<MentalModel title="Optimistic state 是临时投影，不是第二个数据库">真实状态仍是 canonical source。乐观层只描述“如果这次 Action 成功，用户希望立即看到什么”。成功时更新真实状态；失败时真实状态不变，临时投影自然消失。</MentalModel>
+
+<Timeline items={["canonical=A", "Action 开始", "addOptimistic → 临时 A'", "服务器成功 → canonical=A'", "或失败 → canonical 仍为 A", "optimistic 层结束"]} />
+
+<Experiment title="成功与失败两条路径">
+在中间 Demo 提交评论，先观察临时评论立即出现；切换模拟失败后再次提交，观察 pending 结束时未被服务器确认的临时项回退。
+</Experiment>
+
+<Observation>乐观 UI 的关键不是“提前 setState”，而是明确 canonical 与 optimistic 两层。这样失败回滚不需要手工复制旧数组。</Observation>
+
+<AntiPattern title="把 optimistic 结果永久写进两份 State">维护 \`realItems\` 与 \`optimisticItems\` 两套长期 State 会增加合并、去重和回滚复杂度。</AntiPattern>
+
+<Boundary>高风险、不可逆或失败概率高的操作未必适合乐观展示。需要结合错误反馈、幂等性、服务端确认和冲突策略设计。</Boundary>
+
+<Summary items={["canonical state 是事实来源", "optimistic state 只在 Action 期间临时存在", "成功更新真实状态", "失败保持真实状态即可回退"]} />
+
+<FurtherReading links={[{label:"React: useOptimistic",href:"https://react.dev/reference/react/useOptimistic"},{label:"React: useTransition",href:"https://react.dev/reference/react/useTransition"}]} />`;export{e as default};

@@ -1,0 +1,30 @@
+var e=`# State 结构设计与单一数据源
+
+<MentalModel title="State 只保存无法从现有输入可靠计算出的最小事实">
+好的 state model 像规范化的数据模型：相关值一起变化时考虑合并；能由 props/state 计算的值不重复存；同一事实只保留一个 owner。这样 UI 不需要靠 Effect 或多次 setState 去维持副本同步。
+</MentalModel>
+
+<Experiment title="制造并消除矛盾状态">
+在中间 Demo 中比较冗余/重复 state 与派生计算方案。尝试让两个副本产生不一致，再观察单一数据源如何消除同步路径。
+</Experiment>
+
+<DemoReference action="切换不同 state shape 并执行更新" observe="寻找是否存在两个字段表达同一事实、是否能组合出不可能状态。" />
+
+<Flow items={["列出 UI 所需事实", "标记可由其他值派生的字段", "确定唯一 owner", "删除重复/矛盾 state", "render 时计算派生值"]} />
+
+<Boundary title="不要为了 DRY 把所有 state 合成一个对象">
+单一数据源不是“只能有一个 useState”。独立变化、没有一致性约束的值可以分开保存；关键是不要重复表达同一事实或制造必须手工同步的副本。
+</Boundary>
+
+<AntiPattern title="Effect 同步派生 state">
+\`fullName\` 若能由 \`firstName + lastName\` 得到，就在 render 中计算。额外保存 \`fullName\` 再用 Effect 同步，会多一次 render，并产生暂时不一致的状态。
+</AntiPattern>
+
+<Summary>
+- 保存最小事实集合，派生值直接计算。
+- 避免矛盾、冗余、重复和过深 state。
+- 每个事实确定唯一 owner。
+- State shape 是正确性设计，不只是代码风格。
+</Summary>
+
+<FurtherReading items={[{ label: "React: Choosing the State Structure", href: "https://react.dev/learn/choosing-the-state-structure" }, { label: "React: You Might Not Need an Effect", href: "https://react.dev/learn/you-might-not-need-an-effect" }]} />`;export{e as default};
