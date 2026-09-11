@@ -15,7 +15,7 @@ const TEACHING_PROPS = {
   Concept: new Set(["title"]),
   Experiment: new Set(["title"]),
   Observation: new Set(["title"]),
-  Compare: new Set(["left", "right", "leftItems", "rightItems", "leftTitle", "rightTitle"]),
+  Compare: new Set(["left", "right", "leftTitle", "rightTitle"]),
   Timeline: new Set(["steps", "items"]), // items is a temporary compatibility alias.
   Flow: new Set(["items"]),
   Boundary: new Set(["title"]),
@@ -153,7 +153,7 @@ test("teaching primitives use supported props and do not silently render empty s
       if (tag.component === "Flow" && !props.has("items")) {
         problems.push(`${fileName}: self-closing <Flow> has no items`);
       }
-      if (tag.component === "Compare" && !props.has("left") && !props.has("right") && !props.has("leftItems") && !props.has("rightItems")) {
+      if (tag.component === "Compare" && !props.has("left") && !props.has("right")) {
         problems.push(`${fileName}: self-closing <Compare> has no comparison content`);
       }
       if (tag.component === "Summary" && !props.has("items")) {
