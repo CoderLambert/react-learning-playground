@@ -135,6 +135,12 @@ These corrections follow the official React requirements that reducers be pure, 
    - Gate C: PASS.
    - The interactive Demo only executes the split-Context version; the “single Context vs dual Context” side is currently a static code card, so the Note overstates the executable comparison. Advice recommends either adding a real single-Context control or narrowing the Experiment.
 
+12. `use-ref.mdx` -> `notes-advice/use-ref.mdx`
+   - Gate A: PASS.
+   - Gate B: PASS.
+   - Gate C: PASS.
+   - Main refinements: React's render-time ref rule has a documented predictable-initialization exception; the Demo's `setInterval` example should not be called a “high-precision stopwatch”; and `useLayoutEffect` should be framed as a paint-before-layout tool rather than a default companion to DOM refs.
+
 ## Sources used for factual review
 
 Primary references were current official React documentation for:
@@ -149,6 +155,7 @@ Primary references were current official React documentation for:
 - Scaling Up with Reducer and Context;
 - `useContext` / `createContext` React 19 provider semantics;
 - `memo` Context behavior;
+- `useRef` / Referencing Values with Refs;
 - Render and Commit / purity guidance.
 
 ## Validation
@@ -158,4 +165,4 @@ Previous audit head `52ebaf8fd21c245d4e440633e89e8c1c0e4add59` has exact-head Gi
 - `React Learning Verify` run `34640431132`: **success**
 - `Workbench Integration Verify` run `34640431137`: **success**
 
-Run 3 adds two executable Demo fixes plus three advice files, so those previous green runs are regression evidence only, not acceptance evidence for the new head. No local checkout/runtime is exposed through the GitHub connector; local lint/build is not claimed. Exact-head workflows on the latest PR head remain the acceptance source.
+Run 3 adds two executable Demo fixes plus four advice files, so those previous green runs are regression evidence only, not acceptance evidence for the new head. No local checkout/runtime is exposed through the GitHub connector; local lint/build is not claimed. Exact-head workflows on the latest PR head remain the acceptance source.
