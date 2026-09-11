@@ -3,6 +3,14 @@
   min-height: 100vh;
 }
 
+.workbench-brand-title-row h1 {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.2;
+  color: var(--text-main);
+  white-space: nowrap;
+}
+
 .workbench-app-content {
   max-width: none;
   width: 100%;
@@ -13,6 +21,7 @@
 .workbench-notes-pane {
   display: grid;
   gap: 18px;
+  padding: 18px;
 }
 
 .note-toc {
@@ -139,6 +148,16 @@
   border: 0;
 }
 
+@media (min-width: 901px) and (max-width: 1180px) {
+  .workbench-shell[data-navigation-collapsed="false"] {
+    --workbench-current-nav-width: var(--workbench-nav-width);
+  }
+
+  .workbench-shell[data-navigation-collapsed="false"] .workbench-navigation-slot {
+    width: var(--workbench-nav-width);
+  }
+}
+
 @media (max-width: 900px) {
   .workbench-mobile-menu-toggle {
     display: inline-flex;
@@ -158,13 +177,15 @@
   }
 
   .workbench-inspector-toggle {
-    display: none;
+    display: inline-flex;
   }
 
   .workbench-inspector-slot {
     position: fixed;
     inset: 0;
     z-index: 100;
+    width: 100%;
+    max-width: none;
     background: var(--bg-surface);
   }
 
@@ -183,9 +204,21 @@
   }
 
   .breadcrumb-current {
-    max-width: 42vw;
+    max-width: 34vw;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .workbench-inspector-toggle {
+    font-size: 0;
+    width: 34px;
+    height: 30px;
+    padding: 0;
+  }
+
+  .workbench-inspector-toggle::after {
+    content: "☰";
+    font-size: 14px;
   }
 }
