@@ -1,5 +1,8 @@
 const MEBI = 1024 * 1024;
 const DEEPSEEK_MODEL_SOURCE = "https://api-docs.deepseek.com/quick_start/pricing/";
+const DEEPSEEK_CONTEXT_WINDOW_TOKENS = MEBI;
+const DEEPSEEK_MAX_OUTPUT_TOKENS = 384 * 1024;
+const DEFAULT_OUTPUT_RESERVE_TOKENS = 16 * 1024;
 
 /**
  * This is an application fallback, not a provider claim. Unknown model IDs
@@ -9,8 +12,8 @@ export const DEFAULT_MODEL_CONTEXT = Object.freeze({
   modelId: "unknown",
   contextWindowTokens: 128 * 1024,
   officialMaxOutputTokens: null,
-  defaultSoftBudgetTokens: 96 * 1024,
-  defaultOutputReserveTokens: 16 * 1024,
+  defaultSoftBudgetTokens: 112 * 1024,
+  defaultOutputReserveTokens: DEFAULT_OUTPUT_RESERVE_TOKENS,
   warningRatio: 0.7,
   compactionRatio: 0.82,
   known: false,
@@ -20,13 +23,15 @@ export const DEFAULT_MODEL_CONTEXT = Object.freeze({
   source: null,
 });
 
-function officialDeepSeekModel(modelId, extra = {}) {
+function officialDeepSeekModel(modelId) {
   return Object.freeze({
     modelId,
-    contextWindowTokens: MEBI,
-    officialMaxOutputTokens: 384 * 1024,
-    defaultSoftBudgetTokens: 256 * 1024,
-    defaultOutputReserveTokens: 16 * 1024,
+    contextWindowTokens: DEEPSEEK_CONTEXT_WINDOW_TOKENS,
+    officialMaxOutputTokens: DEEPSEEK_MAX_OUTPUT_TOKENS,
+    // The application does not impose a hidden 256K ceiling. The default
+    // effective input budget is the official window minus the output reserve.
+    defaultSoftBudgetTokens: DEEPSEEK_CONTEXT_WINDOW_TOKENS - DEFAULT_OUTPUT_RESERVE_TOKENS,
+    defaultOutputReserveTokens: DEFAULT_OUTPUT_RESERVE_TOKENS,
     warningRatio: 0.7,
     compactionRatio: 0.82,
     known: true,
@@ -34,20 +39,13 @@ function officialDeepSeekModel(modelId, extra = {}) {
     estimated: false,
     contextWindowLabel: "1M official",
     source: DEEPSEEK_MODEL_SOURCE,
-    ...extra,
   });
 }
 
 export const MODEL_CONTEXTS = Object.freeze({
-  "deepseek-flash": officialDeepSeekModel("deepseek-flash"),
+  "deepseek-v4-flash": officialDeepSeekModel("deepseek-v4-flash"),
   "deepseek-v4-pro": officialDeepSeekModel("deepseek-v4-pro"),
-  // DeepSeek documents these as accepted legacy aliases served by Flash.
-  "deepseek-v4-flash": officialDeepSeekModel("deepseek-v4-flash", {
-    aliasOf: "deepseek-flash",
-  }),
-  "deepseek-v4-flash-vision-exp": officialDeepSeekModel("deepseek-v4-flash-vision-exp", {
-    aliasOf: "deepseek-flash",
-  }),
+  "deepseek-v4-flash-vision-exp": officialDeepSeekModel("deepseek-v4-flash-vision-exp"),
 });
 
 /**
@@ -76,7 +74,7 @@ export function getModelContextMetadata(modelId, overrides = {}) {
   const maxInputTokens = Math.max(1, contextWindowTokens - defaultOutputReserveTokens);
   const defaultSoftBudgetTokens = Math.min(
     maxInputTokens,
-    positiveInteger(overrides.defaultSoftBudgetTokens, preset.defaultSoftBudgetTokens),
+    positiveInteger(overrides.defaultSoftBudgetTokens, Math.min(preset.defaultSoftBudgetTokens, maxInputTokens)),
   );
   const official = hasWindowOverride ? false : preset.official;
 
