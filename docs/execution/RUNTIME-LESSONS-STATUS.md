@@ -9,6 +9,7 @@ Owned lesson pairs:
 - `src/content/notes/state-snapshot-queue.mdx` + `src/demos/StateSnapshotQueueDemo.jsx`
 
 Base inspected: `main` at `76562aefc1dab2ac4ab780f36b96a2d30d7e7948`.
+PR: `#82` (`automation/runtime-lessons` -> `main`, draft, do not merge automatically).
 
 ## Completed
 
@@ -18,7 +19,7 @@ Base inspected: `main` at `76562aefc1dab2ac4ab780f36b96a2d30d7e7948`.
 - removed substantial Event-vs-Effect teaching from this lesson;
 - changed the Demo so propagation and default behavior are independently observable with two switches;
 - added the React-specific `onScroll` propagation exception to the Note;
-- Note experiment now maps directly to Demo controls.
+- Note experiment maps directly to Demo controls.
 
 ### Event vs Effect
 
@@ -26,7 +27,7 @@ Base inspected: `main` at `76562aefc1dab2ac4ab780f36b96a2d30d7e7948`.
 - direct Event path sends the command from the click handler;
 - anti-pattern path uses `requested` state plus Effect, and changing `product` while the request is pending visibly re-runs the Effect command;
 - retained a separate legitimate Effect example for external online-state synchronization;
-- Note now explains the causal model and maps exactly to the Demo.
+- Note explains the causal model and maps exactly to the Demo.
 
 ### State Snapshot / Update Queue
 
@@ -46,12 +47,17 @@ Reviewed against current official React documentation:
 - Queueing a Series of State Updates
 - Render and Commit
 
-## Validation
+## Final validation
 
-Repository-level CI is expected to run on the task PR. No shared `package.json` or teaching-infrastructure files were modified in this branch.
+The lesson-content head `5ae77f4e92d4bb6b1ddf16586726ab18d6e8db47` was validated by both repository workflows:
 
-## Remaining work
+- `React Learning Verify` run 145: **success**
+- `Workbench Integration Verify` run 84: **success**
 
-- inspect exact-head CI once the PR exists;
-- fix only task-attributable lint/build/E2E failures;
-- keep the PR open for review; do not merge.
+Final scope review of PR #82 shows exactly seven changed files: the six owned Note/Demo files plus this status document. No shared `package.json`, teaching infrastructure, registry, or unrelated lesson files are changed.
+
+`main` remained at `76562aefc1dab2ac4ab780f36b96a2d30d7e7948` during final validation, so there is no base drift requiring another content pass.
+
+## Completion state
+
+The runtime-mechanism lesson task is complete for its defined scope. Leave PR #82 open as a draft for human review and do not merge automatically. Re-open this work only if review identifies a concrete issue, `main` materially changes the relevant contracts, or CI regresses for a task-attributable reason.
