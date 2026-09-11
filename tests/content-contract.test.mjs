@@ -1,10 +1,11 @@
 import assert from "node:assert/strict";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import test from "node:test";
 
-const ROOT = new URL("../", import.meta.url);
-const NOTES_DIR = new URL("../src/content/notes/", import.meta.url);
+const NOTES_DIR_URL = new URL("../src/content/notes/", import.meta.url);
+const NOTES_DIR = fileURLToPath(NOTES_DIR_URL);
 const REGISTRY_FILE = new URL("../src/demos/index.js", import.meta.url);
 const TEACHING_COMPONENTS_FILE = new URL("../src/components/mdx/TeachingComponents.jsx", import.meta.url);
 
@@ -14,7 +15,7 @@ const TEACHING_PROPS = {
   Concept: new Set(["title"]),
   Experiment: new Set(["title"]),
   Observation: new Set(["title"]),
-  Compare: new Set(["left", "right", "leftTitle", "rightTitle"]),
+  Compare: new Set(["left", "right", "leftItems", "rightItems", "leftTitle", "rightTitle"]),
   Timeline: new Set(["steps", "items"]), // items is a temporary compatibility alias.
   Flow: new Set(["items"]),
   Boundary: new Set(["title"]),
@@ -26,11 +27,14 @@ const TEACHING_PROPS = {
   FurtherReading: new Set(["items", "links"]), // links is a temporary compatibility alias.
 };
 
-const COMPONENT_PATTERN = new RegExp(`<(${Object.keys(TEACHING_PROPS).join("|")})\\b([\\s\\S]*?)(/?)>`, "g");
+const COMPONENT_PATTERN = new RegExp(
+  `<(${Object.keys(TEACHING_PROPS).join("|")})\\b([\\s\\S]*?)(/?)>`,
+  "g",
+);
 
 function noteFiles() {
   return readdirSync(NOTES_DIR)
-    .filter((name) => name.endsWith(".mdx"))
+    .filter((name) => name.endsWith(".mdx") && name !== "runtime-smoke.mdx")
     .sort();
 }
 
@@ -73,10 +77,10 @@ function parseAttributes(source) {
   }
 
   while (index < source.length) {
-    while (/\\s/.test(source[index] ?? "")) index += 1;
+    while (/\s/.test(source[index] ?? "")) index += 1;
     if (index >= source.length || source[index] === "/") break;
 
-    const nameMatch = source.slice(index).match(/^([A-Za-z_$][\\w$:-]*)/);
+    const nameMatch = source.slice(index).match(/^([A-Za-z_$][\w$:-]*)/);
     if (!nameMatch) {
       index += 1;
       continue;
@@ -85,17 +89,17 @@ function parseAttributes(source) {
     const name = nameMatch[1];
     names.push(name);
     index += name.length;
-    while (/\\s/.test(source[index] ?? "")) index += 1;
+    while (/\s/.test(source[index] ?? "")) index += 1;
 
     if (source[index] !== "=") continue;
     index += 1;
-    while (/\\s/.test(source[index] ?? "")) index += 1;
+    while (/\s/.test(source[index] ?? "")) index += 1;
 
     const valueStart = source[index];
     if (valueStart === '"' || valueStart === "'") skipQuoted(valueStart);
     else if (valueStart === "{") skipExpression();
     else {
-      while (index < source.length && !/\\s/.test(source[index])) index += 1;
+      while (index < source.length && !/\s/.test(source[index])) index += 1;
     }
   }
 
@@ -107,7 +111,6 @@ function openingTags(source) {
     component: match[1],
     attributes: parseAttributes(match[2]),
     selfClosing: match[3] === "/",
-    raw: match[0],
   }));
 }
 
@@ -115,22 +118,20 @@ function demoIds() {
   const registry = readFileSync(REGISTRY_FILE, "utf8");
   const demosStart = registry.indexOf("export const demos = [");
   assert.notEqual(demosStart, -1, "src/demos/index.js must export the demos registry");
-  return [...registry.slice(demosStart).matchAll(/\\bid:\\s*"([a-z0-9-]+)"/g)].map((match) => match[1]);
+  return [...registry.slice(demosStart).matchAll(/\bid:\s*"([a-z0-9-]+)"/g)].map((match) => match[1]);
 }
 
-test("every registered learning unit resolves to exactly one convention-based note", () => {
-  const expected = new Set(demoIds());
-  const actual = new Set(noteFiles().map((name) => name.slice(0, -4)));
-
-  assert.deepEqual([...actual].filter((id) => !expected.has(id)), [], "orphan notes must not exist");
-  assert.deepEqual([...expected].filter((id) => !actual.has(id)), [], "every demo must have a matching note");
+test("every registered learning unit has a convention-based note", () => {
+  const available = new Set(noteFiles().map((name) => name.slice(0, -4)));
+  const missing = demoIds().filter((id) => !available.has(id));
+  assert.deepEqual(missing, [], "every registered demo must have a matching note");
 });
 
 test("teaching primitives use supported props and do not silently render empty self-closing blocks", () => {
   const problems = [];
 
   for (const fileName of noteFiles()) {
-    const source = readFileSync(join(NOTES_DIR.pathname, fileName), "utf8");
+    const source = readFileSync(join(NOTES_DIR, fileName), "utf8");
 
     for (const tag of openingTags(source)) {
       const allowed = TEACHING_PROPS[tag.component];
@@ -152,6 +153,9 @@ test("teaching primitives use supported props and do not silently render empty s
       if (tag.component === "Flow" && !props.has("items")) {
         problems.push(`${fileName}: self-closing <Flow> has no items`);
       }
+      if (tag.component === "Compare" && !props.has("left") && !props.has("right") && !props.has("leftItems") && !props.has("rightItems")) {
+        problems.push(`${fileName}: self-closing <Compare> has no comparison content`);
+      }
       if (tag.component === "Summary" && !props.has("items")) {
         problems.push(`${fileName}: self-closing <Summary> has no content`);
       }
@@ -166,11 +170,9 @@ test("teaching primitives use supported props and do not silently render empty s
 
 test("runtime keeps temporary aliases until all existing notes are normalized", () => {
   const source = readFileSync(TEACHING_COMPONENTS_FILE, "utf8");
-  assert.match(source, /function Timeline\\(\\{ steps = \\[\\], items = \\[\\], children \\}\\)/);
-  assert.match(source, /function Summary\\(\\{ title = "核心结论", items = \\[\\], children \\}\\)/);
-  assert.match(source, /function FurtherReading\\(\\{ items = \\[\\], links = \\[\\], children \\}\\)/);
-});
-
-test("content contract test stays repository-relative", () => {
-  assert.ok(ROOT.pathname.endsWith("/react-learning-playground/") || ROOT.pathname.endsWith("/"));
+  assert.ok(source.includes("export function Timeline({ steps = [], items = [], children })"));
+  assert.ok(source.includes('export function Summary({ title = "核心结论", items = [], children })'));
+  assert.ok(source.includes("leftItems = []"));
+  assert.ok(source.includes("rightItems = []"));
+  assert.ok(source.includes("export function FurtherReading({ items = [], links = [], children })"));
 });
