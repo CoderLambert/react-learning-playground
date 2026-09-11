@@ -1,0 +1,26 @@
+# action-state-form-status 审核建议
+
+## 当前结论
+
+- Gate A Correctness：**PASS**
+- Gate B Demo Contract：**PASS**
+- Gate C Mental Model：**PASS**
+
+## 审核要点
+
+Note 对两个 API 的职责划分准确：`useActionState` 管理 Action 返回结果与 pending；`useFormStatus` 从调用组件所在的最近父 `<form>` 读取提交状态。Action 作为 form action 使用时，wrapped Action 的参数顺序是 `previousState, formData`，Demo 也真实执行这一契约。
+
+Experiment 可以完整观察：无效邮箱返回业务错误、有效邮箱返回成功结果；外层同时显示 `useActionState.isPending`，子组件 `SubmitArea` 使用 `useFormStatus().pending/data` 读取父 form 当前提交上下文。
+
+## 边界与生产决策
+
+- `useFormStatus` 不是全局请求状态；它的作用域是父 form。
+- 预期业务错误适合返回为 Action state；未知程序异常可以抛出并交给 Error Boundary。
+- pending 已由 Action API 提供时，不要再复制成第二份手工 `isSubmitting` State。
+- `data` 表示当前提交的 FormData；课程不应把它当长期业务状态。
+
+## 建议修改
+
+1. “Action 状态机”可以继续作为教学比喻，但不要暗示 React 提供了显式 FSM 定义；更准确地说是 Action 的结果/pending 状态。
+2. 可以强调 `useFormStatus` 必须由 form 后代调用，这一点 Demo 和 Note 已经很好地一致。
+3. 当前课程硬 Gate 全部通过，后续优先保持简洁，不需要再人为增加模板章节。
