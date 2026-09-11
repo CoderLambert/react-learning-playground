@@ -145,6 +145,7 @@ export function AiAssistant({
   onSuggestionSelect,
   disabled = false,
   error = null,
+  notice = null,
   suggestions,
   providerLabel,
   modelLabel,
@@ -153,6 +154,7 @@ export function AiAssistant({
 }) {
   const inputId = useId();
   const errorId = useId();
+  const noticeId = useId();
   const statusId = useId();
   const isStreaming = status === "streaming" || status === "loading";
   const isSubmitDisabled = disabled || isStreaming || !inputValue.trim();
@@ -232,6 +234,12 @@ export function AiAssistant({
         {statusText}
       </div>
 
+      {notice ? (
+        <div id={noticeId} className="ai-assistant-notice" role="status">
+          {notice}
+        </div>
+      ) : null}
+
       {error ? (
         <div id={errorId} className="ai-assistant-error" role="alert">
           <span>{typeof error === "string" ? error : error.message ?? "请求失败，请稍后重试。"}</span>
@@ -253,7 +261,7 @@ export function AiAssistant({
           placeholder={placeholder}
           rows={3}
           disabled={disabled}
-          aria-describedby={`${statusId}${error ? ` ${errorId}` : ""}`}
+          aria-describedby={[statusId, notice ? noticeId : null, error ? errorId : null].filter(Boolean).join(" ")}
         />
         <div className="ai-assistant-composer-footer">
           <span className="ai-assistant-shortcut">Enter 发送 · Shift+Enter 换行</span>

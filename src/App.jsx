@@ -4,10 +4,12 @@ import "./workbench/Integration.css";
 import { demos, CATEGORIES } from "./demos";
 import { ChapterCheckpoint } from "./components/ChapterCheckpoint";
 import { getCheckpointChapter } from "./components/chapterCheckpointMap";
+import { AiAssistant } from "./components/ai-assistant";
 import { LearningInspector } from "./components/learning-inspector";
 import { NoteToc } from "./components/notes/NoteToc";
 import { NoteViewer } from "./components/notes/NoteViewer";
 import { MDX_TEACHING_COMPONENTS } from "./components/mdx";
+import { useAiLearningAssistant } from "./ai/useAiLearningAssistant.js";
 import { WorkbenchNavigation } from "./workbench/WorkbenchNavigation";
 import { WorkbenchShell } from "./workbench/WorkbenchShell";
 import { toLearningUnit } from "./workbench/contracts";
@@ -47,6 +49,10 @@ export default function App() {
   const currentLearningUnit = useMemo(() => (currentDemo ? toLearningUnit(currentDemo) : null), [currentDemo]);
   const currentCategory = useMemo(() => CATEGORIES.find((category) => category.id === currentDemo?.category), [currentDemo]);
   const currentCheckpointChapter = currentDemo ? getCheckpointChapter(currentDemo.id) : null;
+  const aiAssistant = useAiLearningAssistant({
+    learningUnit: currentLearningUnit,
+    activeSourceFile: workbenchState.sourceFile,
+  });
 
   useEffect(() => {
     setSourceFile(null);
@@ -104,6 +110,22 @@ export default function App() {
             onActiveFileChange={setSourceFile}
           />
         </Suspense>
+      )}
+      ai={(
+        <AiAssistant
+          contextSummary={aiAssistant.contextSummary}
+          messages={aiAssistant.messages}
+          status={aiAssistant.status}
+          inputValue={aiAssistant.inputValue}
+          onInputChange={aiAssistant.setInputValue}
+          onSubmit={aiAssistant.submit}
+          onReset={aiAssistant.reset}
+          onStop={aiAssistant.stop}
+          disabled={aiAssistant.disabled}
+          error={aiAssistant.error}
+          notice={aiAssistant.notice}
+          providerLabel="DeepSeek"
+        />
       )}
     />
   ) : null;

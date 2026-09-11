@@ -17,16 +17,28 @@ const learningUnit = {
   ],
 };
 
-test("raw note registry exposes lazy raw MDX API without replacing compiled loader", async () => {
+test("raw note registry uses lazy virtual MDX text modules without replacing compiled loader", async () => {
   const source = await readFile(new URL("../src/workbench/noteRegistry.js", import.meta.url), "utf8");
 
+  assert.match(source, /import \{ RAW_NOTE_LOADERS \} from "virtual:raw-mdx-note-registry";/);
   assert.match(source, /const NOTE_MODULE_LOADERS = import\.meta\.glob\("\.\.\/content\/notes\/\*\.mdx"\);/);
-  assert.match(source, /const NOTE_RAW_LOADERS = import\.meta\.glob\("\.\.\/content\/notes\/\*\.mdx", \{/);
-  assert.match(source, /query: "\?raw"/);
-  assert.match(source, /import: "default"/);
+  assert.doesNotMatch(source, /query: "\?raw"/);
   assert.match(source, /export function getRawNoteLoader\(learningUnitId\)/);
+  assert.match(source, /return RAW_NOTE_LOADERS\[noteId\] \?\? null;/);
   assert.match(source, /export async function loadRawNote\(learningUnitId\)/);
   assert.match(source, /if \(!loader\) return null;/);
+});
+
+test("Vite virtual raw-note plugin reads MDX as text and preserves per-note lazy imports", async () => {
+  const source = await readFile(new URL("../vite.config.js", import.meta.url), "utf8");
+
+  assert.ok(source.includes('const RAW_NOTE_REGISTRY_ID = "virtual:raw-mdx-note-registry";'));
+  assert.ok(source.includes('const RAW_NOTE_PREFIX = "virtual:raw-mdx-note/";'));
+  assert.ok(source.includes('name: "react-learning-raw-mdx-notes",'));
+  assert.ok(source.includes("readdirSync(NOTES_DIRECTORY"));
+  assert.ok(source.includes("readFileSync(notePath, \"utf8\")"));
+  assert.ok(source.includes("() => import("));
+  assert.ok(source.includes("this.addWatchFile(notePath)"));
 });
 
 test("buildAiContext creates note and single-source envelope", () => {
