@@ -3,6 +3,7 @@
 Branch: `automation/state-design-lessons`
 PR: `#78` (draft, do not merge yet)
 Base: current `main` at `76562aefc1dab2ac4ab780f36b96a2d30d7e7948`
+Validated lesson head before this status-only commit: `0e18aafd626906e79b227402e2cb3301f997c94e`
 
 ## Scope
 
@@ -101,15 +102,17 @@ Primary reference:
 
 ## Validation state
 
-Before this pass, PR head `b4e69c146ae82b2c72812412846b72f52c772769` had:
+The latest lesson/code head before this status-only documentation commit was `0e18aafd626906e79b227402e2cb3301f997c94e`.
 
-- `React Learning Verify`: **success**
-- `Workbench Integration Verify`: still **in progress** when inspected
+Exact-head GitHub Actions results:
 
-This pass added new commits after that head, so those earlier results do **not** validate the latest branch head. No local PASS claim is made from the automation environment. Repository CI must validate the new head before this task is considered complete.
+- `React Learning Verify` run `141`: **success**
+- `Workbench Integration Verify` run `80`: **success**
+
+`main` is still `76562aefc1dab2ac4ab780f36b96a2d30d7e7948`, so the PR base has not advanced during this pass.
+
+No CI failure needs task-attributable remediation. The final code/content diff remains limited to this task's primary lesson files, the two directly adjacent ownership notes, and this execution-status document; shared `package.json` and teaching infrastructure were not modified.
 
 ## Remaining work
 
-1. Inspect CI for the latest PR head and fix only task-attributable failures.
-2. Re-read the final PR diff for accidental overlap with shared teaching infrastructure or unrelated lessons.
-3. If CI is green and no further concrete ownership/state-modeling gap is found, leave PR #78 ready for human review; do not merge it.
+No additional concrete state-ownership/content gap was found after the primary and adjacent lesson pass. Leave PR #78 as a draft for human review and do not merge it. Future runs should only resume substantive editing if `main` materially changes these lessons, review feedback identifies a real issue, or latest-head CI regresses for a task-attributable reason.
