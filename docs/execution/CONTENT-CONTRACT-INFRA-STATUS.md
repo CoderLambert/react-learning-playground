@@ -26,8 +26,10 @@ Source      = implementation
 - The `Compare` aliases were discovered by the semantic check: several existing notes were passing lists through props that the runtime previously ignored.
 - Added `tests/content-contract.test.mjs` and `npm run test:content` to detect:
   - registered learning units without a convention-based note;
+  - duplicate registered learning-unit ids;
   - unsupported teaching-component props;
   - empty self-closing Timeline/Flow/Compare/Summary/FurtherReading blocks;
+  - statically detectable literal-empty teaching props such as `steps={[]}`, `items={[]}`, or empty `DemoReference action/observe` strings;
   - `DemoReference` blocks missing `action` or `observe`;
   - accidental removal of temporary runtime aliases before note normalization finishes.
 - `runtime-smoke.mdx` is intentionally excluded from the learning-unit mapping check because repository history identifies it as the MDX compiler/runtime fixture rather than a production lesson.
@@ -59,7 +61,7 @@ Source      = implementation
 - For those files, legacy `Timeline items` became `steps`, `Summary items` became child list content, and `FurtherReading links` became `items` where present.
 - Note-level `Timeline items` is now rejected globally.
 - Note-level `Summary items` and `FurtherReading links` are also rejected globally except for one explicit temporary compatibility entry: `event-vs-effect.mdx`. That lesson is owned by Runtime PR #82, whose branch already uses canonical `<Summary>...</Summary>` and `<FurtherReading items={...} />`; the exception exists only until branch reconciliation.
-- Runtime aliases remain temporarily available in `TeachingComponents.jsx` so active parallel branches are not broken while their canonical note changes are reconciled.
+- Runtime aliases remain temporarily available in `TeachingComponents.jsx` so parallel lesson branches are not broken while their canonical note changes are reconciled.
 
 ### TypeScript sample compiler gate
 
@@ -70,25 +72,17 @@ Source      = implementation
 
 ## Validation evidence
 
-Validated implementation head before this status-only commit: `a1fbbdf8ab299aa5fc31315deb90016b88753724`.
+Previous PR head `4f8e1ea5b73ff3b2a1b7f560dabd75678db68f73` has complete exact-head GitHub validation:
 
-`React Learning Verify` run `34645277144` (#193): **PASS**
+- `React Learning Verify` run `34645386038` (#197): **PASS**
+- `Workbench State URL Verify` run `34645386162` (#81): **PASS**
+- `Workbench Integration Verify` run `34645386175` (#136): **PASS**
 
-- `npm ci`: **PASS**
-- AI focused tests: **PASS**
-- `npm run test:content`: **PASS**
-- `npm run typecheck:samples`: **PASS**
-- `npm run lint`: **PASS**
-- `npm run build`: **PASS**
-
-The same implementation head also has:
-
-- `Workbench State URL Verify` run `34645277062` (#80): **PASS**
-- `Workbench Integration Verify` run `34645277110` (#132): **IN PROGRESS** when this status entry was written; do not claim it as PASS until GitHub reports success.
+That head includes the real TypeScript sample gate and the canonical-prop migration. The newer content-contract commit `1149a3be63e3601b4fc862ecc511d351ad15785a` additionally rejects duplicate demo ids and literal-empty teaching props. Latest-head CI is the acceptance source for that stricter check; no PASS claim is made until GitHub reports it.
 
 ## Remaining work
 
 1. Reconcile Runtime PR #82 so `event-vs-effect.mdx` supplies its already-canonical Summary/FurtherReading form, then remove the one-file compatibility exception from `test:content`.
 2. Reconcile TypeScript PR #81 with this shared compiler gate and inspect its intentional `@ts-expect-error` examples under real `tsc`; any sample diagnostic fix belongs on the TypeScript-owned branch.
-3. After all active lesson branches are reconciled and no production note relies on compatibility props, remove the temporary runtime aliases in `TeachingComponents.jsx` and tighten the runtime-alias assertion accordingly.
+3. After the remaining branch-owned note usage is reconciled and no production note relies on compatibility props, remove the temporary runtime aliases in `TeachingComponents.jsx` and tighten the runtime-alias assertion accordingly.
 4. Keep PR #79 draft and unmerged until the above branch-reconciliation dependencies are resolved and latest-head validation is green.
