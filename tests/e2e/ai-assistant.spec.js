@@ -134,13 +134,14 @@ test("AI assistant handles normalized errors, stop and New Chat", async ({ page 
   });
 
   const composer = await openAiTab(page);
+  const transcript = page.getByRole("log", { name: "AI 对话记录" });
   await composer.fill("触发错误");
   await page.getByRole("button", { name: "发送" }).click();
   await expect(page.getByRole("alert")).toContainText("mock quota");
 
   await page.getByRole("button", { name: "新对话" }).click();
   await expect(page.getByRole("alert")).toHaveCount(0);
-  await expect(page.getByText("触发错误")).toHaveCount(0);
+  await expect(transcript.getByText("触发错误", { exact: true })).toHaveCount(0);
 
   await composer.fill("慢回答");
   await page.getByRole("button", { name: "发送" }).click();
@@ -192,15 +193,18 @@ test("conversation history survives reload and stays scoped to the current learn
   });
 
   let composer = await openAiTab(page);
+  let transcript = page.getByRole("log", { name: "AI 对话记录" });
   await composer.fill("remember this question");
   await page.getByRole("button", { name: "发送" }).click();
-  await expect(page.getByText("persisted answer")).toBeVisible();
-  await expect(page.getByText("remember this question")).toBeVisible();
+  await expect(transcript.getByText("persisted answer", { exact: true })).toBeVisible();
+  await expect(transcript.getByText("remember this question", { exact: true })).toBeVisible();
 
   await page.reload();
   await page.getByRole("tab", { name: "AI" }).click();
   composer = page.getByRole("textbox", { name: "向 AI 助手提问" });
+  transcript = page.getByRole("log", { name: "AI 对话记录" });
   await expect(composer).toBeEnabled();
-  await expect(page.getByText("remember this question")).toBeVisible();
+  await expect(transcript.getByText("remember this question", { exact: true })).toBeVisible();
+  await expect(transcript.getByText("persisted answer", { exact: true })).toBeVisible();
   await expect(page.locator(".ai-conversation-popover summary")).toContainText("会话");
 });
