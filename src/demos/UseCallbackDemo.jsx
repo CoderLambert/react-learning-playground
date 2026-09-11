@@ -1,4 +1,4 @@
-import { memo, useCallback, useRef, useState } from "react";
+import { memo, useCallback, useState } from "react";
 
 const MemoChild = memo(function MemoChild({ onAdd }) {
   console.count("MemoChild render");
@@ -20,7 +20,6 @@ export function UseCallbackDemo() {
   const [count, setCount] = useState(0);
   const [themeTick, setThemeTick] = useState(0);
   const [stable, setStable] = useState(true);
-  const previousCallbackRef = useRef(null);
 
   const stableCallback = useCallback(() => {
     setCount((value) => value + 1);
@@ -31,10 +30,7 @@ export function UseCallbackDemo() {
   };
 
   const activeCallback = stable ? stableCallback : unstableCallback;
-  const isSameAsPrevious = previousCallbackRef.current
-    ? Object.is(previousCallbackRef.current, activeCallback)
-    : null;
-  previousCallbackRef.current = activeCallback;
+  const identityResult = stable ? "相同引用" : "不同引用";
 
   return (
     <div>
@@ -64,7 +60,7 @@ export function UseCallbackDemo() {
           <h3 className="demo-section-title"><span>🧪</span> 实验：函数 prop 是否让 memo 失效</h3>
           <p className="demo-section-desc">
             切换“稳定 callback / 每次新建函数”，再点击“无关 Render”。观察当前函数与上一轮是否为同一引用，
-            同时查看 Console 中 <code>MemoChild render</code> 次数。
+            同时查看 Console 中 <code>MemoChild render</code> 次数。这里的结果是对下一次无关 Render 的预期。
           </p>
         </div>
 
@@ -80,8 +76,8 @@ export function UseCallbackDemo() {
         <div className="demo-alert demo-alert-tip" style={{ marginBottom: "12px" }}>
           <div className="demo-alert-title">🔎 identity 观察</div>
           <div>
-            当前 callback 与上一轮：
-            <strong>{isSameAsPrevious === null ? "首次 Render" : isSameAsPrevious ? " 相同引用" : " 不同引用"}</strong>
+            下一次无关 Render 的 callback 与当前：
+            <strong>{identityResult}</strong>
           </div>
           <div>count：{count}</div>
         </div>

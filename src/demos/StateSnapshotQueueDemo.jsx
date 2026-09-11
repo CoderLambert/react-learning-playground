@@ -1,16 +1,20 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 
 export function StateSnapshotQueueDemo() {
   const [count, setCount] = useState(0);
   const [notes, setNotes] = useState([]);
-  const renderCount = useRef(0);
-  renderCount.current += 1;
+  const [renderCount, setRenderCount] = useState(1);
+
+  function recordRender() {
+    setRenderCount((value) => value + 1);
+  }
 
   function log(message) {
     setNotes((items) => [message, ...items].slice(0, 10));
   }
 
   function replaceThreeTimes() {
+    recordRender();
     log(`handler snapshot = ${count}`);
     setCount(count + 1);
     setCount(count + 1);
@@ -19,6 +23,7 @@ export function StateSnapshotQueueDemo() {
   }
 
   function updateThreeTimes() {
+    recordRender();
     log(`handler snapshot = ${count}`);
     setCount((c) => c + 1);
     setCount((c) => c + 1);
@@ -28,8 +33,17 @@ export function StateSnapshotQueueDemo() {
 
   function delayedRead() {
     const snapshot = count;
+    recordRender();
     setCount((c) => c + 1);
-    setTimeout(() => log(`timer 来自旧 render：捕获 snapshot=${snapshot}；timer 执行时不会自动改成最新值`), 700);
+    setTimeout(() => {
+      recordRender();
+      log(`timer 来自旧 render：捕获 snapshot=${snapshot}；timer 执行时不会自动改成最新值`);
+    }, 700);
+  }
+
+  function incrementOnce() {
+    recordRender();
+    setCount((value) => value + 1);
   }
 
   return (
@@ -42,9 +56,9 @@ export function StateSnapshotQueueDemo() {
 
       <div className="demo-section">
         <div className="demo-grid-2">
-          <div style={{ padding: 16, background: "var(--bg-surface-secondary)", borderRadius: 10 }}><div>当前 UI count</div><strong style={{ fontSize: 34 }}>{count}</strong><div style={{ marginTop: 8 }}>Render #{renderCount.current}</div></div>
+          <div style={{ padding: 16, background: "var(--bg-surface-secondary)", borderRadius: 10 }}><div>当前 UI count</div><strong style={{ fontSize: 34 }}>{count}</strong><div style={{ marginTop: 8 }}>Render #{renderCount}</div></div>
           <div style={{ display: "grid", gap: 8, alignContent: "start" }}>
-            <button className="btn" type="button" onClick={() => setCount(count + 1)}>+1：替换为 snapshot + 1</button>
+            <button className="btn" type="button" onClick={incrementOnce}>+1：替换为 snapshot + 1</button>
             <button className="btn" type="button" onClick={replaceThreeTimes}>连续 3 次 count + 1</button>
             <button className="btn btn-primary" type="button" onClick={updateThreeTimes}>连续 3 次 updater</button>
             <button className="btn" type="button" onClick={delayedRead}>+1 并在 timer 中读取旧快照</button>

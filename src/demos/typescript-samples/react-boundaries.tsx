@@ -29,7 +29,7 @@ export function ProfileCard({ name, children, onRename }: ProfileCardProps) {
         Focus
       </button>
       <button type="submit">Save</button>
-      {children}
+      {renderLoadState({ status: "success", data: children }, (content) => content)}
     </form>
   );
 }
@@ -40,7 +40,7 @@ type LoadState<T> =
   | { status: "success"; data: T }
   | { status: "error"; message: string };
 
-export function renderLoadState<T>(state: LoadState<T>, renderData: (data: T) => ReactNode) {
+function renderLoadState<T>(state: LoadState<T>, renderData: (data: T) => ReactNode) {
   switch (state.status) {
     case "idle":
       return "尚未请求";

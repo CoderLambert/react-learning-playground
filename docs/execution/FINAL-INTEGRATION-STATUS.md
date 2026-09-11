@@ -79,7 +79,7 @@ This status document changes the integration HEAD, so the same workflow must als
 Validated on branch `chore/final-browser-validation` against the production preview at `/react-learning-playground/` on 2026-09-11.
 
 - `npm ci`: **PASS** — 122 packages installed; audit reported 0 vulnerabilities.
-- `npm run lint`: **PASS** — exit code 0; existing teaching-demo and verification-script warnings remain documented by the command output.
+- `npm run lint`: **PASS** — exit code 0 with 0 warnings.
 - `npm run build`: **PASS** — Vite production build completed; existing large-chunk advisory remains.
 - `npm run test:e2e`: **PASS** — 10 Chromium tests passed in 7.9s in the final CI-like run.
 - production preview smoke: **PASS** — `curl` verified the base-path HTML root and base-prefixed asset references.
@@ -98,6 +98,7 @@ Validated on branch `chore/final-browser-validation` against the production prev
 - Added the missing `EffectEventDemo` label/select association.
 - Added `noValidate` to the accessibility demo so its custom invalid-email live-region state is reachable through the real form interaction.
 - Adjusted shared subtle-text and badge colors to resolve the axe contrast findings.
+- Cleared the remaining 22 lint warnings without disabling the React purity, ref, Effect, or hooks rules: interaction counters now use state, external cache rows use a React-owned snapshot and clock Effect, and teaching-only non-component helpers are kept internal to their raw examples.
 
 ### Remaining manual debt
 

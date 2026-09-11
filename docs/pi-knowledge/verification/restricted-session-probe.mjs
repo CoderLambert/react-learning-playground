@@ -24,7 +24,7 @@ fs.existsSync = function(path) {
   return originalExists(path);
 };
 for (const key of ['exec', 'execSync', 'execFile', 'execFileSync', 'spawn', 'spawnSync', 'fork']) {
-  cp[key] = (...args) => { execAttempts.push(key); throw new Error('PROBE blocked child process'); };
+  cp[key] = (..._args) => { execAttempts.push(key); throw new Error('PROBE blocked child process'); };
 }
 for (const obj of [fs, fsp]) {
   for (const key of ['readFile', 'readFileSync', 'readdir', 'readdirSync']) {

@@ -21,7 +21,7 @@ export function SelectList<T>({ items, getKey, renderItem, onSelect }: SelectLis
   );
 }
 
-export function useHistory<T>(initialValue: T) {
+function useHistory<T>(initialValue: T) {
   const [current, setCurrent] = useState<T>(initialValue);
   const [history, setHistory] = useState<T[]>([initialValue]);
 

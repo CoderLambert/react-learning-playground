@@ -1,20 +1,29 @@
-import { useLayoutEffect, useRef, useState } from "react";
+import { useState } from "react";
 
 export function RenderCommitDemo() {
   const [count, setCount] = useState(0);
   const [themeTick, setThemeTick] = useState(0);
-  const renders = useRef(0);
-  const commits = useRef(0);
-  const previousText = useRef("");
-  renders.current += 1;
+  const [renderCount, setRenderCount] = useState(1);
+  const [commitCount, setCommitCount] = useState(1);
+  const [changed, setChanged] = useState(false);
 
   const text = `Count: ${count}`;
-  const changed = previousText.current !== text;
 
-  useLayoutEffect(() => {
-    commits.current += 1;
-    previousText.current = text;
-  });
+  function recordInteraction(didTextChange) {
+    setRenderCount((value) => value + 1);
+    setCommitCount((value) => value + 1);
+    setChanged(didTextChange);
+  }
+
+  function incrementCount() {
+    setCount((value) => value + 1);
+    recordInteraction(true);
+  }
+
+  function incrementThemeTick() {
+    setThemeTick((value) => value + 1);
+    recordInteraction(false);
+  }
 
   return (
     <div>
@@ -27,13 +36,13 @@ export function RenderCommitDemo() {
       <div className="demo-section">
         <div className="demo-grid-2">
           <div style={{ display: "grid", gap: 10, alignContent: "start" }}>
-            <button className="btn btn-primary" type="button" onClick={() => setCount((c) => c + 1)}>更新 count（UI 文本会变）</button>
-            <button className="btn" type="button" onClick={() => setThemeTick((t) => t + 1)}>只更新无关 state（Count 文本不变）</button>
+            <button className="btn btn-primary" type="button" onClick={incrementCount}>更新 count（UI 文本会变）</button>
+            <button className="btn" type="button" onClick={incrementThemeTick}>只更新无关 state（Count 文本不变）</button>
           </div>
           <div style={{ padding: 16, background: "var(--bg-surface-secondary)", borderRadius: 10 }}>
             <strong style={{ fontSize: 28 }}>{text}</strong>
-            <div style={{ marginTop: 12 }}>Render 调用次数：{renders.current}</div>
-            <div>已完成 Commit：{commits.current}</div>
+            <div style={{ marginTop: 12 }}>Render 调用次数：{renderCount}</div>
+            <div>已完成 Commit：{commitCount}</div>
             <div>themeTick：{themeTick}</div>
             <div className={`demo-alert ${changed ? "demo-alert-tip" : ""}`} style={{ marginTop: 12 }}>本次 render 计算出的 Count 文本相对上次 commit：<strong>{changed ? "变化" : "相同"}</strong></div>
           </div>

@@ -6,6 +6,11 @@ const PRODUCTS = Array.from({ length: 1200 }, (_, index) => ({
   price: (index % 37) + 10,
 }));
 
+function calculateProducts(query) {
+  const normalized = query.trim().toLowerCase();
+  return PRODUCTS.filter((product) => product.name.toLowerCase().includes(normalized));
+}
+
 const ProductList = memo(function ProductList({ products }) {
   console.count("ProductList render");
   return (
@@ -22,13 +27,8 @@ export function ReactCompilerDemo() {
   const [unrelated, setUnrelated] = useState(0);
   const [manualMemo, setManualMemo] = useState(false);
 
-  const calculateProducts = () => {
-    const normalized = query.trim().toLowerCase();
-    return PRODUCTS.filter((product) => product.name.toLowerCase().includes(normalized));
-  };
-
-  const memoizedProducts = useMemo(calculateProducts, [query]);
-  const directProducts = calculateProducts();
+  const memoizedProducts = useMemo(() => calculateProducts(query), [query]);
+  const directProducts = calculateProducts(query);
   const products = manualMemo ? memoizedProducts : directProducts;
 
   return (

@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const USERS = {
   ada: { id: "ada", name: "Ada", role: "Frontend" },
@@ -21,8 +21,26 @@ export function ServerStateCacheDemo() {
   const [view, setView] = useState({ status: "idle", data: null, source: "—" });
   const [staleMs, setStaleMs] = useState(3000);
   const [requestCount, setRequestCount] = useState(0);
+  const [cacheRows, setCacheRows] = useState([]);
+  const [now, setNow] = useState(() => Date.now());
 
-  const cacheRows = useMemo(() => Array.from(cacheRef.current.entries()).map(([key, entry]) => ({ key, age: Date.now() - entry.cachedAt, name: entry.data.name })), [view]);
+  useEffect(() => {
+    const clock = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(clock);
+  }, []);
+
+  function refreshCacheRows() {
+    setCacheRows(Array.from(cacheRef.current.entries()).map(([key, entry]) => ({
+      key,
+      cachedAt: entry.cachedAt,
+      name: entry.data.name,
+    })));
+  }
+
+  const visibleCacheRows = cacheRows.map((row) => ({
+    ...row,
+    age: row.cachedAt === 0 ? "stale" : `${Math.max(0, now - row.cachedAt)}ms`,
+  }));
 
   async function load(id, { force = false } = {}) {
     setUserId(id);
@@ -51,6 +69,7 @@ export function ServerStateCacheDemo() {
     try {
       const data = await promise;
       cacheRef.current.set(key, { data, cachedAt: Date.now() });
+      refreshCacheRows();
       setView({ status: "success", data, source: "network → cache" });
     } finally {
       inFlightRef.current.delete(key);
@@ -61,6 +80,7 @@ export function ServerStateCacheDemo() {
     const key = `user:${userId}`;
     const entry = cacheRef.current.get(key);
     if (entry) cacheRef.current.set(key, { ...entry, cachedAt: 0 });
+    refreshCacheRows();
     setView((current) => ({ ...current, source: "invalidated: next read is stale" }));
   }
 
@@ -84,7 +104,7 @@ export function ServerStateCacheDemo() {
         <label style={{ display: "block", marginTop: 14 }}>模拟 staleTime：{staleMs}ms <input type="range" min="0" max="8000" step="1000" value={staleMs} onChange={(e) => setStaleMs(Number(e.target.value))} /></label>
         <div className="demo-grid-2" style={{ marginTop: 14 }}>
           <div className="demo-alert demo-alert-tip"><strong>当前 query</strong><p>key: user:{userId}</p><p>status: {view.status}</p><p>source: {view.source}</p><p>实际 network request: {requestCount}</p>{view.data && <pre>{JSON.stringify(view.data, null, 2)}</pre>}</div>
-          <div className="demo-alert"><strong>Cache</strong>{cacheRows.length === 0 ? <p>empty</p> : cacheRows.map((row) => <p key={row.key}>{row.key} → {row.name} · age {row.age}ms</p>)}</div>
+          <div className="demo-alert"><strong>Cache</strong>{visibleCacheRows.length === 0 ? <p>empty</p> : visibleCacheRows.map((row) => <p key={row.key}>{row.key} → {row.name} · age {row.age}</p>)}</div>
         </div>
       </div>
 

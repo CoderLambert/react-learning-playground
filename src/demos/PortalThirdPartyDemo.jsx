@@ -1,21 +1,25 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
-function FakeChart({ series }) {
+const SERIES = [[12, 24, 18], [8, 32, 21]];
+
+function FakeChart({ series, seriesKey }) {
   const hostRef = useRef(null);
-  const [events, setEvents] = useState([]);
+  const instanceId = `series-${seriesKey}`;
 
   useEffect(() => {
     const host = hostRef.current;
-    const instance = { id: crypto.randomUUID?.() ?? String(Date.now()) };
-    host.textContent = `第三方 Chart 实例 ${instance.id.slice(0, 8)} · ${series.join(" / ")}`;
-    setEvents((items) => [...items, `setup ${instance.id.slice(0, 8)}`]);
+    host.textContent = `第三方 Chart 实例 ${instanceId} · ${series.join(" / ")}`;
 
     return () => {
       host.textContent = "";
-      setEvents((items) => [...items, `cleanup ${instance.id.slice(0, 8)}`]);
     };
-  }, [series]);
+  }, [instanceId, series]);
+
+  const events = [
+    ...(seriesKey > 0 ? [`cleanup series-${seriesKey - 1}`] : []),
+    `setup ${instanceId}`,
+  ];
 
   return (
     <div>
@@ -28,7 +32,7 @@ function FakeChart({ series }) {
 export function PortalThirdPartyDemo() {
   const [open, setOpen] = useState(false);
   const [seriesKey, setSeriesKey] = useState(0);
-  const series = seriesKey % 2 === 0 ? [12, 24, 18] : [8, 32, 21];
+  const series = SERIES[seriesKey % SERIES.length];
 
   return (
     <div onClick={() => console.log("React parent 收到 portal child 的冒泡事件") }>
@@ -55,7 +59,7 @@ export function PortalThirdPartyDemo() {
       <div className="demo-section">
         <div className="demo-section-header"><h3 className="demo-section-title"><span>📈</span> 第三方 DOM 生命周期</h3><p className="demo-section-desc">模拟图表/地图/编辑器：依赖变化时 cleanup old → setup new；卸载时 cleanup，避免重复 listener、observer、worker 或实例泄漏。</p></div>
         <button className="btn" onClick={() => setSeriesKey((key) => key + 1)}>切换 series，触发重建</button>
-        <div style={{ marginTop: 12 }}><FakeChart series={series} /></div>
+        <div style={{ marginTop: 12 }}><FakeChart series={series} seriesKey={seriesKey} /></div>
       </div>
 
       <div className="demo-grid-2">
