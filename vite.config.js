@@ -8,15 +8,18 @@ import { defineConfig } from "vite";
 export default defineConfig({
   base: "/react-learning-playground/",
   plugins: [
-    mdx({
-      // Keep `?raw` MDX imports on Vite's raw-text path so the AI context
-      // receives the original note source instead of a compiled React component.
-      include: /\.mdx(?:$|\?)/,
-      exclude: /[?&]raw(?:&|$)/,
-      providerImportSource: "@mdx-js/react",
-      remarkPlugins: [remarkGfm],
-      rehypePlugins: [rehypeSlug],
-    }),
+    {
+      // Run MDX before Vite core transforms. This lets the filter see `?raw`
+      // and skip those requests so Vite's raw-text loader can handle them.
+      enforce: "pre",
+      ...mdx({
+        include: /\.mdx(?:$|\?)/,
+        exclude: /[?&]raw(?:&|$)/,
+        providerImportSource: "@mdx-js/react",
+        remarkPlugins: [remarkGfm],
+        rehypePlugins: [rehypeSlug],
+      }),
+    },
     react(),
   ],
 });
