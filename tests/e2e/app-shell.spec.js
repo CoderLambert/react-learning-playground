@@ -20,6 +20,8 @@ test.describe("application shell", () => {
     await expect(page.locator(".demo-all-container")).toBeVisible();
     await expect(page.locator('[id^="demo-"]')).toHaveCount(demoCount);
     await expect(page.locator('[id^="demo-"]').last()).toBeVisible();
+    await expect(page.locator("#demo-profiler")).toContainText("Profiler：先测量，再决定是否优化");
+    await page.waitForTimeout(500);
 
     expect(browserDiagnostics.pageErrors).toHaveLength(0);
   });
