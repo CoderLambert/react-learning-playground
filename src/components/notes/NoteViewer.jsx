@@ -59,7 +59,7 @@ export function NoteViewer({
     return () => {
       cancelled = true;
     };
-  }, [learningUnitId, resolution.loader]);
+  }, [learningUnitId, resolution]);
 
   const isReady = loaded.learningUnitId === learningUnitId && Boolean(loaded.Component);
 
