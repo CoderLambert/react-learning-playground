@@ -1,5 +1,5 @@
 const SOURCE_PROTOCOL_PREFIX = "source://";
-const SOURCE_URL_RE = /^source:\/\/([^#?\s]+)#L([1-9]\d*)(?:-(?:L)?([1-9]\d*))?$/i;
+const SOURCE_URL_RE = /^source:\/\/([^#?\s]+)#L([1-9]\d*)(?:-(?:L)?([1-9]\d*))?\/?$/i;
 const MARKDOWN_SOURCE_LINK_RE = /\[([^\]\r\n]{0,256})\]\((source:\/\/[^)\s]+)\)/gi;
 const BRACKET_SOURCE_RE = /\[([^\[\]\r\n]+):L([1-9]\d*)(?:-(?:L)?([1-9]\d*))?\]/g;
 const FALLBACK_SOURCE_FILE_RE = /(?:^|[/\\])[^/\\\s][^/\\]*\.(?:[cm]?[jt]sx?|css|scss|sass|less|mdx?|json|html?|vue|svelte|py|go|rs|java|kt|kts|sql|ya?ml|toml)$/i;
@@ -78,6 +78,34 @@ export function parseSourceCitationUrl(href) {
     startLine: match[2],
     endLine: match[3] ?? match[2],
   });
+}
+
+export function buildSourceCitationPreview(citation, sources, options = {}) {
+  const normalized = normalizeSourceCitation(citation);
+  if (!normalized || !Array.isArray(sources)) return "";
+
+  const source = sources.find((item) => item?.name === normalized.fileName);
+  const code = typeof source?.code === "string" ? source.code : "";
+  if (!code) return "";
+
+  const lines = code.split("\n");
+  if (normalized.startLine > lines.length) return "";
+
+  const contextLines = Number.isFinite(options.contextLines)
+    ? Math.max(0, Math.floor(options.contextLines))
+    : 1;
+  const maxLines = Number.isFinite(options.maxLines)
+    ? Math.max(1, Math.floor(options.maxLines))
+    : 14;
+  const startLine = Math.max(1, normalized.startLine - contextLines);
+  const requestedEndLine = Math.min(lines.length, normalized.endLine + contextLines);
+  const endLine = Math.min(requestedEndLine, startLine + maxLines - 1);
+  const preview = lines
+    .slice(startLine - 1, endLine)
+    .map((line, index) => `${startLine + index} | ${line || " "}`)
+    .join("\n");
+
+  return endLine < requestedEndLine ? `${preview}\n…` : preview;
 }
 
 function escapeMarkdownLabel(value) {
