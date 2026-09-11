@@ -11,6 +11,7 @@ async function installStreamingGateway(page) {
     const delay = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 
     window.__aiOutputUpstreamAborted = false;
+    window.__aiGatewayQuestions = [];
     window.fetch = async (input, init = {}) => {
       const url = typeof input === "string" ? input : input?.url;
       if (!url || !new URL(url, window.location.href).pathname.endsWith(gatewayPath)) {
@@ -18,6 +19,7 @@ async function installStreamingGateway(page) {
       }
 
       const { question } = JSON.parse(init.body);
+      window.__aiGatewayQuestions.push(question);
       const signal = init.signal;
       const response = (events, { interval = 0, stayOpen = false, trackCancellation = false } = {}) => {
         let stopped = false;
@@ -134,6 +136,25 @@ test("a long answer renders incrementally and creates exactly one assistant mess
   await expect(assistantMessage).toContainText("流式片段-12");
   await expect(assistantMessage).toHaveAttribute("data-finish-reason", "stop");
   await expect(assistantMessage).not.toHaveAttribute("aria-busy", "true");
+  await expect(assistantMessage).toHaveCount(1);
+});
+
+test("two synchronous submit events remain single-flight", async ({ page }) => {
+  const { composer, transcript } = await openAssistant(page);
+  await composer.fill("e2e:long-stream");
+
+  await composer.locator("xpath=ancestor::form").evaluate((form) => {
+    form.requestSubmit();
+    form.requestSubmit();
+  });
+
+  const assistantMessage = transcript.locator('[data-message-role="assistant"]');
+  await expect(assistantMessage).toHaveCount(1);
+  await expect(assistantMessage).toContainText("流式片段-12");
+  await expect.poll(() => page.evaluate(
+    () => window.__aiGatewayQuestions.filter((question) => question === "e2e:long-stream").length,
+  )).toBe(1);
+  await expect(transcript.locator('[data-message-role="user"]')).toHaveCount(1);
   await expect(assistantMessage).toHaveCount(1);
 });
 

@@ -90,6 +90,21 @@ test("manual compaction persists a durable checkpoint without deleting full hist
   const restoredRequest = requests.find((request) => request.question === "after reload");
   expect(restoredRequest.context.conversationSummary).toContain("理解当前 React Demo");
   expect(restoredRequest.context.conversationSummary).toContain("PropsBasicsDemo.jsx:L1-L2");
+  expect(restoredRequest.history).toEqual([]);
+
+  await page.getByRole("button", { name: "Compact", exact: true }).click();
+  await expect.poll(() => requests.filter(
+    (request) => request.question.startsWith("请将下面对话压缩为结构化 JSON"),
+  ).length).toBe(2);
+  const chainedSummaryRequest = requests.filter(
+    (request) => request.question.startsWith("请将下面对话压缩为结构化 JSON"),
+  )[1];
+  expect(chainedSummaryRequest.question).toContain("after reload");
+  expect(chainedSummaryRequest.question).not.toContain("manual seed");
+
+  const chainedStored = await readAiDatabase(page);
+  expect(chainedStored.messages).toHaveLength(4);
+  expect(chainedStored.compactions).toHaveLength(2);
 });
 
 test("provider actual usage triggers one automatic compaction and does not chain stale usage", async ({ page }) => {
