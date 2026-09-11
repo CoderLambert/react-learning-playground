@@ -1,0 +1,28 @@
+# optimistic-update 审核建议
+
+## 当前结论
+
+- Gate A Correctness：**PASS**
+- Gate B Demo Contract：**PARTIAL**
+- Gate C Mental Model：**PASS**
+
+## 主要问题
+
+Note 对 `useOptimistic` 的核心模型准确：传入的 canonical value 是 Action 结束后的事实来源；optimistic state 只在 Action pending 期间提供临时投影。官方 React 19.2 也要求 optimistic setter 在 Action / Transition 中调用；当前 Demo 把它放在 `<form action={addCommentAction}>` 的 Action 内，契约正确。
+
+Demo 的成功路径能真实观察 optimistic item 立即出现，随后 canonical State 更新并收敛。勾选“模拟服务器失败”时，代码并没有抛出 Action error，而是正常返回且不更新 canonical State；因此它实际演示的是“业务拒绝 / 未确认 → canonical 不变 → optimistic layer 结束”，而不是 Error Boundary 意义上的 Action failure。
+
+这仍然能证明 rollback 心智模型，但 Note 和 Demo 应明确区分“业务拒绝后正常返回”与“Action 抛异常”。
+
+## 边界与生产决策
+
+- optimistic state 不是第二个长期 store；Action 结束后以 canonical value 为准。
+- reducer / updater 必须保持纯函数。
+- 高风险或不可逆操作不一定适合先显示成功态；是否 optimistic 是产品风险决策，不是 API 偏好。
+- 真正的网络/服务器错误还需要明确错误反馈、重试、幂等与冲突策略。
+
+## 建议修改
+
+1. 把 Demo 的“模拟服务器失败”改称“模拟业务拒绝”最准确；若要教授异常失败，应增加真正 throw 的隔离路径和 Error Boundary。
+2. Note 的“失败”可细分为 canonical 未确认（当前 Demo）与 Action error（另一个错误处理层）。
+3. 保留 canonical vs optimistic 两层模型，这是本课最关键且当前实现正确的心智模型。
