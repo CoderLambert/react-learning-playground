@@ -1,5 +1,3 @@
-import { getNoteFileName } from "../workbench/noteRegistry";
-
 export const AI_CONTEXT_LIMITS = Object.freeze({
   maxNoteChars: 24000,
   maxSourceFiles: 8,
@@ -79,8 +77,8 @@ export function buildAiContext({
   ).trim();
 
   const noteText = toText(rawNote);
-  const noteResult = truncateText(noteText, resolvedLimits.maxNoteChars);
-  const noteFileName = id ? getNoteFileName(id) : null;
+  const noteResult = truncateText(noteText, Math.max(0, resolvedLimits.maxNoteChars));
+  const noteFileName = id ? `${id}.mdx` : null;
 
   const inputSources = Array.isArray(sources)
     ? sources
