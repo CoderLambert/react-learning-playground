@@ -56,6 +56,7 @@ export function ConversationHistory({
         <ConversationList
           conversations={other}
           heading={`其他学习单元 · ${other.length}`}
+          onSelect={onSelect}
           onRename={onRename}
           onArchive={onArchive}
           onDelete={onDelete}
