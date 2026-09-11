@@ -1,0 +1,26 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "react-learning-deepseek-assistant",
+  "main": "src/index.js",
+  "compatibility_date": "2026-09-11",
+  "vars": {
+    "ALLOWED_ORIGIN": "https://coderlambert.github.io",
+    "DEEPSEEK_API_BASE": "https://api.deepseek.com",
+    "DEEPSEEK_MODEL": "deepseek-v4-flash",
+    "MAX_OUTPUT_TOKENS": "2048",
+    "UPSTREAM_TIMEOUT_MS": "45000"
+  },
+  "secrets": {
+    "required": ["DEEPSEEK_API_KEY"]
+  },
+  "ratelimits": [
+    {
+      "name": "AI_RATE_LIMITER",
+      "namespace_id": "1001",
+      "simple": {
+        "limit": 10,
+        "period": 60
+      }
+    }
+  ]
+}
