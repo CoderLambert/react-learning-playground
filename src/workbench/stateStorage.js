@@ -3,7 +3,7 @@ import {
   INSPECTOR_TABS,
   WORKBENCH_DIMENSIONS,
   WORKBENCH_STORAGE_KEYS,
-} from "./constants";
+} from "./constants.js";
 
 export const DEFAULT_PERSISTED_WORKBENCH_STATE = Object.freeze({
   navigationCollapsed: false,
