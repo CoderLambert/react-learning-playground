@@ -9,12 +9,12 @@
 
 Specialist ownership checked before the latest batch:
 
-- PR #79 `automation/content-contract-infra`: MDX teaching-component compatibility/canonicalization, semantic content tests, authoring guidance, shared TypeScript sample gate.
-- PR #78 `automation/state-design-lessons`: controlled/uncontrolled, state structure, lifting state, preserving/resetting state.
-- PR #81 `automation/typescript-learning`: TypeScript-for-React Note/Demo/TSX samples.
-- PR #82 `automation/runtime-lessons`: event propagation, Event-vs-Effect, state snapshot/update queue.
+- PR #79 `automation/content-contract-infra`: MDX teaching-component compatibility/canonicalization, semantic content tests, authoring guidance, shared TypeScript sample gate. The task is currently stopped on Runtime/TypeScript branch reconciliation, but its open PR still owns the shared infrastructure and mechanical Note normalization it changed.
+- PR #78 `automation/state-design-lessons`: controlled/uncontrolled, state structure, lifting state, preserving/resetting state. Scope complete and validated; PR remains open for review.
+- PR #81 `automation/typescript-learning`: TypeScript-for-React Note/Demo/TSX samples. Stopped pending combined validation with PR #79's real compiler gate.
+- PR #82 `automation/runtime-lessons`: event propagation, Event-vs-Effect, state snapshot/update queue. Scope complete and validated; never duplicated here.
 
-This branch does not edit those actively owned lesson files. `main` remained unchanged during this run.
+This branch does not edit those owned lesson files. `main` remained unchanged at the baseline SHA during this batch.
 
 ## Concrete residual fixes made by this queue
 
@@ -54,6 +54,13 @@ Each item below has exactly one matching file under `src/content/notes-advice/`.
 22. `form-action.mdx` — A PASS / B PASS / C PASS
 23. `action-state-form-status.mdx` — A PASS / B PASS / C PASS
 24. `optimistic-update.mdx` — A PASS / B PARTIAL / C PASS
+25. `lazy-suspense.mdx` — A PASS / B PASS / C PASS
+26. `suspense-boundary.mdx` — A PASS / B PASS / C PASS
+27. `error-boundary-use.mdx` — A PASS / B PASS / C PASS
+28. `transition-deferred.mdx` — A PASS / B FAIL / C PASS
+29. `render-vs-dom-update.mdx` — A PASS / B PARTIAL / C PASS
+30. `reference-equality.mdx` — A PASS / B PASS / C PASS
+31. `react-memo.mdx` — A PASS / B PASS / C PASS
 
 ## Material open findings
 
@@ -71,20 +78,27 @@ Each item below has exactly one matching file under `src/content/notes-advice/`.
 - `advanced-ref`: Note promises `useEffect` vs `useLayoutEffect` timing comparison, but Demo only implements `useLayoutEffect` measurement.
 - `form-data-modeling`: Note asks for controlled-vs-uncontrolled comparison, while current Demo only executes the FormData/uncontrolled side.
 - `optimistic-update`: rollback is observable, but the “simulate failure” branch is a business rejection that returns normally and leaves canonical state unchanged; it does not exercise an Action throw/Error Boundary path.
+- `transition-deferred`: Note asks to compare direct update, Transition and deferred value, but the Demo has no direct-update control. It also claims learners can observe background render interruption without render-attempt instrumentation. `ExpensiveResults` is not memoized, so the deferred-value performance experiment does not cleanly reproduce the official slow-child optimization shape.
+- `render-vs-dom-update`: MutationObserver gives real target-DOM evidence, but `renderRequest` is a manually incremented experiment counter, not actual component render instrumentation.
+
+## Latest batch review notes
+
+- `lazy-suspense`: core semantics and experiment pass. The 900ms delay is an artificial teaching delay; future wording should attribute caching precisely to the same `lazy(load)` loader Promise/resolved module and optionally connect loader rejection to Error Boundary.
+- `suspense-boundary`: nested vs single boundary experiment matches the Note. The module-level Map is only a teaching stable-Promise fixture and should not be presented as a production invalidation/cache solution. A useful bridge to the next lesson is the React 19.2 behavior for already-revealed content suspending during Transition/deferred updates.
+- `error-boundary-use`: pending/fulfilled/rejected routing is executable. State-stored Promise plus changing `key` is a teaching recovery mechanism; production should prefer framework/cache or Server Component-provided stable Promises. `use` should not be wrapped in try/catch to intercept its Suspense control flow.
+- `reference-equality`: Demo performs real cross-render `Object.is` comparisons and is well aligned. Keep the decision rule “find the identity consumer first” rather than defaulting every object/function to `useMemo`/`useCallback`.
+- `react-memo`: Console counts make primitive/fresh-object/stable-object behavior directly observable. React 19.2 official docs still frame `memo` as an optimization, not a guarantee, and state that React Compiler usually reduces the need for manual `memo`; the Demo correctly says this repository does not currently enable Compiler.
 
 ## Factual sources
 
-Primary factual baseline is current official React documentation, including Components/Hooks purity, `useReducer`, Context, refs, Effects, Lifecycle of Reactive Effects, `useEffectEvent`, Custom Hooks, `useLayoutEffect`, `useImperativeHandle`, React 19 ref-as-prop/`forwardRef`, `<form>` Actions, `useActionState`, `useFormStatus`, and `useOptimistic`. MDN is used only for browser APIs such as `FormData`.
+Primary factual baseline is current official React documentation, including Components/Hooks purity, `useReducer`, Context, refs, Effects, Lifecycle of Reactive Effects, `useEffectEvent`, Custom Hooks, `useLayoutEffect`, `useImperativeHandle`, React 19 ref-as-prop/`forwardRef`, `<form>` Actions, `useActionState`, `useFormStatus`, `useOptimistic`, `lazy`, Suspense, `use(Promise)`, Error Boundaries, `useTransition`, `useDeferredValue`, Render and Commit, and `memo`. MDN is used only for browser APIs such as `FormData` and `MutationObserver`.
 
 ## Validation
 
-Previous audit head `b2200ffd95d54a60cf3a1873a9d6d62951086615` has exact-head GitHub Actions evidence:
+Previous audit head `ff92a95a2a4c74bb5b9a9b4c4d30cb950fac309c` contains the earlier executable Demo fixes and 24 advice records. Its `React Learning Verify` run #215 succeeded; the corresponding Workbench Integration run was still pending at the end of the previous batch.
 
-- `React Learning Verify` run `34645349675`: **success**
-- `Workbench Integration Verify` run `34645349670`: **success**
-
-The current batch adds three executable Demo fixes plus eleven new advice files and this status update. Those previous green runs are regression evidence only; latest-head GitHub Actions remain the acceptance source. No local lint/build result is claimed from the connector-only execution environment.
+The current batch adds seven advice files and this status update, with no production Demo/Note/source edits. Latest-head GitHub Actions remain the acceptance source for build/content regression evidence; no local lint/build result is claimed from the connector-only execution environment.
 
 ## Next
 
-Continue in registry/navigation order from the next unaudited, unowned lesson. Reserved Runtime/State/TypeScript files remain skipped until their specialist branches are reconciled or closed. Prefer concrete correctness/Demo-contract fixes outside those scopes before adding further advice-only records.
+Continue in registry/navigation order from the next unaudited, unowned performance lesson (`use-memo` after the already-audited `react-memo`). Reserved Runtime/State/TypeScript files remain skipped until their specialist branches are reconciled or closed. Prefer concrete correctness/Demo-contract fixes outside those scopes before adding further advice-only records.
