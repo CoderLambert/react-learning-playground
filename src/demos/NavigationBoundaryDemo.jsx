@@ -52,6 +52,7 @@ export function NavigationBoundaryDemo() {
         <div className="demo-meta-tags">
           <span className="badge badge-gray">Link / NavLink</span>
           <span className="badge badge-gray">useNavigate</span>
+          <span className="badge badge-gray">redirect</span>
           <span className="badge badge-gray">History</span>
           <span className="badge badge-gray">Not Found</span>
         </div>
@@ -120,16 +121,16 @@ export function NavigationBoundaryDemo() {
 
       <div className="demo-section">
         <div className="demo-section-header">
-          <h3 className="demo-section-title"><span>🧠</span> 声明式导航优先，程序式导航按需</h3>
+          <h3 className="demo-section-title"><span>🧠</span> Link、redirect、useNavigate 分工</h3>
         </div>
         <div className="demo-grid-2">
           <div className="demo-alert demo-alert-tip">
             <div className="demo-alert-title">Link / NavLink</div>
-            <p>用户主动点击去另一个页面时优先使用。它们保留标准链接语义；NavLink 额外提供 active 状态，适合菜单与面包屑。</p>
+            <p>用户主动点击去另一个页面时优先使用。它们保留标准链接语义；NavLink 额外暴露 active 状态，在 Data / Framework 模式还可暴露 pending 状态。</p>
           </div>
           <div className="demo-alert demo-alert-tip">
-            <div className="demo-alert-title">Programmatic navigation</div>
-            <p>适合“不是用户点击普通链接触发”的流程，例如登录成功后跳转、超时退出、计时任务结束。不要把所有链接都改成 click handler + navigate。</p>
+            <div className="demo-alert-title">redirect / useNavigate</div>
+            <p>在 Data / Framework 模式中，如果跳转是 loader/action 数据流程的一部分，官方更推荐直接返回 <code>redirect</code>。<code>useNavigate</code> 更适合不由普通链接表达的客户端流程，例如超时退出、计时器结束，或 Declarative 模式下表单成功后的命令式跳转。</p>
           </div>
         </div>
       </div>
@@ -140,6 +141,11 @@ export function NavigationBoundaryDemo() {
           如果行为本质是“导航到另一个 URL”，却统一使用按钮和 JavaScript 跳转，会丢失浏览器原生链接能力，例如右键菜单、在新标签页打开以及更自然的键盘/辅助技术语义。
           路由 API 应服从 Web 平台语义，而不是反过来。
         </p>
+      </div>
+
+      <div className="demo-alert demo-alert-tip">
+        <div className="demo-alert-title"><span>📌</span> 本页是概念模拟</div>
+        <p>当前仓库没有安装 React Router；按钮和本地数组只用于可视化 history 语义，不等同于真实 <code>Link</code>、<code>redirect</code>、<code>useNavigate</code> 运行时。</p>
       </div>
     </div>
   );
