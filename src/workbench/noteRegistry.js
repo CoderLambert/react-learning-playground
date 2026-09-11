@@ -52,7 +52,7 @@ export function getNoteLoader(learningUnitId) {
  * Raw notes stay lazy and per-file just like the compiled note modules.
  *
  * @param {string} learningUnitId
- * @returns {null | (() => Promise<string>)}
+ * @returns {null | (() => Promise<unknown>)}
  */
 export function getRawNoteLoader(learningUnitId) {
   const importPath = getNoteImportPath(learningUnitId);
@@ -61,6 +61,9 @@ export function getRawNoteLoader(learningUnitId) {
 
 /**
  * Load raw MDX text while treating a missing note as a normal, non-fatal state.
+ * Vite normally unwraps the default export because the glob declares
+ * `import: "default"`; the module-shaped fallback keeps this boundary tolerant
+ * of bundler/plugin output changes without accepting compiled MDX components.
  *
  * @param {string} learningUnitId
  * @returns {Promise<string | null>}
@@ -69,8 +72,15 @@ export async function loadRawNote(learningUnitId) {
   const loader = getRawNoteLoader(learningUnitId);
   if (!loader) return null;
 
-  const rawNote = await loader();
-  if (typeof rawNote !== "string") {
+  const loaded = await loader();
+  const rawNote =
+    typeof loaded === "string"
+      ? loaded
+      : typeof loaded?.default === "string"
+        ? loaded.default
+        : null;
+
+  if (rawNote === null) {
     throw new TypeError(`Raw note ${learningUnitId} did not resolve to text`);
   }
   return rawNote;
