@@ -115,7 +115,7 @@ Audit branch: `chore/final-production-audit`, based on `origin/main` commit `839
 - Playwright E2E: **PASS** — `CI=true npm run test:e2e`; 12/12 tests passed in 9.1s against `vite preview` at `http://127.0.0.1:4173/react-learning-playground/`.
 - GitHub Actions `React Learning Verify`: **PASS** — run `34571377666`, job `verify`: https://github.com/CoderLambert/react-learning-playground/actions/runs/34571377666.
 - local production preview: **PASS** — `npm run preview -- --host 127.0.0.1 --port 4173` plus `curl --fail http://127.0.0.1:4173/react-learning-playground/`; HTTP 200 and `/react-learning-playground/`-prefixed CSS, JS, and favicon assets. Independent Chromium smoke verified 58 demos, 12 checkpoints, focused/continuous modes, search/no-result/restore, CodeViewer open/close, multi-file source switching, and copy feedback.
-- deployed GitHub Pages smoke: **FAIL** — `https://coderlambert.github.io/react-learning-playground/` was reachable (HTTP 200), assets loaded with the correct base path, and navigation/search/focused/all/early-middle-late demos/CodeViewer/refresh passed with zero page errors, console errors, warnings, or failed requests. The deployed artifact did not render the merged chapter checkpoint UI in continuous mode (`0` checkpoints instead of `12`), so this item is not PASS; it is a stale deployment artifact, not a local runtime failure. Deep-link demo state is **N/A** because demo selection is client-side and exposes no URL route.
+- deployed GitHub Pages smoke: **PASS** — redeployed with `npm run deploy` and verified `origin/gh-pages` commit `11c8028`. `https://coderlambert.github.io/react-learning-playground/` returned HTTP 200 with the current base-path assets; deployed Chromium verified 58 demos, 12 checkpoints, navigation/search/focused/all/early-middle-late demos/CodeViewer/refresh, and no horizontal overflow. Page errors, console errors, console warnings, failed requests, and HTTP responses >= 400 were all 0. Deep-link demo state is **N/A** because demo selection is client-side and exposes no URL route.
 - desktop viewport: **PASS** — independent Chromium interaction smoke at 1440×900 and `tests/e2e/responsive.spec.js`; navigation, forms, CodeViewer, continuous mode, checkpoints, and no horizontal overflow verified.
 - mobile viewport: **PASS** — independent Chromium interaction smoke at 390×844 and `tests/e2e/responsive.spec.js`; keyboard-opened sidebar, navigation, modal, CodeViewer, form submission, readable checkpoint state, and no document/body horizontal overflow verified.
 - console/page-error audit: **PASS** — the Playwright fixture fails on unexpected `pageerror`, `console.error`, and `console.warn`; the final 12-test suite and independent local smoke captured 0 of each, with 0 failed requests while switching through all registered demos. The only Node output was the known Playwright `NO_COLOR` warning from the test runner, not browser console output.
@@ -134,14 +134,13 @@ Audit branch: `chore/final-production-audit`, based on `origin/main` commit `839
 
 ### Remaining manual debt
 
-- The deployed GitHub Pages artifact must be rebuilt/redeployed from the current main line so its 12 chapter checkpoints match the locally validated production build.
 - A real screen-reader pass remains pending and must be performed with an actual screen reader before claiming that validation as PASS.
 - Cross-browser coverage was intentionally limited to Chromium; clipboard permission behavior outside this environment still merits a manual check.
 
 ## Previous integration status
 
-The preceding integration gate covered only build and HTTP availability. Its browser-interaction debt is superseded by the executed local Playwright results above; the current deployed GitHub Pages artifact still needs redeployment to include the merged chapter checkpoints.
+The preceding integration gate covered only build and HTTP availability. Its browser-interaction debt is superseded by the executed local and deployed Playwright results above.
 
 ## Main merge policy
 
-Open `chore/final-production-audit -> main` only after deterministic CI passes on the exact branch HEAD. Do not merge while the deployed GitHub Pages checkpoint mismatch remains; the real screen-reader item is explicitly **PENDING** until a human assistive-technology session is available.
+Open `chore/final-production-audit -> main` only after deterministic CI passes on the exact branch HEAD. The deployed GitHub Pages checkpoint mismatch is resolved; the real screen-reader item remains explicitly **PENDING** until a human assistive-technology session is available.
