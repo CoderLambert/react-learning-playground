@@ -1,5 +1,5 @@
 export const LIMITS = Object.freeze({
-  bodyBytes: 400_000,
+  bodyBytes: 160_000,
   questionChars: 4_000,
   compactionPromptChars: 120_000,
   noteChars: 60_000,
