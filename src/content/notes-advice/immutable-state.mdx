@@ -1,0 +1,30 @@
+# Review: 对象 / 数组 State 不可变更新
+
+## Verdict
+
+核心 React 语义准确，Source 中的 nested copy / map / filter / copy+reverse 示例也正确。但 Note 声称实验可以“比较原地 mutation 与 copy”，当前 Demo 实际并没有提供可执行的 mutation 对照，只展示正确更新路径和一段警告文本，因此 Demo Contract 未通过。
+
+## Hard gates
+
+- **Gate A — Correctness: PASS**。React 官方明确要求把 state 中对象/数组视为只读；更新嵌套对象要沿修改路径复制到顶层；`reverse()`/`sort()` 会修改数组，因此需要先复制。Demo 的正确路径符合这些语义。React 官方也明确指出 mutation 会改变过去 render 的 snapshot，并可能妨碍依赖不可变模型的新特性。
+- **Gate B — Demo Contract: FAIL**。Note 的 Experiment 写“比较原地修改和复制后更新会给 React 留下什么信号”，但 Demo 没有 mutation 按钮、对照视图或旧 snapshot 被破坏的可观察实验。学习者只能阅读警告，不能执行 Note 声称的比较。
+- **Gate C — Mental Model: PASS**。只读 snapshot、浅复制、修改路径复制、顶层新引用的模型是连贯的。
+
+## Important gaps / boundaries
+
+1. “新顶层引用”是必要的更新表达方式，但不要教成“React 只看引用所以必须 spread”的单一机制口号。核心是不要修改已有 snapshot，并向 setter 提交下一份 state。
+2. spread 是浅复制这一点已有说明，应再强调复制数组后仍不能直接改共享对象元素，例如 `const next = [...items]; next[0].done = true` 仍然 mutation。
+3. `Date.now()` 生成 demo id 不是本课重点，但生产代码若在同一毫秒批量创建实体可能冲突；不需要在 Note 展开，只避免把它宣传为通用稳定 ID 策略。
+4. Immer 是可选表达工具，不改变“最终产生新的不可变结果”这一模型。当前 Demo 的边界措辞合理。
+
+## Clarity / engineering usefulness
+
+内容简洁，Source 比文字更有价值。最大问题是实验承诺超出了 Demo 能力。
+
+## Recommended changes
+
+- 二选一：
+  1. **更推荐**：增加一个隔离的 mutation 对照实验，保留旧 snapshot 引用，执行错误 mutation 后直接观察“旧 snapshot 也被改写”或同引用更新行为；明确标记为教学反例并提供 reset。
+  2. 或收窄 Note Experiment，只要求观察 nested copy 后哪些引用变化、哪些保持不变，不再声称能执行 mutation 对照。
+- 增加“浅复制数组但修改共享元素仍是 mutation”的边界例子。
+- production decision rule：**先设计 state 结构；更新时只复制发生变化的路径，并保证不改写任何已有 snapshot。**
