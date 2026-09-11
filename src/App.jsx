@@ -1,6 +1,7 @@
 import { useState, useMemo, lazy, Suspense } from "react";
 import "./App.css";
 import { demos, CATEGORIES } from "./demos";
+import { ChapterCheckpoint, getCheckpointChapter } from "./components/ChapterCheckpoint";
 
 const CodeViewer = lazy(() => import("./components/CodeViewer"));
 
@@ -49,6 +50,8 @@ export default function App() {
     () => CATEGORIES.find((c) => c.id === currentDemo?.category),
     [currentDemo],
   );
+
+  const currentCheckpointChapter = currentDemo ? getCheckpointChapter(currentDemo.id) : null;
 
   const handleSelectDemo = (id) => {
     setActiveTab(id);
@@ -219,35 +222,40 @@ export default function App() {
                     fileName={`${currentDemo.id}.jsx`}
                   />
                 </Suspense>
+                {currentCheckpointChapter && <ChapterCheckpoint chapter={currentCheckpointChapter} />}
               </div>
             ) : null
           ) : (
             <div className="demo-all-container">
-              {demos.map((demo, index) => (
-                <div key={demo.id} id={`demo-${demo.id}`}>
-                  {index > 0 && <hr className="demo-divider" />}
-                  <div style={{ marginBottom: "16px", display: "flex", alignItems: "center", gap: "10px" }}>
-                    <span className="badge badge-blue">案例 {index + 1}</span>
-                    <h3 style={{ margin: 0, fontSize: "16px", fontWeight: "700", color: "var(--text-main)" }}>
-                      {demo.label}
-                    </h3>
-                    <span style={{ fontSize: "12px", color: "var(--text-subtle)" }}>#{demo.id}</span>
+              {demos.map((demo, index) => {
+                const checkpointChapter = getCheckpointChapter(demo.id);
+                return (
+                  <div key={demo.id} id={`demo-${demo.id}`}>
+                    {index > 0 && <hr className="demo-divider" />}
+                    <div style={{ marginBottom: "16px", display: "flex", alignItems: "center", gap: "10px" }}>
+                      <span className="badge badge-blue">案例 {index + 1}</span>
+                      <h3 style={{ margin: 0, fontSize: "16px", fontWeight: "700", color: "var(--text-main)" }}>
+                        {demo.label}
+                      </h3>
+                      <span style={{ fontSize: "12px", color: "var(--text-subtle)" }}>#{demo.id}</span>
+                    </div>
+                    <demo.Component />
+                    <Suspense
+                      fallback={
+                        <div className="code-accordion-wrapper" style={{ padding: "12px 18px", color: "var(--text-subtle)", fontSize: "12.5px" }}>
+                          ⚡ 载入代码视图...
+                        </div>
+                      }
+                    >
+                      <CodeViewer
+                        files={demo.files}
+                        fileName={`${demo.id}.jsx`}
+                      />
+                    </Suspense>
+                    {checkpointChapter && <ChapterCheckpoint chapter={checkpointChapter} />}
                   </div>
-                  <demo.Component />
-                  <Suspense
-                    fallback={
-                      <div className="code-accordion-wrapper" style={{ padding: "12px 18px", color: "var(--text-subtle)", fontSize: "12.5px" }}>
-                        ⚡ 载入代码视图...
-                      </div>
-                    }
-                  >
-                    <CodeViewer
-                      files={demo.files}
-                      fileName={`${demo.id}.jsx`}
-                    />
-                  </Suspense>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </main>
