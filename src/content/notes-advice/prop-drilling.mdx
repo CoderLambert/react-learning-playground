@@ -1,0 +1,29 @@
+# Review: 属性逐层透传：Props、Composition 与 Context
+
+## Verdict
+
+整体质量较高，尤其避免了“prop drilling 一律是反模式”的常见误导。Demo 的三条路径可直接比较，工程决策顺序也合理。主要缺口是 React 19.2 的 Context provider 语法版本说明，以及 Context 更新传播的精确边界。
+
+## Hard gates
+
+- **Gate A — Correctness: PASS**。`useContext` 读取并订阅最近 Provider 的值；Provider `value` 变化时，读取该 Context 的组件会收到新值并重新渲染。Note 对 Context 不是免费全局变量的定位准确。
+- **Gate B — Demo Contract: PASS**。Props drilling、composition、Context 三条路径都使用同一 `user` 数据源，可观察哪些中间层需要知道数据以及消费者 API 的差异。
+- **Gate C — Mental Model: PASS**。学习者能回答什么时候保持 props、什么时候 composition 更自然、什么时候 Context 真正表达跨层环境依赖。
+
+## Important gaps / boundaries
+
+1. React 19 起可以直接渲染 `<SomeContext value={...}>` 作为 Provider；`<SomeContext.Provider>` 仍可工作，但官方将其描述为 React 19 之前的 legacy provider 形式。当前 Demo 使用 `.Provider`，应在 Note 或 Source 注释中说明版本背景，避免学习者误以为这是 React 19 推荐写法。
+2. Context 的传播边界应精确为“读取该 Context 的消费者”，不是 Provider 下所有组件都必然因为 Context 本身而重渲染。官方说明 value 使用 `Object.is` 比较；消费组件会收到新值。
+3. “Context 会扩大更新范围”不是单纯层数问题。真正风险通常是把高频变化、彼此无关的数据塞进同一个 value，或每次父 render 都创建新的 object/function identity。
+4. Context 解决的是读取路径，不自动解决 state architecture。复杂可变状态可以用 reducer + Context，也可以用 external store；不要把“Context vs store”简化成规模阈值。
+
+## Clarity / engineering usefulness
+
+Demo 的三方案并排比较非常有效，且明确承认 composition 会把更多组装职责放到父级，这是很好的 trade-off 教学。
+
+## Recommended changes
+
+- 补 React 19.2 Provider 语法说明，并考虑在未来机械迁移到 `<UserContext value={user}>`。
+- 将“value 变化会传播到消费者”进一步写清：比较使用 `Object.is`，只读该 Context 的组件订阅变化。
+- 增加一个 context value identity 的生产边界：对象/函数 value 是否需要拆分或 memo，应基于真实 render 成本测量，不要默认优化。
+- 保留当前 decision rule：**先问 ownership，再看真正消费者和组件边界，最后才决定传递机制。**
