@@ -149,6 +149,7 @@ export function AiAssistant({
   suggestions,
   providerLabel,
   modelLabel,
+  settings = null,
   placeholder = "针对当前笔记和源码提问…",
   className = "",
 }) {
@@ -205,6 +206,7 @@ export function AiAssistant({
           )}
         </div>
         <ContextChips contextSummary={contextSummary} />
+        {settings ? <div className="ai-assistant-settings-slot">{settings}</div> : null}
       </header>
 
       <div

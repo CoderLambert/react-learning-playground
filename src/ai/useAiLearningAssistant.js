@@ -5,6 +5,12 @@ import { AiChatAbortError, createAiChatClient } from "./chatClient.js";
 import { INITIAL_CHAT_STATE, chatReducer } from "./chatReducer.js";
 import { CHAT_EVENT_TYPES, CHAT_STATUS } from "./contracts.js";
 import {
+  clearDeepSeekBrowserApiKey,
+  loadDeepSeekBrowserSettings,
+  saveDeepSeekBrowserSettings,
+} from "./deepseekBrowserSettings.js";
+import { createDeepSeekDirectClient } from "./deepseekDirectClient.js";
+import {
   adaptLearningContextForGateway,
   buildCompletedChatHistory,
 } from "./learningAssistantContext.js";
@@ -17,6 +23,7 @@ function createRequestId() {
 export function useAiLearningAssistant({ learningUnit, activeSourceFile } = {}) {
   const [chatState, dispatch] = useReducer(chatReducer, INITIAL_CHAT_STATE);
   const [inputValue, setInputValue] = useState("");
+  const [deepSeekSettings, setDeepSeekSettings] = useState(() => loadDeepSeekBrowserSettings());
   const [noteState, setNoteState] = useState({
     learningUnitId: null,
     rawNote: null,
@@ -25,7 +32,17 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile } = {}) 
   });
   const abortControllerRef = useRef(null);
   const activeRequestIdRef = useRef(null);
-  const client = useMemo(() => createAiChatClient(), []);
+  const gatewayClient = useMemo(() => createAiChatClient(), []);
+  const directClient = useMemo(() => createDeepSeekDirectClient({
+    apiKey: deepSeekSettings.apiKey,
+    model: deepSeekSettings.model,
+  }), [deepSeekSettings.apiKey, deepSeekSettings.model]);
+  const client = directClient.configured ? directClient : gatewayClient;
+  const connectionMode = directClient.configured
+    ? "browser"
+    : gatewayClient.configured
+      ? "gateway"
+      : "unconfigured";
   const learningUnitId = learningUnit?.id ?? null;
 
   useEffect(() => {
@@ -77,7 +94,7 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile } = {}) 
     });
   }, [activeSourceFile, contextReady, learningUnit, noteState.rawNote]);
 
-  const gatewayContext = useMemo(
+  const requestContext = useMemo(
     () => (aiContext ? adaptLearningContextForGateway(aiContext) : null),
     [aiContext],
   );
@@ -99,9 +116,32 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile } = {}) 
     dispatch({ type: "reset" });
   }, []);
 
+  const saveConnectionSettings = useCallback((nextSettings) => {
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = null;
+    activeRequestIdRef.current = null;
+    dispatch({ type: "reset" });
+    setInputValue("");
+    setDeepSeekSettings(saveDeepSeekBrowserSettings(nextSettings));
+  }, []);
+
+  const clearConnectionSettings = useCallback(() => {
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = null;
+    activeRequestIdRef.current = null;
+    dispatch({ type: "reset" });
+    setInputValue("");
+    clearDeepSeekBrowserApiKey();
+    setDeepSeekSettings((current) => ({
+      ...current,
+      apiKey: "",
+      rememberApiKey: false,
+    }));
+  }, []);
+
   const submit = useCallback(async (question) => {
     const normalizedQuestion = typeof question === "string" ? question.trim() : "";
-    if (!normalizedQuestion || !client.configured || !gatewayContext || noteState.loading) return;
+    if (!normalizedQuestion || !client.configured || !requestContext || noteState.loading) return;
 
     abortControllerRef.current?.abort();
     const controller = new AbortController();
@@ -115,7 +155,7 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile } = {}) 
 
     try {
       await client.stream(
-        { question: normalizedQuestion, context: gatewayContext, history },
+        { question: normalizedQuestion, context: requestContext, history },
         {
           signal: controller.signal,
           onEvent(event) {
@@ -146,7 +186,7 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile } = {}) 
         abortControllerRef.current = null;
       }
     }
-  }, [chatState.messages, client, gatewayContext, noteState.loading]);
+  }, [chatState.messages, client, requestContext, noteState.loading]);
 
   useEffect(() => () => abortControllerRef.current?.abort(), []);
 
@@ -156,14 +196,19 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile } = {}) 
     activeSourceFile: aiContext?.activeSourceFile ?? null,
   }), [aiContext]);
 
-  const notice = !client.configured
-    ? "AI 网关尚未配置。当前版本可以查看 AI 界面和上下文，配置 VITE_AI_ASSISTANT_URL 后即可连接服务。"
-    : noteState.loading
-      ? "正在准备当前笔记和源码上下文…"
-      : null;
+  const notice = connectionMode === "unconfigured"
+    ? "请配置你自己的 DeepSeek API Key。Key 默认只保存在当前浏览器会话中，配置后即可直接调用 DeepSeek。"
+    : connectionMode === "gateway"
+      ? "当前使用站点 AI 网关；也可以配置自己的 DeepSeek API Key，改为浏览器直连。"
+      : noteState.loading
+        ? "正在准备当前笔记和源码上下文…"
+        : null;
 
   return {
     configured: client.configured,
+    connectionMode,
+    deepSeekSettings,
+    modelLabel: connectionMode === "browser" ? deepSeekSettings.model : null,
     contextReady,
     contextSummary,
     inputValue,
@@ -173,6 +218,9 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile } = {}) 
     error: noteState.error?.message || chatState.error,
     notice,
     disabled: !client.configured || !contextReady || chatState.status === CHAT_STATUS.STREAMING,
+    settingsDisabled: chatState.status === CHAT_STATUS.STREAMING,
+    saveConnectionSettings,
+    clearConnectionSettings,
     submit,
     stop,
     reset,
