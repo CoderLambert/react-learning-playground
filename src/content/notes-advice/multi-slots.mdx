@@ -1,0 +1,30 @@
+# Review: 具名多插槽与组件 API
+
+## Verdict
+
+课程主题和工程价值较好，但当前存在一个明确的 Demo↔Note 契约不一致：Note 用 `undefined / null / ReactNode` 描述三态，而真实组件与 Demo 实际使用的是 `undefined / false / ReactNode`。
+
+## Hard gates
+
+- **Gate A — Correctness: PARTIAL**。`header`/`footer` 这类 ReactNode props 形成具名扩展点的说法正确；但“成熟组件库广泛采用同一种三态协议”不应作为通用事实宣传，这只是本项目选择的一种 API 约定。
+- **Gate B — Demo Contract: FAIL**。Note 的 `DemoReference` 明确要求观察 `undefined/null/具体 ReactNode`，但 `ProductionModal`/`Pannel` 的实现与 Demo 用 `false` 表示显式隐藏。学习者照 Note 操作无法验证 Note 描述的 `null` 协议。
+- **Gate C — Mental Model: PASS**。核心思想——组件定义稳定结构扩展点，并明确默认/覆盖/隐藏语义——是成立的。
+
+## Important gaps / boundaries
+
+1. 必须先统一隐藏 sentinel。当前 Source 明确是 `false`：`slotProp === false` 隐藏、`undefined` 回退默认、其余值覆盖。Note 不应再写 `null`，除非实现也一起迁移。
+2. `ReactNode` 本身包含 `null`、`undefined`、boolean 等不可见值，因此如果 API 把其中某个值赋予“显式隐藏”语义，需要在类型/文档中额外约束，而不能只说“ReactNode props”。
+3. `slotProp !== undefined` 会把 `null` 当成“自定义覆盖”，最终 React 渲染为空；这和 `false` 分支虽然视觉结果可能相同，但协议语义不同。需要明确是否允许这种第四种状态。
+4. “零额外 DOM 成本”只对被隐藏的 slot 区域成立；整个 slot 机制并不天然保证零 wrapper，当前自定义 title/footer 路径实际上会增加 wrapper `div`。
+
+## Clarity / engineering usefulness
+
+这篇 Note 的价值主要在 API contract，而不是 React 内建机制。建议弱化“工业级标准协议”措辞，改成“本 Demo 采用的显式三态约定”，这样更准确，也更利于迁移到其他组件库。
+
+## Recommended changes
+
+- 优先修复 Note：把实验和 Boundary 中的 `null` 改成当前实现真实使用的 `false`，或者统一重构 Source 到 `null`；二者只能选一个。
+- 增加一行明确类型契约，例如 `slot?: ReactNode | false`，并解释 `undefined` 与 `false` 的语义。
+- 删除“成熟组件库普遍采用该三态协议”的泛化宣传，改成项目级设计选择。
+- 删除或收窄“零额外 DOM 成本”，只描述“显式隐藏分支不渲染该区域”。
+- 最终 decision rule：**先定义 slot 的缺省、覆盖、隐藏语义，再写实现；不要让 truthy/falsy 判断偷偷成为 API。**
