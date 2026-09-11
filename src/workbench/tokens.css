@@ -1,0 +1,10 @@
+:root {
+  /* React Learning Workbench layout contract. F0 defines names/defaults only. */
+  --workbench-nav-width: 18rem;
+  --workbench-nav-collapsed-width: 3.5rem;
+  --workbench-inspector-width: 30rem;
+  --workbench-inspector-min-width: 22.5rem;
+  --workbench-inspector-max-width: 56.25rem;
+  --workbench-inspector-max-viewport-width: 60vw;
+  --workbench-resize-handle-width: 0.5rem;
+}
