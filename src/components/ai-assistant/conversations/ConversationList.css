@@ -1,0 +1,119 @@
+.ai-conversation-list {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 10px;
+  color: var(--text-primary, #111827);
+}
+
+.ai-conversation-list__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.ai-conversation-list button,
+.ai-conversation-list input {
+  font: inherit;
+}
+
+.ai-conversation-list__header button,
+.ai-conversation-list__actions button {
+  border: 1px solid var(--border-color, #d9dee7);
+  border-radius: 8px;
+  background: var(--surface, #fff);
+  color: inherit;
+  cursor: pointer;
+}
+
+.ai-conversation-list__header button {
+  padding: 6px 9px;
+}
+
+.ai-conversation-list__empty {
+  margin: 0;
+  color: var(--text-secondary, #667085);
+  font-size: 13px;
+}
+
+.ai-conversation-list ul {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ai-conversation-list li {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+  padding: 5px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+}
+
+.ai-conversation-list li[data-active="true"] {
+  border-color: var(--accent-color, #6d5dfc);
+  background: color-mix(in srgb, var(--accent-color, #6d5dfc) 8%, transparent);
+}
+
+.ai-conversation-list__select {
+  display: grid;
+  min-width: 0;
+  width: 100%;
+  gap: 2px;
+  padding: 7px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ai-conversation-list__select span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ai-conversation-list__select small {
+  color: var(--text-secondary, #667085);
+  font-size: 11px;
+}
+
+.ai-conversation-list__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding-inline: 7px;
+}
+
+.ai-conversation-list__actions button {
+  padding: 3px 6px;
+  font-size: 11px;
+}
+
+.ai-conversation-list__rename input {
+  box-sizing: border-box;
+  width: 100%;
+  border: 1px solid var(--accent-color, #6d5dfc);
+  border-radius: 7px;
+  padding: 7px;
+  color: inherit;
+  background: var(--surface, #fff);
+}
+
+.ai-conversation-list button:focus-visible,
+.ai-conversation-list input:focus-visible {
+  outline: 2px solid var(--accent-color, #6d5dfc);
+  outline-offset: 2px;
+}
+
+.ai-conversation-list button:disabled,
+.ai-conversation-list input:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
