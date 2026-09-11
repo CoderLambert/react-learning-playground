@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { highlightCode } from "../lib/shikiHighlighter";
 
 export function CodeViewer({
@@ -10,11 +10,13 @@ export function CodeViewer({
   variant = "accordion",
   activeFileName,
   onActiveFileChange,
+  focusRange = null,
 }) {
   const [internalExpanded, setInternalExpanded] = useState(defaultExpanded);
   const [activeFileIndex, setActiveFileIndex] = useState(0);
   const [highlightedMap, setHighlightedMap] = useState({});
   const [copied, setCopied] = useState(false);
+  const viewportRef = useRef(null);
   const bodyId = useId();
 
   const fileList = files && files.length > 0 ? files : [{ name: fileName, code: code || "" }];
@@ -24,10 +26,13 @@ export function CodeViewer({
   const currentCode = currentFile?.code || "";
   const isExpanded = variant === "panel" || internalExpanded;
   const isHighlighted = Boolean(highlightedMap[currentFile.name]);
-  const isLoading = isExpanded && Boolean(currentCode) && !isHighlighted;
+  const isFocusedFile = Boolean(
+    focusRange && currentFile?.name === focusRange.fileName && Number(focusRange.startLine) > 0,
+  );
+  const isLoading = isExpanded && Boolean(currentCode) && !isHighlighted && !isFocusedFile;
 
   useEffect(() => {
-    if (!isExpanded || !currentCode || highlightedMap[currentFile.name]) return;
+    if (!isExpanded || !currentCode || highlightedMap[currentFile.name] || isFocusedFile) return;
     let isMounted = true;
 
     highlightCode(currentCode, { language: lang, fileName: currentFile.name })
@@ -39,7 +44,13 @@ export function CodeViewer({
       });
 
     return () => { isMounted = false; };
-  }, [isExpanded, currentCode, currentFile.name, highlightedMap, lang]);
+  }, [isExpanded, currentCode, currentFile.name, highlightedMap, isFocusedFile, lang]);
+
+  useEffect(() => {
+    if (!isFocusedFile || !viewportRef.current) return;
+    const target = viewportRef.current.querySelector(`[data-source-line="${focusRange.startLine}"]`);
+    target?.scrollIntoView({ block: "center", behavior: "smooth" });
+  }, [focusRange?.endLine, focusRange?.fileName, focusRange?.startLine, isFocusedFile]);
 
   const selectFile = (index) => {
     setActiveFileIndex(index);
@@ -63,6 +74,7 @@ export function CodeViewer({
   };
 
   const lineCount = currentCode ? currentCode.trim().split("\n").length : 0;
+  const focusedLines = currentCode.split("\n");
   const body = (
     <div className="code-accordion-body" id={bodyId}>
       {fileList.length > 1 && (
@@ -82,9 +94,38 @@ export function CodeViewer({
           ))}
         </div>
       )}
-      <div className="code-highlight-viewport">
+      <div className="code-highlight-viewport" ref={viewportRef}>
         {isLoading && <div className="code-loading-indicator">⚡ 正在使用 Shiki 渲染高亮语法树...</div>}
-        {isHighlighted ? (
+        {isFocusedFile ? (
+          <pre className="code-fallback-pre source-focused-code" data-source-focus="true">
+            <code>
+              {focusedLines.map((line, index) => {
+                const lineNumber = index + 1;
+                const endLine = Math.max(Number(focusRange.endLine) || Number(focusRange.startLine), Number(focusRange.startLine));
+                const highlighted = lineNumber >= Number(focusRange.startLine) && lineNumber <= endLine;
+                return (
+                  <span
+                    key={lineNumber}
+                    data-source-line={lineNumber}
+                    data-highlighted={highlighted ? "true" : undefined}
+                    style={{
+                      display: "block",
+                      minHeight: "1.6em",
+                      padding: "0 10px",
+                      margin: "0 -10px",
+                      background: highlighted ? "color-mix(in srgb, var(--color-primary) 16%, transparent)" : undefined,
+                      borderLeft: highlighted ? "3px solid var(--color-primary)" : "3px solid transparent",
+                    }}
+                  >
+                    <span aria-hidden="true" style={{ display: "inline-block", width: "4ch", userSelect: "none", opacity: 0.5 }}>{lineNumber}</span>
+                    {line || " "}
+                    {"\n"}
+                  </span>
+                );
+              })}
+            </code>
+          </pre>
+        ) : isHighlighted ? (
           <div className="shiki-container" dangerouslySetInnerHTML={{ __html: highlightedMap[currentFile.name] }} />
         ) : (
           <pre className="code-fallback-pre"><code>{currentCode}</code></pre>

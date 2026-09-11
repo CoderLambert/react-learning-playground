@@ -5,6 +5,8 @@ import { demos, CATEGORIES } from "./demos";
 import { ChapterCheckpoint } from "./components/ChapterCheckpoint";
 import { getCheckpointChapter } from "./components/chapterCheckpointMap";
 import { AiAssistant, DeepSeekSettings } from "./components/ai-assistant";
+import { ContextMeter } from "./components/ai-assistant/context/ContextMeter.jsx";
+import { ConversationList } from "./components/ai-assistant/conversations/ConversationList.jsx";
 import { LearningInspector } from "./components/learning-inspector";
 import { NoteToc } from "./components/notes/NoteToc";
 import { NoteViewer } from "./components/notes/NoteViewer";
@@ -36,6 +38,7 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState("");
   const [mobileNavigationOpen, setMobileNavigationOpen] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
+  const [sourceFocus, setSourceFocus] = useState(null);
   const {
     state: workbenchState,
     setNavigationCollapsed,
@@ -56,7 +59,22 @@ export default function App() {
 
   useEffect(() => {
     setSourceFile(null);
+    setSourceFocus(null);
   }, [currentDemo?.id, setSourceFile]);
+
+  const handleCitationOpen = (citation) => {
+    const fileName = citation?.fileName;
+    const exists = currentLearningUnit?.sources?.some((source) => source.name === fileName);
+    if (!exists) return;
+    setInspectorOpen(true);
+    setInspectorTab("source");
+    setSourceFile(fileName);
+    setSourceFocus({
+      fileName,
+      startLine: citation.startLine,
+      endLine: citation.endLine ?? citation.startLine,
+    });
+  };
 
   const handleSelectDemo = (id) => {
     selectDemo(id);
@@ -87,6 +105,22 @@ export default function App() {
     />
   );
 
+  const conversationNavigation = (
+    <details className="ai-conversation-popover">
+      <summary>会话 · {aiAssistant.conversations.length}</summary>
+      <ConversationList
+        conversations={aiAssistant.conversations}
+        activeConversationId={aiAssistant.activeConversationId}
+        onNew={aiAssistant.reset}
+        onSelect={aiAssistant.selectConversation}
+        onRename={aiAssistant.renameConversation}
+        onArchive={aiAssistant.archiveConversation}
+        onDelete={aiAssistant.deleteConversation}
+        disabled={aiAssistant.status === "streaming"}
+      />
+    </details>
+  );
+
   const inspector = currentLearningUnit ? (
     <LearningInspector
       learningUnit={currentLearningUnit}
@@ -107,7 +141,11 @@ export default function App() {
           <SourceViewer
             learningUnit={currentLearningUnit}
             activeFileName={workbenchState.sourceFile}
-            onActiveFileChange={setSourceFile}
+            onActiveFileChange={(fileName) => {
+              setSourceFile(fileName);
+              if (sourceFocus?.fileName !== fileName) setSourceFocus(null);
+            }}
+            focusRange={sourceFocus}
           />
         </Suspense>
       )}
@@ -121,11 +159,21 @@ export default function App() {
           onSubmit={aiAssistant.submit}
           onReset={aiAssistant.reset}
           onStop={aiAssistant.stop}
+          onCitationOpen={handleCitationOpen}
           disabled={aiAssistant.disabled}
           error={aiAssistant.error}
           notice={aiAssistant.notice}
           providerLabel="DeepSeek"
           modelLabel={aiAssistant.modelLabel}
+          conversationNavigation={conversationNavigation}
+          contextMeter={(
+            <ContextMeter
+              budget={aiAssistant.contextBudget}
+              onCompact={aiAssistant.compactContext}
+              compacting={aiAssistant.compacting}
+              disabled={!aiAssistant.configured || aiAssistant.messages.length === 0}
+            />
+          )}
           settings={(
             <DeepSeekSettings
               settings={aiAssistant.deepSeekSettings}

@@ -1,6 +1,8 @@
 import { useId } from "react";
 import MarkdownRender from "markstream-react";
 import "markstream-react/index.css";
+import { extractSourceCitations } from "../../ai/citations/sourceCitation.js";
+import { SourceCitation } from "./citations/SourceCitation.js";
 import { AI_MARKDOWN_CUSTOM_ID } from "./code/registerAiCodeBlock.js";
 import "./AiAssistant.css";
 
@@ -120,10 +122,11 @@ function AssistantMarkdown({ content, isStreaming }) {
   );
 }
 
-function Message({ message, isStreaming }) {
+function Message({ message, isStreaming, onCitationOpen }) {
   const role = message?.role === "user" ? "user" : "assistant";
   const content = typeof message?.content === "string" ? message.content : "";
   const isAssistant = role === "assistant";
+  const citations = isAssistant && content ? extractSourceCitations(content, { dedupe: true }) : [];
 
   return (
     <article
@@ -151,6 +154,20 @@ function Message({ message, isStreaming }) {
               <span aria-hidden="true" className="ai-assistant-thinking-dots"><i /><i /><i /></span>
               正在组织回答
             </span>
+          ) : null}
+          {citations.length > 0 ? (
+            <div className="ai-assistant-source-citations" aria-label="回答引用的源码">
+              {citations.map((citation) => (
+                <SourceCitation
+                  key={`${citation.fileName}:${citation.startLine}-${citation.endLine}`}
+                  fileName={citation.fileName}
+                  startLine={citation.startLine}
+                  endLine={citation.endLine}
+                  label={citation.label}
+                  onOpen={onCitationOpen}
+                />
+              ))}
+            </div>
           ) : null}
         </div>
       </div>
@@ -193,6 +210,7 @@ export function AiAssistant({
   onStop,
   onRetry,
   onSuggestionSelect,
+  onCitationOpen,
   disabled = false,
   error = null,
   notice = null,
@@ -200,6 +218,8 @@ export function AiAssistant({
   providerLabel,
   modelLabel,
   settings = null,
+  conversationNavigation = null,
+  contextMeter = null,
   placeholder = "针对当前笔记和源码提问…",
   className = "",
 }) {
@@ -259,6 +279,10 @@ export function AiAssistant({
         {settings ? <div className="ai-assistant-settings-slot">{settings}</div> : null}
       </header>
 
+      {conversationNavigation ? (
+        <div className="ai-assistant-conversation-navigation">{conversationNavigation}</div>
+      ) : null}
+
       <div
         className="ai-assistant-transcript"
         role="log"
@@ -277,6 +301,7 @@ export function AiAssistant({
               key={message.id ?? `${message.role ?? "message"}-${index}`}
               message={message}
               isStreaming={Boolean(message.streaming) || (isStreaming && index === messages.length - 1 && message.role !== "user")}
+              onCitationOpen={onCitationOpen}
             />
           ))
         )}
@@ -302,6 +327,8 @@ export function AiAssistant({
           ) : null}
         </div>
       ) : null}
+
+      {contextMeter ? <div className="ai-assistant-context-meter-slot">{contextMeter}</div> : null}
 
       <form className="ai-assistant-composer" onSubmit={handleSubmit}>
         <label htmlFor={inputId}>向 AI 助手提问</label>
