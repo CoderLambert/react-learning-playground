@@ -107,16 +107,18 @@ No demo file path or source filename was renamed. Existing `src/demos/index.js` 
 
 Direct local execution was attempted but the execution container could not resolve `github.com`, so an executable checkout could not be cloned in this run. No local PASS is claimed from that attempt.
 
-Validation must therefore be evidenced by the pull-request-triggered `React Learning Verify` workflow, which runs:
+The pull-request-triggered `React Learning Verify` workflow provided executable evidence on the audit head before this status-only follow-up commit:
 
-- `npm ci`
-- `npm run lint`
-- `npm run build`
-- Playwright Chromium install
-- `npm run test:e2e`
-- production preview HTTP smoke
+- workflow run: `34566854205`
+- `npm ci`: **PASS**
+- `npm run lint`: **PASS**
+- `npm run build`: **PASS**
+- Playwright Chromium install: **PASS**
+- `npm run test:e2e`: **PASS**
+- production preview HTTP smoke: **PASS**
+- workflow conclusion: **SUCCESS**
 
-PR CI result: **PENDING at document creation time**.
+Because this status update creates a new documentation-only head, the PR workflow must pass once more on the exact final head before merge.
 
 ## Remaining manual items
 
