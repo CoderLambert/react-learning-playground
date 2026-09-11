@@ -137,16 +137,17 @@ No demo was renamed or moved. Existing `src/demos/index.js` imports, category as
 
 Local command execution was attempted in the automation environment, but direct GitHub network access from the shell was unavailable, so a checkout could not be cloned there. No local PASS is claimed from that failed attempt.
 
-Validation is delegated to the repository's existing pull-request-triggered `React Learning Verify` workflow, which runs:
+Pull request #14 triggered the existing `React Learning Verify` workflow on the code-change head. Workflow run `34566703256` completed successfully with the following executed steps:
 
-- `npm ci`
-- `npm run lint`
-- `npm run build`
-- Playwright Chromium installation
-- `npm run test:e2e`
-- production preview HTTP smoke
+- `npm ci`: **PASS**
+- `npm run lint`: **PASS**
+- `npm run build`: **PASS**
+- Playwright Chromium installation: **PASS**
+- `npm run test:e2e`: **PASS**
+- production preview HTTP smoke: **PASS**
+- overall `verify` job: **PASS**
 
-Exact PR CI results must be recorded after the pull request run completes. A successful workflow is required before this audit should be merged.
+This status-file update is documentation-only; the final PR head must still receive its own pull-request workflow run before merge. No merge is performed by this audit task.
 
 ## Remaining questions / non-goals
 
