@@ -3,6 +3,7 @@ import {
   DEEPSEEK_MODELS,
   DEEPSEEK_OPENAI_BASE_URL,
 } from "../../ai/deepseekBrowserSettings.js";
+import "./DeepSeekSettings.css";
 
 export function DeepSeekSettings({
   settings,
