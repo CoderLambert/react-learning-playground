@@ -1,4 +1,4 @@
-import { assertContentLength, jsonError, validateRequest } from "./validation.js";
+import { jsonError, readJsonBody, validateRequest } from "./validation.js";
 import { callDeepSeek } from "./deepseek.js";
 import { normalizeDeepSeekStream } from "./stream.js";
 
@@ -37,14 +37,13 @@ export async function handleRequest(request, env, deps = {}) {
   }
 
   try {
-    assertContentLength(request);
     const actor = request.headers.get("cf-connecting-ip") || "anonymous";
     if (env.AI_RATE_LIMITER) {
       const { success } = await env.AI_RATE_LIMITER.limit({ key: `chat:${actor}` });
       if (!success) return json({ error: "rate limit exceeded" }, 429, corsState.headers);
     }
 
-    const payload = await request.json();
+    const payload = await readJsonBody(request);
     const validated = validateRequest(payload);
     const upstream = await callDeepSeek({
       env,
