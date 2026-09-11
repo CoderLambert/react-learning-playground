@@ -1,9 +1,14 @@
 import { useId } from "react";
 import MarkdownRender from "markstream-react";
 import "markstream-react/index.css";
-import { extractSourceCitations } from "../../ai/citations/sourceCitation.js";
+import {
+  buildSourceCitationPreview,
+  extractSourceCitations,
+} from "../../ai/citations/sourceCitation.js";
+import { AiSourcePreviewProvider } from "./citations/AiSourceLink.jsx";
 import { SourceCitation } from "./citations/SourceCitation.js";
 import { AI_MARKDOWN_CUSTOM_ID } from "./code/registerAiCodeBlock.js";
+import "./citations/SourceCitation.css";
 import "./AiAssistant.css";
 
 const DEFAULT_SUGGESTIONS = [
@@ -15,7 +20,6 @@ const DEFAULT_SUGGESTIONS = [
 const FINISH_REASON_COPY = Object.freeze({
   length: "模型达到 provider token 上限，回答可能未完整结束。",
   user_abort: "回答已由你停止。",
-  output_limit: "回答已达到 6000 字上限",
   error: "回答因错误中断。",
 });
 
@@ -103,33 +107,35 @@ function ContextChips({ contextSummary }) {
   );
 }
 
-function AssistantMarkdown({ content, isStreaming }) {
+function AssistantMarkdown({ content, isStreaming, sources }) {
   return (
     <div className="ai-assistant-markdown">
-      <MarkdownRender
-        customId={AI_MARKDOWN_CUSTOM_ID}
-        mode="chat"
-        content={content}
-        final={!isStreaming}
-        htmlPolicy="escape"
-        typewriter={isStreaming}
-        smoothStreaming={isStreaming ? "auto" : false}
-        fade={!isStreaming}
-        showTooltips
-        codeBlockOptions={{
-          fontFamily: "var(--font-mono)",
-          fontSize: 12,
-          lineHeight: 1.6,
-          maxHeight: 420,
-          padding: 12,
-          tabSize: 2,
-        }}
-      />
+      <AiSourcePreviewProvider sources={sources}>
+        <MarkdownRender
+          customId={AI_MARKDOWN_CUSTOM_ID}
+          mode="chat"
+          content={content}
+          final={!isStreaming}
+          htmlPolicy="escape"
+          typewriter={isStreaming}
+          smoothStreaming={isStreaming ? "auto" : false}
+          fade={!isStreaming}
+          showTooltips
+          codeBlockOptions={{
+            fontFamily: "var(--font-mono)",
+            fontSize: 12,
+            lineHeight: 1.6,
+            maxHeight: 420,
+            padding: 12,
+            tabSize: 2,
+          }}
+        />
+      </AiSourcePreviewProvider>
     </div>
   );
 }
 
-function Message({ message, isStreaming, onCitationOpen }) {
+function Message({ message, isStreaming, onCitationOpen, sources }) {
   const role = message?.role === "user" ? "user" : "assistant";
   const content = typeof message?.content === "string" ? message.content : "";
   const isAssistant = role === "assistant";
@@ -157,7 +163,7 @@ function Message({ message, isStreaming, onCitationOpen }) {
         <div className="ai-assistant-message-content">
           {content ? (
             isAssistant ? (
-              <AssistantMarkdown content={content} isStreaming={isStreaming} />
+              <AssistantMarkdown content={content} isStreaming={isStreaming} sources={sources} />
             ) : (
               <p className="ai-assistant-user-copy">{content}</p>
             )
@@ -176,6 +182,7 @@ function Message({ message, isStreaming, onCitationOpen }) {
                   startLine={citation.startLine}
                   endLine={citation.endLine}
                   label={citation.label}
+                  preview={buildSourceCitationPreview(citation, sources)}
                   onOpen={onCitationOpen}
                 />
               ))}
@@ -183,10 +190,7 @@ function Message({ message, isStreaming, onCitationOpen }) {
           ) : null}
         </div>
         {finishReasonCopy ? (
-          <p
-            className="ai-assistant-finish-reason"
-            role={finishReason === "output_limit" ? "status" : undefined}
-          >
+          <p className="ai-assistant-finish-reason">
             {finishReasonCopy}
           </p>
         ) : null}
@@ -280,6 +284,8 @@ export function AiAssistant({
     onInputChange?.(suggestion);
   };
 
+  const sourcePreviewEntries = Array.isArray(contextSummary?.sources) ? contextSummary.sources : [];
+
   return (
     <section
       className={`ai-assistant ${className}`.trim()}
@@ -322,6 +328,7 @@ export function AiAssistant({
               message={message}
               isStreaming={Boolean(message.streaming) || (isStreaming && index === messages.length - 1 && message.role !== "user")}
               onCitationOpen={onCitationOpen}
+              sources={sourcePreviewEntries}
             />
           ))
         )}
