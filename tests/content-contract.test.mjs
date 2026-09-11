@@ -116,12 +116,21 @@ function openingTags(source) {
   return [...source.matchAll(COMPONENT_PATTERN)].map((match) => ({
     component: match[1],
     attributes: parseAttributes(match[2]),
+    attributeSource: match[2],
     selfClosing: match[3] === "/",
   }));
 }
 
 function isTemporaryAlias(fileName, component, prop) {
   return TEMPORARY_ALIAS_PROPS.get(fileName)?.has(`${component}:${prop}`) ?? false;
+}
+
+function hasLiteralEmptyProp(attributeSource, prop) {
+  const escapedProp = prop.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const pattern = new RegExp(
+    `(?:^|\\s)${escapedProp}\\s*=\\s*(?:"\\s*"|'\\s*'|\\{\\s*"\\s*"\\s*\\}|\\{\\s*'\\s*'\\s*\\}|\\{\\s*\\[\\s*\\]\\s*\\})`,
+  );
+  return pattern.test(attributeSource);
 }
 
 function demoIds() {
@@ -131,13 +140,17 @@ function demoIds() {
   return [...registry.slice(demosStart).matchAll(/\bid:\s*"([a-z0-9-]+)"/g)].map((match) => match[1]);
 }
 
-test("every registered learning unit has a convention-based note", () => {
+test("every registered learning unit has one convention-based note", () => {
+  const ids = demoIds();
+  const uniqueIds = new Set(ids);
+  assert.equal(uniqueIds.size, ids.length, "registered demo ids must be unique");
+
   const available = new Set(noteFiles().map((name) => name.slice(0, -4)));
-  const missing = demoIds().filter((id) => !available.has(id));
+  const missing = ids.filter((id) => !available.has(id));
   assert.deepEqual(missing, [], "every registered demo must have a matching note");
 });
 
-test("teaching primitives use supported props and do not silently render empty self-closing blocks", () => {
+test("teaching primitives use supported props and do not silently render empty blocks", () => {
   const problems = [];
 
   for (const fileName of noteFiles()) {
@@ -153,8 +166,26 @@ test("teaching primitives use supported props and do not silently render empty s
       }
 
       const props = new Set(tag.attributes);
-      if (tag.component === "DemoReference" && (!props.has("action") || !props.has("observe"))) {
-        problems.push(`${fileName}: <DemoReference> must provide both action and observe`);
+      if (tag.component === "DemoReference") {
+        if (!props.has("action") || !props.has("observe")) {
+          problems.push(`${fileName}: <DemoReference> must provide both action and observe`);
+        }
+        if (hasLiteralEmptyProp(tag.attributeSource, "action")) {
+          problems.push(`${fileName}: <DemoReference> action must not be an empty literal`);
+        }
+        if (hasLiteralEmptyProp(tag.attributeSource, "observe")) {
+          problems.push(`${fileName}: <DemoReference> observe must not be an empty literal`);
+        }
+      }
+
+      if (tag.component === "Timeline" && hasLiteralEmptyProp(tag.attributeSource, "steps")) {
+        problems.push(`${fileName}: <Timeline> steps must not be a literal empty value`);
+      }
+      if (tag.component === "Flow" && hasLiteralEmptyProp(tag.attributeSource, "items")) {
+        problems.push(`${fileName}: <Flow> items must not be a literal empty value`);
+      }
+      if (tag.component === "FurtherReading" && hasLiteralEmptyProp(tag.attributeSource, "items")) {
+        problems.push(`${fileName}: <FurtherReading> items must not be a literal empty value`);
       }
 
       if (!tag.selfClosing) continue;
@@ -167,6 +198,13 @@ test("teaching primitives use supported props and do not silently render empty s
       }
       if (tag.component === "Compare" && !props.has("left") && !props.has("right")) {
         problems.push(`${fileName}: self-closing <Compare> has no comparison content`);
+      }
+      if (
+        tag.component === "Compare" &&
+        (!props.has("left") || hasLiteralEmptyProp(tag.attributeSource, "left")) &&
+        (!props.has("right") || hasLiteralEmptyProp(tag.attributeSource, "right"))
+      ) {
+        problems.push(`${fileName}: self-closing <Compare> has only literal empty comparison content`);
       }
       if (
         tag.component === "Summary" &&
