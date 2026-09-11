@@ -1,0 +1,75 @@
+name: Workbench Integration Verify
+
+on:
+  pull_request:
+    branches:
+      - integration/react-learning-workbench
+    paths:
+      - "src/**"
+      - "tests/e2e/**"
+      - "docs/execution/WORKBENCH-INTEGRATION-STATUS.md"
+      - "package.json"
+      - "package-lock.json"
+      - "vite.config.js"
+      - ".github/workflows/workbench-integration-verify.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Browser E2E
+        env:
+          CI: "true"
+        run: npm run test:e2e
+
+      - name: Preview HTTP smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run preview -- --host 127.0.0.1 --port 4173 > /tmp/workbench-preview.log 2>&1 &
+          PREVIEW_PID=$!
+          trap 'kill "$PREVIEW_PID" 2>/dev/null || true; cat /tmp/workbench-preview.log' EXIT
+          for attempt in {1..30}; do
+            if curl --fail --silent --show-error http://127.0.0.1:4173/react-learning-playground/ > /tmp/workbench-home.html; then
+              grep -q '<div id="root"></div>' /tmp/workbench-home.html
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Preview did not become healthy" >&2
+          exit 1
+
+      - name: Upload Playwright artifacts
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: workbench-playwright-${{ github.run_id }}
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore

@@ -1,0 +1,30 @@
+# Event Handler 与事件传播
+
+<MentalModel title="事件处理的是一次具体交互的因果链">
+Event Handler 在用户执行具体动作时运行，适合提交、删除、导航等“因为这次动作而发生”的逻辑。事件从目标节点沿 React tree 传播；capture 与 bubble 决定观察阶段，`stopPropagation` 控制继续传播，`preventDefault` 控制浏览器默认行为。
+</MentalModel>
+
+<Experiment title="观察 capture → target → bubble">
+在中间 Demo 中点击嵌套区域，比较普通传播、停止传播和阻止默认行为的日志顺序。先预测父子 handler 的执行顺序。
+</Experiment>
+
+<DemoReference action="触发嵌套点击、stopPropagation 与 preventDefault 示例" observe="区分传播是否继续、浏览器默认行为是否发生，以及两者并非同一件事。" />
+
+<Timeline steps={["capture handler 从外向内观察", "目标元素 handler 执行", "bubble handler 从内向外传播", "若未 preventDefault，浏览器执行默认行为"]} />
+
+<Boundary title="传函数，不要在 render 时调用">
+`onClick={handleClick}` 传递 handler；`onClick={handleClick()}` 会在 render 中立即调用。需要参数时用函数包装，如 `onClick={() => handleSelect(id)}`。
+</Boundary>
+
+<AntiPattern title="用 Effect 间接响应一次点击">
+若逻辑只因为用户点击而发生，直接放在事件链里。先 set 一个 flag，再让 Effect 观察 flag 去执行同一业务动作，会增加状态、时序和重复执行风险。
+</AntiPattern>
+
+<Summary>
+- Event Handler 表达具体用户动作的因果逻辑。
+- capture/bubble 描述传播阶段。
+- stopPropagation 与 preventDefault 解决不同问题。
+- 事件逻辑与 render 纯计算、Effect 外部同步应保持边界。
+</Summary>
+
+<FurtherReading items={[{ label: "React: Responding to Events", href: "https://react.dev/learn/responding-to-events" }, { label: "MDN: Event bubbling", href: "https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/Scripting/Event_bubbling" }]} />

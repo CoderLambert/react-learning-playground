@@ -1,0 +1,30 @@
+# 条件渲染与业务四态
+
+<MentalModel title="条件渲染就是把当前状态映射为 UI">
+React 不提供特殊模板指令；使用 JavaScript 的 `if`、early return、三元表达式和 `&&` 即可描述分支。工程重点是先把业务状态建模清楚，再让每个状态映射到唯一、可理解的界面。
+</MentalModel>
+
+<Experiment title="遍历 loading / error / empty / success">
+在中间 Demo 中依次切换四种状态。先判断每种状态应显示什么，再观察不同条件写法是否保持相同业务语义。
+</Experiment>
+
+<DemoReference action="依次切换四态" observe="检查任一时刻是否只有符合当前状态的 UI 分支出现，并关注分支优先级。" />
+
+<Flow items={["识别业务状态", "确定互斥/可并存关系", "优先处理阻断态", "渲染主成功态", "让分支结构反映业务优先级"]} />
+
+<Boundary title="&& 的左值会影响输出">
+`condition && <View />` 适合明确 boolean 条件。像 `count && <View />` 这样的写法在 `count` 为 `0` 时可能把 `0` 渲染出来；需要布尔语义时显式比较或转换。
+</Boundary>
+
+<AntiPattern title="用多个松散 boolean 表达一个互斥状态机">
+`isLoading`、`hasError`、`isEmpty` 若能同时为 true，就可能出现不可能状态。复杂场景优先用单一 status/discriminated union 表达状态，再进行 UI 映射。
+</AntiPattern>
+
+<Summary>
+- 条件渲染使用普通 JavaScript 控制流。
+- 先建模状态，再选择语法。
+- early return 很适合阻断态。
+- 避免能组合出矛盾 UI 的松散 boolean。
+</Summary>
+
+<FurtherReading items={[{ label: "React: Conditional Rendering", href: "https://react.dev/learn/conditional-rendering" }, { label: "React: Choosing the State Structure", href: "https://react.dev/learn/choosing-the-state-structure" }]} />

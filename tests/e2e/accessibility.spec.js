@@ -6,7 +6,7 @@ test.describe("keyboard and accessibility interaction", () => {
   test("keeps focus visible, labels the form, and exposes live status semantics", async ({ page }) => {
     await loadApp(page);
 
-    const search = page.getByRole("textbox", { name: "搜索知识点或关键词" });
+    const search = page.getByRole("searchbox", { name: "搜索知识点或关键词" });
     await search.focus();
     await expect(search).toBeFocused();
     const focusMetrics = await search.evaluate((element) => {
@@ -20,18 +20,19 @@ test.describe("keyboard and accessibility interaction", () => {
 
     await openDemo(page, "语义、Label 与可访问状态反馈");
     const email = page.getByLabel("邮箱地址");
+    const demoStatus = page.locator('.demo-page [role="status"]');
     await expect(email).toBeVisible();
-    await expect(page.locator('[role="status"]')).toHaveAttribute("aria-live", "polite");
+    await expect(demoStatus).toHaveAttribute("aria-live", "polite");
 
     await email.fill("invalid");
     await email.press("Enter");
-    await expect(page.locator('[role="status"]')).toContainText("正在保存", { timeout: 1_000 });
+    await expect(demoStatus).toContainText("正在保存", { timeout: 1_000 });
     await expect(page.getByRole("alert")).toHaveAttribute("aria-live", "assertive", { timeout: 3_000 });
     await expect(page.getByRole("alert")).toContainText("有效邮箱");
 
     await email.fill("learner@example.com");
     await email.press("Enter");
-    await expect(page.getByRole("status")).toContainText("已保存 learner@example.com", { timeout: 3_000 });
+    await expect(demoStatus).toContainText("已保存 learner@example.com", { timeout: 3_000 });
   });
 
   test("enters, contains, closes, and restores focus for the modal", async ({ page }) => {
