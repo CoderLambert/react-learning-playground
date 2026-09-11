@@ -10,7 +10,7 @@
     "demo:new": "node scripts/create-demo.mjs",
     "lint": "oxlint",
     "preview": "vite preview",
-    "test:ai": "node --test tests/ai-context-builder.test.mjs tests/ai-chat-client.test.mjs tests/ai-learning-assistant.test.mjs tests/deepseek-browser.test.mjs worker/deepseek-assistant/test/*.test.js",
+    "test:ai": "node --test tests/ai-context-builder.test.mjs tests/ai-chat-client.test.mjs tests/ai-learning-assistant.test.mjs tests/ai-context-budgeting.test.mjs tests/deepseek-browser.test.mjs worker/deepseek-assistant/test/*.test.js",
     "test:e2e": "playwright test",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d dist"
