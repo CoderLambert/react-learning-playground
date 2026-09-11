@@ -16,7 +16,7 @@ const TEACHING_PROPS = {
   Experiment: new Set(["title"]),
   Observation: new Set(["title"]),
   Compare: new Set(["left", "right", "leftTitle", "rightTitle"]),
-  Timeline: new Set(["steps", "items"]), // items is a temporary compatibility alias.
+  Timeline: new Set(["steps"]),
   Flow: new Set(["items"]),
   Boundary: new Set(["title"]),
   AntiPattern: new Set(["title"]),
@@ -147,7 +147,7 @@ test("teaching primitives use supported props and do not silently render empty s
 
       if (!tag.selfClosing) continue;
 
-      if (tag.component === "Timeline" && !props.has("steps") && !props.has("items")) {
+      if (tag.component === "Timeline" && !props.has("steps")) {
         problems.push(`${fileName}: self-closing <Timeline> has no steps`);
       }
       if (tag.component === "Flow" && !props.has("items")) {
