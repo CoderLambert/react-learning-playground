@@ -3,18 +3,16 @@ import { useDeferredValue, useMemo, useState, useTransition } from "react";
 const ITEMS = Array.from({ length: 900 }, (_, index) => `React learning item ${index + 1}`);
 
 function ExpensiveResults({ query }) {
-  const startedAt = performance.now();
   const normalized = query.trim().toLowerCase();
   const results = ITEMS.filter((item) => item.toLowerCase().includes(normalized));
 
   let checksum = 0;
   for (let i = 0; i < 180000; i += 1) checksum = (checksum + i) % 997;
-  const duration = Math.max(0, performance.now() - startedAt);
 
   return (
     <div>
       <p style={{ fontSize: 12 }}>
-        渲染查询：<code>{query || "(empty)"}</code> · 结果 {results.length} · 模拟 CPU {duration.toFixed(1)}ms · checksum {checksum}
+        渲染查询：<code>{query || "(empty)"}</code> · 结果 {results.length} · CPU 模拟 checksum {checksum}
       </p>
       <ul>{results.slice(0, 8).map((item) => <li key={item}>{item}</li>)}</ul>
     </div>
