@@ -62,15 +62,16 @@ export function buildDeepSeekDirectMessages({ question, context, history = [] })
 
 async function readApiError(response) {
   try {
-    const data = await response.json();
-    return data?.error?.message || data?.message || `DeepSeek API returned ${response.status}`;
-  } catch {
+    const text = (await response.text()).trim();
+    if (!text) return `DeepSeek API returned ${response.status}`;
     try {
-      const text = (await response.text()).trim();
-      return text || `DeepSeek API returned ${response.status}`;
+      const data = JSON.parse(text);
+      return data?.error?.message || data?.message || `DeepSeek API returned ${response.status}`;
     } catch {
-      return `DeepSeek API returned ${response.status}`;
+      return text;
     }
+  } catch {
+    return `DeepSeek API returned ${response.status}`;
   }
 }
 
@@ -90,6 +91,7 @@ export async function* parseDeepSeekOpenAiStream(stream) {
     while (true) {
       const { value, done } = await reader.read();
       buffer += decoder.decode(value ?? new Uint8Array(), { stream: !done });
+      buffer = buffer.replace(/\r\n/g, "\n");
 
       let boundary = buffer.indexOf("\n\n");
       while (boundary >= 0) {
@@ -97,7 +99,7 @@ export async function* parseDeepSeekOpenAiStream(stream) {
         buffer = buffer.slice(boundary + 2);
 
         const dataLines = block
-          .split(/\r?\n/)
+          .split("\n")
           .filter((line) => line.startsWith("data:"))
           .map((line) => line.slice(5).trim());
 
@@ -196,7 +198,10 @@ export function createDeepSeekDirectClient({
         });
       } catch (error) {
         if (isAbortError(error, signal)) throw new AiChatAbortError();
-        throw new AiChatClientError(error?.message || "无法连接 DeepSeek API", {
+        const message = error instanceof TypeError
+          ? "无法从浏览器直接连接 DeepSeek API，请检查网络或浏览器跨域限制。"
+          : error?.message || "无法连接 DeepSeek API";
+        throw new AiChatClientError(message, {
           code: "DEEPSEEK_NETWORK_ERROR",
           cause: error,
         });
