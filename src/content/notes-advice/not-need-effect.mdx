@@ -1,0 +1,25 @@
+# not-need-effect 审核建议
+
+## 当前结论
+
+- Gate A Correctness：**PASS**
+- Gate B Demo Contract：**FAIL**
+- Gate C Mental Model：**PASS**
+
+## 主要问题
+
+核心判断正确：可在 render 中派生的数据不应再复制到 State 并通过 Effect 同步；由明确用户动作触发的业务逻辑通常应留在对应 Event Handler；`key` 可以表达“这是另一个组件身份”，从而重置子树 State。
+
+但 Note 的 Experiment 声称可以实际比较“Effect 把派生值写回 State”和“render 直接计算”，并观察前者多一次 render/commit 和短暂旧值。当前 Demo 只运行正确的 render 派生版本；错误版本仅是静态 `<pre>` 代码，并没有可执行的对照、render counter 或 stale-value 观察点。因此不能从 Demo 得出该实验结论。
+
+## 边界与反例
+
+- “无外部系统”是很好的第一问，但不是机械规则：某些 Effect 用于 React 与浏览器 API、网络连接、第三方 widget 等外部系统同步。
+- 昂贵纯计算依然属于 render 逻辑；是否使用 memoization 应由成本和测量决定，而不是因为它“看起来像 Effect”。
+- `key` 重置适合身份切换后确实应丢弃本地状态的场景；如果产品需要按实体保留草稿，则应重新设计 State ownership，而不是一律重置。
+
+## 建议修改
+
+1. 要么增加一个隔离的可执行“Effect + derived State”对照，并显示 render 次数/短暂旧值；要么把 Experiment 改成当前 Demo 真正支持的三项观察。
+2. Demo 文案避免把三个示例描述成 React 官方“仅有/固定”的三大场景；更准确地说是从官方建议中选取三个常见案例。
+3. 保留最终决策顺序：先判断是否可派生，再判断是否是明确事件因果，最后才考虑是否需要与外部系统同步。
