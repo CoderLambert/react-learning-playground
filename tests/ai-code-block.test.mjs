@@ -7,6 +7,7 @@ import {
   getCodeBlockLabel,
   normalizeCodeBlockLanguage,
   normalizeCodeBlockText,
+  performCodeBlockCopy,
 } from "../src/components/ai-assistant/code/aiCodeBlockModel.js";
 
 test("builds stable metadata from a Markstream code node", () => {
@@ -47,4 +48,32 @@ test("collapsed preview stays single-line and bounded for long code", () => {
   assert.ok(preview.length <= 96);
   assert.match(preview, /…$/);
   assert.equal(preview.includes("const hidden"), false);
+});
+
+test("copy contract writes exact code before notifying the host", async () => {
+  const events = [];
+  const code = "const answer = 42;";
+
+  const copied = await performCodeBlockCopy({
+    code,
+    writeText: async (value) => events.push(["write", value]),
+    onCopy: (value) => events.push(["notify", value]),
+  });
+
+  assert.equal(copied, true);
+  assert.deepEqual(events, [
+    ["write", code],
+    ["notify", code],
+  ]);
+});
+
+test("copy contract is a no-op for an empty code block", async () => {
+  let writes = 0;
+  const copied = await performCodeBlockCopy({
+    code: "",
+    writeText: async () => { writes += 1; },
+  });
+
+  assert.equal(copied, false);
+  assert.equal(writes, 0);
 });
