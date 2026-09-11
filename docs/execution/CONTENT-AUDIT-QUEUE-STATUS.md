@@ -98,6 +98,43 @@ Recommended next content edit: narrow the DemoReference observation claim and ad
 
 Reserved lessons were skipped rather than duplicated: `event-propagation.mdx` and `state-snapshot-queue.mdx` belong to PR #82; state ownership lessons belong to PR #78. The queue should continue from the next unowned navigation item.
 
+## Run 3
+
+### Residual issues fixed
+
+1. `src/demos/StateReducerDemo.jsx`
+   - The reducer previously called `new Date().toLocaleTimeString()` while claiming to be pure.
+   - Timestamp creation now happens in the event-handler boundary and is carried by the action, so the same `(state, action)` produces the same next state.
+   - The selection guidance was tightened: complex object shape alone is not a reason to use `useReducer`; shared transition rules, auditability and testability are better signals.
+   - Marketing-like “architecture/state-machine” wording was reduced where the Demo does not model an explicit finite-state machine.
+
+2. `src/demos/UseReduceWithContextDemo.jsx`
+   - The reducer previously called `Date.now()` to generate task IDs. ID creation now happens before dispatch and is passed in the action.
+   - Removed absolute claims that dispatch-only consumers “never” re-render. Splitting State/Dispatch Context narrows Context subscriptions; it does not suppress renders from every other source.
+   - Updated provider syntax to React 19 `<Context value={...}>` form and reframed the lesson around subscription boundaries instead of “performance magic”.
+
+These corrections follow the official React requirements that reducers be pure, `dispatch` have stable identity, Context consumers receive updated values when the provided value changes, and `memo`/subscription boundaries are optimizations rather than global render guarantees.
+
+### Lessons audited in navigation order
+
+9. `state-reducer.mdx` -> `notes-advice/state-reducer.mdx`
+   - Gate A: PARTIAL after Demo purity fix.
+   - Gate B: FAIL.
+   - Gate C: PASS.
+   - Note names `add/update/remove` actions that do not exist in the Demo (`INCREMENT/DECREMENT/SET_STEP/RESET/UNDO`). It also asks the learner to prove reducer purity from UI observation, which the Demo cannot establish.
+
+10. `context-propagation.mdx` -> `notes-advice/context-propagation.mdx`
+   - Gate A: PASS.
+   - Gate B: FAIL.
+   - Gate C: PASS.
+   - Note says to inspect real render logs, but Demo `renderCounts` are manually advanced teaching predictions rather than instrumentation. The reliable observable phenomenon is fresh Context value propagation, including through a memoized consumer.
+
+11. `use-reduce-with-context.mdx` -> `notes-advice/use-reduce-with-context.mdx`
+   - Gate A: PASS after Demo fixes.
+   - Gate B: PARTIAL.
+   - Gate C: PASS.
+   - The interactive Demo only executes the split-Context version; the “single Context vs dual Context” side is currently a static code card, so the Note overstates the executable comparison. Advice recommends either adding a real single-Context control or narrowing the Experiment.
+
 ## Sources used for factual review
 
 Primary references were current official React documentation for:
@@ -108,9 +145,17 @@ Primary references were current official React documentation for:
 - Preserving and Resetting State;
 - Updating Objects in State;
 - Updating Arrays in State;
+- `useReducer` and Extracting State Logic into a Reducer;
+- Scaling Up with Reducer and Context;
 - `useContext` / `createContext` React 19 provider semantics;
+- `memo` Context behavior;
 - Render and Commit / purity guidance.
 
 ## Validation
 
-This branch currently contains two JSX prose/correctness wording fixes plus advice/status documentation. No local checkout/runtime is exposed through the GitHub connector, so local lint/build is not claimed. Exact-head GitHub workflow evidence is the validation source; future runs must inspect the newest head before reporting PASS.
+Previous audit head `52ebaf8fd21c245d4e440633e89e8c1c0e4add59` has exact-head GitHub Actions evidence:
+
+- `React Learning Verify` run `34640431132`: **success**
+- `Workbench Integration Verify` run `34640431137`: **success**
+
+Run 3 adds two executable Demo fixes plus three advice files, so those previous green runs are regression evidence only, not acceptance evidence for the new head. No local checkout/runtime is exposed through the GitHub connector; local lint/build is not claimed. Exact-head workflows on the latest PR head remain the acceptance source.
