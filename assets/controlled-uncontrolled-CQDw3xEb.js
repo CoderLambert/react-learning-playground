@@ -1,0 +1,14 @@
+import{n as e,r as t}from"./index-B8CSWDOf.js";var n=t();function r(t){let r={code:`code`,h1:`h1`,h3:`h3`,li:`li`,p:`p`,ul:`ul`,...e(),...t.components},{AntiPattern:i,Boundary:o,Compare:s,DemoReference:c,Experiment:l,FurtherReading:u,MentalModel:d,Summary:f}=r;return i||a(`AntiPattern`,!0),o||a(`Boundary`,!0),s||a(`Compare`,!0),c||a(`DemoReference`,!0),l||a(`Experiment`,!0),u||a(`FurtherReading`,!0),d||a(`MentalModel`,!0),f||a(`Summary`,!0),(0,n.jsxs)(n.Fragment,{children:[(0,n.jsx)(r.h1,{id:`受控与非受控组件`,children:`受控与非受控组件`}),`
+`,(0,n.jsx)(d,{title:`受控与非受控的核心是 state ownership`,children:(0,n.jsxs)(r.p,{children:[`受控组件由父级通过 `,(0,n.jsx)(r.code,{children:`value`}),`（或等价 prop）决定当前值，并通过 `,(0,n.jsx)(r.code,{children:`onChange`}),` 请求修改；非受控组件把当前值保存在自身/DOM 内部，父级通常只给初始值。选择哪种模式，本质是在定义谁拥有事实。`]})}),`
+`,(0,n.jsx)(l,{title:`比较外部控制能力`,children:(0,n.jsx)(r.p,{children:`在中间 Demo 中分别操作 controlled 与 uncontrolled 输入，再让父级尝试重置/同步它们，观察两种 ownership 的差异。`})}),`
+`,(0,n.jsx)(c,{action:`编辑输入并触发父级控制操作`,observe:`确认 value + onChange 的闭环，以及 defaultValue 只负责初始化而非持续控制。`}),`
+`,(0,n.jsxs)(s,{children:[(0,n.jsx)(r.h3,{id:`controlled`,children:`Controlled`}),(0,n.jsx)(r.p,{children:`父级是 source of truth，易于联动、校验和集中重置，但每次变化都进入 React 数据流。`}),(0,n.jsx)(r.h3,{id:`uncontrolled`,children:`Uncontrolled`}),(0,n.jsx)(r.p,{children:`内部/DOM 持有值，接入简单、局部自治，但外部实时协调能力更弱。`})]}),`
+`,(0,n.jsx)(o,{title:`不要在生命周期中随意切换模式`,children:(0,n.jsxs)(r.p,{children:[`输入从 `,(0,n.jsx)(r.code,{children:`undefined`}),` 变成字符串或反向变化，可能造成 controlled/uncontrolled 切换 warning。组件 API 应从一开始就明确 ownership，并保持一致。`]})}),`
+`,(0,n.jsx)(i,{title:`同时维护内部 value 和外部 value 两个真相`,children:(0,n.jsxs)(r.p,{children:[`若组件既接受受控 `,(0,n.jsx)(r.code,{children:`value`}),` 又保存同义内部 state，却没有明确优先级与同步协议，很容易产生竞态。支持双模式时应显式定义 controlled 判定、初始值和更新契约。`]})}),`
+`,(0,n.jsx)(f,{children:(0,n.jsxs)(r.ul,{children:[`
+`,(0,n.jsx)(r.li,{children:`controlled/uncontrolled 是 ownership 选择。`}),`
+`,(0,n.jsxs)(r.li,{children:[(0,n.jsx)(r.code,{children:`value + onChange`}),` 构成受控闭环。`]}),`
+`,(0,n.jsxs)(r.li,{children:[(0,n.jsx)(r.code,{children:`defaultValue`}),` 表达初始值，不是持续控制。`]}),`
+`,(0,n.jsx)(r.li,{children:`公共组件应明确且稳定地定义控制模式。`}),`
+`]})}),`
+`,(0,n.jsx)(u,{items:[{label:`React: Sharing State Between Components`,href:`https://react.dev/learn/sharing-state-between-components`},{label:`React: input`,href:`https://react.dev/reference/react-dom/components/input`}]})]})}function i(t={}){let{wrapper:i}={...e(),...t.components};return i?(0,n.jsx)(i,{...t,children:(0,n.jsx)(r,{...t})}):r(t)}function a(e,t){throw Error(`Expected `+(t?`component`:`object`)+" `"+e+"` to be defined: you likely forgot to import, pass, or provide it.")}export{i as default};
