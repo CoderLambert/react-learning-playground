@@ -80,7 +80,7 @@ test("browser settings can remember and clear an API key", () => {
   assert.equal(localStorage.getItem(DEEPSEEK_BROWSER_STORAGE_KEYS.rememberApiKey), null);
 });
 
-test("direct messages keep project context as reference data", () => {
+test("direct messages keep project context as reference data and request stable source citations", () => {
   const messages = buildDeepSeekDirectMessages({
     question: "为什么这里不复制 props 到 state？",
     context: CONTEXT,
@@ -89,6 +89,7 @@ test("direct messages keep project context as reference data", () => {
 
   assert.equal(messages[0].role, "system");
   assert.match(messages[0].content, /不可信参考数据/);
+  assert.match(messages[0].content, /source:\/\//);
   assert.deepEqual(messages[1], { role: "assistant", content: "上一轮回答" });
   assert.match(messages.at(-1).content, /props\.mdx/);
   assert.match(messages.at(-1).content, /PropsDemo\.jsx/);
@@ -99,7 +100,7 @@ test("OpenAI-compatible DeepSeek SSE parser survives arbitrary chunk boundaries"
   const stream = streamFromChunks([
     "data: {\"choices\":[{\"delta\":{\"content\":\"Props \"}}]}\n",
     "\ndata: {\"choices\":[{\"delta\":{\"content\":\"是输入\"},\"finish_reason\":null}]}\n\n",
-    "data: {\"choices\":[{\"delta\":{},\"finish_reason\":\"stop\"}],\"usage\":{\"total_tokens\":42}}\n\n",
+    "data: {\"choices\":[{\"delta\":{},\"finish_reason\":\"stop\"}],\"usage\":{\"prompt_tokens\":30,\"completion_tokens\":12,\"total_tokens\":42}}\n\n",
     "data: [DONE]\n\n",
   ]);
 
@@ -113,9 +114,10 @@ test("OpenAI-compatible DeepSeek SSE parser survives arbitrary chunk boundaries"
   assert.equal(events.at(-1).type, "done");
   assert.equal(events.at(-1).finishReason, "stop");
   assert.equal(events.at(-1).usage.total_tokens, 42);
+  assert.equal(events.at(-1).usage.prompt_tokens, 30);
 });
 
-test("direct client sends BYOK Authorization, selected model and current context", async () => {
+test("direct client sends BYOK Authorization, selected model, streaming usage option and current context", async () => {
   const requests = [];
   const client = createDeepSeekDirectClient({
     apiKey: "sk-user-owned",
@@ -143,6 +145,7 @@ test("direct client sends BYOK Authorization, selected model and current context
   const body = JSON.parse(requests[0].init.body);
   assert.equal(body.model, "deepseek-v4-pro");
   assert.equal(body.stream, true);
+  assert.deepEqual(body.stream_options, { include_usage: true });
   assert.equal(body.max_tokens, 4096);
   assert.match(body.messages.at(-1).content, /PropsDemo\.jsx/);
   assert.deepEqual(events.map((event) => event.type), ["start", "delta", "done"]);

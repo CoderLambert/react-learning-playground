@@ -134,13 +134,14 @@ test("AI assistant handles normalized errors, stop and New Chat", async ({ page 
   });
 
   const composer = await openAiTab(page);
+  const transcript = page.getByRole("log", { name: "AI 对话记录" });
   await composer.fill("触发错误");
   await page.getByRole("button", { name: "发送" }).click();
   await expect(page.getByRole("alert")).toContainText("mock quota");
 
   await page.getByRole("button", { name: "新对话" }).click();
   await expect(page.getByRole("alert")).toHaveCount(0);
-  await expect(page.getByText("触发错误")).toHaveCount(0);
+  await expect(transcript.getByText("触发错误", { exact: true })).toHaveCount(0);
 
   await composer.fill("慢回答");
   await page.getByRole("button", { name: "发送" }).click();
@@ -148,4 +149,66 @@ test("AI assistant handles normalized errors, stop and New Chat", async ({ page 
   await page.getByRole("button", { name: "停止" }).click();
   await expect(page.getByRole("button", { name: "发送" })).toBeVisible();
   await expect(page.getByText("late")).toHaveCount(0);
+});
+
+test("source citations open the Source inspector and highlight the requested range", async ({ page }) => {
+  await page.route(GATEWAY_URL, async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/x-ndjson",
+      body: normalizedStream(
+        { type: "start" },
+        { type: "delta", text: "查看 [PropsBasicsDemo.jsx:L1-L2](source://PropsBasicsDemo.jsx#L1-L2)" },
+        { type: "done", usage: { prompt_tokens: 80, completion_tokens: 20, total_tokens: 100 } },
+      ),
+    });
+  });
+
+  const composer = await openAiTab(page);
+  await expect(page.getByRole("region", { name: "AI context usage" })).toBeVisible();
+  await composer.fill("给出源码引用");
+  await page.getByRole("button", { name: "发送" }).click();
+
+  const citation = page.getByRole("button", { name: /打开源码 PropsBasicsDemo\.jsx L1–L2/ });
+  await expect(citation).toBeVisible();
+  await citation.click();
+
+  await expect(page.getByRole("tab", { name: "源码" })).toHaveAttribute("aria-selected", "true");
+  await expect(page.locator('[data-source-focus="1-2"]')).toBeVisible();
+  await expect(page.locator('[data-source-line="1"][data-highlighted="true"]')).toBeVisible();
+  await expect(page.locator('[data-source-line="2"][data-highlighted="true"]')).toBeVisible();
+});
+
+test("conversation history survives reload and stays scoped to the current learning unit", async ({ page }) => {
+  await page.route(GATEWAY_URL, async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/x-ndjson",
+      body: normalizedStream(
+        { type: "start" },
+        { type: "delta", text: "persisted answer" },
+        { type: "done" },
+      ),
+    });
+  });
+
+  let composer = await openAiTab(page);
+  let transcript = page.getByRole("log", { name: "AI 对话记录" });
+  let assistantMessage = transcript.locator('[data-message-role="assistant"]');
+  await composer.fill("remember this question");
+  await page.getByRole("button", { name: "发送" }).click();
+  await expect(assistantMessage).toHaveCount(1);
+  await expect(assistantMessage).toContainText("persisted answer");
+  await expect(transcript.getByText("remember this question", { exact: true })).toBeVisible();
+
+  await page.reload();
+  await page.getByRole("tab", { name: "AI" }).click();
+  composer = page.getByRole("textbox", { name: "向 AI 助手提问" });
+  transcript = page.getByRole("log", { name: "AI 对话记录" });
+  assistantMessage = transcript.locator('[data-message-role="assistant"]');
+  await expect(composer).toBeEnabled();
+  await expect(transcript.getByText("remember this question", { exact: true })).toBeVisible();
+  await expect(assistantMessage).toHaveCount(1);
+  await expect(assistantMessage).toContainText("persisted answer");
+  await expect(page.locator(".ai-conversation-popover summary")).toContainText("会话");
 });

@@ -1,7 +1,14 @@
 import CodeViewer from "../CodeViewer";
 import "./SourceViewer.css";
 
-export function SourceViewer({ learningUnit, sources, activeFileName, onActiveFileChange, emptyState }) {
+export function SourceViewer({
+  learningUnit,
+  sources,
+  activeFileName,
+  onActiveFileChange,
+  focusRange = null,
+  emptyState,
+}) {
   const fileList = sources ?? learningUnit?.sources ?? [];
 
   if (fileList.length === 0) {
@@ -13,13 +20,18 @@ export function SourceViewer({ learningUnit, sources, activeFileName, onActiveFi
   }
 
   return (
-    <div className="source-viewer" data-source-file={activeFileName ?? fileList[0]?.name ?? ""}>
+    <div
+      className="source-viewer"
+      data-source-file={activeFileName ?? fileList[0]?.name ?? ""}
+      data-source-focus={focusRange ? `${focusRange.startLine}-${focusRange.endLine}` : undefined}
+    >
       <CodeViewer
         files={fileList}
         variant="panel"
         defaultExpanded
         activeFileName={activeFileName}
         onActiveFileChange={onActiveFileChange}
+        focusRange={focusRange}
       />
     </div>
   );
