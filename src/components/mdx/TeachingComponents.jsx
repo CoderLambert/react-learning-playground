@@ -134,21 +134,3 @@ export function CodeDiff({ before, after, beforeTitle = "Before", afterTitle = "
     </section>
   );
 }
-
-export const MDX_TEACHING_COMPONENTS = Object.freeze({
-  Callout,
-  MentalModel,
-  Concept,
-  Experiment,
-  Observation,
-  Compare,
-  Timeline,
-  Flow,
-  Boundary,
-  AntiPattern,
-  CodeBlock,
-  CodeDiff,
-  DemoReference,
-  Summary,
-  FurtherReading,
-});

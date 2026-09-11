@@ -2,24 +2,29 @@ import { createHighlighterCore } from "shiki/core";
 import { createJavaScriptRegexEngine } from "shiki/engine/javascript";
 import jsxLang from "shiki/langs/jsx.mjs";
 import jsLang from "shiki/langs/javascript.mjs";
-import tsLang from "shiki/langs/typescript.mjs";
-import tsxLang from "shiki/langs/tsx.mjs";
 import cssLang from "shiki/langs/css.mjs";
-import jsonLang from "shiki/langs/json.mjs";
-import bashLang from "shiki/langs/bash.mjs";
 import githubDarkTheme from "shiki/themes/github-dark.mjs";
 
 const THEME = "github-dark";
+const BASE_LANGUAGES = new Set(["jsx", "javascript", "css"]);
 const SUPPORTED_LANGUAGES = new Set(["jsx", "javascript", "typescript", "tsx", "css", "json", "bash"]);
 const LANGUAGE_ALIASES = Object.freeze({ js: "javascript", ts: "typescript", sh: "bash", shell: "bash" });
+const LANGUAGE_LOADERS = Object.freeze({
+  typescript: () => import("shiki/langs/typescript.mjs"),
+  tsx: () => import("shiki/langs/tsx.mjs"),
+  json: () => import("shiki/langs/json.mjs"),
+  bash: () => import("shiki/langs/bash.mjs"),
+});
 
 let highlighterPromise = null;
+const loadedLanguages = new Set(BASE_LANGUAGES);
+const languagePromises = new Map();
 
 export function getSharedHighlighter() {
   if (!highlighterPromise) {
     highlighterPromise = createHighlighterCore({
       themes: [githubDarkTheme],
-      langs: [jsxLang, jsLang, tsLang, tsxLang, cssLang, jsonLang, bashLang],
+      langs: [jsxLang, jsLang, cssLang],
       engine: createJavaScriptRegexEngine(),
     });
   }
@@ -46,12 +51,26 @@ export function inferLanguage(fileName = "", fallback = "jsx") {
   return normalizeLanguage(byExtension[extension] ?? fallback);
 }
 
+async function ensureLanguage(highlighter, language) {
+  if (loadedLanguages.has(language)) return;
+  if (!languagePromises.has(language)) {
+    const loader = LANGUAGE_LOADERS[language];
+    if (!loader) return;
+    languagePromises.set(
+      language,
+      loader().then(({ default: grammar }) => highlighter.loadLanguage(grammar)).then(() => {
+        loadedLanguages.add(language);
+      }),
+    );
+  }
+  await languagePromises.get(language);
+}
+
 export async function highlightCode(code, { language = "jsx", fileName } = {}) {
+  const resolvedLanguage = fileName ? inferLanguage(fileName, language) : normalizeLanguage(language);
   const highlighter = await getSharedHighlighter();
-  return highlighter.codeToHtml(code ?? "", {
-    lang: fileName ? inferLanguage(fileName, language) : normalizeLanguage(language),
-    theme: THEME,
-  });
+  await ensureLanguage(highlighter, resolvedLanguage);
+  return highlighter.codeToHtml(code ?? "", { lang: resolvedLanguage, theme: THEME });
 }
 
 export const SHIKI_THEME = THEME;
