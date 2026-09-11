@@ -21,7 +21,7 @@ import {
 } from "./learningAssistantContext.js";
 import { createUnicodeOutputLimiter } from "./outputLimit.js";
 
-const GATEWAY_TRANSPORT_SOFT_BUDGET_TOKENS = 24 * 1024;
+const GATEWAY_TRANSPORT_INPUT_CAP_TOKENS = 24 * 1024;
 
 function createRequestId() {
   if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
@@ -543,8 +543,8 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile } = {}) 
       const transportPrunedMessageCount = requestHistory.length - transportHistory.length;
       const selected = selectContextWithinBudget({
         modelId: contextModelId,
-        softBudgetTokens: connectionMode === "gateway"
-          ? GATEWAY_TRANSPORT_SOFT_BUDGET_TOKENS
+        transportInputCapTokens: connectionMode === "gateway"
+          ? GATEWAY_TRANSPORT_INPUT_CAP_TOKENS
           : undefined,
         systemPrompt: AI_LEARNING_ASSISTANT_SYSTEM_PROMPT,
         note: aiContext?.note?.content ?? "",
@@ -559,7 +559,7 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile } = {}) 
         prunedHistory: selected.metadata.prunedHistory || transportPrunedMessageCount > 0,
         prunedMessageCount: selected.metadata.prunedMessageCount + transportPrunedMessageCount,
         ...(connectionMode === "gateway"
-          ? { transportSoftBudgetTokens: GATEWAY_TRANSPORT_SOFT_BUDGET_TOKENS }
+          ? { transportInputCapTokens: GATEWAY_TRANSPORT_INPUT_CAP_TOKENS }
           : {}),
       };
       const selectionMessages = [];
@@ -569,7 +569,7 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile } = {}) 
         selectionMessages.push(`已裁剪 ${selectionMetadata.prunedMessageCount} 条较早历史`);
       }
       setContextSelectionNotice(selectionMessages.length
-        ? `上下文已按模型预算裁剪：${selectionMessages.join("；")}。`
+        ? `上下文已按可用预算裁剪：${selectionMessages.join("；")}。`
         : null);
 
       const outboundContext = {

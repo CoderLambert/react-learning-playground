@@ -39,7 +39,12 @@ export function buildContextBudget({
   });
   const estimatedInputTokens = sumValues(breakdown);
   const normalizedActualUsage = normalizeActualUsage(actualUsage);
-  const budgetBasisTokens = normalizedActualUsage?.inputTokens || estimatedInputTokens;
+
+  // Budget decisions must describe the request we are about to send. Provider
+  // usage belongs to the previous completed request and is retained only as
+  // observed telemetry/calibration evidence; it must not suppress compaction
+  // after the current history/input has grown.
+  const budgetBasisTokens = estimatedInputTokens;
   const usageRatio = budgetBasisTokens / limits.softBudgetTokens;
 
   return {
@@ -51,9 +56,8 @@ export function buildContextBudget({
     estimated: true,
     actualUsage: normalizedActualUsage,
     budgetBasisTokens,
-    budgetBasis: normalizedActualUsage?.inputTokens > 0 ? "actual-input" : "estimated-input",
+    budgetBasis: "estimated-current-input",
     breakdown,
-    // Compaction is intentionally governed by the application soft budget.
     usageRatio,
     contextWindowUsageRatio: budgetBasisTokens / limits.model.contextWindowTokens,
     warning: usageRatio >= limits.model.warningRatio,
@@ -68,14 +72,16 @@ export function buildContextBudget({
  * system, current input, active source, note, other sources, durable summary,
  * then the newest complete contiguous history tail.
  *
- * Every variable section is selected/truncated against an input budget that
- * already reserves output tokens. No returned context can exceed that budget
- * according to the same estimator used by the meter.
+ * `softBudgetTokens` is a model/context policy. `transportInputCapTokens` is a
+ * separate serialization/transport constraint (for example a gateway body
+ * limit). A transport cap can reduce what is sent without changing or
+ * masquerading as the model's official context window.
  */
 export function selectContextWithinBudget({
   modelId,
   softBudgetTokens,
   outputReserveTokens,
+  transportInputCapTokens,
   systemPrompt = "",
   note = "",
   sources = [],
@@ -86,12 +92,18 @@ export function selectContextWithinBudget({
   calibration = 1,
   modelOverrides,
 } = {}) {
-  const limits = resolveLimits({ modelId, softBudgetTokens, outputReserveTokens, modelOverrides });
+  const limits = resolveLimits({
+    modelId,
+    softBudgetTokens,
+    outputReserveTokens,
+    transportInputCapTokens,
+    modelOverrides,
+  });
   const normalizedSources = normalizeSources(sources);
   const normalizedHistory = Array.isArray(history) ? history : [];
   const activeSource = selectActiveSource(normalizedSources, activeSourceFile);
   const otherSources = normalizedSources.filter((source) => source !== activeSource);
-  let remaining = limits.softBudgetTokens;
+  let remaining = limits.selectionBudgetTokens;
 
   const selectedSystem = fitText(systemPrompt, remaining, calibration);
   remaining -= selectedSystem.tokens;
@@ -124,7 +136,6 @@ export function selectContextWithinBudget({
   for (let index = normalizedHistory.length - 1; index >= 0; index -= 1) {
     const message = normalizedHistory[index];
     const cost = estimateMessagesTokens([message], { calibration }).tokens;
-    // Keep a complete, contiguous tail; never include a partial chat message.
     if (cost > remaining) break;
     recentHistory.unshift(message);
     remaining -= cost;
@@ -156,6 +167,8 @@ export function selectContextWithinBudget({
     softBudgetTokens: limits.softBudgetTokens,
     outputReserveTokens: limits.outputReserveTokens,
     maxInputTokens: limits.maxInputTokens,
+    transportInputCapTokens: limits.transportInputCapTokens,
+    selectionBudgetTokens: limits.selectionBudgetTokens,
     context,
     breakdown,
     estimatedSelectedTokens,
@@ -176,13 +189,23 @@ export function selectContextWithinBudget({
       prunedMessageCount: prunedMessages.length,
       includedMessageCount: recentHistory.length,
       prunedMessageIds: prunedMessages.map((message) => message?.id).filter(Boolean),
-      withinBudget: estimatedSelectedTokens <= limits.softBudgetTokens,
+      transportInputCapTokens: limits.transportInputCapTokens,
+      constrainedByTransport: limits.transportInputCapTokens != null
+        && limits.selectionBudgetTokens < limits.softBudgetTokens,
+      withinBudget: estimatedSelectedTokens <= limits.selectionBudgetTokens,
+      withinModelSoftBudget: estimatedSelectedTokens <= limits.softBudgetTokens,
       withinProviderInputLimit: estimatedSelectedTokens <= limits.maxInputTokens,
     },
   };
 }
 
-function resolveLimits({ modelId, softBudgetTokens, outputReserveTokens, modelOverrides }) {
+function resolveLimits({
+  modelId,
+  softBudgetTokens,
+  outputReserveTokens,
+  transportInputCapTokens,
+  modelOverrides,
+}) {
   const model = getModelContextMetadata(modelId, modelOverrides);
   const reserve = Math.min(
     Math.max(0, model.contextWindowTokens - 1),
@@ -193,11 +216,17 @@ function resolveLimits({ modelId, softBudgetTokens, outputReserveTokens, modelOv
     maxInputTokens,
     positiveInteger(softBudgetTokens, Math.min(model.defaultSoftBudgetTokens, maxInputTokens)),
   );
+  const transportCap = optionalPositiveInteger(transportInputCapTokens);
+  const selectionBudgetTokens = transportCap == null
+    ? Math.max(1, softBudget)
+    : Math.max(1, Math.min(softBudget, transportCap));
   return {
     model,
     outputReserveTokens: reserve,
     maxInputTokens,
     softBudgetTokens: Math.max(1, softBudget),
+    transportInputCapTokens: transportCap,
+    selectionBudgetTokens,
   };
 }
 
@@ -315,6 +344,11 @@ function finiteNonNegative(value) {
 function positiveInteger(value, fallback) {
   const number = Number(value);
   return Number.isFinite(number) && number > 0 ? Math.floor(number) : fallback;
+}
+
+function optionalPositiveInteger(value) {
+  const number = Number(value);
+  return Number.isFinite(number) && number > 0 ? Math.floor(number) : null;
 }
 
 function nonNegativeInteger(value, fallback) {

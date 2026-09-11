@@ -20,13 +20,28 @@ test("token estimator is explicitly approximate and calibratable", () => {
   assert.ok(calibrated > 1 && calibrated < 1.5);
 });
 
-test("DeepSeek official presets use the current 1M window and unknown models are estimated", () => {
-  assert.equal(getModelContextMetadata("deepseek-flash").contextWindowTokens, 1_048_576);
-  assert.equal(getModelContextMetadata("deepseek-v4-pro").contextWindowTokens, 1_048_576);
-  assert.equal(getModelContextMetadata("deepseek-v4-flash").contextWindowTokens, 1_048_576);
-  assert.equal(getModelContextMetadata("deepseek-v4-flash").aliasOf, "deepseek-flash");
-  assert.equal(getModelContextMetadata("deepseek-v4-pro").official, true);
-  assert.equal(getModelContextMetadata("deepseek-v4-pro").officialMaxOutputTokens, 393_216);
+test("DeepSeek official presets use the documented model ids, 1M window, and 384K max output", () => {
+  for (const modelId of [
+    "deepseek-v4-flash",
+    "deepseek-v4-pro",
+    "deepseek-v4-flash-vision-exp",
+  ]) {
+    const metadata = getModelContextMetadata(modelId);
+    assert.equal(metadata.contextWindowTokens, 1_048_576);
+    assert.equal(metadata.officialMaxOutputTokens, 393_216);
+    assert.equal(metadata.defaultOutputReserveTokens, 16_384);
+    assert.equal(metadata.defaultSoftBudgetTokens, 1_032_192);
+    assert.equal(metadata.maxInputTokens, 1_032_192);
+    assert.equal(metadata.official, true);
+    assert.equal(metadata.estimated, false);
+    assert.equal(metadata.modelId, modelId);
+    assert.equal(metadata.aliasOf, undefined);
+  }
+
+  const removedPseudoCanonical = getModelContextMetadata("deepseek-flash");
+  assert.equal(removedPseudoCanonical.official, false);
+  assert.equal(removedPseudoCanonical.known, false);
+
   const unknown = getModelContextMetadata("future-model");
   assert.equal(unknown.contextWindowTokens, 131_072);
   assert.equal(unknown.known, false);
@@ -42,7 +57,7 @@ test("runtime window overrides cannot masquerade as official metadata", () => {
   assert.equal(metadata.estimated, true);
 });
 
-test("budget arithmetic exposes breakdown, actual usage, warning and compaction states", () => {
+test("budget arithmetic exposes current estimate, previous actual usage, warning and compaction states", () => {
   const budget = buildContextBudget({
     modelId: "future-model",
     softBudgetTokens: 100,
@@ -60,20 +75,44 @@ test("budget arithmetic exposes breakdown, actual usage, warning and compaction 
   assert.equal(budget.actualUsage.outputTokens, 9);
   assert.equal(budget.actualUsage.totalTokens, 100);
   assert.equal(budget.actualUsage.exact, true);
+  assert.equal(budget.budgetBasisTokens, budget.estimatedInputTokens);
+  assert.equal(budget.budgetBasis, "estimated-current-input");
   assert.equal(budget.warning, true);
   assert.equal(budget.shouldCompact, true);
-  assert.equal(budget.budgetBasis, "actual-input");
 });
 
-test("actual provider input usage can trigger compaction when fixture text is small", () => {
+test("previous actual usage cannot suppress compaction after the current context grows", () => {
   const budget = buildContextBudget({
-    modelId: "deepseek-v4-pro",
-    systemPrompt: "small fixture",
-    actualUsage: { prompt_tokens: 220_000, completion_tokens: 100, total_tokens: 220_100 },
+    modelId: "future-model",
+    softBudgetTokens: 100,
+    note: "current context grew substantially ".repeat(40),
+    actualUsage: { prompt_tokens: 10, completion_tokens: 2, total_tokens: 12 },
+    modelOverrides: { warningRatio: 0.7, compactionRatio: 0.82 },
   });
-  assert.equal(budget.estimatedInputTokens < 100, true);
-  assert.equal(budget.budgetBasisTokens, 220_000);
+  assert.equal(budget.actualUsage.inputTokens, 10);
+  assert.ok(budget.estimatedInputTokens > 82);
+  assert.equal(budget.budgetBasisTokens, budget.estimatedInputTokens);
+  assert.equal(budget.warning, true);
   assert.equal(budget.shouldCompact, true);
+});
+
+test("gateway transport cap is explicit and does not change the official model window or soft budget", () => {
+  const result = selectContextWithinBudget({
+    modelId: "deepseek-v4-pro",
+    transportInputCapTokens: 24,
+    systemPrompt: "system",
+    input: "question",
+    note: "note ".repeat(100),
+  });
+
+  assert.equal(result.model.contextWindowTokens, 1_048_576);
+  assert.equal(result.model.official, true);
+  assert.equal(result.softBudgetTokens, 1_032_192);
+  assert.equal(result.transportInputCapTokens, 24);
+  assert.equal(result.selectionBudgetTokens, 24);
+  assert.equal(result.metadata.transportInputCapTokens, 24);
+  assert.equal(result.metadata.constrainedByTransport, true);
+  assert.ok(result.estimatedSelectedTokens <= 24);
 });
 
 test("selection preserves affordable current note/source and keeps the newest message tail", () => {
