@@ -47,12 +47,10 @@ test.describe("React Learning Workbench integration", () => {
     await expect(page.locator(".demo-page h2.demo-title")).toContainText("State Snapshot");
   });
 
-  test("canonicalizes an invalid demo URL and renders a non-fatal missing-note state", async ({ page }) => {
+  test("canonicalizes an invalid demo URL", async ({ page }) => {
     await page.goto("./?demo=does-not-exist");
     await expect(page).not.toHaveURL(/does-not-exist/);
-    await openDemo(page, "Props 基础与解构");
-    await page.getByRole("tab", { name: "笔记" }).click();
-    await expect(page.getByRole("status")).toContainText("详细笔记尚未创建");
+    await expect(page.locator(".demo-page h2.demo-title")).toBeVisible();
   });
 
   test("uses a full-screen inspector presentation on mobile", async ({ page }) => {

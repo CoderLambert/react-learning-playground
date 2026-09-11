@@ -1,0 +1,23 @@
+# useRef：跨渲染保存“不会驱动 UI”的值
+
+`useRef` 返回一个稳定对象；修改 `ref.current` 不会触发重新渲染，因此它适合保存 DOM 节点、计时器句柄和其他不参与视觉输出的可变值。
+
+<MentalModel title="Ref 是组件实例里的可变口袋">
+State 是渲染输入；Ref 是 React 在组件生命周期内替你保留、但不会加入渲染调度的可变容器。渲染需要知道的值应放 State，不需要反映到 JSX 的值才考虑 Ref。
+</MentalModel>
+
+<Flow items={["render 创建/复用同一个 ref 对象", "commit 后 DOM ref 指向真实节点", "事件或 Effect 中读写 ref.current", "写 ref 不触发 render"]} />
+
+<Experiment title="跟随中间 Demo">
+在 Demo 中分别修改普通 State 与 Ref 计数，再使用 DOM 控制按钮。观察：State 更新会刷新界面；单独写 `ref.current` 不会让屏幕立即反映新值；DOM ref 只能在节点已经提交后可靠使用。
+</Experiment>
+
+<Observation>Ref 的稳定身份与 `current` 的可变性是两件事。React 保留 ref 对象，但不会追踪 `current` 的变化来决定是否渲染。</Observation>
+
+<AntiPattern title="用 Ref 逃避 State">如果一个值改变后 UI 应立即变化，却把它只放进 Ref，会得到过期界面。也不要在 render 中随意读写 `ref.current`；渲染应保持纯。</AntiPattern>
+
+<Boundary>Ref 是 escape hatch。优先用 props/state 表达声明式数据流；只有必须与 DOM、浏览器 API 或非 React 生命周期对象交互时再使用。</Boundary>
+
+<Summary items={["Ref 跨 render 保留同一容器", "写 current 不触发 render", "DOM ref 在 commit 后可用", "影响 JSX 的数据用 State"]} />
+
+<FurtherReading links={[{label:"React: Referencing Values with Refs",href:"https://react.dev/learn/referencing-values-with-refs"},{label:"React: Manipulating the DOM with Refs",href:"https://react.dev/learn/manipulating-the-dom-with-refs"},{label:"React: useRef",href:"https://react.dev/reference/react/useRef"}]} />

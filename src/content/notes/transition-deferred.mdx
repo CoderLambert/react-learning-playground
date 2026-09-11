@@ -1,0 +1,21 @@
+# Transition 与 Deferred UI：区分紧急更新和可延迟更新
+
+Transition 让某些更新以非阻塞方式在后台渲染；`useDeferredValue` 让一部分 UI 暂时继续使用旧值，同时 React 尝试用新值完成后台 render。
+
+<MentalModel title="输入必须立即响应，昂贵结果可以稍后跟上">urgent update 负责输入框、按钮反馈等直接交互；transition/deferred work 负责允许被新更新打断、稍后提交的非紧急 UI。它们不是让计算消失，而是改变调度与呈现方式。</MentalModel>
+
+<Compare leftTitle="useTransition" rightTitle="useDeferredValue" leftItems={["你控制触发更新的位置", "startTransition 包住非紧急 setState", "isPending 可表达过渡状态"]} rightItems={["你拿到一个可能滞后的值", "适合无法控制上游 setState 时延迟消费", "旧内容可保持并标记 stale"]} />
+
+<Experiment title="快速输入并制造慢列表">
+运行中间 Demo 连续快速键入。比较直接更新、Transition 和 deferred value：观察输入是否保持响应、结果区是否暂时显示旧内容，以及新的输入如何打断尚未提交的后台 render。
+</Experiment>
+
+<Observation>Transition 不适合控制文本输入本身；输入的 State 应同步更新。`useDeferredValue` 也不是 debounce：它没有固定毫秒延迟，而是与 React 渲染调度协作。</Observation>
+
+<AntiPattern title="把所有更新都包进 startTransition">非紧急只是 UX 语义，不是“性能优化开关”。错误标记会延迟本应立即反馈的界面。</AntiPattern>
+
+<Boundary>网络请求的频率控制仍可能需要 debounce/throttle/cache；Transition 主要协调 React render，不替代请求层策略。</Boundary>
+
+<Summary items={["urgent UI 保持即时", "Transition 标记可中断的非紧急更新", "deferred value 允许消费者暂时用旧值", "它们不是 debounce"]} />
+
+<FurtherReading links={[{label:"React: useTransition",href:"https://react.dev/reference/react/useTransition"},{label:"React: useDeferredValue",href:"https://react.dev/reference/react/useDeferredValue"}]} />
