@@ -21,7 +21,7 @@ export function WorkbenchNavigation({ categories, learningUnits, activeId, viewM
     return units.filter((unit) => getSearchText(unit, categoryMap.get(unit.categoryId)?.name).includes(query));
   }, [categoryMap, searchQuery, units]);
   const groups = useMemo(() => categories.map((category) => ({ ...category, items: filteredUnits.filter((unit) => unit.categoryId === category.id) })).filter((group) => group.items.length > 0), [categories, filteredUnits]);
-  const navigationClassName = ["workbench-navigation", collapsed ? "is-collapsed" : "", className].filter(Boolean).join(" ");
+  const navigationClassName = ["workbench-navigation", "app-sidebar", collapsed ? "is-collapsed" : "", className].filter(Boolean).join(" ");
 
   return (
     <div className={navigationClassName}>
@@ -46,13 +46,11 @@ export function WorkbenchNavigation({ categories, learningUnits, activeId, viewM
           </label>
         )}
       </div>
-
       <nav className="workbench-navigation-list sidebar-content" aria-label="React 学习内容">
         <button type="button" className={`workbench-navigation-overview all-overview-btn ${viewMode === "all" ? "is-active active" : ""}`} onClick={onSelectAll} title={collapsed ? `全部功能完整总览（${units.length} 篇）` : undefined}>
           <span aria-hidden="true">🌟</span>
           {!collapsed && <><span>全部功能完整总览</span><span className="workbench-navigation-count nav-item-badge">{units.length} 篇</span></>}
         </button>
-
         {groups.map((group) => (
           <section key={group.id} className="workbench-navigation-group category-group" aria-label={group.name}>
             <div className="workbench-navigation-group-header category-group-title" title={collapsed ? group.name : undefined}>
