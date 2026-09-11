@@ -15,7 +15,7 @@ function createConnection(roomId, onConnected) {
 export function EffectEventDemo() {
   const [roomId, setRoomId] = useState("general");
   const [theme, setTheme] = useState("light");
-  const [connectCount, setConnectCount] = useState(1);
+  const [connectCount, setConnectCount] = useState(0);
   const [notice, setNotice] = useState("等待连接");
 
   const onConnected = useEffectEvent(() => {
@@ -23,6 +23,7 @@ export function EffectEventDemo() {
   });
 
   useEffect(() => {
+    setConnectCount((count) => count + 1);
     const connection = createConnection(roomId, onConnected);
     connection.connect();
     return () => connection.disconnect();
@@ -30,7 +31,6 @@ export function EffectEventDemo() {
 
   function handleRoomChange(event) {
     setRoomId(event.target.value);
-    setConnectCount((count) => count + 1);
   }
 
   return (
@@ -48,8 +48,9 @@ export function EffectEventDemo() {
             <button className="btn" onClick={() => setTheme((v) => v === "light" ? "dark" : "light")}>切换 theme：{theme}</button>
           </div>
           <div>
-            <div className="demo-alert demo-alert-tip"><strong>连接次数：{connectCount}</strong><p>{notice}</p></div>
-            <p>观察：只切换 theme 不会增加连接次数；切换 roomId 才触发 cleanup → setup。</p>
+            <div className="demo-alert demo-alert-tip"><strong>Effect setup 次数：{connectCount}</strong><p>{notice}</p></div>
+            <p>观察：只切换 theme 不会触发新的连接 setup；切换 roomId 才会让旧连接 cleanup，并为新 roomId 执行 setup。</p>
+            <p style={{ fontSize: "12px", color: "var(--text-subtle)" }}>开发环境启用 Strict Mode 时，初次挂载可能额外经历一次 setup → cleanup → setup 压力测试，因此计数可能高于生产环境。</p>
           </div>
         </div>
       </div>
