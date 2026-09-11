@@ -1,6 +1,10 @@
 import { useMemo, useState } from "react";
 import { CodeBlockNode } from "markstream-react";
-import { buildAiCodeBlockModel, performCodeBlockCopy } from "./aiCodeBlockModel.js";
+import {
+  buildAiCodeBlockModel,
+  normalizeCodeBlockOptions,
+  performCodeBlockCopy,
+} from "./aiCodeBlockModel.js";
 import "./AiCodeBlock.css";
 
 async function copyToClipboard(text) {
@@ -36,6 +40,10 @@ export function AiCodeBlock({
   const [collapsed, setCollapsed] = useState(false);
   const [copyState, setCopyState] = useState("idle");
   const model = useMemo(() => buildAiCodeBlockModel(node), [node]);
+  const normalizedCodeBlockOptions = useMemo(
+    () => normalizeCodeBlockOptions(codeBlockOptions),
+    [codeBlockOptions],
+  );
   const title = model.label || model.language;
   const lineLabel = `${model.lineCount} ${model.lineCount === 1 ? "line" : "lines"}`;
 
@@ -105,7 +113,7 @@ export function AiCodeBlock({
             themes={themes}
             minWidth={minWidth}
             maxWidth={maxWidth}
-            codeBlockOptions={codeBlockOptions}
+            codeBlockOptions={normalizedCodeBlockOptions}
             showHeader={false}
             showCollapseButton={false}
             showFontSizeButtons={false}
