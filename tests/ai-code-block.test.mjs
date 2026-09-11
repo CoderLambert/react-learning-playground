@@ -38,7 +38,7 @@ test("normalizes empty and incomplete streaming nodes without throwing", () => {
 test("converts CSS-style line-height ratios to Markstream pixel metrics", () => {
   assert.deepEqual(
     normalizeCodeBlockOptions({ fontSize: 12, lineHeight: 1.6, tabSize: 2 }),
-    { fontSize: 12, lineHeight: 19.200000000000003, tabSize: 2 },
+    { fontSize: 12, lineHeight: 19.2, tabSize: 2 },
   );
   assert.deepEqual(
     normalizeCodeBlockOptions({ fontSize: 14, lineHeight: 20 }),
