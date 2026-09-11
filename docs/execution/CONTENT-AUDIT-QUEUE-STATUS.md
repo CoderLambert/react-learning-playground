@@ -84,7 +84,19 @@ Recommended next content edit: narrow the DemoReference observation claim and ad
    - Gate C: PASS.
    - React 19.2 note: `<SomeContext value={...}>` is the current provider form; `.Provider` still works but is the pre-React-19 form. Context consumers update when the provided value changes according to `Object.is`; avoid saying the entire provider subtree inherently rerenders because of Context.
 
-The next navigation item is `event-propagation.mdx`, but it remains owned by the runtime-mechanism PR and is intentionally skipped. The queue should resume at the next unowned lesson after all reserved runtime/state files are skipped.
+7. `immutable-state.mdx` -> `notes-advice/immutable-state.mdx`
+   - Gate A: PASS.
+   - Gate B: FAIL.
+   - Gate C: PASS.
+   - The Note promises an executable mutation-vs-copy comparison, while the Demo only provides correct immutable operations plus a warning string. Either add an isolated mutation counterexample or narrow the Experiment to observable reference changes that the Demo actually implements.
+
+8. `render-commit.mdx` -> `notes-advice/render-commit.mdx`
+   - Gate A: PASS with wording caution.
+   - Gate B: FAIL.
+   - Gate C: PASS.
+   - The Note says learners can observe render logs/component execution, but the Demo has no render log or execution counter. `requestAnimationFrame` is also a browser frame API, not a React commit callback, so the current wording should not imply direct commit instrumentation.
+
+Reserved lessons were skipped rather than duplicated: `event-propagation.mdx` and `state-snapshot-queue.mdx` belong to PR #82; state ownership lessons belong to PR #78. The queue should continue from the next unowned navigation item.
 
 ## Sources used for factual review
 
@@ -94,7 +106,10 @@ Primary references were current official React documentation for:
 - Passing Props to a Component;
 - Rendering Lists;
 - Preserving and Resetting State;
-- `useContext` / `createContext` React 19 provider semantics.
+- Updating Objects in State;
+- Updating Arrays in State;
+- `useContext` / `createContext` React 19 provider semantics;
+- Render and Commit / purity guidance.
 
 ## Validation
 
