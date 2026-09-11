@@ -46,6 +46,17 @@ export function buildCodeBlockPreview(code, limit = PREVIEW_LIMIT) {
   return `${firstMeaningfulLine.slice(0, Math.max(0, limit - 1))}…`;
 }
 
+export async function performCodeBlockCopy({ code, writeText, onCopy }) {
+  if (!code) return false;
+  if (typeof writeText !== "function") {
+    throw new TypeError("writeText must be a function");
+  }
+
+  await writeText(code);
+  onCopy?.(code);
+  return true;
+}
+
 export function buildAiCodeBlockModel(node) {
   const code = normalizeCodeBlockText(node);
 
