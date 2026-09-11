@@ -31,8 +31,10 @@ Source      = implementation
   - empty self-closing Timeline/Flow/Compare/Summary/FurtherReading blocks;
   - statically detectable literal-empty teaching props such as `steps={[]}`, `items={[]}`, or empty `DemoReference action/observe` strings;
   - `DemoReference` blocks missing `action` or `observe`;
+  - invalid MDX filenames that Vite can compile but the raw-note registry would silently filter out;
+  - orphan production notes by requiring a one-to-one mapping between production MDX note ids and registered learning-unit ids, with `runtime-smoke.mdx` as the sole explicit fixture exception;
   - accidental removal of temporary runtime aliases before note normalization finishes.
-- `runtime-smoke.mdx` is intentionally excluded from the learning-unit mapping check because repository history identifies it as the MDX compiler/runtime fixture rather than a production lesson.
+- The filename/parity contract closes a real Note/Source-context gap: compiled note loading uses `import.meta.glob`, while the raw-note virtual registry only exposes ids matching `[a-z0-9-]`. A malformed filename must now fail CI instead of producing a note that can render but cannot be loaded as raw context.
 - Added the content-contract test to `React Learning Verify` so semantic content failures block the primary PR verification workflow.
 - Replaced the old 19-step note template with flexible teaching principles built around core question → predict/experiment → observe/explain → boundary/counterexample → project decision rule.
 - Documented hard quality gates for correctness, Demo↔Note alignment and mental-model completeness.
@@ -72,13 +74,13 @@ Source      = implementation
 
 ## Validation evidence
 
-Previous PR head `4f8e1ea5b73ff3b2a1b7f560dabd75678db68f73` has complete exact-head GitHub validation:
+PR head `d9c286438de80c7cfa5aa4ad04acaf7053400485` has complete exact-head GitHub validation:
 
-- `React Learning Verify` run `34645386038` (#197): **PASS**
-- `Workbench State URL Verify` run `34645386162` (#81): **PASS**
-- `Workbench Integration Verify` run `34645386175` (#136): **PASS**
+- `React Learning Verify` run `34649827088` (#200): **PASS**
+- `Workbench State URL Verify` run `34649827096` (#83): **PASS**
+- `Workbench Integration Verify` run `34649827092` (#139): **PASS**
 
-That head includes the real TypeScript sample gate and the canonical-prop migration. The newer content-contract commit `1149a3be63e3601b4fc862ecc511d351ad15785a` additionally rejects duplicate demo ids and literal-empty teaching props. Latest-head CI is the acceptance source for that stricter check; no PASS claim is made until GitHub reports it.
+The newer commit `9fa5861ae6ed00c9d80e0722a6961768fc900b3b` adds raw/compiled note-registry filename and one-to-one parity checks. Latest-head CI is the acceptance source for that stricter contract; no PASS claim is made until GitHub reports it.
 
 ## Remaining work
 
