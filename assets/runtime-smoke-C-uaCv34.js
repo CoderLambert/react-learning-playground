@@ -1,6 +1,0 @@
-import{d as e,p as t}from"./index-B4AkXXb7.js";var n=t();function r(t){let r={h1:`h1`,h2:`h2`,p:`p`,table:`table`,tbody:`tbody`,td:`td`,th:`th`,thead:`thead`,tr:`tr`,...e(),...t.components};return(0,n.jsxs)(n.Fragment,{children:[(0,n.jsx)(r.h1,{id:`mdx-runtime-smoke`,children:`MDX Runtime Smoke`}),`
-`,(0,n.jsx)(r.p,{children:`This file exists only to prove that the Workbench runtime compiles MDX into a lazy note chunk.`}),`
-`,(0,n.jsx)(r.h2,{id:`gfm-table`,children:`GFM table`}),`
-`,(0,n.jsxs)(r.table,{children:[(0,n.jsx)(r.thead,{children:(0,n.jsxs)(r.tr,{children:[(0,n.jsx)(r.th,{children:`capability`}),(0,n.jsx)(r.th,{children:`expected`})]})}),(0,n.jsxs)(r.tbody,{children:[(0,n.jsxs)(r.tr,{children:[(0,n.jsx)(r.td,{children:`headings`}),(0,n.jsx)(r.td,{children:`slugged`})]}),(0,n.jsxs)(r.tr,{children:[(0,n.jsx)(r.td,{children:`tables`}),(0,n.jsx)(r.td,{children:`supported`})]})]})]}),`
-`,(0,n.jsx)(r.h2,{id:`jsx-boundary`,children:`JSX boundary`}),`
-`,(0,n.jsx)(`strong`,{"data-runtime-smoke":`true`,children:`MDX JSX compiles successfully.`})]})}function i(t={}){let{wrapper:i}={...e(),...t.components};return i?(0,n.jsx)(i,{...t,children:(0,n.jsx)(r,{...t})}):r(t)}export{i as default};
