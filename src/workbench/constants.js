@@ -27,7 +27,7 @@ export const WORKBENCH_CSS_VARS = Object.freeze({
   resizeHandleWidth: "--workbench-resize-handle-width",
 });
 
-export const INSPECTOR_TABS = Object.freeze(["notes", "source"]);
+export const INSPECTOR_TABS = Object.freeze(["notes", "source", "ai"]);
 
 export const DEFAULT_INSPECTOR_STATE = Object.freeze({
   open: true,

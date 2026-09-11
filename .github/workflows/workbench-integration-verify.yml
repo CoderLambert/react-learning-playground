@@ -4,11 +4,13 @@ on:
   pull_request:
     branches:
       - integration/react-learning-workbench
+      - integration/deepseek-ai-assistant
       - main
     paths:
       - "src/App.jsx"
       - "src/App.css"
       - "src/main.jsx"
+      - "src/ai/**"
       - "src/components/**"
       - "src/demos/**"
       - "src/lib/**"
@@ -46,6 +48,8 @@ jobs:
         run: npm ci
 
       - name: Build
+        env:
+          VITE_AI_ASSISTANT_URL: http://127.0.0.1:4173/__ai-test__
         run: npm run build
 
       - name: Install Playwright Chromium
