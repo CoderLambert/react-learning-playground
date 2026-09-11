@@ -5,11 +5,13 @@ on:
     branches:
       - integration/react-complete-learning
       - integration/react-learning-workbench
+      - integration/deepseek-ai-assistant
       - main
   push:
     branches:
       - integration/react-complete-learning
       - integration/react-learning-workbench
+      - integration/deepseek-ai-assistant
       - main
 
 permissions:
@@ -35,6 +37,9 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: AI focused tests
+        run: npm run test:ai
 
       - name: Lint
         run: npm run lint
