@@ -87,14 +87,14 @@ export function AccessibleModalDemo() {
           <span className="badge badge-blue">Focus Management</span>
         </div>
         <p className="demo-desc">
-          模态对话框不能只“视觉盖住页面”。键盘用户需要知道焦点去了哪里，并且不能 Tab 到背后的页面内容。
+          模态对话框不能只“视觉盖住页面”。WAI-ARIA Modal Dialog 模式要求焦点进入对话框、Tab/Shift+Tab 不逃出、Escape 可关闭，并在通常情况下关闭后把焦点归还到触发位置；模态期间背景内容还应真正不可交互。
         </p>
       </div>
 
       <div className="demo-section">
         <div className="demo-section-header">
           <h3 className="demo-section-title"><span>🎮</span> 只用键盘完成实验</h3>
-          <p className="demo-section-desc">打开后连续按 Tab / Shift+Tab，再按 Escape。观察焦点不会逃出 Modal，并最终回到触发按钮。</p>
+          <p className="demo-section-desc">打开后连续按 Tab / Shift+Tab，再按 Escape。这个教学实现重点演示初始焦点、焦点循环和焦点恢复。</p>
         </div>
         <button ref={openerRef} type="button" className="btn btn-primary" onClick={() => setOpen(true)}>
           打开 Modal
@@ -105,11 +105,11 @@ export function AccessibleModalDemo() {
       <div className="demo-grid-2">
         <div className="demo-alert demo-alert-tip">
           <div className="demo-alert-title">Modal 的完整职责</div>
-          <p>accessible name、初始焦点、Tab 循环、Escape、关闭后的焦点恢复，以及让背景内容不可交互。</p>
+          <p>accessible name、合适的初始焦点、Tab 循环、Escape、关闭后的合理焦点位置，以及让背景内容在键盘、指针和辅助技术语义上不可交互。</p>
         </div>
         <div className="demo-alert demo-alert-warning">
-          <div className="demo-alert-title">生产项目边界</div>
-          <p>完整 inert/background isolation、嵌套 dialog、滚动锁定等边界复杂。生产项目优先采用经过可访问性验证的 Dialog primitive，而不是重复手写。</p>
+          <div className="demo-alert-title">教学实现边界</div>
+          <p>本 Demo 没有实现完整的 <code>inert</code>/background isolation、动态 focusable 列表、嵌套 dialog 与滚动锁定。<code>aria-modal="true"</code> 是语义声明，不应被当作自动禁用背景交互的实现。生产项目优先采用经过可访问性验证的 Dialog primitive。</p>
         </div>
       </div>
     </div>

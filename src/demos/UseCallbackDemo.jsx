@@ -7,7 +7,8 @@ const MemoChild = memo(function MemoChild({ onAdd }) {
     <div className="demo-alert demo-alert-success">
       <div className="demo-alert-title">🧒 memo 子组件</div>
       <div>
-        只有当 <code>onAdd</code> 的引用保持不变时，父组件的无关 Render 才可能命中 memo。
+        当 <code>onAdd</code> 的引用与上一轮相同、且组件自身 State / Context 没有触发更新时，
+        父组件的无关 Render 才有机会被 <code>memo</code> 跳过。
       </div>
       <button className="btn btn-secondary" onClick={onAdd} style={{ marginTop: "10px" }}>
         子组件调用 onAdd
@@ -30,7 +31,6 @@ export function UseCallbackDemo() {
   };
 
   const activeCallback = stable ? stableCallback : unstableCallback;
-  const identityResult = stable ? "相同引用" : "不同引用";
 
   return (
     <div>
@@ -43,8 +43,9 @@ export function UseCallbackDemo() {
         </div>
 
         <p className="demo-desc">
-          每次 Render 中声明的函数默认都是新引用。<code>useCallback</code> 会在依赖未变化时返回同一个函数引用，
-          主要用于配合 <code>memo</code> 子组件或需要稳定函数 dependency 的 Hook。
+          每次 Render 中声明的函数通常都是新引用。<code>useCallback</code> 会在依赖未变化时返回缓存的函数定义，
+          常见用途是配合 <code>memo</code> 子组件，或稳定其他 Hook / 自定义 Hook API 所依赖的函数 identity。
+          它只应作为性能优化使用，不是 correctness 工具。
         </p>
 
         <div className="demo-meta-tags">
@@ -59,8 +60,9 @@ export function UseCallbackDemo() {
         <div className="demo-section-header">
           <h3 className="demo-section-title"><span>🧪</span> 实验：函数 prop 是否让 memo 失效</h3>
           <p className="demo-section-desc">
-            切换“稳定 callback / 每次新建函数”，再点击“无关 Render”。观察当前函数与上一轮是否为同一引用，
-            同时查看 Console 中 <code>MemoChild render</code> 次数。这里的结果是对下一次无关 Render 的预期。
+            切换“稳定 callback / 每次新建函数”，再点击“无关 Render”。查看 Console 中
+            <code>MemoChild render</code> 次数：稳定 callback 模式下，只有父级无关 State 改变时，子组件应能跳过 render；
+            普通函数模式则会因为函数 prop identity 每轮变化而重新 render。
           </p>
         </div>
 
@@ -69,17 +71,19 @@ export function UseCallbackDemo() {
             无关 Render：{themeTick}
           </button>
           <button className="btn btn-secondary" onClick={() => setStable((value) => !value)}>
-            当前：{stable ? "useCallback 稳定引用" : "普通函数新引用"}
+            当前：{stable ? "useCallback 缓存函数" : "普通函数每轮新建"}
           </button>
         </div>
 
         <div className="demo-alert demo-alert-tip" style={{ marginBottom: "12px" }}>
-          <div className="demo-alert-title">🔎 identity 观察</div>
+          <div className="demo-alert-title">🔎 观察方式</div>
           <div>
-            下一次无关 Render 的 callback 与当前：
-            <strong>{identityResult}</strong>
+            当前模式：<strong>{stable ? "依赖不变时复用 callback identity" : "每次 Render 创建新 callback identity"}</strong>
           </div>
           <div>count：{count}</div>
+          <div style={{ marginTop: 6 }}>
+            不在 render 中通过 ref 记录“上一轮 callback”来证明 identity；那会为了教学观察而引入 render 阶段可变读写，反而破坏纯渲染示例。
+          </div>
         </div>
 
         <MemoChild onAdd={activeCallback} />
@@ -107,7 +111,7 @@ export function UseCallbackDemo() {
   setCount(value => value + 1);
 }, []);`}</pre>
             <div style={{ marginTop: "8px", fontSize: "13px" }}>
-              callback 不再需要读取当前 count，因此可以移除这个 reactive dependency。
+              callback 不再读取当前 count，因此这个 reactive dependency 可以被移除。
             </div>
           </div>
         </div>
@@ -118,7 +122,7 @@ export function UseCallbackDemo() {
         <div>
           不要给所有事件函数机械套 <code>useCallback</code>。普通按钮 handler 通常不需要稳定 identity。
           当函数作为 memoized child 的 prop、其他 Hook 的 dependency，或自定义 Hook 对外 API 时，稳定引用才可能有价值。
-          如果没有具体优化目标，直接声明普通函数更清晰。
+          如果没有具体优化目标，直接声明普通函数更清晰；启用 React Compiler 的项目还会进一步减少手写 <code>useCallback</code> 的需要。
         </div>
       </div>
     </div>

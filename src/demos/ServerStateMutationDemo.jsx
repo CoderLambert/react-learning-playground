@@ -62,19 +62,20 @@ export function ServerStateMutationDemo() {
     <div>
       <div className="demo-header-card">
         <div className="demo-header-top"><h2 className="demo-title"><span>🏎️</span> 请求架构：race、cancellation、pagination、optimistic mutation</h2><span className="badge badge-blue">Server State</span></div>
-        <p className="demo-desc">网络请求会乱序、取消、失败和重试。成熟 Server State 层的价值是把这些生命周期从每个组件的 Effect 中集中管理，而不是重复手写。</p>
+        <p className="demo-desc">网络请求可能乱序、取消、失败和重试。成熟 Server State 层的价值，是把缓存与请求生命周期集中管理，而不是让每个组件重复拼装 Effect、loading、race guard 和 mutation 回滚逻辑。</p>
       </div>
 
       <div className="demo-section">
-        <div className="demo-section-header"><h3 className="demo-section-title"><span>⚔️</span> Race + AbortController</h3><p className="demo-section-desc">先发一个慢请求，再立刻发快请求。新请求会 abort 旧请求；request id 仍作为最后一道 stale-result guard。</p></div>
+        <div className="demo-section-header"><h3 className="demo-section-title"><span>⚔️</span> Race + AbortController</h3><p className="demo-section-desc">先发一个慢请求，再立刻发快请求。这个教学实现主动 abort 旧请求；request id 仍作为 stale-result guard，演示“取消底层工作”和“忽略过期结果”是两个相关但不同的防线。</p></div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}><button className="btn" onClick={() => search("slow-react", 1600)}>slow 1600ms</button><button className="btn btn-primary" onClick={() => search("fast-query", 400)}>fast 400ms</button><button className="btn" onClick={() => abortRef.current?.abort()}>cancel current</button></div>
         <div className="demo-grid-2" style={{ marginTop: 14 }}><div className="demo-alert demo-alert-tip"><strong>Committed result</strong><p>{result}</p></div><pre style={{ whiteSpace: "pre-wrap" }}>{logs.join("\n")}</pre></div>
+        <div className="demo-alert demo-alert-tip" style={{ marginTop: 12 }}><strong>映射到 TanStack Query：</strong>queryFn 会收到 <code>AbortSignal</code>。只有 queryFn/底层请求实际消费这个 signal 时，网络 Promise 才会随取消协作终止；未消费 signal 的未使用 query 默认仍可完成并把结果留在 cache。</div>
       </div>
 
       <div className="demo-section">
         <div className="demo-section-header"><h3 className="demo-section-title"><span>📄</span> Pagination 是 query identity 的一部分</h3></div>
         <button className="btn" disabled={page === 1} onClick={() => setPage((p) => p - 1)}>上一页</button><span style={{ margin: "0 12px" }}>queryKey = ["projects", {'{'} page: {page} {'}'}]</span><button className="btn" onClick={() => setPage((p) => p + 1)}>下一页</button>
-        <div className="demo-alert demo-alert-tip" style={{ marginTop: 12 }}>真实查询层应按 page/cursor 形成稳定 query key；旧页数据可保留作为 placeholder，避免翻页时 UI 完全闪空。</div>
+        <div className="demo-alert demo-alert-tip" style={{ marginTop: 12 }}>真实查询层应把 page/cursor 纳入 query key。TanStack Query v5 可用 <code>placeholderData: keepPreviousData</code>（或等价 identity function）在新 key 请求期间继续显示上一页成功数据，并通过 <code>isPlaceholderData</code> 区分占位数据。</div>
       </div>
 
       <div className="demo-section">
@@ -84,8 +85,8 @@ export function ServerStateMutationDemo() {
       </div>
 
       <div className="demo-grid-2">
-        <div className="demo-alert demo-alert-warning"><strong>反模式</strong><p>每个页面都写 useEffect + fetch + loading + error + ignore flag + retry + cache。代码会快速演化成不一致的数据层。</p></div>
-        <div className="demo-alert demo-alert-tip"><strong>TanStack Query 心智</strong><p>query 负责读取与缓存生命周期；mutation 负责写入；成功后 invalidate/setQueryData，optimistic flow 需要 snapshot/rollback。Query cancellation 可通过 queryFn 的 AbortSignal 协作。</p></div>
+        <div className="demo-alert demo-alert-warning"><strong>反模式</strong><p>每个页面都写 useEffect + fetch + loading + error + ignore flag + retry + cache。代码会快速演化成彼此不一致的数据层。</p></div>
+        <div className="demo-alert demo-alert-tip"><strong>TanStack Query 心智</strong><p>query 负责读取与缓存生命周期；mutation 负责写入。成功后常见做法是 invalidate 相关 query 或直接 setQueryData。Optimistic UI 有两条主路：只在单个 UI 中展示时可利用 mutation variables；需要修改共享 cache 时通常在 onMutate 中 cancel 相关 refetch、snapshot 旧值、setQueryData，并在失败时 rollback。</p></div>
       </div>
     </div>
   );
