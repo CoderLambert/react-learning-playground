@@ -8,6 +8,7 @@ const NOTES_DIR_URL = new URL("../src/content/notes/", import.meta.url);
 const NOTES_DIR = fileURLToPath(NOTES_DIR_URL);
 const REGISTRY_FILE = new URL("../src/demos/index.js", import.meta.url);
 const TEACHING_COMPONENTS_FILE = new URL("../src/components/mdx/TeachingComponents.jsx", import.meta.url);
+const NOTE_ID_PATTERN = /^[a-z0-9][a-z0-9-]*$/;
 
 const TEACHING_PROPS = {
   Callout: new Set(["type", "title"]),
@@ -38,10 +39,14 @@ const COMPONENT_PATTERN = new RegExp(
   "g",
 );
 
-function noteFiles() {
+function allNoteFiles() {
   return readdirSync(NOTES_DIR)
-    .filter((name) => name.endsWith(".mdx") && name !== "runtime-smoke.mdx")
+    .filter((name) => name.endsWith(".mdx"))
     .sort();
+}
+
+function noteFiles() {
+  return allNoteFiles().filter((name) => name !== "runtime-smoke.mdx");
 }
 
 function parseAttributes(source) {
@@ -148,6 +153,24 @@ test("every registered learning unit has one convention-based note", () => {
   const available = new Set(noteFiles().map((name) => name.slice(0, -4)));
   const missing = ids.filter((id) => !available.has(id));
   assert.deepEqual(missing, [], "every registered demo must have a matching note");
+});
+
+test("production note filenames stay compatible with compiled and raw note registries", () => {
+  const files = allNoteFiles();
+  const invalidFileNames = files.filter((name) => !NOTE_ID_PATTERN.test(name.slice(0, -4)));
+  assert.deepEqual(
+    invalidFileNames,
+    [],
+    "every MDX filename must be a valid raw-note registry id so compiled and raw loading stay in sync",
+  );
+
+  const registeredIds = [...new Set(demoIds())].sort();
+  const productionNoteIds = noteFiles().map((name) => name.slice(0, -4)).sort();
+  assert.deepEqual(
+    productionNoteIds,
+    registeredIds,
+    "production notes must map one-to-one to registered learning units; runtime-smoke.mdx is the only fixture exception",
+  );
 });
 
 test("teaching primitives use supported props and do not silently render empty blocks", () => {
