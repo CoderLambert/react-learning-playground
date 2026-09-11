@@ -44,10 +44,16 @@ function normalizePreview(preview) {
   return String(preview);
 }
 
-function isRangeOnlyLabel(label, lineLabel) {
-  const normalized = String(label ?? "").trim().replace(/–/g, "-");
-  const normalizedRange = String(lineLabel ?? "").replace(/–/g, "-");
-  return normalized && normalized.toLowerCase() === normalizedRange.toLowerCase();
+function normalizeCitationLabel(value) {
+  return String(value ?? "").trim().replace(/–/g, "-").toLowerCase();
+}
+
+function isRedundantLabel(label, fileName, lineLabel) {
+  const normalized = normalizeCitationLabel(label);
+  if (!normalized) return true;
+  const normalizedRange = normalizeCitationLabel(lineLabel);
+  const normalizedCanonical = normalizeCitationLabel(`${fileName}:${lineLabel}`);
+  return normalized === normalizedRange || normalized === normalizedCanonical;
 }
 
 export function createSourceCitationOpenPayload(citation) {
@@ -78,7 +84,7 @@ export function SourceCitation({
   const previewText = normalizePreview(preview);
   const lineLabel = formatSourceCitationLines(citation.startLine, citation.endLine);
   const interactive = typeof onOpen === "function" && !disabled;
-  const visibleLabel = label && !isRangeOnlyLabel(label, lineLabel)
+  const visibleLabel = label && !isRedundantLabel(label, citation.fileName, lineLabel)
     ? String(label)
     : citation.fileName;
   const accessibleLabel = interactive
