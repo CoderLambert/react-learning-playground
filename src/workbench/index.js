@@ -1,10 +1,3 @@
-import {
-  DEFAULT_INSPECTOR_STATE,
-  INSPECTOR_TABS,
-  WORKBENCH_CSS_VARS,
-  WORKBENCH_DIMENSIONS,
-  WORKBENCH_STORAGE_KEYS,
-} from "./constants";
 export {
   getAvailableNoteIds,
   getNoteFileName,
