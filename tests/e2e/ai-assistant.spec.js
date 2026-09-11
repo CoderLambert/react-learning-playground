@@ -194,17 +194,21 @@ test("conversation history survives reload and stays scoped to the current learn
 
   let composer = await openAiTab(page);
   let transcript = page.getByRole("log", { name: "AI 对话记录" });
+  let assistantMessage = transcript.locator('[data-message-role="assistant"]');
   await composer.fill("remember this question");
   await page.getByRole("button", { name: "发送" }).click();
-  await expect(transcript.getByText("persisted answer", { exact: true })).toBeVisible();
+  await expect(assistantMessage).toHaveCount(1);
+  await expect(assistantMessage).toContainText("persisted answer");
   await expect(transcript.getByText("remember this question", { exact: true })).toBeVisible();
 
   await page.reload();
   await page.getByRole("tab", { name: "AI" }).click();
   composer = page.getByRole("textbox", { name: "向 AI 助手提问" });
   transcript = page.getByRole("log", { name: "AI 对话记录" });
+  assistantMessage = transcript.locator('[data-message-role="assistant"]');
   await expect(composer).toBeEnabled();
   await expect(transcript.getByText("remember this question", { exact: true })).toBeVisible();
-  await expect(transcript.getByText("persisted answer", { exact: true })).toBeVisible();
+  await expect(assistantMessage).toHaveCount(1);
+  await expect(assistantMessage).toContainText("persisted answer");
   await expect(page.locator(".ai-conversation-popover summary")).toContainText("会话");
 });
