@@ -5,7 +5,7 @@ import { createContext, useContext, useReducer, useRef, useEffect } from "react"
 // ==========================================
 // 通道 A：只负责传递变化频繁的状态 State
 const TaskStateContext = createContext(null);
-// 通道 B：只负责传递生命周期内引用恒定不变的 dispatch 函数
+// 通道 B：只负责传递引用稳定的 dispatch 函数
 const TaskDispatchContext = createContext(null);
 
 // ==========================================
@@ -13,14 +13,14 @@ const TaskDispatchContext = createContext(null);
 // ==========================================
 const initialTasks = [
   { id: 1, title: "学习 React 19 核心 API", done: true },
-  { id: 2, title: "拆分 Context 双通道，规避无效重渲染", done: false },
+  { id: 2, title: "拆分 Context 双通道，理解订阅边界", done: false },
   { id: 3, title: "消除全部 Oxlint 语法规范告警", done: false },
 ];
 
 function taskReducer(tasks, action) {
   switch (action.type) {
     case "ADD":
-      return [{ id: Date.now(), title: action.title, done: false }, ...tasks];
+      return [{ id: action.id, title: action.title, done: false }, ...tasks];
     case "TOGGLE":
       return tasks.map((t) => (t.id === action.id ? { ...t, done: !t.done } : t));
     case "DELETE":
@@ -52,33 +52,34 @@ function TaskProvider({ children }) {
   const [tasks, dispatch] = useReducer(taskReducer, initialTasks);
 
   return (
-    <TaskStateContext.Provider value={tasks}>
-      <TaskDispatchContext.Provider value={dispatch}>
+    <TaskStateContext value={tasks}>
+      <TaskDispatchContext value={dispatch}>
         {children}
-      </TaskDispatchContext.Provider>
-    </TaskStateContext.Provider>
+      </TaskDispatchContext>
+    </TaskStateContext>
   );
 }
 
 // ==========================================
 // 4. 消费组件 A：仅订阅 Dispatch 通道（写操作）
-// 核心亮点：无论任务状态怎么变，由于 dispatch 引用永久稳定，本组件【绝对不会】触发重渲染！
+// State Context value 的变化不会因为 Context 订阅本身通知这个组件。
+// 这不是“组件永远不会重新渲染”的保证：其他 props/state/父级路径仍可能触发渲染。
 // ==========================================
 function AddTaskBar() {
   const dispatch = useTaskDispatch();
   const badgeElementRef = useRef(null);
 
-  // 在副作用中更新 DOM 计数，严格遵守纯函数渲染阶段禁止操作 ref 规范
+  // 在副作用中更新 DOM 计数，避免渲染阶段直接操作 DOM。
   useEffect(() => {
     if (badgeElementRef.current) {
       const count = (Number(badgeElementRef.current.dataset.renders) || 0) + 1;
       badgeElementRef.current.dataset.renders = String(count);
-      badgeElementRef.current.textContent = `⚡ 挂载/渲染次数：${count} 次（保持恒定）`;
+      badgeElementRef.current.textContent = `⚡ 本组件实际渲染：${count} 次`;
     }
   });
 
   const handleQuickAdd = (text) => {
-    dispatch({ type: "ADD", title: text });
+    dispatch({ type: "ADD", id: Date.now(), title: text });
   };
 
   return (
@@ -95,12 +96,12 @@ function AddTaskBar() {
           组件 A：任务添加栏（只订阅 Dispatch 通道）
         </h4>
         <span ref={badgeElementRef} className="badge badge-green">
-          ⚡ 挂载/渲染次数：1 次（保持恒定）
+          ⚡ 本组件实际渲染：1 次
         </span>
       </div>
 
       <p style={{ margin: "0 0 10px 0", fontSize: "12.5px", color: "var(--text-muted)" }}>
-        由于仅使用了 <code>useTaskDispatch()</code>，即便右侧任务列表不断增删，本组件依然 0 次多余重渲染！
+        该组件不读取 <code>TaskStateContext</code>，因此任务 state 的 Context 更新不会因为订阅关系直接通知它；这不等于 React 对任何其他渲染来源做“永不重渲染”的保证。
       </p>
 
       <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
@@ -129,19 +130,17 @@ function AddTaskBar() {
 
 // ==========================================
 // 5. 消费组件 B：订阅 State 通道（读操作）
-// 核心亮点：只有当任务数据真实变化时，才响应式重渲染
 // ==========================================
 function TaskList() {
   const tasks = useTaskState();
   const dispatch = useTaskDispatch();
   const badgeElementRef = useRef(null);
 
-  // 在副作用中更新 DOM 计数
   useEffect(() => {
     if (badgeElementRef.current) {
       const count = (Number(badgeElementRef.current.dataset.renders) || 0) + 1;
       badgeElementRef.current.dataset.renders = String(count);
-      badgeElementRef.current.textContent = `🔄 渲染次数：${count} 次（随 State 刷新）`;
+      badgeElementRef.current.textContent = `🔄 本组件实际渲染：${count} 次`;
     }
   });
 
@@ -159,7 +158,7 @@ function TaskList() {
           组件 B：任务列表视图（订阅 State 通道）
         </h4>
         <span ref={badgeElementRef} className="badge badge-amber">
-          🔄 渲染次数：1 次（随 State 刷新）
+          🔄 本组件实际渲染：1 次
         </span>
       </div>
 
@@ -205,75 +204,70 @@ function TaskList() {
 export function UseReduceWithContextDemo() {
   return (
     <div>
-      {/* 头部说明卡片 */}
       <div className="demo-header-card">
         <div className="demo-header-top">
           <div>
             <h2 className="demo-title">
-              <span>⚡</span> Reducer + Context 双通道拆分与性能极致优化
+              <span>⚡</span> Reducer + Context：拆分读写订阅边界
             </h2>
           </div>
-          <span className="badge badge-green">高级性能模式</span>
+          <span className="badge badge-green">Context 边界</span>
         </div>
         <p className="demo-desc">
-          在传统 Context 架构中，一旦将 <code>&#123; state, dispatch &#125;</code> 混在一个 Provider 中向下传递，每次 state 变更都会导致整个子树所有订阅 Context 的组件无脑重新渲染。<strong>双通道拆分模式</strong> 将 State 与稳定的 Dispatch 彻底隔离，让写组件保持 0 无效重渲染。
+          当 <code>&#123; state, dispatch &#125;</code> 作为一个 Context value 时，state 改变会产生新的 value identity，所有读取该 Context 的消费者都会收到更新。把 State 与稳定的 Dispatch 分成两个 Context，可以让只需要 dispatch 的节点不订阅 State Context。
         </p>
         <div className="demo-meta-tags">
-          <span className="badge badge-gray">双通道架构 (Dual-Channel Context)</span>
-          <span className="badge badge-gray">Dispatch 引用不变性 (Stable Identity)</span>
-          <span className="badge badge-gray">按需精确定向重渲染 (Targeted Re-render)</span>
+          <span className="badge badge-gray">State / Dispatch Context</span>
+          <span className="badge badge-gray">Stable dispatch identity</span>
+          <span className="badge badge-gray">Subscription boundary</span>
         </div>
       </div>
 
-      {/* 原理对比卡片 */}
       <div className="demo-section">
         <div className="demo-section-header">
           <h3 className="demo-section-title">
-            <span>⚖️</span> 单通道 vs 双通道架构对比
+            <span>⚖️</span> 单 Context vs 双 Context
           </h3>
         </div>
 
         <div className="demo-grid-2">
           <div className="comparison-card bad">
             <div className="comparison-header bad">
-              <span>❌</span> 单通道（常见性能杀手）
+              <span>⚠️</span> 单 Context
             </div>
             <pre style={{ margin: 0, padding: "8px", background: "#fef2f2", borderRadius: "4px", fontSize: "12px", overflowX: "auto" }}>
-{`// 🔴 只要 state 变了，对象引用更新
-// 所有只想发送 dispatch 的按钮组件全部被迫重渲染！
-<AppContext.Provider value={{ state, dispatch }}>
-  <AddButton /> {/* 每次都白白重渲染！ */}
+{`// state 变化时，这个 value 对象 identity 也变化
+<AppContext value={{ state, dispatch }}>
+  <AddButton /> {/* 若读取 AppContext，也订阅整份 value */}
   <ListView />
-</AppContext.Provider>`}
+</AppContext>`}
             </pre>
           </div>
 
           <div className="comparison-card good">
             <div className="comparison-header good">
-              <span>✅</span> 双通道拆分（工业级标准实践）
+              <span>✅</span> 双 Context
             </div>
             <pre style={{ margin: 0, padding: "8px", background: "#f0fdf4", borderRadius: "4px", fontSize: "12px", overflowX: "auto" }}>
-{`// 🟢 dispatch 引用恒定不变
-// 只消费 Dispatch 的组件永远不因数据更新而重渲染！
-<StateContext.Provider value={state}>
-  <DispatchContext.Provider value={dispatch}>
-    <AddButton /> {/* 始终保持 1 次渲染！ */}
+{`// dispatch identity 稳定；写组件无需订阅 StateContext
+<StateContext value={state}>
+  <DispatchContext value={dispatch}>
+    <AddButton />
     <ListView />
-  </DispatchContext.Provider>
-</StateContext.Provider>`}
+  </DispatchContext>
+</StateContext>`}
             </pre>
           </div>
         </div>
       </div>
 
-      {/* 实时性能测试工作台 */}
       <div className="demo-section">
         <div className="demo-section-header">
           <h3 className="demo-section-title">
-            <span>🔬</span> 实时渲染计数测试工作台
+            <span>🔬</span> 实时渲染观察
           </h3>
           <p className="demo-section-desc">
-            点击下方组件 A 中的按钮添加或切换任务，注意观察顶部绿色的【组件 A 渲染次数】与橙色的【组件 B 渲染次数】：
+            点击组件 A 的按钮添加/清理任务，或在组件 B 中切换/删除任务。对比两个组件的实际渲染计数，并把观察解释为“订阅来源不同”，而不是“dispatch-only 组件永远不会渲染”。
           </p>
         </div>
 
@@ -285,13 +279,12 @@ export function UseReduceWithContextDemo() {
         </TaskProvider>
       </div>
 
-      {/* 总结提示 */}
       <div className="demo-alert demo-alert-tip">
         <div className="demo-alert-title">
-          <span>💡</span> 性能优化心智法则
+          <span>💡</span> 决策规则
         </div>
         <div>
-          React 官方明确指出：<code>dispatch</code> 函数的引用在组件的整个生命周期中是<strong>完全稳定且永久不变的</strong>。因此，通过单独开辟 <code>DispatchContext</code>，所有只负责触发行为的组件（按钮、表单提交器、定时调度器）都不需要重渲染，无需编写任何复杂的 <code>React.memo</code>！
+          React 保证 <code>useReducer</code> 返回的 <code>dispatch</code> 具有稳定 identity。拆分 Context 的直接收益是缩小订阅面；是否值得这样做，应结合 API 清晰度和真实渲染成本判断，而不是把双 Context 当成默认性能模板。
         </div>
       </div>
     </div>
