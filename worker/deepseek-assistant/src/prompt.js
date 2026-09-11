@@ -10,7 +10,7 @@ function block(tag, attrs, content) {
   return `<${tag}${suffix}>\n${content}\n</${tag}>`;
 }
 
-export function buildMessages({ question, context, history }) {
+function learningSections(context) {
   const { learningUnit, note, sources, activeSourceFile, conversationSummary } = context;
   const sections = [
     block("learning-unit", {}, [
@@ -30,12 +30,25 @@ export function buildMessages({ question, context, history }) {
     sections.push("<sources missing=\"true\" />");
   }
 
-  if (conversationSummary) {
-    sections.push(block("durable-summary", {}, conversationSummary));
+  if (conversationSummary) sections.push(block("durable-summary", {}, conversationSummary));
+  return sections;
+}
+
+export function buildMessages({ purpose = "chat", question, context, history = [], compaction }) {
+  const sections = learningSections(context);
+
+  if (purpose === "compaction") {
+    sections.push(block("compaction-request", {}, compaction.prompt));
+    return [
+      {
+        role: "system",
+        content: `${AI_LEARNING_ASSISTANT_SYSTEM_PROMPT}\n\n当前请求用于内部对话压缩。严格按照 <compaction-request> 的结构化 JSON 要求输出，不要回答学习问题，不要添加 Markdown。`,
+      },
+      { role: "user", content: sections.join("\n\n") },
+    ];
   }
 
   sections.push(block("question", {}, question));
-
   return [
     { role: "system", content: AI_LEARNING_ASSISTANT_SYSTEM_PROMPT },
     ...history,
