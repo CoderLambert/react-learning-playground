@@ -33,37 +33,19 @@ export function WorkbenchNavigation({
   className = "",
 }) {
   const units = useMemo(() => normalizeUnits(learningUnits), [learningUnits]);
-  const categoryMap = useMemo(
-    () => new Map(categories.map((category) => [category.id, category])),
-    [categories],
-  );
-
+  const categoryMap = useMemo(() => new Map(categories.map((category) => [category.id, category])), [categories]);
   const filteredUnits = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
     if (!query) return units;
-
-    return units.filter((unit) => {
-      const category = categoryMap.get(unit.categoryId);
-      return getSearchText(unit, category?.name).includes(query);
-    });
+    return units.filter((unit) => getSearchText(unit, categoryMap.get(unit.categoryId)?.name).includes(query));
   }, [categoryMap, searchQuery, units]);
-
   const groups = useMemo(
-    () =>
-      categories
-        .map((category) => ({
-          ...category,
-          items: filteredUnits.filter((unit) => unit.categoryId === category.id),
-        }))
-        .filter((group) => group.items.length > 0),
+    () => categories
+      .map((category) => ({ ...category, items: filteredUnits.filter((unit) => unit.categoryId === category.id) }))
+      .filter((group) => group.items.length > 0),
     [categories, filteredUnits],
   );
-
-  const navigationClassName = [
-    "workbench-navigation",
-    collapsed ? "is-collapsed" : "",
-    className,
-  ]
+  const navigationClassName = ["workbench-navigation", collapsed ? "is-collapsed" : "", className]
     .filter(Boolean)
     .join(" ");
 
@@ -75,7 +57,7 @@ export function WorkbenchNavigation({
           {!collapsed && (
             <div className="workbench-brand-copy">
               <div className="workbench-brand-title-row">
-                <strong>React 核心实验室</strong>
+                <h1>React 核心实验室</h1>
                 <span>React 19</span>
               </div>
               <p>Demo、笔记与源码协同学习工作台</p>
@@ -134,7 +116,6 @@ export function WorkbenchNavigation({
                 </>
               )}
             </div>
-
             <div className="workbench-navigation-items">
               {group.items.map((unit) => {
                 const active = viewMode === "focused" && activeId === unit.id;
@@ -148,9 +129,7 @@ export function WorkbenchNavigation({
                     title={collapsed ? unit.title : unit.description || unit.title}
                   >
                     {collapsed ? (
-                      <span className="workbench-navigation-item-marker" aria-hidden="true">
-                        {unit.title.slice(0, 1)}
-                      </span>
+                      <span className="workbench-navigation-item-marker" aria-hidden="true">{unit.title.slice(0, 1)}</span>
                     ) : (
                       <>
                         <span className="workbench-navigation-item-title">{unit.title}</span>
@@ -164,12 +143,8 @@ export function WorkbenchNavigation({
             </div>
           </section>
         ))}
-
-        {groups.length === 0 && !collapsed && (
-          <div className="workbench-navigation-empty">未找到匹配 “{searchQuery}” 的内容</div>
-        )}
+        {groups.length === 0 && !collapsed && <div className="workbench-navigation-empty">未找到匹配 “{searchQuery}” 的内容</div>}
       </nav>
-
       <footer className="workbench-navigation-footer">
         {collapsed ? <span title={`${units.length} 个核心模式`}>{units.length}</span> : <span>共收录 {units.length} 个核心模式</span>}
         {!collapsed && <span>⚡ Vite + Oxlint</span>}
