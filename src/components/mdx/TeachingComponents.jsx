@@ -45,8 +45,11 @@ export function AntiPattern({ title = "Anti-pattern", children }) {
   return <TeachingBlock tone="danger" eyebrow="不推荐" title={title}>{children}</TeachingBlock>;
 }
 
-export function Summary({ title = "核心结论", children }) {
-  return <TeachingBlock tone="summary" eyebrow="Summary" title={title}>{children}</TeachingBlock>;
+export function Summary({ title = "核心结论", items = [], children }) {
+  const body = children ?? (
+    items.length > 0 ? <ul>{items.map((item, index) => <li key={`${index}-${String(item)}`}>{item}</li>)}</ul> : null
+  );
+  return <TeachingBlock tone="summary" eyebrow="Summary" title={title}>{body}</TeachingBlock>;
 }
 
 export function Compare({ left, right, leftTitle = "错误模型", rightTitle = "推荐模型", children }) {
@@ -70,8 +73,9 @@ function Sequence({ label, items = [], children, ordered = false }) {
   );
 }
 
-export function Timeline({ steps = [], children }) {
-  return <Sequence label="Timeline" items={steps} ordered>{children}</Sequence>;
+export function Timeline({ steps = [], items = [], children }) {
+  const resolvedSteps = steps.length > 0 ? steps : items;
+  return <Sequence label="Timeline" items={resolvedSteps} ordered>{children}</Sequence>;
 }
 
 export function Flow({ items = [], children }) {
@@ -88,11 +92,12 @@ export function DemoReference({ action, observe, children }) {
   );
 }
 
-export function FurtherReading({ items = [], children }) {
+export function FurtherReading({ items = [], links = [], children }) {
+  const resolvedItems = items.length > 0 ? items : links;
   return (
     <TeachingBlock eyebrow="Further Reading" title="延伸阅读">
-      {items.length > 0 && (
-        <ul>{items.map((item) => <li key={item.href}><a href={item.href} target="_blank" rel="noreferrer">{item.label ?? item.href}</a></li>)}</ul>
+      {resolvedItems.length > 0 && (
+        <ul>{resolvedItems.map((item) => <li key={item.href}><a href={item.href} target="_blank" rel="noreferrer">{item.label ?? item.href}</a></li>)}</ul>
       )}
       {children}
     </TeachingBlock>
