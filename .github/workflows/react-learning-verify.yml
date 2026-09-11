@@ -1,0 +1,55 @@
+name: React Learning Verify
+
+on:
+  pull_request:
+    branches:
+      - integration/react-complete-learning
+      - main
+  push:
+    branches:
+      - integration/react-complete-learning
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+
+      - name: Preview HTTP smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run preview -- --host 127.0.0.1 --port 4173 > /tmp/react-learning-preview.log 2>&1 &
+          PREVIEW_PID=$!
+          trap 'kill "$PREVIEW_PID" 2>/dev/null || true; cat /tmp/react-learning-preview.log' EXIT
+
+          for attempt in {1..30}; do
+            if curl --fail --silent --show-error http://127.0.0.1:4173/react-learning-playground/ > /tmp/react-learning-home.html; then
+              grep -q '<div id="root"></div>' /tmp/react-learning-home.html
+              exit 0
+            fi
+            sleep 1
+          done
+
+          echo "Preview did not become healthy" >&2
+          exit 1
