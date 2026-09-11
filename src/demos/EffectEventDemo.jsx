@@ -15,7 +15,7 @@ function createConnection(roomId, onConnected) {
 export function EffectEventDemo() {
   const [roomId, setRoomId] = useState("general");
   const [theme, setTheme] = useState("light");
-  const [connectCount, setConnectCount] = useState(0);
+  const [connectCount, setConnectCount] = useState(1);
   const [notice, setNotice] = useState("等待连接");
 
   const onConnected = useEffectEvent(() => {
@@ -23,11 +23,15 @@ export function EffectEventDemo() {
   });
 
   useEffect(() => {
-    setConnectCount((n) => n + 1);
     const connection = createConnection(roomId, onConnected);
     connection.connect();
     return () => connection.disconnect();
   }, [roomId]);
+
+  function handleRoomChange(event) {
+    setRoomId(event.target.value);
+    setConnectCount((count) => count + 1);
+  }
 
   return (
     <div>
@@ -39,7 +43,7 @@ export function EffectEventDemo() {
         <div className="demo-grid-2">
           <div>
             <label htmlFor="effect-event-room">房间</label>
-            <select id="effect-event-room" className="form-input" value={roomId} onChange={(e) => setRoomId(e.target.value)}><option>general</option><option>react</option><option>typescript</option></select>
+            <select id="effect-event-room" className="form-input" value={roomId} onChange={handleRoomChange}><option>general</option><option>react</option><option>typescript</option></select>
             <label style={{ display: "block", marginTop: 12 }}>主题</label>
             <button className="btn" onClick={() => setTheme((v) => v === "light" ? "dark" : "light")}>切换 theme：{theme}</button>
           </div>

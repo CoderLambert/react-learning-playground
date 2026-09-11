@@ -8,11 +8,12 @@ export function EventVsEffectDemo() {
   const [product, setProduct] = useState("React 课程");
   const [online, setOnline] = useState(true);
   const [message, setMessage] = useState("尚未购买");
-  const [syncLog, setSyncLog] = useState([]);
+  const syncLine = `Effect: 与外部在线状态同步 → ${online ? "online" : "offline"}`;
 
   useEffect(() => {
     const line = `Effect: 与外部在线状态同步 → ${online ? "online" : "offline"}`;
-    setSyncLog((items) => [...items.slice(-3), line]);
+    console.log(line);
+    return () => console.log(`Effect cleanup: 结束 ${online ? "online" : "offline"} 同步`);
   }, [online]);
 
   async function handleBuy() {
@@ -41,7 +42,7 @@ export function EventVsEffectDemo() {
           <div>
             <h4>当前状态 → Effect 同步</h4>
             <button className="btn" onClick={() => setOnline((v) => !v)}>切换为 {online ? "offline" : "online"}</button>
-            <div style={{ marginTop: 10, display: "grid", gap: 6 }}>{syncLog.map((line, i) => <code key={`${line}-${i}`}>{line}</code>)}</div>
+            <div style={{ marginTop: 10, display: "grid", gap: 6 }}><code>{syncLine}</code></div>
           </div>
         </div>
       </div>
