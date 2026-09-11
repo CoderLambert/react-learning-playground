@@ -76,7 +76,11 @@ export function DeepSeekSettings({
 
           <label className="deepseek-settings-field">
             <span>模型</span>
-            <select value={model} onChange={(event) => setModel(event.target.value)}>
+            <select
+              aria-label="DeepSeek 模型"
+              value={model}
+              onChange={(event) => setModel(event.target.value)}
+            >
               {DEEPSEEK_MODELS.map((item) => (
                 <option key={item.id} value={item.id}>{item.label} · {item.id}</option>
               ))}
