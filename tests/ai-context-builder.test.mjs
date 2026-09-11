@@ -30,9 +30,10 @@ test("raw note registry exposes lazy raw MDX API without replacing compiled load
   assert.match(source, /typeof loaded\?\.default === "string"/);
 });
 
-test("MDX compiler excludes raw imports so AI receives source text", async () => {
+test("MDX compiler runs pre-transform and excludes raw imports so AI receives source text", async () => {
   const source = await readFile(new URL("../vite.config.js", import.meta.url), "utf8");
 
+  assert.ok(source.includes('enforce: "pre",'));
   assert.ok(source.includes("include: /\\.mdx(?:$|\\?)/,"));
   assert.ok(source.includes("exclude: /[?&]raw(?:&|$)/,"));
 });
