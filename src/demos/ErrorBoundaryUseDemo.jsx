@@ -22,10 +22,6 @@ class DemoErrorBoundary extends Component {
     return { error };
   }
 
-  componentDidCatch(error) {
-    console.error("ErrorBoundary captured:", error);
-  }
-
   render() {
     if (this.state.error) {
       return (
