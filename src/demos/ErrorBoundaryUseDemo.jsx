@@ -1,4 +1,4 @@
-import { Component, Suspense, use, useMemo, useState } from "react";
+import { Component, Suspense, use, useState } from "react";
 
 function createMessagePromise(mode, attempt) {
   return new Promise((resolve, reject) => {
@@ -46,13 +46,15 @@ function PromiseReader({ resource }) {
 }
 
 export function ErrorBoundaryUseDemo() {
-  const [mode, setMode] = useState("success");
   const [attempt, setAttempt] = useState(1);
-  const resource = useMemo(() => createMessagePromise(mode, attempt), [mode, attempt]);
+  const [mode, setMode] = useState("success");
+  const [resource, setResource] = useState(() => createMessagePromise("success", 1));
 
-  function retry(nextMode = mode) {
+  function retry(nextMode) {
+    const nextAttempt = attempt + 1;
+    setAttempt(nextAttempt);
     setMode(nextMode);
-    setAttempt((value) => value + 1);
+    setResource(createMessagePromise(nextMode, nextAttempt));
   }
 
   return (
@@ -72,7 +74,7 @@ export function ErrorBoundaryUseDemo() {
       <div className="demo-section">
         <div className="demo-section-header">
           <h3 className="demo-section-title"><span>🎮</span> Promise 状态路由实验</h3>
-          <p className="demo-section-desc">每次点击都会在事件阶段创建并缓存到本次 state 的 Promise，而不是在 render 中反复 new Promise。</p>
+          <p className="demo-section-desc">每次点击都在事件阶段创建新的稳定 Promise，并把 Promise 本身存进 State；render 只负责用 <code>use</code> 读取它。</p>
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
           <button type="button" className="btn btn-primary" onClick={() => retry("success")}>加载成功资源</button>
