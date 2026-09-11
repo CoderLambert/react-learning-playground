@@ -30,3 +30,26 @@ export {
   createDeepSeekDirectClient,
   parseDeepSeekOpenAiStream,
 } from "./deepseekDirectClient.js";
+export {
+  DEFAULT_MODEL_CONTEXT,
+  MODEL_CONTEXTS,
+  getModelContextMetadata,
+} from "./context/modelMetadata.js";
+export {
+  estimateMessagesTokens,
+  estimateTextTokens,
+  calibrateTokenEstimate,
+} from "./context/tokenEstimator.js";
+export {
+  CONTEXT_CATEGORIES,
+  buildContextBudget,
+  selectContextWithinBudget,
+} from "./context/contextBudget.js";
+export {
+  SUMMARY_CONTRACT_VERSION,
+  createCompactionService,
+  createEmptySummary,
+  normalizeStructuredSummary,
+  serializeStructuredSummary,
+  shouldAutoCompact,
+} from "./compaction/compactionService.js";

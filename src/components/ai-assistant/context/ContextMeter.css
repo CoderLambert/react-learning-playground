@@ -1,0 +1,107 @@
+.ai-context-meter {
+  border: 1px solid color-mix(in srgb, currentColor 16%, transparent);
+  border-radius: 10px;
+  background: color-mix(in srgb, currentColor 3%, transparent);
+  overflow: hidden;
+}
+
+.ai-context-meter__summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.ai-context-meter__toggle {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ai-context-meter__toggle:focus-visible,
+.ai-context-meter__compact:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: -2px;
+}
+
+.ai-context-meter__window,
+.ai-context-meter__estimate,
+.ai-context-meter__actual {
+  opacity: 0.68;
+  font-size: 0.78rem;
+}
+
+.ai-context-meter__compact {
+  margin-right: 8px;
+  padding: 5px 9px;
+  border: 1px solid color-mix(in srgb, currentColor 20%, transparent);
+  border-radius: 7px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.ai-context-meter__compact:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.ai-context-meter__progress {
+  display: block;
+  width: 100%;
+  height: 3px;
+  border: 0;
+}
+
+.ai-context-meter--warning .ai-context-meter__progress,
+.ai-context-meter--danger .ai-context-meter__progress {
+  accent-color: currentColor;
+}
+
+.ai-context-meter__details {
+  padding: 8px 10px 10px;
+  border-top: 1px solid color-mix(in srgb, currentColor 10%, transparent);
+}
+
+.ai-context-meter__details dl {
+  margin: 0;
+}
+
+.ai-context-meter__row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 2px 0;
+  font-size: 0.82rem;
+}
+
+.ai-context-meter__row dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.ai-context-meter__actual {
+  margin: 8px 0 0;
+}
+
+@media (max-width: 560px) {
+  .ai-context-meter__window {
+    display: none;
+  }
+
+  .ai-context-meter__summary {
+    align-items: stretch;
+  }
+
+  .ai-context-meter__toggle {
+    flex-wrap: wrap;
+  }
+}
