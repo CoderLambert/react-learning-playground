@@ -16,6 +16,14 @@ function updateAssistantMessage(messages, requestId, updater) {
 
 export function chatReducer(state, action) {
   switch (action.type) {
+    case "hydrate":
+      return {
+        ...INITIAL_CHAT_STATE,
+        messages: Array.isArray(action.messages)
+          ? action.messages.map((message) => ({ ...message, streaming: false }))
+          : [],
+      };
+
     case "request": {
       const requestId = action.requestId;
       if (!requestId) throw new TypeError("request action requires requestId");
