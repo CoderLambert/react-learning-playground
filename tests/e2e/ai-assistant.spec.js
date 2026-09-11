@@ -49,7 +49,7 @@ test("AI assistant sends current note, numbered source and active source context
   expect(first.context.activeSourceFile).toBe("PropsBasicsDemo.jsx");
 
   await page.getByRole("tab", { name: "源码" }).click();
-  await page.getByRole("button", { name: "UserCard.jsx" }).click();
+  await page.getByRole("tab", { name: "UserCard.jsx" }).click();
   await page.getByRole("tab", { name: "AI" }).click();
   await expect(page.getByText("UserCard.jsx", { exact: true }).last()).toBeVisible();
 
