@@ -104,11 +104,8 @@ export function TypeErrorExamples() {
   // @ts-expect-error Controlled contract requires both value and onValueChange.
   const incompleteControlledTabs = <ControlledTabs value="overview" />;
 
-  // @ts-expect-error success state must carry data, not error.
-  const impossibleState: LoadState<string> = {
-    status: "success",
-    error: new Error("wrong branch"),
-  };
+  // @ts-expect-error success state requires data; error belongs to another union branch.
+  const impossibleState: LoadState<string> = { status: "success", error: new Error("wrong branch") };
 
   return (
     <>
