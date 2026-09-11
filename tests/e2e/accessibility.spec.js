@@ -6,7 +6,7 @@ test.describe("keyboard and accessibility interaction", () => {
   test("keeps focus visible, labels the form, and exposes live status semantics", async ({ page }) => {
     await loadApp(page);
 
-    const search = page.getByRole("textbox", { name: "搜索知识点或关键词" });
+    const search = page.getByRole("searchbox", { name: "搜索知识点或关键词" });
     await search.focus();
     await expect(search).toBeFocused();
     const focusMetrics = await search.evaluate((element) => {
