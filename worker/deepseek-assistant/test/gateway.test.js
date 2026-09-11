@@ -27,6 +27,16 @@ function sse(lines) {
   });
 }
 
+function chunkedBytes(bytes, splitAt) {
+  return new ReadableStream({
+    start(controller) {
+      controller.enqueue(bytes.slice(0, splitAt));
+      controller.enqueue(bytes.slice(splitAt));
+      controller.close();
+    },
+  });
+}
+
 async function readLines(stream) {
   return (await new Response(stream).text()).trim().split("\n").map(JSON.parse);
 }
@@ -62,6 +72,50 @@ test("parses DeepSeek ChatCompletions SSE and normalizes app events", async () =
   assert.equal(events[2].usage.total_tokens, 12);
 });
 
+test("concurrent streams keep UTF-8 decoder state isolated", async () => {
+  const encoder = new TextEncoder();
+  const makePayload = (text) => encoder.encode(
+    `data: ${JSON.stringify({ choices: [{ delta: { content: text }, finish_reason: null }] })}\n` +
+      "data: [DONE]\n",
+  );
+  const first = makePayload("你");
+  const second = makePayload("好");
+  const firstMarker = encoder.encode("你");
+  const secondMarker = encoder.encode("好");
+  const findSplit = (bytes, marker) => {
+    outer: for (let i = 0; i <= bytes.length - marker.length; i += 1) {
+      for (let j = 0; j < marker.length; j += 1) {
+        if (bytes[i + j] !== marker[j]) continue outer;
+      }
+      return i + 1;
+    }
+    throw new Error("UTF-8 marker not found");
+  };
+
+  const [firstEvents, secondEvents] = await Promise.all([
+    readLines(normalizeDeepSeekStream(chunkedBytes(first, findSplit(first, firstMarker)))),
+    readLines(normalizeDeepSeekStream(chunkedBytes(second, findSplit(second, secondMarker)))),
+  ]);
+
+  assert.equal(firstEvents[1].text, "你");
+  assert.equal(secondEvents[1].text, "好");
+});
+
+test("cancelling normalized output cancels the locked upstream reader", async () => {
+  let cancelled = false;
+  const upstream = new ReadableStream({
+    pull() {},
+    cancel() {
+      cancelled = true;
+    },
+  });
+  const reader = normalizeDeepSeekStream(upstream).getReader();
+  const first = await reader.read();
+  assert.equal(JSON.parse(new TextDecoder().decode(first.value)).type, "start");
+  await reader.cancel("stop");
+  assert.equal(cancelled, true);
+});
+
 test("gateway enforces origin, media type and rate limit", async () => {
   const base = "https://worker.example/chat";
   const blocked = await handleRequest(new Request(base, { method: "POST", headers: { origin: "https://evil.example", "content-type": "application/json" }, body: JSON.stringify(requestBody()) }), { ALLOWED_ORIGIN: "https://coderlambert.github.io" });
@@ -72,6 +126,16 @@ test("gateway enforces origin, media type and rate limit", async () => {
     AI_RATE_LIMITER: { limit: async () => ({ success: false }) },
   });
   assert.equal(limited.status, 429);
+});
+
+test("gateway enforces actual body size even without trusting content-length", async () => {
+  const response = await handleRequest(new Request("https://worker.example/chat", {
+    method: "POST",
+    headers: { origin: "https://coderlambert.github.io", "content-type": "application/json" },
+    body: "x".repeat(160_001),
+  }), { ALLOWED_ORIGIN: "https://coderlambert.github.io" });
+  assert.equal(response.status, 413);
+  assert.match(await response.text(), /request body too large/);
 });
 
 test("gateway hides upstream body and streams normalized response", async () => {
