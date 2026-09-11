@@ -32,6 +32,10 @@ import { UrlStateDemo } from "./UrlStateDemo";
 import { NestedRoutesDemo } from "./NestedRoutesDemo";
 import { NavigationBoundaryDemo } from "./NavigationBoundaryDemo";
 import { RouteDataBoundaryDemo } from "./RouteDataBoundaryDemo";
+import { RenderingStrategiesDemo } from "./RenderingStrategiesDemo";
+import { HydrationStreamingDemo } from "./HydrationStreamingDemo";
+import { RscBoundaryDemo } from "./RscBoundaryDemo";
+import { ServerFunctionsFrameworkDemo } from "./ServerFunctionsFrameworkDemo";
 
 // 源码原始字符串（Vite ?raw 原生支持）
 import componentJsxPureRenderRaw from "./ComponentJsxPureRenderDemo.jsx?raw";
@@ -74,6 +78,10 @@ import urlStateRaw from "./UrlStateDemo.jsx?raw";
 import nestedRoutesRaw from "./NestedRoutesDemo.jsx?raw";
 import navigationBoundaryRaw from "./NavigationBoundaryDemo.jsx?raw";
 import routeDataBoundaryRaw from "./RouteDataBoundaryDemo.jsx?raw";
+import renderingStrategiesRaw from "./RenderingStrategiesDemo.jsx?raw";
+import hydrationStreamingRaw from "./HydrationStreamingDemo.jsx?raw";
+import rscBoundaryRaw from "./RscBoundaryDemo.jsx?raw";
+import serverFunctionsFrameworkRaw from "./ServerFunctionsFrameworkDemo.jsx?raw";
 
 // @demo-imports
 
@@ -84,6 +92,7 @@ export const CATEGORIES = [
   { id: "forms", name: "Forms 与 React 19 Actions", icon: "📝" },
   { id: "performance", name: "性能模型与优化", icon: "🚀" },
   { id: "routing", name: "Router 与页面状态", icon: "🧭" },
+  { id: "server-react", name: "SSR、RSC 与 Framework", icon: "🖥️" },
 ];
 
 export const demos = [
@@ -121,5 +130,9 @@ export const demos = [
   { id: "nested-routes", label: "Nested Routes 与 Outlet", category: "routing", badge: "架构", description: "可视化父子 Route 匹配链、Outlet 插槽、Index Route 与无 path Layout Route 的职责边界", Component: NestedRoutesDemo, files: [{ name: "NestedRoutesDemo.jsx", code: nestedRoutesRaw }] },
   { id: "navigation-boundary", label: "Navigation 与 Route Boundary", category: "routing", badge: "导航", description: "区分声明式链接与程序式导航，可视化 history push/replace/back/forward 与 Not Found 边界", Component: NavigationBoundaryDemo, files: [{ name: "NavigationBoundaryDemo.jsx", code: navigationBoundaryRaw }] },
   { id: "route-data-boundary", label: "Route Loader 数据边界", category: "routing", badge: "数据", description: "可视化 route match → loader(params) → pending → loader data / nearest error boundary 的页面数据流程", Component: RouteDataBoundaryDemo, files: [{ name: "RouteDataBoundaryDemo.jsx", code: routeDataBoundaryRaw }] },
+  { id: "rendering-strategies", label: "CSR / SSG / SSR 渲染策略", category: "server-react", badge: "架构", description: "区分客户端渲染、静态预渲染与请求时 SSR，理解 React Core 与 framework rendering policy 的边界", Component: RenderingStrategiesDemo, files: [{ name: "RenderingStrategiesDemo.jsx", code: renderingStrategiesRaw }] },
+  { id: "hydration-streaming", label: "Hydration 与 Streaming SSR", category: "server-react", badge: "SSR", description: "可视化 server HTML → hydrate → interactive、hydration mismatch 与 shell/Suspense streaming 时间线", Component: HydrationStreamingDemo, files: [{ name: "HydrationStreamingDemo.jsx", code: hydrationStreamingRaw }] },
+  { id: "rsc-boundary", label: "RSC Server / Client Boundary", category: "server-react", badge: "RSC", description: "观察 Server Component、Client Component、RSC payload 与客户端 bundle 边界，区分 RSC 和 SSR", Component: RscBoundaryDemo, files: [{ name: "RscBoundaryDemo.jsx", code: rscBoundaryRaw }] },
+  { id: "server-functions-framework", label: "Server Functions 与 Framework 边界", category: "server-react", badge: "React 19", description: "区分 Server Function、Server Action、React primitive 与 React Router / Next.js framework responsibility", Component: ServerFunctionsFrameworkDemo, files: [{ name: "ServerFunctionsFrameworkDemo.jsx", code: serverFunctionsFrameworkRaw }] },
   // @demo-entries
 ];
