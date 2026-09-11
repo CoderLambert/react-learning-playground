@@ -1,11 +1,10 @@
-import { useState, createContext, useContext } from "react";
+import { createContext, useContext, useState } from "react";
 
-// 创建全局用户上下文
 const UserContext = createContext(null);
 
 // ==========================================
-// 方案 1：属性逐层透传 (Prop Drilling)
-// 缺点：中间组件 Navbar 和 Header 完全不需要 user，却被迫传递
+// 路径 1：显式 Props 数据流
+// Props 本身不是反模式；问题出现在大量中间组件只负责机械透传时。
 // ==========================================
 function DrillingAvatar({ user }) {
   return (
@@ -26,15 +25,28 @@ function DrillingAvatar({ user }) {
       >
         {user.name.charAt(0)}
       </div>
-      <span style={{ fontSize: "13px" }}>{user.name} ({user.role})</span>
+      <span style={{ fontSize: "13px" }}>
+        {user.name} ({user.role})
+      </span>
     </div>
   );
 }
 
 function DrillingHeader({ user }) {
   return (
-    <div style={{ padding: "8px 12px", background: "#f1f5f9", borderRadius: "6px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-      <span style={{ fontSize: "12px", color: "#64748b" }}>Header（中间层 2）</span>
+    <div
+      style={{
+        padding: "8px 12px",
+        background: "#f1f5f9",
+        borderRadius: "6px",
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+      }}
+    >
+      <span style={{ fontSize: "12px", color: "#64748b" }}>
+        Header（只负责继续传递 user）
+      </span>
       <DrillingAvatar user={user} />
     </div>
   );
@@ -42,25 +54,57 @@ function DrillingHeader({ user }) {
 
 function DrillingNavbar({ user }) {
   return (
-    <div style={{ padding: "10px", border: "1px dashed #cbd5e1", borderRadius: "8px" }}>
-      <div style={{ fontSize: "12px", color: "#64748b", marginBottom: "6px" }}>Navbar 导航栏（中间层 1）</div>
+    <div
+      style={{
+        padding: "10px",
+        border: "1px dashed #cbd5e1",
+        borderRadius: "8px",
+      }}
+    >
+      <div
+        style={{
+          fontSize: "12px",
+          color: "#64748b",
+          marginBottom: "6px",
+        }}
+      >
+        Navbar（只负责继续传递 user）
+      </div>
       <DrillingHeader user={user} />
     </div>
   );
 }
 
 // ==========================================
-// 方案 2：组件组合解法 (Component Composition)
-// 官方推荐首选：由顶层直接组装目标组件，中间层通过 children / slot 穿透
-// 中间层无需知晓任何 user 的字段！
+// 路径 2：组件组合
+// 当中间层本质是布局容器时，把已经组装好的 JSX 作为 slot/children 传入。
 // ==========================================
 function CompositionNavbar({ rightSlot }) {
   return (
-    <div style={{ padding: "10px", border: "1px dashed #86efac", borderRadius: "8px", background: "#f0fdf4" }}>
-      <div style={{ fontSize: "12px", color: "#166534", marginBottom: "6px" }}>
-        Navbar 导航栏（无任何 user Props，只负责布局插槽）
+    <div
+      style={{
+        padding: "10px",
+        border: "1px dashed #86efac",
+        borderRadius: "8px",
+        background: "#f0fdf4",
+      }}
+    >
+      <div
+        style={{
+          fontSize: "12px",
+          color: "#166534",
+          marginBottom: "6px",
+        }}
+      >
+        Navbar（只定义布局插槽，不需要知道 user）
       </div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}
+      >
         <span style={{ fontSize: "13px", fontWeight: "600" }}>应用 Logo</span>
         {rightSlot}
       </div>
@@ -69,11 +113,12 @@ function CompositionNavbar({ rightSlot }) {
 }
 
 // ==========================================
-// 方案 3：Context API 全局共享解法
-// 适合全局深层广播（如多处消费当前用户/主题）
+// 路径 3：Context
+// 适合树中相距较远、多个位置都需要消费同一份信息的场景。
 // ==========================================
 function ContextAvatar() {
   const user = useContext(UserContext);
+
   return (
     <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
       <div
@@ -92,15 +137,28 @@ function ContextAvatar() {
       >
         {user.name.charAt(0)}
       </div>
-      <span style={{ fontSize: "13px" }}>{user.name} ({user.role})</span>
+      <span style={{ fontSize: "13px" }}>
+        {user.name} ({user.role})
+      </span>
     </div>
   );
 }
 
 function ContextHeader() {
   return (
-    <div style={{ padding: "8px 12px", background: "#eff6ff", borderRadius: "6px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-      <span style={{ fontSize: "12px", color: "#1e40af" }}>Header（无需 Props，直接透传）</span>
+    <div
+      style={{
+        padding: "8px 12px",
+        background: "#eff6ff",
+        borderRadius: "6px",
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+      }}
+    >
+      <span style={{ fontSize: "12px", color: "#1e40af" }}>
+        Header（不消费 user）
+      </span>
       <ContextAvatar />
     </div>
   );
@@ -108,9 +166,21 @@ function ContextHeader() {
 
 function ContextNavbar() {
   return (
-    <div style={{ padding: "10px", border: "1px dashed #93c5fd", borderRadius: "8px" }}>
-      <div style={{ fontSize: "12px", color: "#1e40af", marginBottom: "6px" }}>
-        Navbar 导航栏（无需 Props）
+    <div
+      style={{
+        padding: "10px",
+        border: "1px dashed #93c5fd",
+        borderRadius: "8px",
+      }}
+    >
+      <div
+        style={{
+          fontSize: "12px",
+          color: "#1e40af",
+          marginBottom: "6px",
+        }}
+      >
+        Navbar（不消费 user）
       </div>
       <ContextHeader />
     </div>
@@ -122,37 +192,47 @@ export function PropDrillingDemo() {
 
   return (
     <div>
-      {/* 头部说明卡片 */}
       <div className="demo-header-card">
         <div className="demo-header-top">
           <div>
             <h2 className="demo-title">
-              <span>🪜</span> 属性逐层透传（Prop Drilling）与两大破解之道
+              <span>🪜</span> Prop Drilling：不是看到多层 Props 就要消灭
             </h2>
           </div>
-          <span className="badge badge-amber">架构解耦</span>
+          <span className="badge badge-amber">数据边界</span>
         </div>
         <p className="demo-desc">
-          “Prop Drilling” 指为了将数据传递给深层子组件，沿途所有中间组件都必须显式接收并向下透传 Props 的反模式。这导致中间组件与无关数据过度耦合，重构极易出错。
+          Props 是 React 最直接、最显式的数据流。只有当数据需要穿过许多“不消费它”的中间组件，导致接口噪声和重构成本明显上升时，才值得把它识别为需要处理的 prop drilling。
         </p>
         <div className="demo-meta-tags">
-          <span className="badge badge-red">反模式：逐层透传 (Drilling)</span>
-          <span className="badge badge-green">官方首选推荐：组件组合 (Composition)</span>
-          <span className="badge badge-blue">全局解法：Context API</span>
+          <span className="badge badge-amber">默认：显式 Props</span>
+          <span className="badge badge-green">布局解耦：Composition</span>
+          <span className="badge badge-blue">远距离共享：Context</span>
         </div>
       </div>
 
-      {/* 实时修改用户状态 */}
       <div className="demo-section" style={{ padding: "16px 20px" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "12px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <span style={{ fontSize: "13px", fontWeight: "600" }}>修改顶层用户状态：</span>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: "12px",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+            <span style={{ fontSize: "13px", fontWeight: "600" }}>
+              修改数据所有者中的 user：
+            </span>
             <input
               type="text"
               className="form-input"
               style={{ width: "160px" }}
               value={user.name}
-              onChange={(e) => setUser({ ...user, name: e.target.value })}
+              onChange={(event) =>
+                setUser((current) => ({ ...current, name: event.target.value }))
+              }
               placeholder="用户姓名"
             />
             <input
@@ -160,7 +240,9 @@ export function PropDrillingDemo() {
               className="form-input"
               style={{ width: "160px" }}
               value={user.role}
-              onChange={(e) => setUser({ ...user, role: e.target.value })}
+              onChange={(event) =>
+                setUser((current) => ({ ...current, role: event.target.value }))
+              }
               placeholder="用户角色"
             />
           </div>
@@ -168,52 +250,83 @@ export function PropDrillingDemo() {
             className="btn btn-secondary btn-sm"
             onClick={() => setUser({ name: "Sarah Lee", role: "UI 设计总监" })}
           >
-            切换为用户 Sarah
+            切换为 Sarah
           </button>
         </div>
       </div>
 
-      {/* 三大方案直观对比 */}
       <div className="demo-section">
         <div className="demo-section-header">
           <h3 className="demo-section-title">
-            <span>⚖️</span> 三大解决路径方案对比
+            <span>⚖️</span> 同一份数据的三种传递路径
           </h3>
           <p className="demo-section-desc">
-            观察代码结构与组件责任边界的不同：
+            三种路径都能工作。真正要比较的是数据所有权、组件职责、消费范围和接口成本，而不是寻找一个永远正确的 API。
           </p>
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-          {/* 方案 1 */}
           <div className="comparison-card bad">
             <div className="comparison-header bad">
-              <span>❌</span> 方案 1：属性逐层透传 (Prop Drilling)
+              <span>1️⃣</span> 显式 Props：链路很深时才出现 drilling 成本
             </div>
-            <p style={{ margin: "0 0 10px 0", fontSize: "13px", color: "var(--text-muted)" }}>
-              链路：<code>Page(拥有 user) ➔ Navbar(无需 user) ➔ Header(无需 user) ➔ Avatar(消费 user)</code>。中间任何一层改名或漏传都会导致崩溃。
+            <p
+              style={{
+                margin: "0 0 10px 0",
+                fontSize: "13px",
+                color: "var(--text-muted)",
+              }}
+            >
+              <code>Page → Navbar → Header → Avatar</code>。这种写法的数据来源最清楚；当 Navbar、Header 长期只是机械透传，而且链路继续增长时，接口噪声才开始成为真实问题。
             </p>
             <DrillingNavbar user={user} />
           </div>
 
-          {/* 方案 2 */}
           <div className="comparison-card good">
             <div className="comparison-header good">
-              <span>✅</span> 方案 2：组件组合插槽 (Component Composition - 官方优先推荐)
+              <span>2️⃣</span> Composition：中间层本质是布局容器时很合适
             </div>
-            <p style={{ margin: "0 0 10px 0", fontSize: "13px", color: "var(--text-muted)" }}>
-              由顶层直接渲染 <code>&lt;DrillingAvatar user=&#123;user&#125; /&gt;</code> 并作为 slot 传给 Navbar。中间组件仅负责插槽摆放，对 <code>user</code> 完全解耦，随时可替换！
+            <p
+              style={{
+                margin: "0 0 10px 0",
+                fontSize: "13px",
+                color: "var(--text-muted)",
+              }}
+            >
+              顶层直接创建 <code>&lt;DrillingAvatar user=&#123;user&#125; /&gt;</code>，Navbar 只接收已经组装好的 JSX。这样缩短了数据 props 的传递链，但代价是父组件承担更多布局组合职责。
             </p>
             <CompositionNavbar rightSlot={<DrillingAvatar user={user} />} />
           </div>
 
-          {/* 方案 3 */}
-          <div style={{ border: "1px solid #bfdbfe", borderRadius: "var(--radius-md)", padding: "16px", backgroundColor: "#f8fafc" }}>
-            <div style={{ fontSize: "13.5px", fontWeight: "700", color: "#1d4ed8", display: "flex", alignItems: "center", gap: "6px", marginBottom: "10px" }}>
-              <span>🌐</span> 方案 3：Context API 全局广播
+          <div
+            style={{
+              border: "1px solid #bfdbfe",
+              borderRadius: "var(--radius-md)",
+              padding: "16px",
+              backgroundColor: "#f8fafc",
+            }}
+          >
+            <div
+              style={{
+                fontSize: "13.5px",
+                fontWeight: "700",
+                color: "#1d4ed8",
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                marginBottom: "10px",
+              }}
+            >
+              <span>3️⃣</span> Context：多个远距离消费者需要同一信息
             </div>
-            <p style={{ margin: "0 0 10px 0", fontSize: "13px", color: "var(--text-muted)" }}>
-              通过 <code>UserContext.Provider</code> 包裹顶层，深层 <code>Avatar</code> 直接使用 <code>useContext(UserContext)</code> 获取数据，中间链路 0 属性感知。
+            <p
+              style={{
+                margin: "0 0 10px 0",
+                fontSize: "13px",
+                color: "var(--text-muted)",
+              }}
+            >
+              Provider 让后代消费者直接读取当前值，中间组件不用声明对应 prop。它降低了重复透传，但也让依赖从组件调用处变得不那么显式，因此不应仅因为“传了两三层”就引入 Context。
             </p>
             <UserContext.Provider value={user}>
               <ContextNavbar />
@@ -222,16 +335,31 @@ export function PropDrillingDemo() {
         </div>
       </div>
 
-      {/* 核心设计决策心智 */}
-      <div className="demo-alert demo-alert-tip">
+      <div className="demo-section">
+        <div className="demo-section-header">
+          <h3 className="demo-section-title">
+            <span>🧠</span> 判断顺序：先问数据归谁，再问怎么传
+          </h3>
+        </div>
+        <div style={{ display: "grid", gap: "10px" }}>
+          <div className="demo-alert demo-alert-tip">
+            <strong>Props：</strong>消费关系局部、链路可读时继续使用。显式依赖通常更容易追踪和复用。
+          </div>
+          <div className="demo-alert demo-alert-tip">
+            <strong>Composition：</strong>如果中间组件只是 Layout / Shell，把 JSX 作为 <code>children</code> 或 slot 传入，通常可以减少无意义的数据 props。
+          </div>
+          <div className="demo-alert demo-alert-tip">
+            <strong>Context：</strong>当同一信息由树中多个、相距较远的组件消费，例如主题、当前账号、路由上下文或模块级共享状态，再考虑 Context。
+          </div>
+        </div>
+      </div>
+
+      <div className="demo-alert demo-alert-warning">
         <div className="demo-alert-title">
-          <span>💡</span> 架构决策指南：遇到 Prop Drilling 时如何抉择？
+          <span>⚠️</span> 真实项目边界
         </div>
         <div>
-          1. <strong>不要过早引入 Context</strong>：Context 会降低组件的独立复用性。如果只是 2~3 层的布局传递，<strong>优先使用组件组合（插槽 / Children）</strong>。
-        </div>
-        <div>
-          2. <strong>何时使用 Context</strong>：当数据是真正的“全局共享属性”（如当前登录用户信息、UI 主题 Theme、国际化语言 Locale、购物车全局清单），且组件树中很多不同深度的组件都需要同时读取时，才选用 Context。
+          不要按“层数”机械选方案。两三层 props 可能完全合理；十层透传也可能通过重新划分组件边界解决。先检查 State ownership、组件是否承担了过多职责、真正消费者有多少，再决定是否引入 Composition 或 Context。
         </div>
       </div>
     </div>
