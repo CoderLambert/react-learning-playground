@@ -1,7 +1,8 @@
 import { useState, useMemo, lazy, Suspense } from "react";
 import "./App.css";
 import { demos, CATEGORIES } from "./demos";
-import { ChapterCheckpoint, getCheckpointChapter } from "./components/ChapterCheckpoint";
+import { ChapterCheckpoint } from "./components/ChapterCheckpoint";
+import { getCheckpointChapter } from "./components/chapterCheckpointMap";
 
 const CodeViewer = lazy(() => import("./components/CodeViewer"));
 
@@ -68,21 +69,13 @@ export default function App() {
 
   return (
     <div className="app-shell">
-      {/* 移动端遮罩层 */}
       {isMobileOpen && (
         <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(15, 23, 42, 0.4)",
-            zIndex: 45,
-            backdropFilter: "blur(2px)",
-          }}
+          style={{ position: "fixed", inset: 0, background: "rgba(15, 23, 42, 0.4)", zIndex: 45, backdropFilter: "blur(2px)" }}
           onClick={() => setIsMobileOpen(false)}
         />
       )}
 
-      {/* 侧边导航栏 */}
       <aside className={`app-sidebar ${isMobileOpen ? "open" : ""}`}>
         <div className="sidebar-header">
           <div className="brand-wrapper">
@@ -94,55 +87,30 @@ export default function App() {
               </div>
             </div>
           </div>
-          <p className="brand-desc">
-            系统级进阶实践：组件组合、状态模式、Context 优化与副作用闭环
-          </p>
+          <p className="brand-desc">系统级进阶实践：组件组合、状态模式、Context 优化与副作用闭环</p>
 
           <div className="sidebar-search-box">
             <span className="sidebar-search-icon">🔍</span>
-            <input
-              type="text"
-              className="sidebar-search-input"
-              placeholder="搜索知识点或关键词..."
-              aria-label="搜索知识点或关键词"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+            <input type="text" className="sidebar-search-input" placeholder="搜索知识点或关键词..." aria-label="搜索知识点或关键词" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
           </div>
         </div>
 
         <nav className="sidebar-content">
-          <button
-            className={`all-overview-btn ${viewMode === "all" ? "active" : ""}`}
-            onClick={handleSelectAll}
-          >
-            <span>🌟</span>
-            <span>全部功能完整总览</span>
-            <span className="nav-item-badge">{demos.length} 篇</span>
+          <button className={`all-overview-btn ${viewMode === "all" ? "active" : ""}`} onClick={handleSelectAll}>
+            <span>🌟</span><span>全部功能完整总览</span><span className="nav-item-badge">{demos.length} 篇</span>
           </button>
 
           {categorizedDemos.map((group) => (
             <div key={group.id} className="category-group">
               <div className="category-group-header">
-                <span className="category-group-title">
-                  <span>{group.icon}</span>
-                  <span>{group.name}</span>
-                </span>
+                <span className="category-group-title"><span>{group.icon}</span><span>{group.name}</span></span>
                 <span className="category-count">{group.items.length}</span>
               </div>
-
               {group.items.map((item) => {
                 const isActive = viewMode === "focused" && activeTab === item.id;
                 return (
-                  <button
-                    key={item.id}
-                    className={`nav-item ${isActive ? "active" : ""}`}
-                    onClick={() => handleSelectDemo(item.id)}
-                    title={item.description}
-                  >
-                    <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {item.label}
-                    </span>
+                  <button key={item.id} className={`nav-item ${isActive ? "active" : ""}`} onClick={() => handleSelectDemo(item.id)} title={item.description}>
+                    <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.label}</span>
                     {item.badge && <span className="nav-item-badge">{item.badge}</span>}
                   </button>
                 );
@@ -151,76 +119,39 @@ export default function App() {
           ))}
 
           {categorizedDemos.length === 0 && (
-            <div style={{ textAlign: "center", padding: "32px 16px", color: "var(--text-subtle)", fontSize: "13px" }}>
-              未找到匹配 “{searchQuery}” 的内容
-            </div>
+            <div style={{ textAlign: "center", padding: "32px 16px", color: "var(--text-subtle)", fontSize: "13px" }}>未找到匹配 “{searchQuery}” 的内容</div>
           )}
         </nav>
 
-        <div className="sidebar-footer">
-          <span>共收录 {demos.length} 个核心模式</span>
-          <span>⚡ Vite + Oxlint</span>
-        </div>
+        <div className="sidebar-footer"><span>共收录 {demos.length} 个核心模式</span><span>⚡ Vite + Oxlint</span></div>
       </aside>
 
-      {/* 主工作舞台 */}
       <div className="app-main">
-        {/* 顶部操作导航条 */}
         <header className="top-bar">
           <div className="top-bar-left">
-            <button
-              className="mobile-menu-toggle"
-              onClick={() => setIsMobileOpen((prev) => !prev)}
-              aria-label="打开侧边导航"
-            >
-              ☰
-            </button>
+            <button className="mobile-menu-toggle" onClick={() => setIsMobileOpen((prev) => !prev)} aria-label="打开侧边导航">☰</button>
             <div className="breadcrumb-nav">
-              <span className="breadcrumb-category">
-                {viewMode === "all" ? "总览模式" : currentCategory?.name || "核心实验"}
-              </span>
+              <span className="breadcrumb-category">{viewMode === "all" ? "总览模式" : currentCategory?.name || "核心实验"}</span>
               <span className="breadcrumb-sep">/</span>
-              <span className="breadcrumb-current">
-                {viewMode === "all" ? "全部知识点看板" : currentDemo?.label}
-              </span>
+              <span className="breadcrumb-current">{viewMode === "all" ? "全部知识点看板" : currentDemo?.label}</span>
             </div>
           </div>
 
           <div className="top-bar-right">
             <div className="view-mode-pill">
-              <button
-                className={`view-mode-btn ${viewMode === "focused" ? "active" : ""}`}
-                onClick={() => setViewMode("focused")}
-              >
-                单篇聚焦
-              </button>
-              <button
-                className={`view-mode-btn ${viewMode === "all" ? "active" : ""}`}
-                onClick={() => setViewMode("all")}
-              >
-                连续阅读
-              </button>
+              <button className={`view-mode-btn ${viewMode === "focused" ? "active" : ""}`} onClick={() => setViewMode("focused")}>单篇聚焦</button>
+              <button className={`view-mode-btn ${viewMode === "all" ? "active" : ""}`} onClick={() => setViewMode("all")}>连续阅读</button>
             </div>
           </div>
         </header>
 
-        {/* 页面主内容 */}
         <main className="app-content">
           {viewMode === "focused" ? (
             currentDemo ? (
               <div key={currentDemo.id} className="demo-page">
                 <currentDemo.Component />
-                <Suspense
-                  fallback={
-                    <div className="code-accordion-wrapper" style={{ padding: "12px 18px", color: "var(--text-subtle)", fontSize: "12.5px" }}>
-                      ⚡ 载入代码视图...
-                    </div>
-                  }
-                >
-                  <CodeViewer
-                    files={currentDemo.files}
-                    fileName={`${currentDemo.id}.jsx`}
-                  />
+                <Suspense fallback={<div className="code-accordion-wrapper" style={{ padding: "12px 18px", color: "var(--text-subtle)", fontSize: "12.5px" }}>⚡ 载入代码视图...</div>}>
+                  <CodeViewer files={currentDemo.files} fileName={`${currentDemo.id}.jsx`} />
                 </Suspense>
                 {currentCheckpointChapter && <ChapterCheckpoint chapter={currentCheckpointChapter} />}
               </div>
@@ -234,23 +165,12 @@ export default function App() {
                     {index > 0 && <hr className="demo-divider" />}
                     <div style={{ marginBottom: "16px", display: "flex", alignItems: "center", gap: "10px" }}>
                       <span className="badge badge-blue">案例 {index + 1}</span>
-                      <h3 style={{ margin: 0, fontSize: "16px", fontWeight: "700", color: "var(--text-main)" }}>
-                        {demo.label}
-                      </h3>
+                      <h3 style={{ margin: 0, fontSize: "16px", fontWeight: "700", color: "var(--text-main)" }}>{demo.label}</h3>
                       <span style={{ fontSize: "12px", color: "var(--text-subtle)" }}>#{demo.id}</span>
                     </div>
                     <demo.Component />
-                    <Suspense
-                      fallback={
-                        <div className="code-accordion-wrapper" style={{ padding: "12px 18px", color: "var(--text-subtle)", fontSize: "12.5px" }}>
-                          ⚡ 载入代码视图...
-                        </div>
-                      }
-                    >
-                      <CodeViewer
-                        files={demo.files}
-                        fileName={`${demo.id}.jsx`}
-                      />
+                    <Suspense fallback={<div className="code-accordion-wrapper" style={{ padding: "12px 18px", color: "var(--text-subtle)", fontSize: "12.5px" }}>⚡ 载入代码视图...</div>}>
+                      <CodeViewer files={demo.files} fileName={`${demo.id}.jsx`} />
                     </Suspense>
                     {checkpointChapter && <ChapterCheckpoint chapter={checkpointChapter} />}
                   </div>

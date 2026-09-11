@@ -6,7 +6,7 @@ Branch: `feat/chapter-review-exercises`
 
 ## Design
 
-The review layer is implemented with one reusable `ChapterCheckpoint` component and a data-driven chapter map. It does not add a new navigation category or duplicate twelve large Demo components.
+The review layer uses a reusable `ChapterCheckpoint` component plus a small chapter-end mapping utility. It does not add a new navigation category or duplicate twelve large Demo components.
 
 A checkpoint is rendered immediately after the existing CodeViewer for the final Demo of each chapter. Continuous-reading mode renders the same checkpoint at the corresponding chapter boundary.
 
@@ -33,24 +33,27 @@ Total: 65 questions, 36 exercises.
 
 ## Files
 
-- `src/components/ChapterCheckpoint.jsx` — chapter data, chapter-end mapping, reusable UI.
+- `src/components/ChapterCheckpoint.jsx` — chapter content and reusable UI.
+- `src/components/chapterCheckpointMap.js` — maps existing chapter-end Demo IDs to chapters.
 - `src/App.jsx` — injects checkpoints in focused and continuous-reading modes.
 - `tests/e2e/chapter-checkpoints.spec.js` — verifies all twelve chapter boundaries and continuous mode.
 
-`src/demos/index.js` does not require changes because no new Demo/category is introduced. Existing navigation count, category structure, and `?raw` registrations remain intact.
+`src/demos/index.js` is unchanged because no new Demo/category is introduced. Existing navigation count, category structure, and `?raw` registrations remain intact.
 
 ## Validation
 
-Validation must be recorded from actual execution after this branch is pushed/opened as a PR:
+PR-triggered `React Learning Verify` run `34566975858` on commit `d1f5458e601c34749340f9d6815f872606d121b4` completed successfully before the lint-cleanup follow-up commit:
 
-- `npm ci`: PENDING
-- `npm run lint`: PENDING
-- `npm run build`: PENDING
-- `npm run test:e2e`: PENDING
+- `npm ci`: **PASS** — 122 packages installed; 0 vulnerabilities.
+- `npm run lint`: **PASS** — 0 errors. The first run reported 23 warnings, including one newly introduced Fast Refresh warning in `ChapterCheckpoint.jsx`; that new warning is removed by the follow-up split into `chapterCheckpointMap.js`.
+- `npm run build`: **PASS** — Vite production build completed.
+- `npm run test:e2e`: **PASS** — 12 Chromium tests passed in 22.8s, including both new checkpoint tests.
+- production preview smoke: **PASS** — base-path preview became healthy and returned the expected app root.
 
-The PR-triggered `React Learning Verify` workflow is the authoritative CI evidence for this branch. This document must be updated if validation fails or exposes additional debt.
+The follow-up commit must receive the same PR CI gate before merge; no PASS is inferred for the new head until that workflow completes.
 
 ## Manual debt
 
-- The exercises intentionally have no answer key.
-- Content-review branches may later refine wording; this feature is structurally isolated so those edits can be reconciled without changing the checkpoint architecture.
+- Exercises intentionally have no answer key.
+- Existing repository lint warnings outside this feature remain separate cleanup debt; this feature should add no new warning after the follow-up split.
+- Content-review branches may later refine wording; this feature is structurally isolated so those edits can be reconciled without changing checkpoint architecture.
