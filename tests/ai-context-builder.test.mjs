@@ -64,6 +64,14 @@ test("buildAiContext supports explicit multi-source input and active file", () =
 
   assert.deepEqual(context.sources.map((source) => source.name), ["Demo.jsx", "helper.js"]);
   assert.equal(context.activeSourceFile, "helper.js");
+
+  const fallback = buildAiContext({
+    learningUnit,
+    rawNote: "# Note",
+    sources,
+    activeSourceFile: "missing.js",
+  });
+  assert.equal(fallback.activeSourceFile, "Demo.jsx");
 });
 
 test("missing note and source content are explicit and non-fatal", () => {
