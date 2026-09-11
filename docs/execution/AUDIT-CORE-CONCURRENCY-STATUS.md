@@ -94,13 +94,16 @@ The following high-risk areas were checked and their current core claims were re
 
 ## Validation
 
-At document creation time the branch had not yet been submitted to the pull-request CI gate, so command results are intentionally not pre-labeled PASS. The PR-triggered `React Learning Verify` workflow is the execution authority for:
+PR #15 triggered `React Learning Verify` run `34566777339` on audit head `b7451d654a30ad70a6781111f78c6eaddbd55232`.
 
-- `npm ci`
-- `npm run lint`
-- `npm run build`
-- Playwright Chromium installation
-- `npm run test:e2e`
-- production-preview HTTP smoke
+Executed by GitHub Actions:
 
-Exact CI run evidence should be recorded after the pull-request workflow executes. No local command PASS is claimed because this automation environment does not provide an executable repository checkout.
+- `npm ci`: **PASS**
+- `npm run lint`: **PASS**
+- `npm run build`: **PASS**
+- Playwright Chromium installation: **PASS**
+- `npm run test:e2e`: **PASS**
+- production-preview HTTP smoke: **PASS**
+- workflow job `verify`: **PASS**
+
+No local command PASS is claimed; the evidence above comes from the actual pull-request CI execution. This status-only follow-up commit does not change runtime source, but the PR should still remain unmerged until GitHub finishes the workflow triggered for the final PR head.
