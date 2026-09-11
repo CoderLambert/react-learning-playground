@@ -3,6 +3,7 @@ import test from "node:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import {
+  buildSourceCitationPreview,
   extractSourceCitations,
   formatSourceCitationLines,
   isSourceCitationUrl,
@@ -27,6 +28,14 @@ test("serializes and parses a single-line source citation", () => {
     fileName: "ComponentJsxPureRenderDemo.jsx",
     startLine: 120,
     endLine: 120,
+  });
+});
+
+test("accepts an optional trailing slash after the source line fragment", () => {
+  assert.deepEqual(parseSourceCitationUrl("source://ComponentJsxPureRenderDemo.jsx#L146/"), {
+    fileName: "ComponentJsxPureRenderDemo.jsx",
+    startLine: 146,
+    endLine: 146,
   });
 });
 
@@ -66,6 +75,15 @@ test("rejects malformed protocol URLs and arbitrary external URLs", () => {
   assert.equal(isSourceCitationUrl("javascript://File.jsx#L1"), false);
 });
 
+test("builds a line-numbered hover preview around the cited range", () => {
+  const preview = buildSourceCitationPreview(
+    { fileName: "Demo.jsx", startLine: 3, endLine: 4 },
+    [{ name: "Demo.jsx", code: ["one", "two", "three", "four", "five", "six"].join("\n") }],
+  );
+
+  assert.equal(preview, "2 | two\n3 | three\n4 | four\n5 | five");
+});
+
 test("parses conservative legacy bracket citations from mixed prose", () => {
   const text = "见 [ComponentJsxPureRenderDemo.jsx:L120]，以及 [src/hooks/useThing.ts:L9-L12]。忽略 [chapter:L3] 和 [https://x.dev/a.js:L1]。";
   const citations = parseBracketSourceCitations(text);
@@ -101,22 +119,39 @@ test("preserves duplicate occurrences by default and can deduplicate semanticall
   assert.equal(extractSourceCitations(text, { dedupe: true }).length, 1);
 });
 
-test("SourceCitation renders compact accessible file and range UI with preview", () => {
+test("SourceCitation renders preview-only source references without navigation", () => {
   const html = renderToStaticMarkup(
     createElement(SourceCitation, {
       fileName: "ComponentJsxPureRenderDemo.jsx",
       startLine: 44,
       endLine: 46,
+      label: "ComponentJsxPureRenderDemo.jsx:L44-L46",
       preview: ["44 const value = compute();", "45 return value;"],
     }),
   );
 
   assert.match(html, /ai-source-citation/);
+  assert.match(html, /is-preview-only/);
   assert.match(html, /ComponentJsxPureRenderDemo\.jsx/);
   assert.match(html, /L44–L46/);
-  assert.match(html, /aria-label="打开源码 ComponentJsxPureRenderDemo\.jsx L44–L46"/);
+  assert.match(html, /aria-label="ComponentJsxPureRenderDemo\.jsx，源码片段 ComponentJsxPureRenderDemo\.jsx L44–L46"/);
+  assert.doesNotMatch(html, /<button/);
   assert.match(html, /role="tooltip"/);
   assert.match(html, /44 const value = compute\(\);/);
+});
+
+test("SourceCitation remains actionable when an open handler is supplied", () => {
+  const html = renderToStaticMarkup(
+    createElement(SourceCitation, {
+      fileName: "Demo.jsx",
+      startLine: 7,
+      onOpen() {},
+    }),
+  );
+
+  assert.match(html, /<button/);
+  assert.match(html, /is-actionable/);
+  assert.match(html, /aria-label="Demo\.jsx，打开源码 Demo\.jsx L7"/);
 });
 
 test("SourceCitation open payload is stable and contains only navigation fields", () => {

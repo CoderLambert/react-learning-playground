@@ -1,4 +1,4 @@
-export const AI_ASSISTANT_MAX_OUTPUT_CHARS = 6_000;
+export const AI_ASSISTANT_MAX_OUTPUT_CHARS = Number.POSITIVE_INFINITY;
 
 function toUnicodeCharacters(value) {
   return Array.from(typeof value === "string" ? value : String(value ?? ""));
@@ -26,8 +26,10 @@ export function appendWithinOutputLimit(
   return {
     content: `${current}${acceptedText}`,
     acceptedText,
-    characterCount: Math.min(limit, currentCharacters.length + acceptedCharacters.length),
-    outputLimitExceeded: incomingCharacters.length > remaining,
+    characterCount: Number.isFinite(limit)
+      ? Math.min(limit, currentCharacters.length + acceptedCharacters.length)
+      : currentCharacters.length + acceptedCharacters.length,
+    outputLimitExceeded: Number.isFinite(limit) && incomingCharacters.length > remaining,
   };
 }
 
@@ -52,9 +54,11 @@ export function createUnicodeOutputLimiter({
       const remaining = Math.max(0, limit - characterCount);
       const acceptedText = incomingCharacters.slice(0, remaining).join("");
       content += acceptedText;
-      characterCount += Math.min(remaining, incomingCharacters.length);
+      characterCount += Number.isFinite(limit)
+        ? Math.min(remaining, incomingCharacters.length)
+        : incomingCharacters.length;
 
-      if (incomingCharacters.length > remaining) {
+      if (Number.isFinite(limit) && incomingCharacters.length > remaining) {
         outputLimitExceeded = true;
         onOutputLimitExceeded?.();
       }

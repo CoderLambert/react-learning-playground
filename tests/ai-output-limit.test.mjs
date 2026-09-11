@@ -13,29 +13,33 @@ test("output character counting uses Unicode code points instead of UTF-16 code 
   assert.equal(countUnicodeCharacters("A😀中"), 3);
 });
 
-test("streaming output keeps exactly the first 6000 Unicode characters", () => {
-  const first = appendWithinOutputLimit("", "中".repeat(AI_ASSISTANT_MAX_OUTPUT_CHARS - 1));
-  assert.equal(first.characterCount, AI_ASSISTANT_MAX_OUTPUT_CHARS - 1);
+test("assistant output is unlimited by default", () => {
+  assert.equal(AI_ASSISTANT_MAX_OUTPUT_CHARS, Number.POSITIVE_INFINITY);
+
+  const chunk = "中😀".repeat(4_000);
+  const result = appendWithinOutputLimit("", chunk);
+  assert.equal(result.content, chunk);
+  assert.equal(result.acceptedText, chunk);
+  assert.equal(result.characterCount, 8_000);
+  assert.equal(result.outputLimitExceeded, false);
+});
+
+test("streaming limiter does not stop long answers when no explicit cap is configured", () => {
+  let stops = 0;
+  const limiter = createUnicodeOutputLimiter({
+    onOutputLimitExceeded: () => { stops += 1; },
+  });
+
+  const first = limiter.push("🙂".repeat(6_001));
+  const second = limiter.push("继续输出");
+
   assert.equal(first.outputLimitExceeded, false);
-
-  const final = appendWithinOutputLimit(first.content, "😀尾部不应保留");
-  assert.equal(countUnicodeCharacters(final.content), AI_ASSISTANT_MAX_OUTPUT_CHARS);
-  assert.equal(final.content.endsWith("😀"), true);
-  assert.equal(final.acceptedText, "😀");
-  assert.equal(final.outputLimitExceeded, true);
+  assert.equal(second.outputLimitExceeded, false);
+  assert.equal(second.content.endsWith("继续输出"), true);
+  assert.equal(stops, 0);
 });
 
-test("reaching exactly 6000 characters does not claim overflow until another delta arrives", () => {
-  const exact = appendWithinOutputLimit("中".repeat(AI_ASSISTANT_MAX_OUTPUT_CHARS - 1), "😀");
-  assert.equal(exact.characterCount, AI_ASSISTANT_MAX_OUTPUT_CHARS);
-  assert.equal(exact.outputLimitExceeded, false);
-
-  const overflow = appendWithinOutputLimit(exact.content, "x");
-  assert.equal(overflow.acceptedText, "");
-  assert.equal(overflow.outputLimitExceeded, true);
-});
-
-test("streaming limiter fires its upstream stop hook once and ignores buffered late deltas", () => {
+test("an explicit finite limiter still caps output for callers that opt in", () => {
   let stops = 0;
   const limiter = createUnicodeOutputLimiter({
     maxCharacters: 3,

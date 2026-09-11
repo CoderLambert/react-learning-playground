@@ -1,8 +1,17 @@
+.ai-assistant-source-citations {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.42rem;
+  margin-top: 0.8rem;
+  padding-top: 0.68rem;
+  border-top: 1px solid color-mix(in srgb, currentColor 10%, transparent);
+}
+
 .ai-source-citation-wrap {
   position: relative;
   display: inline-flex;
   max-width: 100%;
-  vertical-align: text-bottom;
+  vertical-align: middle;
 }
 
 .ai-source-citation {
@@ -10,25 +19,38 @@
   min-width: 0;
   max-width: 100%;
   align-items: center;
-  gap: 0.32rem;
-  padding: 0.18rem 0.42rem;
-  border: 1px solid color-mix(in srgb, currentColor 20%, transparent);
-  border-radius: 0.42rem;
-  background: color-mix(in srgb, currentColor 5%, transparent);
+  gap: 0.28rem;
+  min-height: 1.75rem;
+  padding: 0.22rem 0.48rem;
+  border: 1px solid color-mix(in srgb, var(--color-primary, currentColor) 22%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-primary, currentColor) 6%, transparent);
   color: inherit;
   font: inherit;
-  font-size: 0.86em;
-  line-height: 1.35;
+  font-size: 0.8rem;
+  line-height: 1.25;
+  text-decoration: none;
+  transition: background 120ms ease, border-color 120ms ease, box-shadow 120ms ease, transform 120ms ease;
+}
+
+.ai-source-citation.is-actionable {
   cursor: pointer;
 }
 
-.ai-source-citation:hover:not(:disabled) {
-  background: color-mix(in srgb, currentColor 9%, transparent);
-  border-color: color-mix(in srgb, currentColor 32%, transparent);
+.ai-source-citation.is-actionable:hover,
+.ai-source-citation.is-preview-only:hover,
+.ai-source-citation:focus-visible {
+  border-color: color-mix(in srgb, var(--color-primary, currentColor) 44%, transparent);
+  background: color-mix(in srgb, var(--color-primary, currentColor) 11%, transparent);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 8%);
+}
+
+.ai-source-citation.is-actionable:hover {
+  transform: translateY(-1px);
 }
 
 .ai-source-citation:focus-visible {
-  outline: 2px solid currentColor;
+  outline: 2px solid color-mix(in srgb, var(--color-primary, currentColor) 62%, transparent);
   outline-offset: 2px;
 }
 
@@ -37,49 +59,68 @@
   opacity: 0.55;
 }
 
+.ai-source-citation.is-inline {
+  min-height: 1.45rem;
+  margin: 0 0.08rem;
+  padding: 0.08rem 0.36rem;
+  border-radius: 0.42rem;
+  font-size: 0.9em;
+  vertical-align: baseline;
+}
+
+.ai-source-citation.is-inline .ai-source-citation-icon {
+  display: none;
+}
+
 .ai-source-citation-icon {
   display: inline-flex;
   flex: 0 0 auto;
+  opacity: 0.72;
 }
 
 .ai-source-citation-file {
   min-width: 0;
+  max-width: min(15rem, 48vw);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+  font-weight: 600;
 }
 
 .ai-source-citation-lines {
   flex: 0 0 auto;
-  padding-inline: 0.25rem;
-  border-radius: 0.28rem;
+  padding-inline: 0.3rem;
+  border-radius: 999px;
   background: color-mix(in srgb, currentColor 8%, transparent);
+  color: color-mix(in srgb, currentColor 82%, transparent);
   font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
-  font-size: 0.92em;
+  font-size: 0.88em;
+  font-weight: 600;
   white-space: nowrap;
 }
 
 .ai-source-citation-preview {
   position: absolute;
-  z-index: 20;
+  z-index: 80;
   inset-inline-start: 0;
-  inset-block-start: calc(100% + 0.4rem);
+  inset-block-start: calc(100% + 0.48rem);
   width: max-content;
-  max-width: min(32rem, 80vw);
-  max-height: 12rem;
+  min-width: min(22rem, 76vw);
+  max-width: min(42rem, 86vw);
+  max-height: 18rem;
   overflow: auto;
-  padding: 0.55rem 0.65rem;
-  border: 1px solid color-mix(in srgb, currentColor 18%, transparent);
-  border-radius: 0.5rem;
+  padding: 0.72rem 0.82rem;
+  border: 1px solid color-mix(in srgb, currentColor 16%, transparent);
+  border-radius: 0.65rem;
   background: var(--surface, Canvas);
   color: var(--text, CanvasText);
-  box-shadow: 0 0.55rem 1.4rem rgb(0 0 0 / 14%);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 18%);
   font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
-  font-size: 0.78rem;
-  line-height: 1.5;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
+  font-size: 0.76rem;
+  line-height: 1.55;
+  white-space: pre;
+  text-align: start;
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
@@ -94,7 +135,19 @@
   transform: translateY(0);
 }
 
+@media (max-width: 720px) {
+  .ai-source-citation-file {
+    max-width: 9rem;
+  }
+
+  .ai-source-citation-preview {
+    min-width: min(18rem, 82vw);
+    max-width: 82vw;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .ai-source-citation,
   .ai-source-citation-preview {
     transition: none;
   }
