@@ -21,6 +21,10 @@ import { FormDataModelingDemo } from "./FormDataModelingDemo";
 import { FormActionDemo } from "./FormActionDemo";
 import { ActionStateFormStatusDemo } from "./ActionStateFormStatusDemo";
 import { OptimisticUpdateDemo } from "./OptimisticUpdateDemo";
+import { LazySuspenseDemo } from "./LazySuspenseDemo";
+import { SuspenseBoundaryDemo } from "./SuspenseBoundaryDemo";
+import { ErrorBoundaryUseDemo } from "./ErrorBoundaryUseDemo";
+import { TransitionDeferredDemo } from "./TransitionDeferredDemo";
 import { RenderVsDomUpdateDemo } from "./RenderVsDomUpdateDemo";
 import { ReferenceEqualityDemo } from "./ReferenceEqualityDemo";
 import { ReactMemoDemo } from "./ReactMemoDemo";
@@ -32,6 +36,8 @@ import { UrlStateDemo } from "./UrlStateDemo";
 import { NestedRoutesDemo } from "./NestedRoutesDemo";
 import { NavigationBoundaryDemo } from "./NavigationBoundaryDemo";
 import { RouteDataBoundaryDemo } from "./RouteDataBoundaryDemo";
+import { AccessibilityBasicsDemo } from "./AccessibilityBasicsDemo";
+import { AccessibleModalDemo } from "./AccessibleModalDemo";
 
 // 源码原始字符串（Vite ?raw 原生支持）
 import componentJsxPureRenderRaw from "./ComponentJsxPureRenderDemo.jsx?raw";
@@ -63,6 +69,11 @@ import formDataModelingRaw from "./FormDataModelingDemo.jsx?raw";
 import formActionRaw from "./FormActionDemo.jsx?raw";
 import actionStateFormStatusRaw from "./ActionStateFormStatusDemo.jsx?raw";
 import optimisticUpdateRaw from "./OptimisticUpdateDemo.jsx?raw";
+import lazySuspenseRaw from "./LazySuspenseDemo.jsx?raw";
+import lazyLessonPanelRaw from "../components/LazyLessonPanel.jsx?raw";
+import suspenseBoundaryRaw from "./SuspenseBoundaryDemo.jsx?raw";
+import errorBoundaryUseRaw from "./ErrorBoundaryUseDemo.jsx?raw";
+import transitionDeferredRaw from "./TransitionDeferredDemo.jsx?raw";
 import renderVsDomUpdateRaw from "./RenderVsDomUpdateDemo.jsx?raw";
 import referenceEqualityRaw from "./ReferenceEqualityDemo.jsx?raw";
 import reactMemoRaw from "./ReactMemoDemo.jsx?raw";
@@ -74,6 +85,8 @@ import urlStateRaw from "./UrlStateDemo.jsx?raw";
 import nestedRoutesRaw from "./NestedRoutesDemo.jsx?raw";
 import navigationBoundaryRaw from "./NavigationBoundaryDemo.jsx?raw";
 import routeDataBoundaryRaw from "./RouteDataBoundaryDemo.jsx?raw";
+import accessibilityBasicsRaw from "./AccessibilityBasicsDemo.jsx?raw";
+import accessibleModalRaw from "./AccessibleModalDemo.jsx?raw";
 
 // @demo-imports
 
@@ -82,8 +95,10 @@ export const CATEGORIES = [
   { id: "state", name: "状态管理与演进", icon: "⚡" },
   { id: "effects", name: "Hooks 与副作用深度", icon: "🎣" },
   { id: "forms", name: "Forms 与 React 19 Actions", icon: "📝" },
+  { id: "async-ui", name: "Suspense 与并发 UI", icon: "⏳" },
   { id: "performance", name: "性能模型与优化", icon: "🚀" },
   { id: "routing", name: "Router 与页面状态", icon: "🧭" },
+  { id: "accessibility", name: "Accessibility", icon: "♿" },
 ];
 
 export const demos = [
@@ -110,6 +125,10 @@ export const demos = [
   { id: "form-action", label: "React 19 form action / formAction", category: "forms", badge: "React 19", description: "函数 action、按钮级 formAction、FormData 与异步 Action / Transition 提交模型", Component: FormActionDemo, files: [{ name: "FormActionDemo.jsx", code: formActionRaw }] },
   { id: "action-state-form-status", label: "useActionState + useFormStatus", category: "forms", badge: "状态", description: "Action 结果状态、previousState、isPending 与表单后代组件读取 pending/data", Component: ActionStateFormStatusDemo, files: [{ name: "ActionStateFormStatusDemo.jsx", code: actionStateFormStatusRaw }] },
   { id: "optimistic-update", label: "useOptimistic 成功收敛与失败回退", category: "forms", badge: "Optimistic", description: "Action 期间的临时 optimistic state、服务器成功确认与失败自动回退", Component: OptimisticUpdateDemo, files: [{ name: "OptimisticUpdateDemo.jsx", code: optimisticUpdateRaw }] },
+  { id: "lazy-suspense", label: "lazy + Suspense 与 Code Splitting", category: "async-ui", badge: "加载", description: "观察首次 lazy module 加载、Suspense fallback 与模块缓存边界", Component: LazySuspenseDemo, files: [{ name: "LazySuspenseDemo.jsx", code: lazySuspenseRaw }, { name: "LazyLessonPanel.jsx", code: lazyLessonPanelRaw }] },
+  { id: "suspense-boundary", label: "Suspense Boundary 与 Nested Reveal", category: "async-ui", badge: "Boundary", description: "对比单一与嵌套 Suspense boundary，观察不同资源准备速度如何影响 reveal sequence", Component: SuspenseBoundaryDemo, files: [{ name: "SuspenseBoundaryDemo.jsx", code: suspenseBoundaryRaw }] },
+  { id: "error-boundary-use", label: "Error Boundary + React 19 use", category: "async-ui", badge: "React 19", description: "观察 Promise pending → Suspense、rejected → Error Boundary，并理解稳定 Promise/缓存要求", Component: ErrorBoundaryUseDemo, files: [{ name: "ErrorBoundaryUseDemo.jsx", code: errorBoundaryUseRaw }] },
+  { id: "transition-deferred", label: "Transition Pending 与 Deferred UI", category: "async-ui", badge: "并发", description: "观察 urgent update、isPending、后台 render、deferred stale UI，并区分 useDeferredValue 与 debounce", Component: TransitionDeferredDemo, files: [{ name: "TransitionDeferredDemo.jsx", code: transitionDeferredRaw }] },
   { id: "render-vs-dom-update", label: "Re-render ≠ DOM Update", category: "performance", badge: "核心", description: "用 MutationObserver 对照 Render 与 Commit，建立先测量再优化的性能心智模型", Component: RenderVsDomUpdateDemo, files: [{ name: "RenderVsDomUpdateDemo.jsx", code: renderVsDomUpdateRaw }] },
   { id: "reference-equality", label: "Reference Equality 引用身份", category: "performance", badge: "基础", description: "用 Object.is 对比对象、数组、函数跨 Render 的 identity，理解 memo 与 Hook dependencies 的基础", Component: ReferenceEqualityDemo, files: [{ name: "ReferenceEqualityDemo.jsx", code: referenceEqualityRaw }] },
   { id: "react-memo", label: "React.memo 命中与失效", category: "performance", badge: "优化", description: "对比 primitive、新对象与稳定对象 props，观察 memo 的命中条件和 identity 陷阱", Component: ReactMemoDemo, files: [{ name: "ReactMemoDemo.jsx", code: reactMemoRaw }] },
@@ -121,5 +140,7 @@ export const demos = [
   { id: "nested-routes", label: "Nested Routes 与 Outlet", category: "routing", badge: "架构", description: "可视化父子 Route 匹配链、Outlet 插槽、Index Route 与无 path Layout Route 的职责边界", Component: NestedRoutesDemo, files: [{ name: "NestedRoutesDemo.jsx", code: nestedRoutesRaw }] },
   { id: "navigation-boundary", label: "Navigation 与 Route Boundary", category: "routing", badge: "导航", description: "区分声明式链接与程序式导航，可视化 history push/replace/back/forward 与 Not Found 边界", Component: NavigationBoundaryDemo, files: [{ name: "NavigationBoundaryDemo.jsx", code: navigationBoundaryRaw }] },
   { id: "route-data-boundary", label: "Route Loader 数据边界", category: "routing", badge: "数据", description: "可视化 route match → loader(params) → pending → loader data / nearest error boundary 的页面数据流程", Component: RouteDataBoundaryDemo, files: [{ name: "RouteDataBoundaryDemo.jsx", code: routeDataBoundaryRaw }] },
+  { id: "accessibility-basics", label: "语义、Label 与可访问状态反馈", category: "accessibility", badge: "基础", description: "使用原生语义、accessible name、键盘操作与 live region 构建可感知的 loading/error/success UI", Component: AccessibilityBasicsDemo, files: [{ name: "AccessibilityBasicsDemo.jsx", code: accessibilityBasicsRaw }] },
+  { id: "accessible-modal", label: "Modal Focus 与键盘边界", category: "accessibility", badge: "Focus", description: "可视化 dialog accessible name、初始焦点、Tab trap、Escape 与关闭后的焦点恢复", Component: AccessibleModalDemo, files: [{ name: "AccessibleModalDemo.jsx", code: accessibleModalRaw }] },
   // @demo-entries
 ];
