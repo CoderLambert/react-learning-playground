@@ -7,6 +7,7 @@ This document records the browser-first AI workspace integration built on `integ
 - Original integration base: `6ed8b88b3d46ddae1195f474466a3fd979645b48`
 - Fully merged module base before cross-module wiring: `135a29de56cd14bfc201a84b7a84883d5703eb91`
 - Integration branch: `feat/browser-ai-workspace-integration`
+- Validated implementation head before this evidence-only documentation commit: `5552b153e427af202fd69b1748f9ab76c3ac17eb`
 - Module PRs: #56 context budgeting/compaction, #57 source citations, #59 conversation persistence, #60 code-block stability
 
 ## Architecture
@@ -34,7 +35,7 @@ Stores:
 
 `ConversationRepository` owns create/list/rename/archive/delete, message durability, context-snapshot deduplication, interrupted-stream recovery, and durable compaction checkpoints. The UI exposes a compact `<details>` conversation control rather than permanently consuming another inspector column, which also keeps the narrow/mobile inspector usable.
 
-Streaming writes are coalesced by `StreamingMessagePersister`; final completion/stop/error writes force durable state. A reload hydrates the latest conversation for the current learning unit. Conversations are scoped by `learningUnitId`, preventing a previous Demo's transcript from becoming the next Demo's model history.
+Streaming writes are coalesced by `StreamingMessagePersister`; final completion/stop/error writes force durable state. Assistant-record creation is single-flight per request, persistence operations are serialized, and finalization waits for the queue plus final persister flush before conversation refresh. This prevents duplicate assistant rows when START/DELTA/DONE arrive before the first IndexedDB append resolves. A reload hydrates the latest conversation for the current learning unit. Conversations are scoped by `learningUnitId`, preventing a previous Demo's transcript from becoming the next Demo's model history.
 
 ## Source citation protocol
 
@@ -94,18 +95,18 @@ Persisted metadata is recursively sanitized for secret-shaped keys. Context snap
 
 ## Validation
 
-Required exact-head validation for the final integration branch:
+Exact-head validation passed on implementation head `5552b153e427af202fd69b1748f9ab76c3ac17eb`:
 
-- `npm ci`
-- `npm run test:ai`
-- `npm run lint`
-- `npm run build`
-- `CI=true npm run test:e2e`
-- production preview HTTP smoke under `/react-learning-playground/`
+- React Learning Verify — run `34620895789` — PASS
+- Workbench State URL Verify — run `34620895904` — PASS
+- Workbench Integration Verify — run `34620895773` — PASS
+  - Build — PASS
+  - Browser E2E — PASS (27/27 Chromium tests)
+  - Preview HTTP smoke — PASS under `/react-learning-playground/`
 
-Additional integrated browser coverage includes source citation jump/highlight, Context Meter visibility, persisted conversation reload, existing streaming/Stop/New Chat behavior, and the inherited Markstream code-block regression coverage.
+The validation workflow covers root dependency installation/build plus focused AI/storage/context coverage, lint/build gates, Chromium E2E, and production preview smoke. Additional integrated browser coverage includes source citation jump/highlight, Context Meter visibility, persisted conversation reload with exactly one user and one assistant record, existing streaming/Stop/New Chat behavior, and the inherited Markstream code-block regression coverage.
 
-Validation run IDs and final integration SHA are filled from exact-head GitHub Actions evidence before merge.
+Because this status-file update is evidence-only, its resulting commit must also receive exact-head CI before #67 is merged.
 
 ## Known limitations / manual debt
 
