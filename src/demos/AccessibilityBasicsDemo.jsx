@@ -41,7 +41,7 @@ export function AccessibilityBasicsDemo() {
           <p className="demo-section-desc">只用键盘 Tab / Shift+Tab / Enter 完成操作，并观察 loading / error / success 都通过 live region 暴露。</p>
         </div>
 
-        <form onSubmit={submit} style={{ display: "grid", gap: 12, maxWidth: 520 }}>
+        <form noValidate onSubmit={submit} style={{ display: "grid", gap: 12, maxWidth: 520 }}>
           <label htmlFor="a11y-email">邮箱地址</label>
           <input
             id="a11y-email"

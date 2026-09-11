@@ -187,7 +187,7 @@
 
 .nav-item.active .nav-item-badge {
   background-color: var(--color-primary-border);
-  color: var(--color-primary);
+  color: var(--color-primary-hover);
 }
 
 .all-overview-btn {
@@ -597,7 +597,7 @@
 
 .badge-green {
   background-color: var(--color-success-light);
-  color: var(--color-success);
+  color: var(--color-success-text);
   border: 1px solid var(--color-success-border);
 }
 
@@ -775,7 +775,6 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  cursor: pointer;
   user-select: none;
   transition: background-color var(--transition-fast);
 }
@@ -793,6 +792,29 @@
   display: flex;
   align-items: center;
   gap: 10px;
+  min-width: 0;
+}
+
+.code-accordion-toggle {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.code-accordion-toggle:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 3px;
+  border-radius: var(--radius-xs);
 }
 
 .code-accordion-arrow {
@@ -903,4 +925,3 @@
   font-size: 12.5px;
   line-height: 1.65;
 }
-

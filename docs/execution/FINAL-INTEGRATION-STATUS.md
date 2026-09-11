@@ -1,6 +1,6 @@
 # Final React Learning Integration Status
 
-Branch: `integration/react-complete-learning`
+Branch: `chore/final-browser-validation` (based on `main` at `8b01fbe`)
 
 ## Scope
 
@@ -74,21 +74,41 @@ Integrated-tree run after the final A/B/C/D/E content merge:
 
 This status document changes the integration HEAD, so the same workflow must also pass again on the exact final integration HEAD before the `integration/react-complete-learning -> main` PR is merged.
 
-## Manual validation debt
+## Final browser validation
 
-The automated preview check is an HTTP smoke test only. The following are **PENDING manual evidence** and are not represented as PASS:
+Validated on branch `chore/final-browser-validation` against the production preview at `/react-learning-playground/` on 2026-09-11.
 
-- focused-mode interaction smoke across the newly integrated demos
-- continuous/all-mode interaction smoke
-- search behavior
-- CodeViewer expand / file switching / copy interaction
-- browser console warning/error review
-- narrow/mobile viewport review
-- keyboard and screen-reader-oriented accessibility smoke
-- Effect cleanup and focus-management interaction checks
+- `npm ci`: **PASS** — 122 packages installed; audit reported 0 vulnerabilities.
+- `npm run lint`: **PASS** — exit code 0; existing teaching-demo and verification-script warnings remain documented by the command output.
+- `npm run build`: **PASS** — Vite production build completed; existing large-chunk advisory remains.
+- `npm run test:e2e`: **PASS** — 10 Chromium tests passed in 7.9s in the final CI-like run.
+- production preview smoke: **PASS** — `curl` verified the base-path HTML root and base-prefixed asset references.
+- desktop browser interaction smoke: **PASS** — 1440×900 navigation, focused/all modes, forms, and CodeViewer.
+- narrow viewport smoke: **PASS** — 390×844 sidebar, navigation, form submission, source viewer, and no document/body horizontal overflow.
+- console/page-error review: **PASS** — automatic diagnostics captured 0 page errors, 0 `console.error` calls, and 0 `console.warn` calls across the final suite; all registered demos were switched through.
+- keyboard/focus accessibility smoke: **PASS** — Tab/Shift+Tab containment, Enter/Space activation, visible focus, labels, live-region semantics, Escape close, and opener focus restoration.
+- automated accessibility scan: **PASS** — axe checks passed for the application shell and modal with no WCAG 2A/2AA violations.
+- real screen-reader validation: **PENDING** — no screen reader was available in this execution environment; axe and DOM/keyboard checks are not a substitute.
 
-No browser-interaction PASS is inferred from the HTTP smoke test.
+### Verification-discovered fixes
+
+- Escaped the `handleClick()` example in `EventPropagationDemo`; it had been evaluated as JavaScript and caused a browser `ReferenceError` when the demo mounted.
+- Added category-name matching to sidebar search and an accessible label for the search field.
+- Converted CodeViewer expand/collapse to a keyboard-accessible button with `aria-expanded` and `aria-controls`.
+- Added the missing `EffectEventDemo` label/select association.
+- Added `noValidate` to the accessibility demo so its custom invalid-email live-region state is reachable through the real form interaction.
+- Adjusted shared subtle-text and badge colors to resolve the axe contrast findings.
+
+### Remaining manual debt
+
+- A real screen-reader pass remains pending and must be performed with an actual screen reader before claiming that validation as PASS.
+- Cross-browser coverage was intentionally limited to Chromium for this final gate.
+- Clipboard UI and Chromium clipboard readback both passed locally; other browser permission policies may still require a manual copy check.
+
+## Previous integration status
+
+The preceding integration gate covered only build and HTTP availability. Its browser-interaction debt is superseded by the executed Playwright results above; the only remaining manual item is the real screen-reader pass explicitly marked **PENDING**.
 
 ## Main merge policy
 
-Open `integration/react-complete-learning -> main` only after deterministic CI passes on the exact final integration HEAD. Merge to `main` only when the PR is mergeable, has no failed checks, and its pull-request-triggered `React Learning Verify` run passes. Otherwise leave the PR open and record the blocker.
+Open `chore/final-browser-validation -> main` only after deterministic CI passes on the exact branch HEAD. Merge to `main` only when the PR is mergeable, has no failed checks, and its pull-request-triggered `React Learning Verify` run passes. Otherwise leave the PR open and record the blocker.

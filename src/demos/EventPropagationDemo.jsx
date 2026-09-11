@@ -37,7 +37,7 @@ export function EventPropagationDemo() {
         <div className="demo-section-header"><h3 className="demo-section-title">🧪 preventDefault ≠ stopPropagation</h3></div>
         <form onSubmit={handleSubmit}><button className="btn" type="submit">提交表单</button></form>
         <div className="demo-alert demo-alert-tip" style={{ marginTop: 12 }}><strong>正确做法：</strong>购买、提交、播放等“用户做了某件事”直接写在 Event Handler；不要先 set 一个 flag，再用 Effect 间接响应点击。</div>
-        <div className="demo-alert demo-alert-warning" style={{ marginTop: 10 }}><strong>常见错误：</strong><code>onClick={handleClick()}</code> 会在 render 时调用函数；应传 <code>onClick={handleClick}</code>。</div>
+        <div className="demo-alert demo-alert-warning" style={{ marginTop: 10 }}><strong>常见错误：</strong><code>{"onClick={handleClick()}"}</code> 会在 render 时调用函数；应传 <code>{"onClick={handleClick}"}</code>。</div>
       </div>
     </div>
   );

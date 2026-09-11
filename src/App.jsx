@@ -15,11 +15,16 @@ export default function App() {
     if (!searchQuery.trim()) return demos;
     const q = searchQuery.toLowerCase();
     return demos.filter(
-      (d) =>
-        d.label.toLowerCase().includes(q) ||
-        d.id.toLowerCase().includes(q) ||
-        d.description?.toLowerCase().includes(q) ||
-        d.badge?.toLowerCase().includes(q),
+      (d) => {
+        const category = CATEGORIES.find((item) => item.id === d.category);
+        return (
+          d.label.toLowerCase().includes(q) ||
+          d.id.toLowerCase().includes(q) ||
+          d.description?.toLowerCase().includes(q) ||
+          d.badge?.toLowerCase().includes(q) ||
+          category?.name.toLowerCase().includes(q)
+        );
+      },
     );
   }, [searchQuery]);
 
@@ -96,6 +101,7 @@ export default function App() {
               type="text"
               className="sidebar-search-input"
               placeholder="搜索知识点或关键词..."
+              aria-label="搜索知识点或关键词"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />

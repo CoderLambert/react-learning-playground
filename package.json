@@ -10,6 +10,7 @@
     "demo:new": "node scripts/create-demo.mjs",
     "lint": "oxlint",
     "preview": "vite preview",
+    "test:e2e": "playwright test",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d dist"
   },
@@ -19,6 +20,8 @@
     "shiki": "^4.4.3"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
+    "@playwright/test": "^1.63.0",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
     "@vitejs/plugin-react": "^6.1.0",

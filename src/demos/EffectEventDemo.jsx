@@ -38,8 +38,8 @@ export function EffectEventDemo() {
       <div className="demo-section">
         <div className="demo-grid-2">
           <div>
-            <label>房间</label>
-            <select className="form-input" value={roomId} onChange={(e) => setRoomId(e.target.value)}><option>general</option><option>react</option><option>typescript</option></select>
+            <label htmlFor="effect-event-room">房间</label>
+            <select id="effect-event-room" className="form-input" value={roomId} onChange={(e) => setRoomId(e.target.value)}><option>general</option><option>react</option><option>typescript</option></select>
             <label style={{ display: "block", marginTop: 12 }}>主题</label>
             <button className="btn" onClick={() => setTheme((v) => v === "light" ? "dark" : "light")}>切换 theme：{theme}</button>
           </div>
