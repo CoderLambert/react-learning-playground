@@ -23,9 +23,15 @@ const TEACHING_PROPS = {
   CodeBlock: new Set(["code", "language", "fileName", "caption"]),
   CodeDiff: new Set(["before", "after", "beforeTitle", "afterTitle", "language"]),
   DemoReference: new Set(["action", "observe"]),
-  Summary: new Set(["title", "items"]), // items is a temporary compatibility alias.
-  FurtherReading: new Set(["items", "links"]), // links is a temporary compatibility alias.
+  Summary: new Set(["title"]),
+  FurtherReading: new Set(["items"]),
 };
+
+// Runtime PR #82 owns this lesson and already rewrites it substantially. Keep the
+// old aliases accepted only for that unreconciled file so new notes cannot add debt.
+const TEMPORARY_ALIAS_PROPS = new Map([
+  ["event-vs-effect.mdx", new Set(["Summary:items", "FurtherReading:links"])],
+]);
 
 const COMPONENT_PATTERN = new RegExp(
   `<(${Object.keys(TEACHING_PROPS).join("|")})\\b([\\s\\S]*?)(/?)>`,
@@ -114,6 +120,10 @@ function openingTags(source) {
   }));
 }
 
+function isTemporaryAlias(fileName, component, prop) {
+  return TEMPORARY_ALIAS_PROPS.get(fileName)?.has(`${component}:${prop}`) ?? false;
+}
+
 function demoIds() {
   const registry = readFileSync(REGISTRY_FILE, "utf8");
   const demosStart = registry.indexOf("export const demos = [");
@@ -135,7 +145,9 @@ test("teaching primitives use supported props and do not silently render empty s
 
     for (const tag of openingTags(source)) {
       const allowed = TEACHING_PROPS[tag.component];
-      const unsupported = tag.attributes.filter((name) => !allowed.has(name));
+      const unsupported = tag.attributes.filter(
+        (name) => !allowed.has(name) && !isTemporaryAlias(fileName, tag.component, name),
+      );
       if (unsupported.length > 0) {
         problems.push(`${fileName}: <${tag.component}> unsupported props: ${unsupported.join(", ")}`);
       }
@@ -156,10 +168,18 @@ test("teaching primitives use supported props and do not silently render empty s
       if (tag.component === "Compare" && !props.has("left") && !props.has("right")) {
         problems.push(`${fileName}: self-closing <Compare> has no comparison content`);
       }
-      if (tag.component === "Summary" && !props.has("items")) {
+      if (
+        tag.component === "Summary" &&
+        !props.has("items") &&
+        !isTemporaryAlias(fileName, "Summary", "items")
+      ) {
         problems.push(`${fileName}: self-closing <Summary> has no content`);
       }
-      if (tag.component === "FurtherReading" && !props.has("items") && !props.has("links")) {
+      if (
+        tag.component === "FurtherReading" &&
+        !props.has("items") &&
+        !isTemporaryAlias(fileName, "FurtherReading", "links")
+      ) {
         problems.push(`${fileName}: self-closing <FurtherReading> has no links`);
       }
     }
