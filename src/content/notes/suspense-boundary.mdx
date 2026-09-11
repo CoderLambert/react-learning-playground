@@ -7,8 +7,8 @@ Suspense boundary 定义“哪些 UI 在等待时一起显示 fallback，以及�
 <Compare
   leftTitle="单一 Boundary"
   rightTitle="嵌套 Boundary"
-  left={<ul><li>任一关键子项 suspend 时整体 fallback</li><li>实现简单</li><li>可能隐藏已准备内容</li></ul>}
-  right={<ul><li>外层先 reveal</li><li>慢区域继续局部 fallback</li><li>可表达渐进式体验</li></ul>}
+  left={["任一关键子项 suspend 时整体 fallback", "实现简单", "可能隐藏已准备内容"]}
+  right={["外层先 reveal", "慢区域继续局部 fallback", "可表达渐进式体验"]}
 />
 
 <Experiment title="比较快慢资源">
