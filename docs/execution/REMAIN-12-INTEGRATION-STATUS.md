@@ -53,29 +53,23 @@ Base: `integration/react-complete-learning`
 
 ## Automated quality gate
 
-A minimal `.github/workflows/react-learning-verify.yml` has been added because the baseline repository had no equivalent workflow. It runs:
+A minimal `.github/workflows/react-learning-verify.yml` was added because the baseline repository had no equivalent workflow. It runs Node 24, `npm ci`, `npm run lint`, `npm run build`, starts Vite preview, and performs an HTTP smoke request against `/react-learning-playground/`.
 
-1. Node 24 setup
-2. `npm ci`
-3. `npm run lint`
-4. `npm run build`
-5. `npm run preview -- --host 127.0.0.1 --port 4173`
-6. HTTP smoke against `/react-learning-playground/`
+GitHub Actions run `34560638921` on Chapter 12 PR head completed successfully:
 
-Current evidence before PR CI execution:
-
-- `npm ci`: PENDING
-- `npm run lint`: PENDING
-- `npm run build`: PENDING
-- preview HTTP smoke: PENDING
-- interactive browser / console / narrow-screen smoke: PENDING (manual debt; not represented as PASS by HTTP smoke)
+- `npm ci`: PASS
+- `npm run lint`: PASS
+- `npm run build`: PASS
+- preview HTTP smoke: PASS
+- workflow job `verify`: PASS
+- interactive browser / console / narrow-screen smoke: PENDING (manual debt; HTTP smoke is not represented as a browser interaction PASS)
 
 ## Other work groups / final integration readiness
 
 ### A — Chapter 02 + TypeScript
 
 - Branch: `learn/remain-02-typescript`
-- Current status: NOT CONTENT-COMPLETE.
+- Current status: NOT CONTENT-COMPLETE at latest inspection.
 - Chapter 02 implementation exists, but Demo / `?raw` registration remains pending and the TypeScript slice is not implemented yet.
 - Therefore final integration MUST NOT start yet.
 
@@ -83,25 +77,26 @@ Current evidence before PR CI execution:
 
 - PR #7: OPEN.
 - Content: COMPLETE according to PR record.
-- Executable gate: PENDING until CI/local evidence exists.
+- Executable gate: PENDING on its branch; final integrated CI will be authoritative.
 
 ### C — Chapter 06 + Accessibility
 
 - PR #8: OPEN.
 - Content: COMPLETE according to PR record.
-- Executable gate: PENDING until CI/local evidence exists.
+- Executable gate: PENDING on its branch; final integrated CI will be authoritative.
 
 ### D — Chapter 08 + Chapter 09
 
 - PR #9: OPEN.
 - Content: COMPLETE according to PR record.
-- Executable gate: PENDING until CI/local evidence exists.
+- Executable gate: PENDING on its branch; final integrated CI will be authoritative.
 
 ### E — Chapter 12 + Final Integration
 
 - Chapter 12 dependency-safe content: COMPLETE.
 - Registration / CodeViewer: COMPLETE.
-- Automated gate: PENDING PR workflow execution.
+- Deterministic CI gate: PASS on GitHub Actions run `34560638921`.
+- Manual browser/UI gate: PENDING.
 
 ## Final integration rule
 
