@@ -57,18 +57,22 @@ Source      = implementation
   - `action-state-form-status.mdx`
   - `lifecycle-of-reactive-effects.mdx`
 - For those files, legacy `Timeline items` became `steps`, `Summary items` became child list content, and `FurtherReading links` became `items` where present.
-- The repository has now reached zero accepted Note usage of `Timeline items`; `test:content` rejects `items` on `<Timeline>` while the runtime compatibility alias remains temporarily available for branch reconciliation.
+- Note-level `Timeline items` is now rejected globally.
+- Note-level `Summary items` and `FurtherReading links` are also rejected globally except for one explicit temporary compatibility entry: `event-vs-effect.mdx`. That lesson is owned by Runtime PR #82, whose branch already uses canonical `<Summary>...</Summary>` and `<FurtherReading items={...} />`; the exception exists only until branch reconciliation.
+- Runtime aliases remain temporarily available in `TeachingComponents.jsx` so active parallel branches are not broken while their canonical note changes are reconciled.
 
 ### TypeScript sample compiler gate
 
 - Added `tsconfig.samples.json` scoped only to `src/demos/typescript-samples/**/*.tsx` with strict/noEmit React TSX settings.
-- Added `npm run typecheck:samples` using an exact `typescript@7.0.2` compiler invocation, so no package-lock churn or competing lesson-file edit is required.
+- Added `npm run typecheck:samples` using an exact compiler invocation, avoiding competing edits to TypeScript-owned sample files.
 - Added `TypeScript sample contract` to `React Learning Verify` after content-contract checks and before lint/build.
 - This resolves the shared-infrastructure gap recorded by `automation/typescript-learning`: once that branch is reconciled with this infrastructure, its legal examples and `@ts-expect-error` assertions are checked by a real TypeScript compiler rather than inferred from Vite build success.
 
 ## Validation evidence
 
-Implementation head `9291dadb890d9c83cd60788e418f3a2ec8af0be8` was validated by `React Learning Verify` run `34645124188`:
+Validated implementation head before this status-only commit: `a1fbbdf8ab299aa5fc31315deb90016b88753724`.
+
+`React Learning Verify` run `34645277144` (#193): **PASS**
 
 - `npm ci`: **PASS**
 - AI focused tests: **PASS**
@@ -77,11 +81,14 @@ Implementation head `9291dadb890d9c83cd60788e418f3a2ec8af0be8` was validated by 
 - `npm run lint`: **PASS**
 - `npm run build`: **PASS**
 
-The same implementation head also has `Workbench State URL Verify` run `34645124170`: **PASS**. `Workbench Integration Verify` run `34645124203` was still pending when this status entry was written; do not claim it as PASS until its conclusion is successful.
+The same implementation head also has:
+
+- `Workbench State URL Verify` run `34645277062` (#80): **PASS**
+- `Workbench Integration Verify` run `34645277110` (#132): **IN PROGRESS** when this status entry was written; do not claim it as PASS until GitHub reports success.
 
 ## Remaining work
 
-1. Continue mechanical normalization of remaining legacy `Summary items` and `FurtherReading links`, avoiding lesson files actively owned by parallel lesson tasks until those branches settle.
-2. Once each remaining legacy prop class reaches zero, tighten `test:content` to reject it in notes while retaining runtime compatibility aliases only long enough for parallel-branch reconciliation.
-3. Reconcile the TypeScript lesson branch with this shared gate and inspect the exact compiler result for its intentional `@ts-expect-error` examples; fix sample content only in the TypeScript-owned branch if diagnostics expose a real sample issue.
-4. After all legacy Note usage reaches zero and dependent lesson branches are reconciled, remove temporary runtime aliases in a final safe cleanup.
+1. Reconcile Runtime PR #82 so `event-vs-effect.mdx` supplies its already-canonical Summary/FurtherReading form, then remove the one-file compatibility exception from `test:content`.
+2. Reconcile TypeScript PR #81 with this shared compiler gate and inspect its intentional `@ts-expect-error` examples under real `tsc`; any sample diagnostic fix belongs on the TypeScript-owned branch.
+3. After all active lesson branches are reconciled and no production note relies on compatibility props, remove the temporary runtime aliases in `TeachingComponents.jsx` and tighten the runtime-alias assertion accordingly.
+4. Keep PR #79 draft and unmerged until the above branch-reconciliation dependencies are resolved and latest-head validation is green.
