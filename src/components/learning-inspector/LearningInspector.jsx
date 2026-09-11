@@ -7,6 +7,8 @@ import {
 import { useInspectorScrollMemory } from "./useInspectorScrollMemory";
 import "./LearningInspector.css";
 
+const TAB_LABELS = Object.freeze({ notes: "笔记", source: "源码", ai: "AI" });
+
 function getInspectorMaxWidth(viewportWidth) {
   const viewportBound = Math.floor(
     viewportWidth * WORKBENCH_DIMENSIONS.inspectorMaxViewportRatio,
@@ -35,6 +37,7 @@ export function LearningInspector({
   onWidthChange,
   notes,
   source,
+  ai,
   className = "",
 }) {
   const {
@@ -205,7 +208,6 @@ export function LearningInspector({
         <div className="learning-inspector-tabs" role="tablist" aria-label="学习面板内容">
           {INSPECTOR_TABS.map((tab) => {
             const selected = activeTab === tab;
-            const label = tab === "notes" ? "笔记" : "源码";
             return (
               <button
                 key={tab}
@@ -218,7 +220,7 @@ export function LearningInspector({
                 tabIndex={selected ? 0 : -1}
                 onClick={() => onTabChange?.(tab)}
               >
-                {label}
+                {TAB_LABELS[tab] ?? tab}
               </button>
             );
           })}
@@ -246,6 +248,17 @@ export function LearningInspector({
           >
             {source ?? <InspectorPlaceholder kind="source" />}
           </section>
+
+          <section
+            {...getPaneProps("ai")}
+            id="learning-inspector-panel-ai"
+            role="tabpanel"
+            aria-labelledby="learning-inspector-tab-ai"
+            hidden={activeTab !== "ai"}
+            className="learning-inspector-pane"
+          >
+            {ai ?? <InspectorPlaceholder kind="ai" />}
+          </section>
         </div>
       </div>
     </aside>
@@ -253,14 +266,17 @@ export function LearningInspector({
 }
 
 function InspectorPlaceholder({ kind }) {
+  const labels = {
+    notes: ["笔记区域", "等待 MDX Runtime 注入当前知识点笔记。"],
+    source: ["源码区域", "等待 SourceViewer 注入当前 Demo 源码。"],
+    ai: ["AI 区域", "等待 AI 学习助手注入当前笔记与源码上下文。"],
+  };
+  const [title, description] = labels[kind] ?? labels.notes;
+
   return (
     <div className="learning-inspector-placeholder">
-      <strong>{kind === "notes" ? "笔记区域" : "源码区域"}</strong>
-      <p>
-        {kind === "notes"
-          ? "等待 MDX Runtime 注入当前知识点笔记。"
-          : "等待 SourceViewer 注入当前 Demo 源码。"}
-      </p>
+      <strong>{title}</strong>
+      <p>{description}</p>
     </div>
   );
 }
