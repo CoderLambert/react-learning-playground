@@ -1,5 +1,5 @@
-import { buildChatRequest, CHAT_EVENT_TYPES } from "./contracts";
-import { parseChatEventStream } from "./streamProtocol";
+import { buildChatRequest, CHAT_EVENT_TYPES } from "./contracts.js";
+import { parseChatEventStream } from "./streamProtocol.js";
 
 export class AiChatClientError extends Error {
   constructor(message, { code = "AI_CHAT_CLIENT_ERROR", status = null, cause } = {}) {
