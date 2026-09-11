@@ -7,8 +7,8 @@ Transition 让某些更新以非阻塞方式在后台渲染；`useDeferredValue`
 <Compare
   leftTitle="useTransition"
   rightTitle="useDeferredValue"
-  left={<ul><li>你控制触发更新的位置</li><li>startTransition 包住非紧急 setState</li><li>isPending 可表达过渡状态</li></ul>}
-  right={<ul><li>你拿到一个可能滞后的值</li><li>适合无法控制上游 setState 时延迟消费</li><li>旧内容可保持并标记 stale</li></ul>}
+  left={["你控制触发更新的位置", "startTransition 包住非紧急 setState", "isPending 可表达过渡状态"]}
+  right={["你拿到一个可能滞后的值", "适合无法控制上游 setState 时延迟消费", "旧内容可保持并标记 stale"]}
 />
 
 <Experiment title="快速输入并制造慢列表">
