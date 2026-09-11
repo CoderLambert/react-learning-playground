@@ -31,7 +31,7 @@ test("users can configure their own DeepSeek key and choose V4 Pro", async ({ pa
 
   await openAiTab(page);
   await page.getByRole("button", { name: /配置 DeepSeek/ }).click();
-  await page.getByLabel("API Key").fill("sk-browser-user");
+  await page.getByRole("textbox", { name: "API Key", exact: true }).fill("sk-browser-user");
   await page.getByLabel("模型").selectOption("deepseek-v4-pro");
   await page.getByRole("checkbox", { name: /长期保存 API Key/ }).check();
   await page.getByRole("button", { name: "保存配置" }).click();
@@ -64,7 +64,7 @@ test("users can configure their own DeepSeek key and choose V4 Pro", async ({ pa
 test("API key defaults to session storage and can be cleared", async ({ page }) => {
   await openAiTab(page);
   await page.getByRole("button", { name: /配置 DeepSeek/ }).click();
-  await page.getByLabel("API Key").fill("sk-session-only");
+  await page.getByRole("textbox", { name: "API Key", exact: true }).fill("sk-session-only");
   await page.getByLabel("模型").selectOption("deepseek-v4-flash");
   await page.getByRole("button", { name: "保存配置" }).click();
 
