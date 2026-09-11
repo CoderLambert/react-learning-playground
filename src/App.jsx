@@ -4,7 +4,7 @@ import "./workbench/Integration.css";
 import { demos, CATEGORIES } from "./demos";
 import { ChapterCheckpoint } from "./components/ChapterCheckpoint";
 import { getCheckpointChapter } from "./components/chapterCheckpointMap";
-import { AiAssistant } from "./components/ai-assistant";
+import { AiAssistant, DeepSeekSettings } from "./components/ai-assistant";
 import { LearningInspector } from "./components/learning-inspector";
 import { NoteToc } from "./components/notes/NoteToc";
 import { NoteViewer } from "./components/notes/NoteViewer";
@@ -125,6 +125,16 @@ export default function App() {
           error={aiAssistant.error}
           notice={aiAssistant.notice}
           providerLabel="DeepSeek"
+          modelLabel={aiAssistant.modelLabel}
+          settings={(
+            <DeepSeekSettings
+              settings={aiAssistant.deepSeekSettings}
+              connectionMode={aiAssistant.connectionMode}
+              onSave={aiAssistant.saveConnectionSettings}
+              onClear={aiAssistant.clearConnectionSettings}
+              disabled={aiAssistant.settingsDisabled}
+            />
+          )}
         />
       )}
     />
