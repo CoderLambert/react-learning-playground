@@ -1,0 +1,14 @@
+import{d as e,p as t}from"./index-DGADrfGl.js";var n=t();function r(t){let r={code:`code`,h1:`h1`,li:`li`,p:`p`,ul:`ul`,...e(),...t.components},{AntiPattern:i,Boundary:o,DemoReference:s,Experiment:c,Flow:l,FurtherReading:u,MentalModel:d,Summary:f}=r;return i||a(`AntiPattern`,!0),o||a(`Boundary`,!0),s||a(`DemoReference`,!0),c||a(`Experiment`,!0),l||a(`Flow`,!0),u||a(`FurtherReading`,!0),d||a(`MentalModel`,!0),f||a(`Summary`,!0),(0,n.jsxs)(n.Fragment,{children:[(0,n.jsx)(r.h1,{id:`reducer--context-双通道`,children:`Reducer + Context 双通道`}),`
+`,(0,n.jsx)(d,{title:`Reducer 管转换，Context 管跨层分发；读与写可以分开订阅`,children:(0,n.jsxs)(r.p,{children:[`页面级复杂状态常把 `,(0,n.jsx)(r.code,{children:`useReducer`}),` 放在上层 Provider：State Context 向读者提供当前数据，Dispatch Context 向写者提供稳定的 dispatch。拆分两条通道能让只需要发 action 的组件不必订阅整份 state。`]})}),`
+`,(0,n.jsx)(c,{title:`比较单 Context 与双 Context`,children:(0,n.jsxs)(r.p,{children:[`在中间 Demo 中更新 reducer state，观察“只 dispatch 的按钮”和“读取 state 的视图”各自 render 日志，比较把 `,(0,n.jsx)(r.code,{children:`{state, dispatch}`}),` 放在一个 Context 与拆分后的传播范围。`]})}),`
+`,(0,n.jsx)(s,{action:`连续 dispatch action 并观察不同消费者`,observe:`确认 dispatch-only 消费者无需读取 State Context；理解拆分优化来自订阅边界，而非 reducer 魔法。`}),`
+`,(0,n.jsx)(l,{items:[`Provider 内 useReducer`,`StateContext.Provider 提供 state`,`DispatchContext.Provider 提供 dispatch`,`读组件订阅 State Context`,`写组件只订阅 Dispatch Context`]}),`
+`,(0,n.jsx)(o,{title:`拆 Context 是架构选择，不是默认模板`,children:(0,n.jsx)(r.p,{children:`若模块很小、更新低频，单 Context 更简单。只有当读写依赖明显不同、传播范围有实际成本或 API 语义更清楚时，双 Context 才值得。`})}),`
+`,(0,n.jsx)(i,{title:`把 Reducer + Context 当 Redux 的无条件替代`,children:(0,n.jsx)(r.p,{children:`它适合页面/模块级共享状态，但缺少成熟外部 store 常见的 selector、devtools、跨模块组织等能力。规模和需求增长后应重新评估，而不是无限扩张单一 Provider。`})}),`
+`,(0,n.jsx)(f,{children:(0,n.jsxs)(r.ul,{children:[`
+`,(0,n.jsx)(r.li,{children:`reducer 集中状态转换规则。`}),`
+`,(0,n.jsx)(r.li,{children:`Context 将 state/dispatch 跨层提供。`}),`
+`,(0,n.jsx)(r.li,{children:`分离 State 与 Dispatch Context 可缩小 dispatch-only 节点的订阅。`}),`
+`,(0,n.jsx)(r.li,{children:`是否拆分应由依赖和性能证据决定。`}),`
+`]})}),`
+`,(0,n.jsx)(u,{items:[{label:`React: Scaling Up with Reducer and Context`,href:`https://react.dev/learn/scaling-up-with-reducer-and-context`},{label:`React: useReducer`,href:`https://react.dev/reference/react/useReducer`},{label:`React: useContext`,href:`https://react.dev/reference/react/useContext`}]})]})}function i(t={}){let{wrapper:i}={...e(),...t.components};return i?(0,n.jsx)(i,{...t,children:(0,n.jsx)(r,{...t})}):r(t)}function a(e,t){throw Error(`Expected `+(t?`component`:`object`)+" `"+e+"` to be defined: you likely forgot to import, pass, or provide it.")}export{i as default};

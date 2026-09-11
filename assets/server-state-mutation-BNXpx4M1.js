@@ -1,0 +1,15 @@
+import{d as e,p as t}from"./index-DGADrfGl.js";var n=t();function r(t){let r={code:`code`,h1:`h1`,li:`li`,p:`p`,ul:`ul`,...e(),...t.components},{AntiPattern:i,Boundary:o,DemoReference:s,Experiment:c,FurtherReading:l,MentalModel:u,Summary:d,Timeline:f}=r;return i||a(`AntiPattern`,!0),o||a(`Boundary`,!0),s||a(`DemoReference`,!0),c||a(`Experiment`,!0),l||a(`FurtherReading`,!0),u||a(`MentalModel`,!0),d||a(`Summary`,!0),f||a(`Timeline`,!0),(0,n.jsxs)(n.Fragment,{children:[(0,n.jsx)(r.h1,{id:`请求竞态取消与-optimistic-mutation`,children:`请求竞态、取消与 Optimistic Mutation`}),`
+`,(0,n.jsx)(u,{title:`请求和 Mutation 都有并发时间线`,children:(0,n.jsx)(r.p,{children:`网络响应不保证按发起顺序返回。读取需要处理过期响应、取消与 query identity；写入需要处理 optimistic 临时状态、服务端确认、失败回滚和相关缓存失效。`})}),`
+`,(0,n.jsx)(c,{title:`故意制造乱序与失败`,children:(0,n.jsx)(r.p,{children:`在中间 Demo 快速切页/切条件制造两个并发请求，观察 Abort/race guard；再执行 optimistic mutation，并分别模拟成功与失败。`})}),`
+`,(0,n.jsx)(s,{action:`快速切换请求并触发成功/失败 mutation`,observe:`旧响应不能覆盖新意图；optimistic 值必须最终 confirm 或 rollback。`}),`
+`,(0,n.jsx)(f,{steps:[`用户产生新 query identity`,`取消旧请求或用 generation/race guard 忽略旧响应`,`最新请求写入对应 cache identity`,`mutation 前保存可回滚快照并应用 optimistic state`,`成功：用服务端结果收敛/失效相关 query`,`失败：回滚并暴露错误`]}),`
+`,(0,n.jsx)(i,{title:`只靠 loading boolean 管所有请求`,children:(0,n.jsx)(r.p,{children:`多个 query、分页、mutation 并发时，一个全局 loading 无法表达真实状态。状态应绑定资源 identity，并区分读取、后台 refetch、mutation pending 与 error。`})}),`
+`,(0,n.jsx)(o,{title:`Abort 不等于业务竞态全部解决`,children:(0,n.jsx)(r.p,{children:`服务端可能已收到请求，某些 Promise/库也未必完全可取消；客户端仍需保证旧结果不能覆盖新状态。Mutation 的幂等、冲突和服务端事务属于 API/领域设计，不是 React 能单独解决的。`})}),`
+`,(0,n.jsx)(o,{title:`Demo 不是 TanStack Query 实现`,children:(0,n.jsxs)(r.p,{children:[`这里展示的是 cancellation、optimistic update、rollback、invalidation 的通用概念。TanStack Query 的 `,(0,n.jsx)(r.code,{children:`onMutate`}),`/mutation lifecycle、取消和缓存 API 请以当前官方版本为准，不要从 Demo 反推库 API。`]})}),`
+`,(0,n.jsx)(d,{children:(0,n.jsxs)(r.ul,{children:[`
+`,(0,n.jsx)(r.li,{children:`请求身份与响应顺序必须解耦。`}),`
+`,(0,n.jsx)(r.li,{children:`cancellation 与 race guard 是互补手段。`}),`
+`,(0,n.jsx)(r.li,{children:`optimistic mutation 必须设计 confirm/rollback。`}),`
+`,(0,n.jsx)(r.li,{children:`成熟 server-state 库能统一这些生命周期，但不能替代领域一致性设计。`}),`
+`]})}),`
+`,(0,n.jsx)(l,{items:[{label:`TanStack Query: Query Cancellation`,href:`https://tanstack.com/query/latest/docs/framework/react/guides/query-cancellation`},{label:`TanStack Query: Optimistic Updates`,href:`https://tanstack.com/query/latest/docs/framework/react/guides/optimistic-updates`},{label:`MDN: AbortController`,href:`https://developer.mozilla.org/docs/Web/API/AbortController`}]})]})}function i(t={}){let{wrapper:i}={...e(),...t.components};return i?(0,n.jsx)(i,{...t,children:(0,n.jsx)(r,{...t})}):r(t)}function a(e,t){throw Error(`Expected `+(t?`component`:`object`)+" `"+e+"` to be defined: you likely forgot to import, pass, or provide it.")}export{i as default};
