@@ -1,1 +1,0 @@
-import{p as e}from"./index-YqgnKHhB.js";var t=e();function n(){return(0,t.jsxs)(`div`,{className:`demo-alert demo-alert-tip`,children:[(0,t.jsx)(`div`,{className:`demo-alert-title`,children:`Lazy chunk 已解析并渲染`}),(0,t.jsxs)(`p`,{children:[`这个组件来自独立模块。第一次真正尝试渲染它时，React 才调用`,(0,t.jsx)(`code`,{children:` lazy(load) `}),` 的加载函数；加载结果会被缓存。`]})]})}export{n as default};
