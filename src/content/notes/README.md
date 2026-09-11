@@ -70,6 +70,8 @@ Canonical APIs:
 <Timeline steps={["..."]} />
 <Flow items={["..."]} />
 
+<Compare left={<p>...</p>} right={<p>...</p>} />
+
 <Summary>
 - ...
 </Summary>
@@ -100,7 +102,7 @@ Available primitives:
 - `Summary`
 - `FurtherReading`
 
-`Timeline items`, `Summary items` and `FurtherReading links` are temporary runtime compatibility aliases for older notes. New or edited notes must use the canonical forms above; existing notes should be normalized mechanically without rewriting their lesson meaning.
+`Timeline items`, `Compare leftItems/rightItems`, `Summary items` and `FurtherReading links` are temporary runtime compatibility aliases for older notes. New or edited notes must use the canonical forms above; existing notes should be normalized mechanically without rewriting their lesson meaning.
 
 ## Content quality gate
 
