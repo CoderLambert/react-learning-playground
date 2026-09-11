@@ -39,6 +39,7 @@ export default function App() {
   const [mobileNavigationOpen, setMobileNavigationOpen] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
   const [sourceFocus, setSourceFocus] = useState(null);
+  const [pendingConversationTarget, setPendingConversationTarget] = useState(null);
   const {
     state: workbenchState,
     setNavigationCollapsed,
@@ -76,18 +77,74 @@ export default function App() {
     });
   };
 
-  const handleSelectDemo = (id) => {
+  const navigateToDemo = (id) => {
     selectDemo(id);
     setViewMode("focused");
     setMobileNavigationOpen(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  const handleSelectDemo = (id) => {
+    setPendingConversationTarget(null);
+    navigateToDemo(id);
+  };
+
   const handleSelectAll = () => {
+    setPendingConversationTarget(null);
     setViewMode("all");
     setMobileNavigationOpen(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
+
+  const handleConversationSelect = (conversationId) => {
+    const conversation = aiAssistant.conversationHistory.find((item) => item.id === conversationId);
+    if (!conversation || conversation.archived) return;
+
+    if (conversation.learningUnitId === currentLearningUnit?.id) {
+      setPendingConversationTarget(null);
+      void aiAssistant.selectConversation(conversationId);
+      return;
+    }
+
+    const targetExists = demos.some((demo) => demo.id === conversation.learningUnitId);
+    if (!targetExists) return;
+
+    setPendingConversationTarget({
+      conversationId,
+      learningUnitId: conversation.learningUnitId,
+    });
+    navigateToDemo(conversation.learningUnitId);
+    setInspectorOpen(true);
+    setInspectorTab("ai");
+  };
+
+  useEffect(() => {
+    if (!pendingConversationTarget) return;
+    if (currentLearningUnit?.id !== pendingConversationTarget.learningUnitId) return;
+
+    const targetStillExists = aiAssistant.conversationHistory.some((conversation) => (
+      conversation.id === pendingConversationTarget.conversationId &&
+      conversation.learningUnitId === pendingConversationTarget.learningUnitId &&
+      !conversation.archived
+    ));
+    if (!targetStillExists) {
+      setPendingConversationTarget(null);
+      return;
+    }
+
+    if (aiAssistant.activeConversationId === pendingConversationTarget.conversationId) {
+      setPendingConversationTarget(null);
+      return;
+    }
+
+    void aiAssistant.selectConversation(pendingConversationTarget.conversationId);
+  }, [
+    aiAssistant.activeConversationId,
+    aiAssistant.conversationHistory,
+    aiAssistant.selectConversation,
+    currentLearningUnit?.id,
+    pendingConversationTarget,
+  ]);
 
   const navigation = (
     <WorkbenchNavigation
@@ -126,7 +183,7 @@ export default function App() {
             activeConversationId={aiAssistant.activeConversationId}
             learningUnitId={currentLearningUnit?.id}
             learningUnitLabels={learningUnitLabels}
-            onSelect={aiAssistant.selectConversation}
+            onSelect={handleConversationSelect}
             onRename={aiAssistant.renameConversation}
             onArchive={aiAssistant.archiveConversation}
             onDelete={aiAssistant.deleteConversation}
