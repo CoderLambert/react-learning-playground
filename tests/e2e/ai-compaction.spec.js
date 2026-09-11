@@ -1,9 +1,19 @@
 import { expect, test } from "@playwright/test";
 
 const GATEWAY_URL = "http://127.0.0.1:4173/__ai-test__";
+const COMPACTION_PREFIX = "请将下面对话压缩为结构化 JSON";
 
 function stream(...events) {
   return `${events.map((event) => JSON.stringify(event)).join("\n")}\n`;
+}
+
+function isCompactionRequest(request) {
+  return request?.purpose === "compaction"
+    && request?.compaction?.prompt?.startsWith(COMPACTION_PREFIX);
+}
+
+function compactionPrompt(request) {
+  return request?.compaction?.prompt ?? "";
 }
 
 const SUMMARY = {
@@ -55,7 +65,7 @@ test("manual compaction persists a durable checkpoint without deleting full hist
   await page.route(GATEWAY_URL, async (route) => {
     const body = route.request().postDataJSON();
     requests.push(body);
-    const summarizing = body.question.startsWith("请将下面对话压缩为结构化 JSON");
+    const summarizing = isCompactionRequest(body);
     await route.fulfill({
       status: 200,
       contentType: "application/x-ndjson",
@@ -93,14 +103,10 @@ test("manual compaction persists a durable checkpoint without deleting full hist
   expect(restoredRequest.history).toEqual([]);
 
   await page.getByRole("button", { name: "Compact", exact: true }).click();
-  await expect.poll(() => requests.filter(
-    (request) => request.question.startsWith("请将下面对话压缩为结构化 JSON"),
-  ).length).toBe(2);
-  const chainedSummaryRequest = requests.filter(
-    (request) => request.question.startsWith("请将下面对话压缩为结构化 JSON"),
-  )[1];
-  expect(chainedSummaryRequest.question).toContain("after reload");
-  expect(chainedSummaryRequest.question).not.toContain("manual seed");
+  await expect.poll(() => requests.filter(isCompactionRequest).length).toBe(2);
+  const chainedSummaryRequest = requests.filter(isCompactionRequest)[1];
+  expect(compactionPrompt(chainedSummaryRequest)).toContain("after reload");
+  expect(compactionPrompt(chainedSummaryRequest)).not.toContain("manual seed");
 
   const chainedStored = await readAiDatabase(page);
   expect(chainedStored.messages).toHaveLength(4);
@@ -112,7 +118,7 @@ test("provider actual usage triggers one automatic compaction and does not chain
   await page.route(GATEWAY_URL, async (route) => {
     const body = route.request().postDataJSON();
     requests.push(body);
-    const summarizing = body.question.startsWith("请将下面对话压缩为结构化 JSON");
+    const summarizing = isCompactionRequest(body);
     const highUsage = body.question === "high usage seed";
     await route.fulfill({
       status: 200,
@@ -137,14 +143,14 @@ test("provider actual usage triggers one automatic compaction and does not chain
   await submit(page, composer, "high usage seed");
   await submit(page, composer, "after automatic compaction");
 
-  const summaryRequests = requests.filter((request) => request.question.startsWith("请将下面对话压缩为结构化 JSON"));
+  const summaryRequests = requests.filter(isCompactionRequest);
   expect(summaryRequests).toHaveLength(1);
   const afterCompaction = requests.find((request) => request.question === "after automatic compaction");
   expect(afterCompaction.context.conversationSummary).toContain("理解当前 React Demo");
   await expect(page.locator(".ai-assistant-notice")).toContainText("完整对话仍保留");
 
   await submit(page, composer, "low usage follow-up");
-  expect(requests.filter((request) => request.question.startsWith("请将下面对话压缩为结构化 JSON"))).toHaveLength(1);
+  expect(requests.filter(isCompactionRequest)).toHaveLength(1);
   const stored = await readAiDatabase(page);
   expect(stored.compactions).toHaveLength(1);
   expect(stored.messages).toHaveLength(6);
