@@ -1,5 +1,8 @@
 const DEFAULT_LANGUAGE = "text";
 const PREVIEW_LIMIT = 96;
+const DEFAULT_CODE_FONT_SIZE = 12;
+const MIN_RENDERABLE_LINE_HEIGHT = 12;
+const MAX_UNIT_LESS_LINE_HEIGHT = 3;
 
 export function normalizeCodeBlockText(node) {
   if (typeof node?.code === "string") return node.code;
@@ -10,6 +13,35 @@ export function normalizeCodeBlockText(node) {
 export function normalizeCodeBlockLanguage(node) {
   const language = typeof node?.language === "string" ? node.language.trim() : "";
   return language || DEFAULT_LANGUAGE;
+}
+
+export function normalizeCodeBlockOptions(options) {
+  if (!options || typeof options !== "object" || Array.isArray(options)) return options;
+
+  const normalized = { ...options };
+  const fontSize = Number(normalized.fontSize);
+  const lineHeight = Number(normalized.lineHeight);
+
+  // Markstream's codeBlockOptions.lineHeight is a pixel metric. Call sites can
+  // easily pass a normal CSS unitless ratio (for example 1.6), which Markstream
+  // then interprets as 1.6px and visually stacks every code line on top of the
+  // next one. Treat only small positive values as CSS-style ratios; real pixel
+  // values (for example 18 or 20) pass through unchanged.
+  if (
+    Number.isFinite(lineHeight) &&
+    lineHeight > 0 &&
+    lineHeight <= MAX_UNIT_LESS_LINE_HEIGHT
+  ) {
+    const resolvedFontSize = Number.isFinite(fontSize) && fontSize > 0
+      ? fontSize
+      : DEFAULT_CODE_FONT_SIZE;
+    normalized.lineHeight = Math.max(
+      MIN_RENDERABLE_LINE_HEIGHT,
+      Math.round(resolvedFontSize * lineHeight * 100) / 100,
+    );
+  }
+
+  return normalized;
 }
 
 function parseMetaLabel(meta) {

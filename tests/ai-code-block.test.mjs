@@ -6,6 +6,7 @@ import {
   countCodeBlockLines,
   getCodeBlockLabel,
   normalizeCodeBlockLanguage,
+  normalizeCodeBlockOptions,
   normalizeCodeBlockText,
   performCodeBlockCopy,
 } from "../src/components/ai-assistant/code/aiCodeBlockModel.js";
@@ -32,6 +33,22 @@ test("normalizes empty and incomplete streaming nodes without throwing", () => {
   assert.equal(normalizeCodeBlockLanguage({}), "text");
   assert.equal(countCodeBlockLines(""), 0);
   assert.equal(countCodeBlockLines("const value ="), 1);
+});
+
+test("converts CSS-style line-height ratios to Markstream pixel metrics", () => {
+  assert.deepEqual(
+    normalizeCodeBlockOptions({ fontSize: 12, lineHeight: 1.6, tabSize: 2 }),
+    { fontSize: 12, lineHeight: 19.2, tabSize: 2 },
+  );
+  assert.deepEqual(
+    normalizeCodeBlockOptions({ fontSize: 14, lineHeight: 20 }),
+    { fontSize: 14, lineHeight: 20 },
+  );
+});
+
+test("uses a safe default font size when normalizing a line-height ratio", () => {
+  const normalized = normalizeCodeBlockOptions({ lineHeight: 1.5 });
+  assert.equal(normalized.lineHeight, 18);
 });
 
 test("prefers explicit file labels and supports common metadata forms", () => {
