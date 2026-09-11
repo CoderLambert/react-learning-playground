@@ -33,5 +33,10 @@ jobs:
       - name: Build production site
         run: npm run build
 
+      - name: Configure deploy identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
       - name: Publish gh-pages branch
-        run: npx gh-pages -d dist -u "github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>" -m "Deploy ${GITHUB_SHA}"
+        run: npx gh-pages -d dist -m "Deploy ${GITHUB_SHA}"
