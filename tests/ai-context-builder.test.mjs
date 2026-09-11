@@ -27,6 +27,14 @@ test("raw note registry exposes lazy raw MDX API without replacing compiled load
   assert.match(source, /export function getRawNoteLoader\(learningUnitId\)/);
   assert.match(source, /export async function loadRawNote\(learningUnitId\)/);
   assert.match(source, /if \(!loader\) return null;/);
+  assert.match(source, /typeof loaded\?\.default === "string"/);
+});
+
+test("MDX compiler excludes raw imports so AI receives source text", async () => {
+  const source = await readFile(new URL("../vite.config.js", import.meta.url), "utf8");
+
+  assert.match(source, /include: \/\\\.mdx\(\?:\$\|\\\?\)\//);
+  assert.match(source, /exclude: \/\[\?&\]raw\(\?:&\|\$\)\//);
 });
 
 test("buildAiContext creates note and single-source envelope", () => {
