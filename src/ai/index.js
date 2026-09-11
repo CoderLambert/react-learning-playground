@@ -15,3 +15,18 @@ export {
   createAiChatClient,
   getConfiguredAiAssistantUrl,
 } from "./chatClient.js";
+export {
+  DEEPSEEK_BROWSER_STORAGE_KEYS,
+  DEEPSEEK_MODELS,
+  DEEPSEEK_OPENAI_BASE_URL,
+  DEFAULT_DEEPSEEK_MODEL,
+  clearDeepSeekBrowserApiKey,
+  loadDeepSeekBrowserSettings,
+  normalizeDeepSeekModel,
+  saveDeepSeekBrowserSettings,
+} from "./deepseekBrowserSettings.js";
+export {
+  buildDeepSeekDirectMessages,
+  createDeepSeekDirectClient,
+  parseDeepSeekOpenAiStream,
+} from "./deepseekDirectClient.js";
