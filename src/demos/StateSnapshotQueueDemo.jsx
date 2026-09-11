@@ -1,10 +1,8 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 
 export function StateSnapshotQueueDemo() {
   const [count, setCount] = useState(0);
   const [notes, setNotes] = useState([]);
-  const renderCount = useRef(0);
-  renderCount.current += 1;
 
   function log(message) {
     setNotes((items) => [message, ...items].slice(0, 10));
@@ -42,7 +40,11 @@ export function StateSnapshotQueueDemo() {
 
       <div className="demo-section">
         <div className="demo-grid-2">
-          <div style={{ padding: 16, background: "var(--bg-surface-secondary)", borderRadius: 10 }}><div>当前 UI count</div><strong style={{ fontSize: 34 }}>{count}</strong><div style={{ marginTop: 8 }}>Render #{renderCount.current}</div></div>
+          <div style={{ padding: 16, background: "var(--bg-surface-secondary)", borderRadius: 10 }}>
+            <div>当前这次 render 的 count snapshot</div>
+            <strong style={{ fontSize: 34 }}>{count}</strong>
+            <div style={{ marginTop: 8, fontSize: 12, color: "var(--text-muted)" }}>事件处理器会闭包捕获创建它的那次 render 的值。</div>
+          </div>
           <div style={{ display: "grid", gap: 8, alignContent: "start" }}>
             <button className="btn" type="button" onClick={() => setCount(count + 1)}>+1：替换为 snapshot + 1</button>
             <button className="btn" type="button" onClick={replaceThreeTimes}>连续 3 次 count + 1</button>
@@ -55,7 +57,7 @@ export function StateSnapshotQueueDemo() {
       <div className="demo-section">
         <div className="demo-section-header"><h3 className="demo-section-title">🔬 可观察结果</h3></div>
         <div style={{ display: "grid", gap: 6 }}>{notes.map((item, index) => <code key={`${item}-${index}`}>{item}</code>)}</div>
-        <div className="demo-alert demo-alert-tip" style={{ marginTop: 12 }}><strong>队列模型：</strong><code>setCount(count + 1)</code> 在同一 render 中都基于同一个 snapshot；<code>setCount(c =&gt; c + 1)</code> 把转换函数加入队列，后一个 updater 接收前一个结果。</div>
+        <div className="demo-alert demo-alert-tip" style={{ marginTop: 12 }}><strong>队列模型：</strong><code>setCount(count + 1)</code> 在同一 render 中都基于同一个 snapshot；<code>setCount(c =&gt; c + 1)</code> 把 updater 加入队列，React 在处理队列时把前一个 updater 的结果交给后一个。</div>
         <div className="demo-alert demo-alert-warning" style={{ marginTop: 10 }}><strong>边界：</strong>functional updater 解决“基于前值更新”的队列问题，不是读取任意最新 state 的逃生舱；异步流程仍应明确其数据时序。</div>
       </div>
     </div>
