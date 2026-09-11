@@ -1,0 +1,25 @@
+# use-effect-correct-usage 审核建议
+
+## 当前结论
+
+- Gate A Correctness：**PASS**
+- Gate B Demo Contract：**FAIL**
+- Gate C Mental Model：**PASS**
+
+## 主要问题
+
+Note 对 Effect 的核心定位正确：它用于把 React 与外部系统同步，cleanup 用来撤销上一轮同步；开发 Strict Mode 的额外 setup → cleanup → setup 也描述准确。
+
+但实验描述与 Demo 不一致。Note 要求“运行定时器/事件监听实验，改变依赖并切换启用状态”，实际 Demo 没有定时器实验，也没有让 resize watcher 的某个依赖发生变化来观察 cleanup → setup；它主要展示挂载/卸载 resize listener，以及 `pageTitleBadge → document.title` 同步。因此当前实验不能证明 Note 声称的完整现象。
+
+## 心智模型与边界
+
+- 保留“Effect 是同步过程，不是生命周期回调”的主线。
+- 应明确 passive Effect 与 browser paint 的时序不应被简化为固定的“paint 后执行”；React 会根据交互等情况调整执行时机，真正稳定的课程边界是“Effect 在 commit 后用于外部同步”。
+- “没有外部系统先不要 Effect”是很好的项目决策规则。
+
+## 建议修改
+
+1. 将 Experiment 改成 Demo 实际支持的两个实验：挂载/卸载 resize watcher；改变 unread state 后观察 `document.title`。
+2. 若确实要教授依赖变化导致 cleanup → setup，应新增一个真实可切换订阅目标，而不是只在文案中声明。
+3. 不要把按钮 handler 中预先写入的日志当作 Effect lifecycle instrumentation；若要证明 lifecycle，应由 Effect setup/cleanup 本身产生日志或用专门测试验证。
