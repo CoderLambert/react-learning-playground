@@ -1,0 +1,31 @@
+# advanced-ref 审核建议
+
+## 当前结论
+
+- Gate A Correctness：**PASS**
+- Gate B Demo Contract：**FAIL**
+- Gate C Mental Model：**PASS**
+
+## 主要问题
+
+React 19 边界描述准确：函数组件可以接收 `ref` prop；`forwardRef` 在 React 19 已不再必要，并被官方标记为未来会废弃。`useImperativeHandle` 用来缩小父组件获得的命令式能力，`useLayoutEffect` 则用于确实必须在浏览器 paint 前完成的布局读取/修正。
+
+Demo 能真实展示两件事：
+
+1. `useLayoutEffect` 读取 box width；
+2. 父组件通过 imperative handle 只能调用 `focus()` / `select()`，而不是拿到整个 input DOM node。
+
+但 Note 的 Experiment 声称“比较普通 Effect 与 Layout Effect 的测量时机”。当前 Demo 没有 `useEffect` 对照，也没有 paint/flicker instrumentation，因此这一比较不可执行，Gate B 不通过。
+
+## 重要边界
+
+- `useLayoutEffect` 会阻塞 repaint，应把它视为有成本的浏览器布局 escape hatch，而不是“更及时的 useEffect”。
+- 只有需要在用户看到画面前读取布局并同步修正时，才有理由使用它；订阅、日志、网络同步通常不需要。
+- imperative handle 应暴露最小能力；如果行为能用 props/state 表达，优先声明式 API。
+- React 18 兼容库仍可能需要 `forwardRef`，版本策略应与应用自身 React 19 写法分开讨论。
+
+## 建议修改
+
+1. 将 Experiment 改为当前 Demo 真正支持的“切换 box 宽度并观察同步测量 + 通过窄 imperative handle 控制 input”。
+2. 如果课程确实要比较 `useEffect` 与 `useLayoutEffect`，新增一个可观察的布局修正/闪烁对照，而不是只靠文字声明时序差异。
+3. 保留 React 19 ref-as-prop 与最小 imperative API 的生产决策规则，这是本课最有价值的工程边界。
