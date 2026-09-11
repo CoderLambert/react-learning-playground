@@ -11,6 +11,11 @@
   white-space: nowrap;
 }
 
+.workbench-navigation-count,
+.workbench-navigation-badge {
+  color: #475569;
+}
+
 .workbench-app-content {
   max-width: none;
   width: 100%;
