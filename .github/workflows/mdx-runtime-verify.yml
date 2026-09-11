@@ -27,12 +27,17 @@ jobs:
         run: npm run lint
       - name: Build
         run: npm run build
-      - name: Verify lazy MDX chunk
+      - name: Verify MDX compilation and lazy registry contract
         shell: bash
         run: |
           set -euo pipefail
-          ls -lah dist/assets
-          find dist/assets -maxdepth 1 -type f -name '*runtime-smoke*.js' -print -quit | grep -q runtime-smoke
+          grep -F 'import.meta.glob("../content/notes/*.mdx")' src/workbench/noteRegistry.js
+          if grep -F 'eager: true' src/workbench/noteRegistry.js; then
+            echo "note registry must remain lazy" >&2
+            exit 1
+          fi
+          npx vite build --ssr src/content/notes/runtime-smoke.mdx --outDir /tmp/mdx-runtime-smoke
+          grep -R -q 'data-runtime-smoke' /tmp/mdx-runtime-smoke
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
       - name: Browser E2E
