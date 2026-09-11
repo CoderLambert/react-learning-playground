@@ -33,7 +33,6 @@ export function LearningInspector({
   onOpenChange,
   onFocusModeChange,
   onWidthChange,
-  onSourceFileChange: _onSourceFileChange,
   notes,
   source,
   className = "",
