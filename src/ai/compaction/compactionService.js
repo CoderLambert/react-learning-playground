@@ -63,7 +63,7 @@ export function createCompactionService({ summarize, now = () => new Date().toIS
 
   let active = null;
 
-  async function compact({
+  function compact({
     messages = [],
     previousSummary = null,
     coveredThroughMessageId = null,
@@ -101,8 +101,7 @@ export function createCompactionService({ summarize, now = () => new Date().toIS
         history: [],
         summary: serialized,
       });
-      const lastCovered =
-        coveredThroughMessageId || originalMessages.at(-1)?.id || null;
+      const lastCovered = coveredThroughMessageId || originalMessages.at(-1)?.id || null;
 
       return {
         summary,
