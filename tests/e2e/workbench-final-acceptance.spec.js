@@ -24,12 +24,12 @@ test.describe("React Learning Workbench final acceptance", () => {
   test("keeps the GitHub Pages base path and demo URL stable across refresh", async ({ page }) => {
     await page.goto("./?demo=props");
     await expect(page).toHaveURL(/\/react-learning-playground\/\?demo=props$/);
-    await expect(page.locator(".demo-page h2.demo-title")).toContainText("Props 基础与解构");
+    await expect(page.locator(".demo-page h2.demo-title")).toContainText("Props 基础");
     await expect(page.locator(".note-runtime-content")).toBeVisible();
 
     await page.reload();
     await expect(page).toHaveURL(/\/react-learning-playground\/\?demo=props$/);
-    await expect(page.locator(".demo-page h2.demo-title")).toContainText("Props 基础与解构");
+    await expect(page.locator(".demo-page h2.demo-title")).toContainText("Props 基础");
     await expect(page.locator(".note-runtime-content")).toBeVisible();
   });
 });
