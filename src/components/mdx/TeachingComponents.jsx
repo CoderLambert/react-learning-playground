@@ -57,6 +57,11 @@ function ItemList({ items }) {
   return <ul>{items.map((item, index) => <li key={`${index}-${String(item)}`}>{item}</li>)}</ul>;
 }
 
+function CompareContent({ value, legacyItems }) {
+  if (Array.isArray(value)) return <ItemList items={value} />;
+  return value ?? <ItemList items={legacyItems} />;
+}
+
 export function Compare({
   left,
   right,
@@ -71,13 +76,16 @@ export function Compare({
     return <TeachingBlock eyebrow="对比">{children}</TeachingBlock>;
   }
 
-  const leftContent = left ?? <ItemList items={leftItems} />;
-  const rightContent = right ?? <ItemList items={rightItems} />;
-
   return (
     <section className="mdx-compare" aria-label="方案对比">
-      <article className="mdx-compare-pane mdx-compare-bad"><h3>{leftTitle}</h3><div>{leftContent}</div></article>
-      <article className="mdx-compare-pane mdx-compare-good"><h3>{rightTitle}</h3><div>{rightContent}</div></article>
+      <article className="mdx-compare-pane mdx-compare-bad">
+        <h3>{leftTitle}</h3>
+        <div><CompareContent value={left} legacyItems={leftItems} /></div>
+      </article>
+      <article className="mdx-compare-pane mdx-compare-good">
+        <h3>{rightTitle}</h3>
+        <div><CompareContent value={right} legacyItems={rightItems} /></div>
+      </article>
     </section>
   );
 }
