@@ -10,6 +10,13 @@ import { UseRefDemo } from "./UseRefDemo";
 import { UseEffectCorrectUsageDemo } from "./UseEffectCorrectUsageDemo";
 import { NotNeedEffectDemo } from "./NotNeedEffectDemo";
 import { LifecycleOfReactiveEffectsDemo } from "./LifecycleOfReactiveEffectsDemo";
+import { RenderVsDomUpdateDemo } from "./RenderVsDomUpdateDemo";
+import { ReferenceEqualityDemo } from "./ReferenceEqualityDemo";
+import { ReactMemoDemo } from "./ReactMemoDemo";
+import { UseMemoDemo } from "./UseMemoDemo";
+import { UseCallbackDemo } from "./UseCallbackDemo";
+import { ProfilerDemo } from "./ProfilerDemo";
+import { ReactCompilerDemo } from "./ReactCompilerDemo";
 
 // 源码原始字符串（Vite ?raw 原生支持）
 import propsBasicsRaw from "./PropsBasicsDemo.jsx?raw";
@@ -33,6 +40,13 @@ import useRefRaw from "./UseRefDemo.jsx?raw";
 import useEffectCorrectUsageRaw from "./UseEffectCorrectUsageDemo.jsx?raw";
 import notNeedEffectRaw from "./NotNeedEffectDemo.jsx?raw";
 import lifecycleRaw from "./LifecycleOfReactiveEffectsDemo.jsx?raw";
+import renderVsDomUpdateRaw from "./RenderVsDomUpdateDemo.jsx?raw";
+import referenceEqualityRaw from "./ReferenceEqualityDemo.jsx?raw";
+import reactMemoRaw from "./ReactMemoDemo.jsx?raw";
+import useMemoRaw from "./UseMemoDemo.jsx?raw";
+import useCallbackRaw from "./UseCallbackDemo.jsx?raw";
+import profilerRaw from "./ProfilerDemo.jsx?raw";
+import reactCompilerRaw from "./ReactCompilerDemo.jsx?raw";
 
 // @demo-imports
 
@@ -40,6 +54,7 @@ export const CATEGORIES = [
   { id: "components", name: "组件通信与插槽", icon: "🧩" },
   { id: "state", name: "状态管理与演进", icon: "⚡" },
   { id: "effects", name: "Hooks 与副作用深度", icon: "🎣" },
+  { id: "performance", name: "性能模型与优化", icon: "🚀" },
 ];
 
 export const demos = [
@@ -131,7 +146,7 @@ export const demos = [
     label: "Reducer + Context 双通道优化",
     category: "state",
     badge: "进阶",
-    description: "拆分 State 与 Dispatch 独立上下文，彻底规避无效重新渲染",
+    description: "拆分 State 与 Dispatch 独立上下文，缩小只消费 dispatch 节点的更新范围",
     Component: UseReduceWithContextDemo,
     files: [
       { name: "UseReduceWithContextDemo.jsx", code: useReduceWithContextRaw },
@@ -179,6 +194,83 @@ export const demos = [
     Component: LifecycleOfReactiveEffectsDemo,
     files: [
       { name: "LifecycleOfReactiveEffectsDemo.jsx", code: lifecycleRaw },
+    ],
+  },
+  {
+    id: "render-vs-dom-update",
+    label: "Re-render ≠ DOM Update",
+    category: "performance",
+    badge: "核心",
+    description: "用 MutationObserver 对照 Render 与 Commit，建立先测量再优化的性能心智模型",
+    Component: RenderVsDomUpdateDemo,
+    files: [
+      { name: "RenderVsDomUpdateDemo.jsx", code: renderVsDomUpdateRaw },
+    ],
+  },
+  {
+    id: "reference-equality",
+    label: "Reference Equality 引用身份",
+    category: "performance",
+    badge: "基础",
+    description: "用 Object.is 对比对象、数组、函数跨 Render 的 identity，理解 memo 与 Hook dependencies 的基础",
+    Component: ReferenceEqualityDemo,
+    files: [
+      { name: "ReferenceEqualityDemo.jsx", code: referenceEqualityRaw },
+    ],
+  },
+  {
+    id: "react-memo",
+    label: "React.memo 命中与失效",
+    category: "performance",
+    badge: "优化",
+    description: "对比 primitive、新对象与稳定对象 props，观察 memo 的命中条件和 identity 陷阱",
+    Component: ReactMemoDemo,
+    files: [
+      { name: "ReactMemoDemo.jsx", code: reactMemoRaw },
+    ],
+  },
+  {
+    id: "use-memo",
+    label: "useMemo 昂贵计算缓存",
+    category: "performance",
+    badge: "优化",
+    description: "对比缓存与直接计算，观察依赖变化、昂贵计算与稳定 identity 的真实使用边界",
+    Component: UseMemoDemo,
+    files: [
+      { name: "UseMemoDemo.jsx", code: useMemoRaw },
+    ],
+  },
+  {
+    id: "use-callback",
+    label: "useCallback 函数引用稳定",
+    category: "performance",
+    badge: "优化",
+    description: "联动 memo child 观察函数 prop identity，理解 useCallback 的命中条件、updater function 与真实边界",
+    Component: UseCallbackDemo,
+    files: [
+      { name: "UseCallbackDemo.jsx", code: useCallbackRaw },
+    ],
+  },
+  {
+    id: "profiler",
+    label: "Profiler 先测量再优化",
+    category: "performance",
+    badge: "分析",
+    description: "用 Profiler actualDuration/baseDuration 观察 commit 成本，建立先定位瓶颈再优化的流程",
+    Component: ProfilerDemo,
+    files: [
+      { name: "ProfilerDemo.jsx", code: profilerRaw },
+    ],
+  },
+  {
+    id: "react-compiler",
+    label: "React Compiler 自动优化模型",
+    category: "performance",
+    badge: "Compiler",
+    description: "理解构建期自动 memoization、Rules of React、渐进采用与手工 memoization 的新边界",
+    Component: ReactCompilerDemo,
+    files: [
+      { name: "ReactCompilerDemo.jsx", code: reactCompilerRaw },
     ],
   },
   // @demo-entries
