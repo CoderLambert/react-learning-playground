@@ -28,6 +28,10 @@ import { UseMemoDemo } from "./UseMemoDemo";
 import { UseCallbackDemo } from "./UseCallbackDemo";
 import { ProfilerDemo } from "./ProfilerDemo";
 import { ReactCompilerDemo } from "./ReactCompilerDemo";
+import { ExternalStoreDemo } from "./ExternalStoreDemo";
+import { PortalThirdPartyDemo } from "./PortalThirdPartyDemo";
+import { ServerStateCacheDemo } from "./ServerStateCacheDemo";
+import { ServerStateMutationDemo } from "./ServerStateMutationDemo";
 import { UrlStateDemo } from "./UrlStateDemo";
 import { NestedRoutesDemo } from "./NestedRoutesDemo";
 import { NavigationBoundaryDemo } from "./NavigationBoundaryDemo";
@@ -70,6 +74,10 @@ import useMemoRaw from "./UseMemoDemo.jsx?raw";
 import useCallbackRaw from "./UseCallbackDemo.jsx?raw";
 import profilerRaw from "./ProfilerDemo.jsx?raw";
 import reactCompilerRaw from "./ReactCompilerDemo.jsx?raw";
+import externalStoreRaw from "./ExternalStoreDemo.jsx?raw";
+import portalThirdPartyRaw from "./PortalThirdPartyDemo.jsx?raw";
+import serverStateCacheRaw from "./ServerStateCacheDemo.jsx?raw";
+import serverStateMutationRaw from "./ServerStateMutationDemo.jsx?raw";
 import urlStateRaw from "./UrlStateDemo.jsx?raw";
 import nestedRoutesRaw from "./NestedRoutesDemo.jsx?raw";
 import navigationBoundaryRaw from "./NavigationBoundaryDemo.jsx?raw";
@@ -83,6 +91,8 @@ export const CATEGORIES = [
   { id: "effects", name: "Hooks 与副作用深度", icon: "🎣" },
   { id: "forms", name: "Forms 与 React 19 Actions", icon: "📝" },
   { id: "performance", name: "性能模型与优化", icon: "🚀" },
+  { id: "external", name: "外部 Store 与第三方系统", icon: "📡" },
+  { id: "server-state", name: "Server State 与请求架构", icon: "🗄️" },
   { id: "routing", name: "Router 与页面状态", icon: "🧭" },
 ];
 
@@ -117,6 +127,10 @@ export const demos = [
   { id: "use-callback", label: "useCallback 函数引用稳定", category: "performance", badge: "优化", description: "联动 memo child 观察函数 prop identity，理解 useCallback 的命中条件、updater function 与真实边界", Component: UseCallbackDemo, files: [{ name: "UseCallbackDemo.jsx", code: useCallbackRaw }] },
   { id: "profiler", label: "Profiler 先测量再优化", category: "performance", badge: "分析", description: "用 Profiler actualDuration/baseDuration 观察 commit 成本，建立先定位瓶颈再优化的流程", Component: ProfilerDemo, files: [{ name: "ProfilerDemo.jsx", code: profilerRaw }] },
   { id: "react-compiler", label: "React Compiler 自动优化模型", category: "performance", badge: "Compiler", description: "理解构建期自动 memoization、Rules of React、渐进采用与手工 memoization 的新边界", Component: ReactCompilerDemo, files: [{ name: "ReactCompilerDemo.jsx", code: reactCompilerRaw }] },
+  { id: "external-store", label: "useSyncExternalStore 外部订阅", category: "external", badge: "Store", description: "可视化 subscribe/getSnapshot、snapshot identity、unsubscribe 与外部状态选型边界", Component: ExternalStoreDemo, files: [{ name: "ExternalStoreDemo.jsx", code: externalStoreRaw }] },
+  { id: "portal-third-party", label: "Portal 与第三方 DOM 生命周期", category: "external", badge: "集成", description: "观察 React Tree 与 DOM Tree 差异，并用 ref + Effect setup/cleanup 管理第三方 DOM 实例", Component: PortalThirdPartyDemo, files: [{ name: "PortalThirdPartyDemo.jsx", code: portalThirdPartyRaw }] },
+  { id: "server-state-cache", label: "Server State Cache 生命周期", category: "server-state", badge: "Cache", description: "区分 Client/Server State，可视化 query key、fresh/stale、refetch、in-flight dedupe 与 invalidation", Component: ServerStateCacheDemo, files: [{ name: "ServerStateCacheDemo.jsx", code: serverStateCacheRaw }] },
+  { id: "server-state-mutation", label: "请求竞态、取消与 Optimistic Mutation", category: "server-state", badge: "Mutation", description: "观察 Abort cancellation、race guard、pagination query identity、optimistic confirm/rollback", Component: ServerStateMutationDemo, files: [{ name: "ServerStateMutationDemo.jsx", code: serverStateMutationRaw }] },
   { id: "url-state", label: "URL 状态与 Search Params", category: "routing", badge: "核心", description: "把 URL 作为可分享、可刷新、可前进后退的页面状态来源，区分 Route Params 与 Search Params", Component: UrlStateDemo, files: [{ name: "UrlStateDemo.jsx", code: urlStateRaw }] },
   { id: "nested-routes", label: "Nested Routes 与 Outlet", category: "routing", badge: "架构", description: "可视化父子 Route 匹配链、Outlet 插槽、Index Route 与无 path Layout Route 的职责边界", Component: NestedRoutesDemo, files: [{ name: "NestedRoutesDemo.jsx", code: nestedRoutesRaw }] },
   { id: "navigation-boundary", label: "Navigation 与 Route Boundary", category: "routing", badge: "导航", description: "区分声明式链接与程序式导航，可视化 history push/replace/back/forward 与 Not Found 边界", Component: NavigationBoundaryDemo, files: [{ name: "NavigationBoundaryDemo.jsx", code: navigationBoundaryRaw }] },
