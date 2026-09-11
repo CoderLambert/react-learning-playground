@@ -45,5 +45,16 @@ test.describe("effects and cleanup", () => {
     await expect(page.getByRole("dialog", { name: "Portal demo" })).toBeHidden();
     await page.getByRole("button", { name: "切换 series，触发重建", exact: true }).click();
     await expect(page.locator("pre").filter({ hasText: /setup/ }).first()).toContainText("cleanup");
+
+    await openDemo(page, "useSyncExternalStore 外部订阅");
+    const readerA = page.locator(".demo-alert-tip").filter({ hasText: "Reader A" }).first();
+    const readerB = page.locator(".demo-alert-tip").filter({ hasText: "Reader B" }).first();
+    await expect(readerA).toContainText("当前订阅者：2");
+    await page.getByRole("button", { name: /externalStore.increment/ }).click();
+    await expect(readerA).toContainText("snapshot.value = 1");
+    await expect(readerB).toContainText("snapshot.value = 1");
+    await openDemo(page, "Props 基础与解构");
+    await openDemo(page, "useSyncExternalStore 外部订阅");
+    await expect(readerA).toContainText("当前订阅者：2");
   });
 });

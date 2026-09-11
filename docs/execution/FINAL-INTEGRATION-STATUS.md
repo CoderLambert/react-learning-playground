@@ -1,6 +1,6 @@
 # Final React Learning Integration Status
 
-Branch: `chore/final-browser-validation` (based on `main` at `8b01fbe`)
+Branch: `chore/final-production-audit` (based on `main` at `83916b6`)
 
 ## Scope
 
@@ -76,12 +76,12 @@ This status document changes the integration HEAD, so the same workflow must als
 
 ## Final browser validation
 
-Validated on branch `chore/final-browser-validation` against the production preview at `/react-learning-playground/` on 2026-09-11.
+Validated on branch `chore/final-production-audit` against the production preview at `/react-learning-playground/` on 2026-09-11.
 
 - `npm ci`: **PASS** — 122 packages installed; audit reported 0 vulnerabilities.
-- `npm run lint`: **PASS** — exit code 0; existing teaching-demo and verification-script warnings remain documented by the command output.
+- `npm run lint`: **PASS** — exit code 0 with 0 warnings.
 - `npm run build`: **PASS** — Vite production build completed; existing large-chunk advisory remains.
-- `npm run test:e2e`: **PASS** — 10 Chromium tests passed in 7.9s in the final CI-like run.
+- `npm run test:e2e`: **PASS** — 12 Chromium tests passed in 9.1s in the final CI-like run.
 - production preview smoke: **PASS** — `curl` verified the base-path HTML root and base-prefixed asset references.
 - desktop browser interaction smoke: **PASS** — 1440×900 navigation, focused/all modes, forms, and CodeViewer.
 - narrow viewport smoke: **PASS** — 390×844 sidebar, navigation, form submission, source viewer, and no document/body horizontal overflow.
@@ -105,10 +105,42 @@ Validated on branch `chore/final-browser-validation` against the production prev
 - Cross-browser coverage was intentionally limited to Chromium for this final gate.
 - Clipboard UI and Chromium clipboard readback both passed locally; other browser permission policies may still require a manual copy check.
 
+## Final post-merge production acceptance
+
+Audit branch: `chore/final-production-audit`, based on `origin/main` commit `83916b6`; browser: headless Chromium; date: 2026-09-11.
+
+- `npm ci`: **PASS** — executed at repository root; 122 packages installed and npm audit reported 0 vulnerabilities.
+- `npm run lint`: **PASS** — executed after all audit fixes; exit code 0 with 0 warnings.
+- `npm run build`: **PASS** — Vite production build completed successfully; only the existing large-chunk advisory was emitted.
+- Playwright E2E: **PASS** — `CI=true npm run test:e2e`; 12/12 tests passed in 9.1s against `vite preview` at `http://127.0.0.1:4173/react-learning-playground/`.
+- local production preview: **PASS** — `npm run preview -- --host 127.0.0.1 --port 4173` plus `curl --fail http://127.0.0.1:4173/react-learning-playground/`; HTTP 200 and `/react-learning-playground/`-prefixed CSS, JS, and favicon assets. Independent Chromium smoke verified 58 demos, 12 checkpoints, focused/continuous modes, search/no-result/restore, CodeViewer open/close, multi-file source switching, and copy feedback.
+- deployed GitHub Pages smoke: **FAIL** — `https://coderlambert.github.io/react-learning-playground/` was reachable (HTTP 200), assets loaded with the correct base path, and navigation/search/focused/all/early-middle-late demos/CodeViewer/refresh passed with zero page errors, console errors, warnings, or failed requests. The deployed artifact did not render the merged chapter checkpoint UI in continuous mode (`0` checkpoints instead of `12`), so this item is not PASS; it is a stale deployment artifact, not a local runtime failure. Deep-link demo state is **N/A** because demo selection is client-side and exposes no URL route.
+- desktop viewport: **PASS** — independent Chromium interaction smoke at 1440×900 and `tests/e2e/responsive.spec.js`; navigation, forms, CodeViewer, continuous mode, checkpoints, and no horizontal overflow verified.
+- mobile viewport: **PASS** — independent Chromium interaction smoke at 390×844 and `tests/e2e/responsive.spec.js`; keyboard-opened sidebar, navigation, modal, CodeViewer, form submission, readable checkpoint state, and no document/body horizontal overflow verified.
+- console/page-error audit: **PASS** — the Playwright fixture fails on unexpected `pageerror`, `console.error`, and `console.warn`; the final 12-test suite and independent local smoke captured 0 of each, with 0 failed requests while switching through all registered demos. The only Node output was the known Playwright `NO_COLOR` warning from the test runner, not browser console output.
+- keyboard-only audit: **PASS** — an independent 1440×900 Chromium pass used focus, Tab, Shift+Tab, Enter, Space, and Escape without mouse actions; logical focus, visible focus, labels, form submit, CodeViewer file switching, and checkpoint navigation passed.
+- modal focus management: **PASS** — the keyboard-only pass verified initial focus, Shift+Tab/Tab containment, Escape close, and focus restoration to the opener; the corresponding Playwright accessibility test also passed.
+- automated accessibility scan: **PASS** — `@axe-core/playwright` scans reported 0 WCAG 2A/2AA violations for normal focused demo, search results, modal-open, form-error, and chapter-checkpoint states; the checked states waited for the demo transition to settle. This is automated axe/DOM validation, not screen-reader validation.
+- actual screen-reader validation: **PENDING** — Linux environment check found no Orca, NVDA, or VoiceOver; no real screen reader was used. Requires a human assistive-technology session.
+- React Router real lab: **PASS** — `cd integration-labs/router && npm install && npm run build`; production preview on port 4301 plus `node ../smoke.mjs router http://127.0.0.1:4301/` passed nested navigation and 404 boundary interaction.
+- TanStack Query real lab: **PASS** — `cd integration-labs/tanstack-query && npm install && npm run build`; mock server plus production preview on port 4302 and `node ../smoke.mjs query http://127.0.0.1:4302/` passed shared request identity, retry recovery, optimistic mutation, rollback, and expected HTTP 500 evidence.
+- Next.js App Router real lab: **PASS** — `cd integration-labs/next-app-router && npm install && npm run build`; `npm run start -- --hostname 127.0.0.1 --port 4303` plus `node ../smoke.mjs next http://127.0.0.1:4303/` passed Server Action persistence.
+
+### Audit fixes
+
+- `LifecycleOfReactiveEffectsDemo.jsx`: removed state updates from Effect setup/cleanup, which cleared the final `react(set-state-in-effect)` lint warning while keeping socket synchronization in the Effect and moving user-visible transition logs to the room-switch event.
+- `ExternalStoreDemo.jsx`: fixed the real remount/subscription defect where the UI displayed zero subscribers after both `useSyncExternalStore` readers mounted. The cached snapshot now includes listener count and notifies subscribers after subscription changes; `effects-cleanup.spec.js` covers initial count, updates, and unmount/remount.
+
+### Remaining manual debt
+
+- The deployed GitHub Pages artifact must be rebuilt/redeployed from the current main line so its 12 chapter checkpoints match the locally validated production build.
+- A real screen-reader pass remains pending and must be performed with an actual screen reader before claiming that validation as PASS.
+- Cross-browser coverage was intentionally limited to Chromium; clipboard permission behavior outside this environment still merits a manual check.
+
 ## Previous integration status
 
-The preceding integration gate covered only build and HTTP availability. Its browser-interaction debt is superseded by the executed Playwright results above; the only remaining manual item is the real screen-reader pass explicitly marked **PENDING**.
+The preceding integration gate covered only build and HTTP availability. Its browser-interaction debt is superseded by the executed local Playwright results above; the current deployed GitHub Pages artifact still needs redeployment to include the merged chapter checkpoints.
 
 ## Main merge policy
 
-Open `chore/final-browser-validation -> main` only after deterministic CI passes on the exact branch HEAD. Merge to `main` only when the PR is mergeable, has no failed checks, and its pull-request-triggered `React Learning Verify` run passes. Otherwise leave the PR open and record the blocker.
+Open `chore/final-production-audit -> main` only after deterministic CI passes on the exact branch HEAD. Do not merge while the deployed GitHub Pages checkpoint mismatch remains; the real screen-reader item is explicitly **PENDING** until a human assistive-technology session is available.
