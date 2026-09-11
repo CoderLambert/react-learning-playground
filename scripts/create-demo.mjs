@@ -167,7 +167,7 @@ export function buildRegistryUpdate(registry, { componentName, id, title, catego
   ].join("\n");
   const entry = `  {
     id: ${JSON.stringify(id)},
-    label: ${JSON.stringify(title)},
+    label: ${JSON.stringify(`🧪 ${title}`)},
     category: ${JSON.stringify(category)},
     Component: ${componentName},
     files: [{ name: ${JSON.stringify(`${componentName}.jsx`)}, code: ${rawVariableName} }],
