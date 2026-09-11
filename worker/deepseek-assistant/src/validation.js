@@ -28,6 +28,20 @@ export function assertContentLength(request) {
   if (raw && Number(raw) > LIMITS.bodyBytes) fail("request body too large", 413);
 }
 
+export async function readJsonBody(request) {
+  assertContentLength(request);
+  const raw = await request.text();
+  if (new TextEncoder().encode(raw).byteLength > LIMITS.bodyBytes) {
+    fail("request body too large", 413);
+  }
+
+  try {
+    return JSON.parse(raw);
+  } catch {
+    fail("invalid JSON body");
+  }
+}
+
 export function validateRequest(payload) {
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) fail("JSON object required");
   const question = text(payload.question, "question", LIMITS.questionChars);
