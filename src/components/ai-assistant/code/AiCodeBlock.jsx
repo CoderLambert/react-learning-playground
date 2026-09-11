@@ -1,11 +1,11 @@
 import { useMemo, useState } from "react";
 import { CodeBlockNode } from "markstream-react";
-import { buildAiCodeBlockModel } from "./aiCodeBlockModel.js";
+import { buildAiCodeBlockModel, performCodeBlockCopy } from "./aiCodeBlockModel.js";
 import "./AiCodeBlock.css";
 
 async function copyToClipboard(text) {
-  if (navigator?.clipboard?.writeText) {
-    await navigator.clipboard.writeText(text);
+  if (globalThis.navigator?.clipboard?.writeText) {
+    await globalThis.navigator.clipboard.writeText(text);
     return;
   }
 
@@ -43,8 +43,11 @@ export function AiCodeBlock({
     if (!model.code) return;
 
     try {
-      await copyToClipboard(model.code);
-      onCopy?.(model.code);
+      await performCodeBlockCopy({
+        code: model.code,
+        writeText: copyToClipboard,
+        onCopy,
+      });
       setCopyState("copied");
     } catch {
       setCopyState("failed");
