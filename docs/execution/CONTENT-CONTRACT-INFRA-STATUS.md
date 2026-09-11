@@ -35,31 +35,53 @@ Source      = implementation
 - Replaced the old 19-step note template with flexible teaching principles built around core question → predict/experiment → observe/explain → boundary/counterexample → project decision rule.
 - Documented hard quality gates for correctness, Demo↔Note alignment and mental-model completeness.
 
-### Canonical Compare migration
+### Canonical prop migration
 
-- Mechanically migrated all three known production notes using legacy `Compare leftItems/rightItems`:
+- Mechanically migrated all known production `Compare leftItems/rightItems` usages to canonical `left/right`:
   - `not-need-effect.mdx`
   - `suspense-boundary.mdx`
   - `transition-deferred.mdx`
-- While migrating, made canonical `Compare left/right` accept either renderable nodes or arrays. Arrays are rendered as lists by the teaching component, which keeps MDX concise and avoids nested JSX inside prop expressions.
-- Tightened `test:content`: `leftItems/rightItems` are now rejected in note content. The runtime aliases remain temporarily available for backward compatibility, but new/edited notes cannot use them.
-- The same three touched notes were also mechanically normalized from `Summary items` to children and from `FurtherReading links` to canonical `items`; lesson meaning was not changed.
+- Canonical `Compare left/right` accepts either renderable nodes or arrays. Arrays are rendered as lists by the teaching component, keeping MDX parser-friendly without nested JSX prop expressions.
+- `test:content` now rejects legacy `leftItems/rightItems` in notes.
+- Mechanically normalized these additional unowned notes without changing lesson meaning:
+  - `form-action.mdx`
+  - `advanced-ref.mdx`
+  - `lazy-suspense.mdx`
+  - `optimistic-update.mdx`
+  - `use-effect-correct-usage.mdx`
+  - `use-ref.mdx`
+  - `custom-hooks.mdx`
+  - `controlled-form.mdx`
+  - `error-boundary-use.mdx`
+  - `form-data-modeling.mdx`
+  - `action-state-form-status.mdx`
+  - `lifecycle-of-reactive-effects.mdx`
+- For those files, legacy `Timeline items` became `steps`, `Summary items` became child list content, and `FurtherReading links` became `items` where present.
+- The repository has now reached zero accepted Note usage of `Timeline items`; `test:content` rejects `items` on `<Timeline>` while the runtime compatibility alias remains temporarily available for branch reconciliation.
+
+### TypeScript sample compiler gate
+
+- Added `tsconfig.samples.json` scoped only to `src/demos/typescript-samples/**/*.tsx` with strict/noEmit React TSX settings.
+- Added `npm run typecheck:samples` using an exact `typescript@7.0.2` compiler invocation, so no package-lock churn or competing lesson-file edit is required.
+- Added `TypeScript sample contract` to `React Learning Verify` after content-contract checks and before lint/build.
+- This resolves the shared-infrastructure gap recorded by `automation/typescript-learning`: once that branch is reconciled with this infrastructure, its legal examples and `@ts-expect-error` assertions are checked by a real TypeScript compiler rather than inferred from Vite build success.
 
 ## Validation evidence
 
-Earlier baseline implementation head `51fc8aba679c8645a39b8174b5a294501e1e79aa` was validated by `React Learning Verify` run `34637090169`:
+Implementation head `9291dadb890d9c83cd60788e418f3a2ec8af0be8` was validated by `React Learning Verify` run `34645124188`:
 
 - `npm ci`: **PASS**
-- AI focused tests: **PASS** (91 tests)
+- AI focused tests: **PASS**
 - `npm run test:content`: **PASS**
+- `npm run typecheck:samples`: **PASS**
 - `npm run lint`: **PASS**
 - `npm run build`: **PASS**
 
-The canonical Compare migration produced newer commits after that evidence. No PASS claim is made yet for the current head; latest-head PR CI is the acceptance source.
+The same implementation head also has `Workbench State URL Verify` run `34645124170`: **PASS**. `Workbench Integration Verify` run `34645124203` was still pending when this status entry was written; do not claim it as PASS until its conclusion is successful.
 
 ## Remaining work
 
-1. Continue mechanical normalization of remaining legacy `Timeline items`, `Summary items`, and `FurtherReading links`, avoiding lesson files actively owned by parallel lesson tasks until those branches settle.
-2. As each legacy prop class reaches zero, tighten `test:content` to reject it in notes while retaining the runtime compatibility alias for a short transition window.
-3. Integrate TypeScript sample validation once the TypeScript-content branch's intentional valid/invalid TSX samples can be consumed without duplicating or conflicting with that branch. This task owns shared `package.json`/CI wiring.
-4. After all legacy note usage reaches zero and dependent lesson branches are reconciled, remove temporary runtime aliases in a final safe cleanup.
+1. Continue mechanical normalization of remaining legacy `Summary items` and `FurtherReading links`, avoiding lesson files actively owned by parallel lesson tasks until those branches settle.
+2. Once each remaining legacy prop class reaches zero, tighten `test:content` to reject it in notes while retaining runtime compatibility aliases only long enough for parallel-branch reconciliation.
+3. Reconcile the TypeScript lesson branch with this shared gate and inspect the exact compiler result for its intentional `@ts-expect-error` examples; fix sample content only in the TypeScript-owned branch if diagnostics expose a real sample issue.
+4. After all legacy Note usage reaches zero and dependent lesson branches are reconciled, remove temporary runtime aliases in a final safe cleanup.
