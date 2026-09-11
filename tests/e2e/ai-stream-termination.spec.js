@@ -1,10 +1,10 @@
 import { expect, test } from "@playwright/test";
 
 const GATEWAY_PATH = "/__ai-test__";
-const OUTPUT_LIMIT = 6_000;
+const LARGE_OUTPUT_SIZE = 6_001;
 
 async function installStreamingGateway(page) {
-  await page.addInitScript(({ gatewayPath, outputLimit }) => {
+  await page.addInitScript(({ gatewayPath, largeOutputSize }) => {
     const originalFetch = window.fetch.bind(window);
     const encoder = new TextEncoder();
     const encode = (event) => encoder.encode(`${JSON.stringify(event)}\n`);
@@ -71,13 +71,13 @@ async function installStreamingGateway(page) {
         ], { interval: 75 });
       }
 
-      if (question === "e2e:output-limit") {
+      if (question === "e2e:unlimited-output") {
         return response([
           { type: "start" },
-          { type: "delta", text: "🙂".repeat(outputLimit + 1) },
-          { type: "delta", text: "不应被消费" },
+          { type: "delta", text: "🙂".repeat(largeOutputSize) },
+          { type: "delta", text: "继续输出" },
           { type: "done", finishReason: "stop" },
-        ], { interval: 250, trackCancellation: true });
+        ], { interval: 50, trackCancellation: true });
       }
 
       if (question === "e2e:user-abort") {
@@ -102,7 +102,7 @@ async function installStreamingGateway(page) {
         { type: "done", finishReason },
       ], { interval: 25 });
     };
-  }, { gatewayPath: GATEWAY_PATH, outputLimit: OUTPUT_LIMIT });
+  }, { gatewayPath: GATEWAY_PATH, largeOutputSize: LARGE_OUTPUT_SIZE });
 }
 
 async function openAssistant(page) {
@@ -158,21 +158,20 @@ test("two synchronous submit events remain single-flight", async ({ page }) => {
   await expect(assistantMessage).toHaveCount(1);
 });
 
-test("more than 6000 Unicode characters stops upstream and finalizes at output_limit", async ({ page }) => {
+test("more than 6000 Unicode characters continues to stream and persist", async ({ page }) => {
   const { composer, transcript } = await openAssistant(page);
   const assistantMessage = transcript.locator('[data-message-role="assistant"]');
 
-  await submit(page, composer, "e2e:output-limit");
+  await submit(page, composer, "e2e:unlimited-output");
 
   await expect(assistantMessage).toHaveCount(1);
-  await expect(assistantMessage).toHaveAttribute("data-finish-reason", "output_limit");
-  await expect(assistantMessage.getByRole("status")).toHaveText("回答已达到 6000 字上限");
+  await expect(assistantMessage).toContainText("继续输出");
+  await expect(assistantMessage).toHaveAttribute("data-finish-reason", "stop");
+  await expect(assistantMessage.locator(".ai-assistant-finish-reason")).toHaveCount(0);
   await expect.poll(async () => assistantMessage.locator(".ai-assistant-markdown").evaluate(
     (node) => Array.from(node.textContent ?? "").length,
-  )).toBe(OUTPUT_LIMIT);
-  await expect(assistantMessage).not.toContainText("不应被消费");
-  await expect.poll(() => page.evaluate(() => window.__aiOutputUpstreamAborted)).toBe(true);
-  await expect(assistantMessage).toHaveCount(1);
+  )).toBe(LARGE_OUTPUT_SIZE + 4);
+  await expect.poll(() => page.evaluate(() => window.__aiOutputUpstreamAborted)).toBe(false);
 
   const persisted = await page.evaluate(() => new Promise((resolve, reject) => {
     const open = indexedDB.open("react-learning-ai");
@@ -188,18 +187,18 @@ test("more than 6000 Unicode characters stops upstream and finalizes at output_l
     };
   }));
   expect(persisted).toHaveLength(1);
-  expect(Array.from(persisted[0].content)).toHaveLength(OUTPUT_LIMIT);
+  expect(Array.from(persisted[0].content)).toHaveLength(LARGE_OUTPUT_SIZE + 4);
   expect(persisted[0]).toMatchObject({
     status: "complete",
-    metadata: { finishReason: "output_limit" },
+    metadata: { finishReason: "stop" },
   });
 
   await page.reload();
   await page.getByRole("tab", { name: "AI" }).click();
   const restored = page.getByRole("log", { name: "AI 对话记录" }).locator('[data-message-role="assistant"]');
   await expect(restored).toHaveCount(1);
-  await expect(restored).toHaveAttribute("data-finish-reason", "output_limit");
-  await expect(restored.getByRole("status")).toHaveText("回答已达到 6000 字上限");
+  await expect(restored).toContainText("继续输出");
+  await expect(restored).toHaveAttribute("data-finish-reason", "stop");
 });
 
 test("stop and provider length expose distinct terminal UI states", async ({ page }) => {
