@@ -1,0 +1,38 @@
+# Props 基础与解构
+
+<MentalModel title="Props 是父组件给子组件的一次 render 输入">
+Props 表达父 → 子的数据流。子组件可以读取、解构和基于 props 派生值，但不应修改 props 本身；需要改变数据时，应通过事件回调把“发生了什么”通知拥有该数据的组件。
+</MentalModel>
+
+<Experiment title="观察只读输入与派生计算">
+在中间 Demo 中修改父级提供的数据，比较 UserCard、ProductCard 的输出，并观察默认值、对象展开与派生展示如何随下一次 render 更新。
+</Experiment>
+
+<DemoReference action="改变父级输入并比较多个子组件" observe="确认数据从父到子流动；子组件只消费输入，派生值无需额外 state。" />
+
+<Flow items={["父组件拥有数据", "render 时通过 JSX attributes 传入 props", "子组件读取/解构", "子组件计算 UI", "需要修改时通过 callback prop 上报事件"]} />
+
+<Compare>
+### Props
+由父组件提供，是当前 render 的只读输入。
+
+### State
+由组件树中的某个位置拥有，可通过更新请求驱动下一次 render。
+</Compare>
+
+<Boundary title="默认值只处理 undefined">
+解构默认值在属性缺失或值为 `undefined` 时生效；显式传入 `null` 不会触发默认值。展开 props 很方便，但公共组件中过度透传会模糊 API 边界。
+</Boundary>
+
+<AntiPattern title="复制 props 到 state 后持续同步">
+若一个值能直接从 props 计算，就不要再保存一份 state 并用 Effect 同步。重复数据源会制造过期和冲突；只有确实需要“以 props 初始化后独立演化”的状态才应单独建模。
+</AntiPattern>
+
+<Summary>
+- Props 是父 → 子的只读 render 输入。
+- callback prop 用来把事件向拥有数据的一侧传递。
+- 能从 props 派生的值通常直接计算。
+- 明确的 props API 比无边界对象展开更可维护。
+</Summary>
+
+<FurtherReading items={[{ label: "React: Passing Props to a Component", href: "https://react.dev/learn/passing-props-to-a-component" }, { label: "React: Sharing State Between Components", href: "https://react.dev/learn/sharing-state-between-components" }]} />
