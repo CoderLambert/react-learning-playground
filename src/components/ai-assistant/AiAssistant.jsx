@@ -1,6 +1,7 @@
 import { useId } from "react";
 import MarkdownRender from "markstream-react";
 import "markstream-react/index.css";
+import { AI_MARKDOWN_CUSTOM_ID } from "./code/registerAiCodeBlock.js";
 import "./AiAssistant.css";
 
 const DEFAULT_SUGGESTIONS = [
@@ -97,6 +98,7 @@ function AssistantMarkdown({ content, isStreaming }) {
   return (
     <div className="ai-assistant-markdown">
       <MarkdownRender
+        customId={AI_MARKDOWN_CUSTOM_ID}
         mode="chat"
         content={content}
         final={!isStreaming}
