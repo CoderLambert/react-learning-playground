@@ -229,7 +229,8 @@ export class StreamingMessagePersister {
   schedule(patch) {
     this.pending = { ...(this.pending ?? {}), ...patch };
     if (this.timer) return;
-    this.timer = this.setTimeoutImpl(() => {
+    const scheduleTimeout = this.setTimeoutImpl;
+    this.timer = scheduleTimeout(() => {
       this.timer = null;
       void this.flush();
     }, this.intervalMs);
@@ -251,7 +252,8 @@ export class StreamingMessagePersister {
 
   async finalize(patch = {}) {
     if (this.timer) {
-      this.clearTimeoutImpl(this.timer);
+      const clearScheduledTimeout = this.clearTimeoutImpl;
+      clearScheduledTimeout(this.timer);
       this.timer = null;
     }
     this.pending = { ...(this.pending ?? {}), ...patch };
