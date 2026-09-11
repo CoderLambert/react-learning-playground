@@ -1,0 +1,62 @@
+name: Real Integration Labs
+on:
+  push:
+    branches: [feat/real-integration-labs]
+    paths: ["integration-labs/**", "docs/execution/REAL-INTEGRATION-LABS-STATUS.md", ".github/workflows/real-integration-labs.yml"]
+  pull_request:
+    branches: [main]
+    paths: ["integration-labs/**", "docs/execution/REAL-INTEGRATION-LABS-STATUS.md", ".github/workflows/real-integration-labs.yml"]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 24, cache: npm }
+      - name: Root install and regression
+        run: |
+          npm ci
+          npm run lint
+          npm run build
+          npx playwright install --with-deps chromium
+          npm run test:e2e
+      - name: Router install/build
+        working-directory: integration-labs/router
+        run: npm install && npm run build
+      - name: Router browser smoke
+        shell: bash
+        run: |
+          cd integration-labs/router
+          npm run preview -- --host 127.0.0.1 --port 4301 > /tmp/router.log 2>&1 & PID=$!
+          trap 'kill $PID 2>/dev/null || true; cat /tmp/router.log' EXIT
+          for i in {1..30}; do curl -fsS http://127.0.0.1:4301/ >/dev/null && break || sleep 1; done
+          cd ../..
+          node integration-labs/smoke.mjs http://127.0.0.1:4301/ "Real Router Integration"
+      - name: Query install/build
+        working-directory: integration-labs/tanstack-query
+        run: npm install && npm run build
+      - name: Query HTTP and browser smoke
+        shell: bash
+        run: |
+          cd integration-labs/tanstack-query
+          node mock-server.mjs > /tmp/query-api.log 2>&1 & API=$!
+          npm run preview -- --host 127.0.0.1 --port 4302 > /tmp/query-web.log 2>&1 & WEB=$!
+          trap 'kill $API $WEB 2>/dev/null || true; cat /tmp/query-api.log; cat /tmp/query-web.log' EXIT
+          for i in {1..30}; do curl -fsS http://127.0.0.1:4302/ >/dev/null && curl -fsS 'http://127.0.0.1:4302/api/items?page=1' >/dev/null && break || sleep 1; done
+          cd ../..
+          node integration-labs/smoke.mjs http://127.0.0.1:4302/ "TanStack Query 5"
+      - name: Next install/build
+        working-directory: integration-labs/next-app-router
+        run: npm install && npm run build
+      - name: Next HTTP and browser smoke
+        shell: bash
+        run: |
+          cd integration-labs/next-app-router
+          npm run start -- --hostname 127.0.0.1 --port 4303 > /tmp/next.log 2>&1 & PID=$!
+          trap 'kill $PID 2>/dev/null || true; cat /tmp/next.log' EXIT
+          for i in {1..45}; do curl -fsS http://127.0.0.1:4303/ >/dev/null && break || sleep 1; done
+          cd ../..
+          node integration-labs/smoke.mjs http://127.0.0.1:4303/ "Next.js 16 App Router"

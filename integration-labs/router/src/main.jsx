@@ -1,0 +1,69 @@
+import React from "react";
+import { createRoot } from "react-dom/client";
+import {
+  Link,
+  NavLink,
+  Outlet,
+  createBrowserRouter,
+  useLoaderData,
+  useNavigation,
+  useParams,
+  useRouteError,
+  useSearchParams,
+} from "react-router";
+import { RouterProvider } from "react-router/dom";
+import "./styles.css";
+
+const projects = {
+  alpha: { name: "Alpha", owner: "Ada", activity: ["loader ready", "nested route mounted"] },
+  beta: { name: "Beta", owner: "Lin", activity: ["search state preserved", "URL is source of truth"] },
+};
+
+function wait(ms, signal) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(resolve, ms);
+    signal?.addEventListener("abort", () => { clearTimeout(timer); reject(signal.reason); }, { once: true });
+  });
+}
+
+async function projectLoader({ params, request }) {
+  await wait(450, request.signal);
+  const project = projects[params.projectId];
+  if (!project) throw new Response("Project not found", { status: 404, statusText: "Not Found" });
+  return project;
+}
+
+function RootLayout() {
+  const navigation = useNavigation();
+  return <div className="shell">
+    <header><strong>React Router 8 · real Data Router</strong><nav><NavLink to="/">Home</NavLink><NavLink to="/projects/alpha">Alpha</NavLink><NavLink to="/projects/beta?tab=activity">Beta + search</NavLink><NavLink to="/projects/missing">404 boundary</NavLink></nav></header>
+    {navigation.state !== "idle" && <div className="pending" role="status">navigation: {navigation.state}</div>}
+    <main><Outlet /></main>
+  </div>;
+}
+
+function Home() {
+  return <section><h1>Real Router Integration</h1><p>This app uses an actual Data Router. Route matching, loaders, params, search params, pending navigation, nested outlets and route errors are handled by React Router—not React Core.</p><Link to="/projects/alpha">Open project route</Link></section>;
+}
+
+function ProjectLayout() {
+  const project = useLoaderData();
+  const { projectId } = useParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab = searchParams.get("tab") ?? "overview";
+  return <section><h1>{project.name}</h1><p>params.projectId = <code>{projectId}</code> · loader owner = <strong>{project.owner}</strong></p><div className="row"><button onClick={() => setSearchParams({ tab: "overview" })}>tab=overview</button><button onClick={() => setSearchParams({ tab: "activity" })}>tab=activity</button></div><p>URL search state: <code>{tab}</code></p><nav><Link to=".">Overview child</Link><Link to="activity">Activity child</Link></nav><Outlet context={{ project }} /></section>;
+}
+
+function ProjectOverview() { return <article><h2>Nested index route</h2><p>Rendered through the parent route's Outlet.</p></article>; }
+function ProjectActivity() { const project = useLoaderData(); return <article><h2>Nested activity</h2><ul>{project.activity.map((item) => <li key={item}>{item}</li>)}</ul></article>; }
+function RouteError() { const error = useRouteError(); return <section role="alert"><h1>Route Error Boundary</h1><p>{error?.status ?? "Error"} {error?.statusText ?? error?.message}</p><Link to="/">Return home</Link></section>; }
+
+const router = createBrowserRouter([{ path: "/", Component: RootLayout, ErrorBoundary: RouteError, children: [
+  { index: true, Component: Home },
+  { path: "projects/:projectId", loader: projectLoader, Component: ProjectLayout, children: [
+    { index: true, Component: ProjectOverview },
+    { path: "activity", loader: projectLoader, Component: ProjectActivity },
+  ] },
+] }]);
+
+createRoot(document.getElementById("root")).render(<React.StrictMode><RouterProvider router={router} /></React.StrictMode>);

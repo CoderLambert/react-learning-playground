@@ -1,0 +1,31 @@
+import React, { useState } from "react";
+import { createRoot } from "react-dom/client";
+import { keepPreviousData, QueryClient, QueryClientProvider, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import "./styles.css";
+
+const queryClient = new QueryClient({ defaultOptions: { queries: { staleTime: 3000, retryDelay: 100 } } });
+
+async function fetchJson(url, options = {}) { const response = await fetch(url, options); if (!response.ok) throw new Error((await response.json()).message || response.statusText); return response.json(); }
+function useItems(page) { return useQuery({ queryKey: ["items", page], queryFn: ({ signal }) => fetchJson(`/api/items?page=${page}`, { signal }), placeholderData: keepPreviousData }); }
+
+function Mirror({ page }) { const query = useItems(page); return <div className="card"><strong>Observer B, same queryKey</strong><p>requestId: {query.data?.requestId ?? "…"}</p></div>; }
+
+function App() {
+  const client = useQueryClient(); const [page, setPage] = useState(1); const [text, setText] = useState("new item"); const itemsQuery = useItems(page);
+  const flaky = useQuery({ queryKey: ["flaky"], queryFn: ({ signal }) => fetchJson("/api/flaky", { signal }), retry: 2, enabled: false });
+  const mutation = useMutation({
+    mutationFn: (nextText) => fetchJson("/api/items", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ text: nextText }) }),
+    onMutate: async (nextText) => { await client.cancelQueries({ queryKey: ["items", 1] }); const previous = client.getQueryData(["items", 1]); client.setQueryData(["items", 1], (old) => old ? { ...old, items: [{ id: `optimistic-${Date.now()}`, text: nextText }, ...old.items] } : old); return { previous }; },
+    onError: (_error, _variables, context) => { if (context?.previous) client.setQueryData(["items", 1], context.previous); },
+    onSettled: () => client.invalidateQueries({ queryKey: ["items"] }),
+  });
+  const state = client.getQueryState(["items", page]);
+  return <main><h1>TanStack Query 5 · real runtime</h1><p>Two observers share <code>["items", page]</code>; identical requestId demonstrates one cached query/in-flight request rather than two component-owned fetches.</p>
+    <div className="grid"><div className="card"><strong>Observer A</strong><p>status: {itemsQuery.status} / fetchStatus: {itemsQuery.fetchStatus}</p><p>requestId: {itemsQuery.data?.requestId ?? "…"}</p><p>cache updatedAt: {state?.dataUpdatedAt ?? "—"}</p><ul>{itemsQuery.data?.items.map((item) => <li key={item.id}>{item.text}</li>)}</ul></div><Mirror page={page}/></div>
+    <div className="row"><button disabled={page===1} onClick={() => setPage((p)=>p-1)}>Previous</button><button disabled={!itemsQuery.data?.hasMore} onClick={() => setPage((p)=>p+1)}>Next page</button><button onClick={() => client.invalidateQueries({ queryKey:["items",page] })}>invalidate current</button><button onClick={() => client.cancelQueries({ queryKey:["items",page] })}>cancel in-flight</button></div>
+    <section><h2>Retry policy</h2><button onClick={() => flaky.refetch()}>Run deterministic flaky query</button><span> {flaky.status} {flaky.data?.message ?? flaky.error?.message}</span></section>
+    <section><h2>Optimistic mutation + rollback</h2><input value={text} onChange={(e)=>setText(e.target.value)}/><button disabled={mutation.isPending} onClick={() => mutation.mutate(text)}>Add</button><p>Use text containing <code>fail</code> to force rollback. Mutation: {mutation.status}{mutation.error ? ` · ${mutation.error.message}` : ""}</p></section>
+    <p className="note">TanStack Query owns query identity/cache/freshness/retry/invalidation/cancellation/optimistic lifecycle. The local Node server only provides deterministic HTTP responses and failures.</p>
+  </main>;
+}
+createRoot(document.getElementById("root")).render(<QueryClientProvider client={queryClient}><App/></QueryClientProvider>);
