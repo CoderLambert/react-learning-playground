@@ -3,6 +3,10 @@ export const NOTE_FILE_SUFFIX = ".mdx";
 export const NOTE_PATH_PATTERN = `${NOTE_CONTENT_ROOT}/{learningUnitId}${NOTE_FILE_SUFFIX}`;
 
 const NOTE_MODULE_LOADERS = import.meta.glob("../content/notes/*.mdx");
+const NOTE_RAW_LOADERS = import.meta.glob("../content/notes/*.mdx", {
+  query: "?raw",
+  import: "default",
+});
 const NOTE_IMPORT_ROOT = "../content/notes";
 
 function assertLearningUnitId(learningUnitId) {
@@ -40,6 +44,36 @@ function getNoteImportPath(learningUnitId) {
 export function getNoteLoader(learningUnitId) {
   const importPath = getNoteImportPath(learningUnitId);
   return NOTE_MODULE_LOADERS[importPath] ?? null;
+}
+
+/**
+ * Resolve the original MDX source for consumers that need deterministic text
+ * rather than the compiled React component (for example the AI context layer).
+ * Raw notes stay lazy and per-file just like the compiled note modules.
+ *
+ * @param {string} learningUnitId
+ * @returns {null | (() => Promise<string>)}
+ */
+export function getRawNoteLoader(learningUnitId) {
+  const importPath = getNoteImportPath(learningUnitId);
+  return NOTE_RAW_LOADERS[importPath] ?? null;
+}
+
+/**
+ * Load raw MDX text while treating a missing note as a normal, non-fatal state.
+ *
+ * @param {string} learningUnitId
+ * @returns {Promise<string | null>}
+ */
+export async function loadRawNote(learningUnitId) {
+  const loader = getRawNoteLoader(learningUnitId);
+  if (!loader) return null;
+
+  const rawNote = await loader();
+  if (typeof rawNote !== "string") {
+    throw new TypeError(`Raw note ${learningUnitId} did not resolve to text`);
+  }
+  return rawNote;
 }
 
 export function hasNote(learningUnitId) {
