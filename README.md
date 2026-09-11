@@ -4,7 +4,7 @@
 
 在线地址：<https://coderlambert.github.io/react-learning-playground/>
 
-当前项目包含 58 个学习单元、12 个章节 checkpoint，以及与每个学习单元一一对应的 MDX 笔记。学习方式是：**左侧选择知识点，中间运行 Demo，右侧阅读 Notes 或查看 Source。**
+当前所有已注册学习单元都配有对应的 MDX 笔记，并保留 12 个章节 checkpoint。学习方式是：**左侧选择知识点，中间运行 Demo，右侧阅读 Notes 或查看 Source。**
 
 ## 本地运行
 
@@ -170,32 +170,55 @@ src/content/notes/README.md
 
 ## 新增 Demo
 
-### 1. 先生成 Demo 骨架
+### 1. 使用脚手架生成 Workbench-ready Demo
 
-项目提供脚手架：
+交互式创建：
 
 ```bash
 npm run demo:new
 ```
 
-也可以直接传入英文名称和展示标题：
+交互模式会询问 Demo 名称、展示标题和所属 category。
+
+非交互模式需要显式传入已有 category：
 
 ```bash
-npm run demo:new -- use-id "useId"
+npm run demo:new -- use-id "useId" --category components
 ```
 
-名称支持 kebab-case、camelCase 或 PascalCase，并且需要以英文字母开头。
+Demo 名称支持 kebab-case、camelCase 或 PascalCase，并且需要以英文字母开头。`category` 必须使用 `src/demos/index.js` 中 `CATEGORIES` 已声明的 id，例如 `components`、`state`、`effects` 等；不要在脚手架参数里自行发明新的 category id。
 
-脚本会：
+修正后的脚手架会自动完成：
 
 1. 创建 `src/demos/UseIdDemo.jsx`。
 2. 在 `src/demos/index.js` 中加入组件 import。
 3. 生成稳定的 Demo id，例如 `use-id`。
-4. 在 `demos` registry 中加入基础条目。
+4. 写入满足当前 Workbench contract 的 registry entry。
+5. 自动加入该 Demo 自身的 Vite `?raw` import，并把它接入 `files`，因此生成后 Source Inspector 就能看到 Demo 主文件。
 
-### 2. 补全 registry metadata 和源码文件
+### 2. 理解 registry 字段边界
 
-当前 Workbench 的完整 Demo entry 建议包含：
+当前 Workbench contract 对一个可运行学习单元要求以下字段：
+
+```text
+必需：id / category / label / Component
+```
+
+其中：
+
+- `id`：稳定学习单元 id，同时决定对应笔记文件名和 `?demo=<id>` URL。
+- `category`：必须引用 `CATEGORIES` 中已有的 category id。
+- `label`：导航和页面展示标题。
+- `Component`：真正运行的 React Demo。
+
+右侧 `Source` Inspector 是否能显示源码由 `files` 决定。要让某个源码文件出现在 Source 中，需要同时满足：
+
+1. 为该文件添加 Vite `?raw` import。
+2. 在 `files` 中使用这个 raw import 变量作为 `code`。
+
+`description`、`badge`、`keywords` 属于可选的展示 / 搜索 metadata，可以按需要补充；它们不是 `toLearningUnit` 的最低运行要求。
+
+一个完整 entry 可以写成：
 
 ```js
 {
@@ -211,22 +234,31 @@ npm run demo:new -- use-id "useId"
 }
 ```
 
-并在 `src/demos/index.js` 顶部加入 raw source：
+脚手架会自动为新 Demo 主文件创建类似下面的 raw import：
 
 ```js
 import useIdRaw from "./UseIdDemo.jsx?raw";
 ```
 
-`category` 应使用 `CATEGORIES` 中已有的 id；如果要增加新的分类，再单独修改 `CATEGORIES`。
+如果 Demo 还依赖辅助组件，并且也希望在 Source Inspector 中展示这些辅助源码，则需要手工为每个辅助文件增加对应的 `?raw` import，再补到 `files`。
 
-`files` 决定右侧 `Source` Tab 可以看到哪些源码。如果 Demo 还依赖辅助组件，可以继续加入：
+例如：
 
 ```js
+import useIdRaw from "./UseIdDemo.jsx?raw";
+import fieldRaw from "../components/Field.jsx?raw";
+
+// ...
+
 files: [
   { name: "UseIdDemo.jsx", code: useIdRaw },
   { name: "Field.jsx", code: fieldRaw },
 ]
 ```
+
+**`files` 中每一个 `code` 变量都必须有对应的 `?raw` import。** 不要只增加 `files` entry 而遗漏 import，否则构建阶段会出现未定义变量。
+
+如果确实需要新增 category，再单独修改 `CATEGORIES`，并评估导航结构是否也应该随之调整；普通新增 Demo 优先复用已有分类。
 
 ### 3. 为新 Demo 新增对应笔记
 
