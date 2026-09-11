@@ -11,8 +11,8 @@
   white-space: nowrap;
 }
 
-.workbench-navigation-count,
-.workbench-navigation-badge {
+.workbench-shell .workbench-navigation-count,
+.workbench-shell .workbench-navigation-badge {
   color: #475569;
 }
 
