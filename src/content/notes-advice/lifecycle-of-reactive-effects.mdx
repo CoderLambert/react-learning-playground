@@ -1,0 +1,27 @@
+# lifecycle-of-reactive-effects 审核建议
+
+## 当前结论
+
+- Gate A Correctness：**PASS**
+- Gate B Demo Contract：**PARTIAL**
+- Gate C Mental Model：**PASS**
+
+## 主要问题
+
+Note 对 reactive values、cleanup → setup 和“不要通过删依赖控制执行次数”的解释准确；`useEffectEvent` 也被正确限制在 Effect 内部的非响应式逻辑。
+
+原 Demo 曾在 `handleSwitchRoom` 里直接写入 `[Cleanup]` / `[Setup]` 日志，实际上这些日志发生在 state update 之前，并不是 React Effect cleanup/setup 的真实 instrumentation。本审核分支已将它改为“切换请求 + 提示下一轮 Effect 会清理旧连接并建立新连接”，并把面板从 lifecycle monitor 改为同步行为日志，避免把预测当事实。
+
+Note 的 Experiment 仍略超出 Demo 能力：它要求观察 cleanup/setup 顺序，以及“可通过函数式更新解耦的值”。当前 Demo 可以真实观察 `roomId` 改变连接目标、`isMuted` 不导致重连，但没有真实 setup/cleanup 日志，也没有函数式 updater 依赖移除实验。
+
+## 心智模型与边界
+
+- “Effect 生命周期围绕同步过程，而不是组件 mount/update/unmount”是高价值模型。
+- `useEffectEvent` 读取的是调用时最新 committed 值，且只能从 Effect / Effect Event 中调用；不要把它描述为稳定 callback identity 工具。
+- 函数式 updater 只有在“下一个 state 由上一个 state 计算”时才能移除对旧值的读取；不能拿它机械消除真实依赖。
+
+## 建议修改
+
+1. 将 Experiment 收窄到 Demo 当前真实可观察的 `roomId` 与 `isMuted` 对比。
+2. 若要教授 cleanup/setup 顺序，增加由 Effect setup/cleanup 自身产生的可验证 instrumentation，而不是事件 handler 预测日志。
+3. 将函数式 updater 的依赖重构作为单独 Source/示例讲解，除非 Demo 增加对应实验。
