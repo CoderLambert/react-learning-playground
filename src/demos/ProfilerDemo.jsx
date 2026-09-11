@@ -1,4 +1,4 @@
-import { Profiler, memo, useCallback, useMemo, useState } from "react";
+import { Profiler, memo, useCallback, useMemo, useRef, useState } from "react";
 
 const ROWS = Array.from({ length: 1800 }, (_, index) => ({
   id: index + 1,
@@ -34,8 +34,15 @@ export function ProfilerDemo() {
   const [themeTick, setThemeTick] = useState(0);
   const [memoized, setMemoized] = useState(false);
   const [samples, setSamples] = useState([]);
+  const samplesUpdateRef = useRef(false);
 
   const onRender = useCallback((id, phase, actualDuration, baseDuration, startTime, commitTime) => {
+    if (samplesUpdateRef.current) {
+      samplesUpdateRef.current = false;
+      return;
+    }
+
+    samplesUpdateRef.current = true;
     setSamples((current) => [
       {
         id: `${commitTime}-${current.length}`,
