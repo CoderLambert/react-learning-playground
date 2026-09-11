@@ -1,6 +1,32 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { highlightCode } from "../lib/shikiHighlighter";
 
+function decorateHighlightedLines(html, focusRange) {
+  if (!html || !focusRange || Number(focusRange.startLine) <= 0) return html;
+
+  const startLine = Number(focusRange.startLine);
+  const endLine = Math.max(Number(focusRange.endLine) || startLine, startLine);
+  let lineNumber = 0;
+
+  return html.replace(/<span class="line">/g, () => {
+    lineNumber += 1;
+    const highlighted = lineNumber >= startLine && lineNumber <= endLine;
+    const style = [
+      "display:block",
+      "min-height:1.6em",
+      "padding:0 10px",
+      "margin:0 -10px",
+      highlighted
+        ? "background:color-mix(in srgb, var(--color-primary) 16%, transparent)"
+        : "background:transparent",
+      highlighted
+        ? "border-left:3px solid var(--color-primary)"
+        : "border-left:3px solid transparent",
+    ].join(";");
+    return `<span class="line" data-source-line="${lineNumber}"${highlighted ? ' data-highlighted="true"' : ""} style="${style}">`;
+  });
+}
+
 export function CodeViewer({
   code,
   fileName = "Demo.jsx",
@@ -29,10 +55,10 @@ export function CodeViewer({
   const isFocusedFile = Boolean(
     focusRange && currentFile?.name === focusRange.fileName && Number(focusRange.startLine) > 0,
   );
-  const isLoading = isExpanded && Boolean(currentCode) && !isHighlighted && !isFocusedFile;
+  const isLoading = isExpanded && Boolean(currentCode) && !isHighlighted;
 
   useEffect(() => {
-    if (!isExpanded || !currentCode || highlightedMap[currentFile.name] || isFocusedFile) return;
+    if (!isExpanded || !currentCode || highlightedMap[currentFile.name]) return;
     let isMounted = true;
 
     highlightCode(currentCode, { language: lang, fileName: currentFile.name })
@@ -44,13 +70,13 @@ export function CodeViewer({
       });
 
     return () => { isMounted = false; };
-  }, [isExpanded, currentCode, currentFile.name, highlightedMap, isFocusedFile, lang]);
+  }, [isExpanded, currentCode, currentFile.name, highlightedMap, lang]);
 
   useEffect(() => {
-    if (!isFocusedFile || !viewportRef.current) return;
+    if (!isFocusedFile || !viewportRef.current || !isHighlighted) return;
     const target = viewportRef.current.querySelector(`[data-source-line="${focusRange.startLine}"]`);
     target?.scrollIntoView({ block: "center", behavior: "smooth" });
-  }, [focusRange?.endLine, focusRange?.fileName, focusRange?.startLine, isFocusedFile]);
+  }, [focusRange?.endLine, focusRange?.fileName, focusRange?.startLine, isFocusedFile, isHighlighted]);
 
   const selectFile = (index) => {
     setActiveFileIndex(index);
@@ -75,6 +101,9 @@ export function CodeViewer({
 
   const lineCount = currentCode ? currentCode.trim().split("\n").length : 0;
   const focusedLines = currentCode.split("\n");
+  const highlightedHtml = isHighlighted
+    ? decorateHighlightedLines(highlightedMap[currentFile.name], isFocusedFile ? focusRange : null)
+    : "";
   const body = (
     <div className="code-accordion-body" id={bodyId}>
       {fileList.length > 1 && (
@@ -96,7 +125,13 @@ export function CodeViewer({
       )}
       <div className="code-highlight-viewport" ref={viewportRef}>
         {isLoading && <div className="code-loading-indicator">⚡ 正在使用 Shiki 渲染高亮语法树...</div>}
-        {isFocusedFile ? (
+        {isHighlighted ? (
+          <div
+            className={`shiki-container ${isFocusedFile ? "source-focused-code" : ""}`.trim()}
+            data-source-focus={isFocusedFile ? "true" : undefined}
+            dangerouslySetInnerHTML={{ __html: highlightedHtml }}
+          />
+        ) : isFocusedFile ? (
           <pre className="code-fallback-pre source-focused-code" data-source-focus="true">
             <code>
               {focusedLines.map((line, index) => {
@@ -125,8 +160,6 @@ export function CodeViewer({
               })}
             </code>
           </pre>
-        ) : isHighlighted ? (
-          <div className="shiki-container" dangerouslySetInnerHTML={{ __html: highlightedMap[currentFile.name] }} />
         ) : (
           <pre className="code-fallback-pre"><code>{currentCode}</code></pre>
         )}
