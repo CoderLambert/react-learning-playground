@@ -16,6 +16,12 @@
   color: #475569;
 }
 
+.workbench-navigation-search input:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18);
+}
+
 .workbench-app-content {
   max-width: none;
   width: 100%;
