@@ -1,4 +1,4 @@
-import { CHAT_STATUS } from "./contracts";
+import { CHAT_STATUS } from "./contracts.js";
 
 export const INITIAL_CHAT_STATE = Object.freeze({
   messages: [],
