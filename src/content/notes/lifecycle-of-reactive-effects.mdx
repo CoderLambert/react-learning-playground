@@ -4,7 +4,7 @@
 
 <MentalModel title="依赖数组是代码的结果，不是愿望清单">props、state 和组件体内声明的值都是 reactive values。Effect 读取哪些 reactive values，依赖就应反映哪些值；不要通过删依赖来强行控制执行次数。</MentalModel>
 
-<Timeline items={["commit A", "setup(A)", "依赖改变", "cleanup(A)", "setup(B)", "再次改变", "cleanup(B)", "setup(C)"]} />
+<Timeline steps={["commit A", "setup(A)", "依赖改变", "cleanup(A)", "setup(B)", "再次改变", "cleanup(B)", "setup(C)"]} />
 
 <Experiment title="改变不同依赖">
 使用中间 Demo 分别改变连接目标、普通 UI State 与可通过函数式更新解耦的值。观察哪些变化真正要求重新同步，以及 cleanup/setup 的顺序。
@@ -16,6 +16,11 @@
 
 <Boundary>如果某段逻辑不应该因某个值变化而重新同步，先确认它是否真属于 Effect；若它需要读取最新 committed 值但不参与响应性，可评估 Effect Event。</Boundary>
 
-<Summary items={["Effect 生命周期围绕同步过程", "依赖来自实际 reactive reads", "每次重同步先 cleanup 旧过程", "通过重构依赖而不是删除依赖解决循环"]} />
+<Summary>
+- Effect 生命周期围绕同步过程。
+- 依赖来自实际 reactive reads。
+- 每次重同步先 cleanup 旧过程。
+- 通过重构依赖而不是删除依赖解决循环。
+</Summary>
 
-<FurtherReading links={[{label:"React: Lifecycle of Reactive Effects",href:"https://react.dev/learn/lifecycle-of-reactive-effects"},{label:"React: Removing Effect Dependencies",href:"https://react.dev/learn/removing-effect-dependencies"}]} />
+<FurtherReading items={[{label:"React: Lifecycle of Reactive Effects",href:"https://react.dev/learn/lifecycle-of-reactive-effects"},{label:"React: Removing Effect Dependencies",href:"https://react.dev/learn/removing-effect-dependencies"}]} />
