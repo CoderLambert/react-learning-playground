@@ -432,20 +432,37 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile } = {}) 
     dispatch({ type: "request", requestId, question: normalizedQuestion });
     setInputValue("");
     let assistantRecord = null;
+    let assistantRecordPromise = null;
     let persister = null;
     let assistantText = "";
+    let persistenceQueue = Promise.resolve();
 
-    const ensureAssistantRecord = async () => {
-      if (assistantRecord || !repository || !conversation) return assistantRecord;
-      assistantRecord = await repository.appendMessage({
-        conversationId: conversation.id,
-        role: "assistant",
-        content: assistantText,
-        status: "streaming",
-        contextSnapshotId: snapshot?.id ?? null,
+    const ensureAssistantRecord = () => {
+      if (assistantRecord) return Promise.resolve(assistantRecord);
+      if (!repository || !conversation) return Promise.resolve(null);
+      if (!assistantRecordPromise) {
+        assistantRecordPromise = repository.appendMessage({
+          conversationId: conversation.id,
+          role: "assistant",
+          content: assistantText,
+          status: "streaming",
+          contextSnapshotId: snapshot?.id ?? null,
+        }).then((record) => {
+          assistantRecord = record;
+          persister = new StreamingMessagePersister(repository, record.id);
+          return record;
+        });
+      }
+      return assistantRecordPromise;
+    };
+
+    const enqueuePersistence = (task = null) => {
+      persistenceQueue = persistenceQueue.then(async () => {
+        const record = await ensureAssistantRecord();
+        if (!record || !task) return record;
+        return task();
       });
-      persister = new StreamingMessagePersister(repository, assistantRecord.id);
-      return assistantRecord;
+      return persistenceQueue;
     };
 
     try {
@@ -457,15 +474,19 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile } = {}) 
             if (activeRequestIdRef.current !== requestId) return;
             if (event.type === CHAT_EVENT_TYPES.START) {
               dispatch({ type: "start", requestId });
-              void ensureAssistantRecord();
+              void enqueuePersistence();
             } else if (event.type === CHAT_EVENT_TYPES.DELTA) {
               assistantText += event.text;
               dispatch({ type: "delta", requestId, text: event.text });
-              void ensureAssistantRecord().then(() => persister?.schedule({ content: assistantText, status: "streaming" }));
+              const persistedText = assistantText;
+              void enqueuePersistence(() => {
+                persister?.schedule({ content: persistedText, status: "streaming" });
+              });
             } else if (event.type === CHAT_EVENT_TYPES.DONE) {
               dispatch({ type: "done", requestId, usage: event.usage });
-              void ensureAssistantRecord().then(() => persister?.finalize({
-                content: assistantText,
+              const persistedText = assistantText;
+              void enqueuePersistence(() => persister?.finalize({
+                content: persistedText,
                 status: "complete",
                 usage: normalizeUsage(event.usage),
               }));
@@ -473,9 +494,11 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile } = {}) 
           },
         },
       );
+      await persistenceQueue;
       await persister?.flush();
       await refreshConversations(repository);
     } catch (error) {
+      await persistenceQueue.catch(() => null);
       if (error instanceof AiChatAbortError || controller.signal.aborted) {
         dispatch({ type: "cancel", requestId });
         await ensureAssistantRecord();
