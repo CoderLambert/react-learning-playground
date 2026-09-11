@@ -14,11 +14,19 @@ export const CHAT_STATUS = Object.freeze({
   CANCELLED: "cancelled",
 });
 
+export const CHAT_PURPOSES = Object.freeze({
+  CHAT: "chat",
+  COMPACTION: "compaction",
+});
+
+export const COMPACTION_PROMPT_PREFIX = "请将下面对话压缩为结构化 JSON";
+
 export const CHAT_LIMITS = Object.freeze({
   maxQuestionChars: 4_000,
   maxHistoryMessages: 12,
   maxHistoryMessageChars: 8_000,
   maxContextChars: 180_000,
+  maxCompactionPromptChars: 120_000,
 });
 
 const ALLOWED_ROLES = new Set(["user", "assistant"]);
@@ -35,6 +43,10 @@ function truncateText(value, maxChars) {
   const text = typeof value === "string" ? value : String(value ?? "");
   if (text.length <= maxChars) return { text, truncated: false };
   return { text: text.slice(0, maxChars), truncated: true };
+}
+
+export function isCompactionPrompt(value) {
+  return typeof value === "string" && value.trimStart().startsWith(COMPACTION_PROMPT_PREFIX);
 }
 
 export function normalizeHistory(history = [], limits = CHAT_LIMITS) {
@@ -68,6 +80,20 @@ export function serializeContext(context, limits = CHAT_LIMITS) {
   return serialized;
 }
 
+export function buildCompactionRequest({ prompt, context }, limits = CHAT_LIMITS) {
+  const normalizedPrompt = typeof prompt === "string" ? prompt.trim() : "";
+  if (!normalizedPrompt) throw new TypeError("compaction prompt is required");
+  if (normalizedPrompt.length > limits.maxCompactionPromptChars) {
+    throw new RangeError(`compaction prompt exceeds ${limits.maxCompactionPromptChars} characters`);
+  }
+  const contextJson = serializeContext(context, limits);
+  return {
+    purpose: CHAT_PURPOSES.COMPACTION,
+    context: JSON.parse(contextJson),
+    compaction: { prompt: normalizedPrompt },
+  };
+}
+
 export function buildChatRequest({ question, context, history = [] }, limits = CHAT_LIMITS) {
   const normalizedQuestion = typeof question === "string" ? question.trim() : "";
   if (!normalizedQuestion) throw new TypeError("question is required");
@@ -79,6 +105,7 @@ export function buildChatRequest({ question, context, history = [] }, limits = C
   const contextJson = serializeContext(context, limits);
 
   return {
+    purpose: CHAT_PURPOSES.CHAT,
     question: normalizedQuestion,
     context: JSON.parse(contextJson),
     history: normalizedHistory,

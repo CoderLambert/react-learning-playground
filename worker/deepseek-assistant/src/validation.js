@@ -1,6 +1,7 @@
 export const LIMITS = Object.freeze({
   bodyBytes: 160_000,
   questionChars: 4_000,
+  compactionPromptChars: 120_000,
   noteChars: 60_000,
   sourceFiles: 12,
   sourceCharsEach: 50_000,
@@ -43,10 +44,7 @@ export async function readJsonBody(request) {
   }
 }
 
-export function validateRequest(payload) {
-  if (!payload || typeof payload !== "object" || Array.isArray(payload)) fail("JSON object required");
-  const question = text(payload.question, "question", LIMITS.questionChars);
-  const context = payload.context;
+function validateContext(context) {
   if (!context || typeof context !== "object" || Array.isArray(context)) fail("context object required");
 
   const learningUnit = context.learningUnit && typeof context.learningUnit === "object"
@@ -82,6 +80,28 @@ export function validateRequest(payload) {
     ? ""
     : text(context.conversationSummary, "context.conversationSummary", LIMITS.summaryChars);
 
+  return { learningUnit, note, sources, activeSourceFile, conversationSummary };
+}
+
+export function validateRequest(payload) {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) fail("JSON object required");
+  const purpose = payload.purpose === "compaction" ? "compaction" : "chat";
+  const context = validateContext(payload.context);
+
+  if (purpose === "compaction") {
+    if (!payload.compaction || typeof payload.compaction !== "object" || Array.isArray(payload.compaction)) {
+      fail("compaction object required");
+    }
+    const prompt = text(payload.compaction.prompt, "compaction.prompt", LIMITS.compactionPromptChars);
+    return {
+      purpose,
+      context,
+      compaction: { prompt },
+      history: [],
+    };
+  }
+
+  const question = text(payload.question, "question", LIMITS.questionChars);
   const rawHistory = payload.history ?? [];
   if (!Array.isArray(rawHistory)) fail("history must be an array");
   if (rawHistory.length > LIMITS.historyItems) fail(`history exceeds ${LIMITS.historyItems} messages`, 413);
@@ -92,8 +112,9 @@ export function validateRequest(payload) {
   });
 
   return {
+    purpose,
     question,
-    context: { learningUnit, note, sources, activeSourceFile, conversationSummary },
+    context,
     history,
   };
 }
