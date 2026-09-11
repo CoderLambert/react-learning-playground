@@ -43,7 +43,12 @@ export function UseEffectCorrectUsageDemo() {
   const handleToggleWatcher = () => {
     setShowWatcher((prev) => {
       const next = !prev;
-      addLog("info", next ? "🟢 重新挂载监听组件" : "🧹 卸载监听组件；其 Effect cleanup 会移除 resize listener");
+      addLog(
+        "info",
+        next
+          ? "🟢 [Setup 建立] 重新挂载监听组件；Effect 会注册 resize listener"
+          : "🧹 [Cleanup 清理] 卸载监听组件；Effect cleanup 会移除 resize listener",
+      );
       return next;
     });
   };
