@@ -64,16 +64,17 @@ Chapter 02 content/registration status: **COMPLETE**.
 
 A minimal branch-local GitHub Actions workflow was added because the integration baseline has no equivalent workflow. It runs Node 24, `npm ci`, `npm run lint`, `npm run build`, starts Vite preview, and performs an HTTP smoke request against `/react-learning-playground/`.
 
-Current evidence before PR workflow completion:
+GitHub Actions run `34561853080` completed successfully after the content/registration changes:
 
-- `npm ci`: PENDING
-- `npm run lint`: PENDING
-- `npm run build`: PENDING
-- preview HTTP smoke: PENDING
-- browser interaction / console / narrow-screen smoke: PENDING manual evidence
+- `npm ci`: **PASS**
+- `npm run lint`: **PASS**
+- `npm run build`: **PASS**
+- preview HTTP smoke: **PASS**
+- workflow job `verify`: **PASS**
+- browser interaction / console / narrow-screen smoke: **PENDING manual evidence**
 
-No PASS is claimed without actual execution evidence.
+No browser-interaction PASS is inferred from the HTTP-only smoke test.
 
 ## Completion
 
-Dependency-safe content, Demo registration and CodeViewer registration are **CONTENT_COMPLETE**. The branch is ready for PR verification against `integration/react-complete-learning`; deterministic gate results must be updated from the actual GitHub Actions run.
+Dependency-safe content, Demo registration, CodeViewer registration and deterministic CI are **COMPLETE**. The branch is ready for integration review against `integration/react-complete-learning`.
