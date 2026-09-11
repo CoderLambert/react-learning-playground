@@ -1,0 +1,26 @@
+# custom-hooks 审核建议
+
+## 当前结论
+
+- Gate A Correctness：**PASS**
+- Gate B Demo Contract：**PASS**
+- Gate C Mental Model：**PASS**
+
+## 审核要点
+
+Note 的核心模型准确：Custom Hook 复用的是状态逻辑，不共享某个 React State 实例；每次 Hook 调用仍依附于各自组件/Hook 调用位置的生命周期。Demo 中两个 `CounterCard` 各自调用 `useCounter()`，可以直接观察 A 的更新不会改变 B。
+
+`useOnlineSignal` 也合理展示了把外部系统订阅与 cleanup 封装进自定义 Hook 的场景。本审核分支修正了一个真实边界：原实现把初始在线状态硬编码为 `true`，如果页面加载时浏览器已经离线，会在第一次 online/offline 事件前显示错误状态；现在会在浏览器环境从 `navigator.onLine` 初始化，并保留非浏览器环境 fallback。
+
+## 边界与生产决策
+
+- 不调用 Hooks 的普通纯函数不应该为了“复用”而加 `use` 前缀。
+- Custom Hook 不会自动让多个调用共享 State；若需要共享事实，应明确选择提升 State、Context 或 external store。
+- 抽取 Hook 不能修复错误 Effect。应先确认同步模型和依赖正确，再抽象 API。
+- 参数如果决定内部 Effect 的同步目标，仍然是 reactive input；自定义 Hook 不能隐藏这个事实。
+
+## 建议修改
+
+1. Note 可直接引用 Demo 的 `useCounter` 名称，而不是只用 `useOnlineStatus()` 泛例，使 Note↔Demo 映射更紧。
+2. 对外暴露的 Hook API 尽量表达领域能力和不变量，而不是简单把底层 `setState`/Effect 细节换个名字。
+3. 保持当前实验：两个独立 counter + 一个封装外部订阅的 Hook，已经足以支撑本课核心结论。
