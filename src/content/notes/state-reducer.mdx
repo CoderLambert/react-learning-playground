@@ -1,0 +1,30 @@
+# useReducer 状态机模式
+
+<MentalModel title="Reducer 把事件翻译成下一份 state">
+当一个组件有多种相关状态转换时，`useReducer` 将“发生了什么”与“如何转换”分离：UI dispatch action，纯 reducer 根据 `(state, action)` 计算 next state。它不会自动让状态全局化，也不是性能优化 API。
+</MentalModel>
+
+<Experiment title="按 action 审计状态转换">
+在中间 Demo 中依次触发不同 action，观察 action 日志、旧 state 与新 state。尝试从 action 名称直接回答“用户/系统发生了什么”。
+</Experiment>
+
+<DemoReference action="触发 add/update/remove 等 reducer action" observe="确认 reducer 不产生副作用，并且每种 action 都返回完整可预测的 next state。" />
+
+<Flow items={["Event Handler 决定发生的事件", "dispatch(action)", "React 调用 reducer(state, action)", "reducer 纯计算 next state", "下一次 render 使用新 state"]} />
+
+<Boundary title="Reducer 必须保持纯净">
+不要在 reducer 中请求 API、写存储、生成不可控副作用。Reducer 可能在开发检查中被重复调用；其职责是确定性状态转换。
+</Boundary>
+
+<AntiPattern title="为了‘架构感’把简单 state 全部 reducer 化">
+单个独立 boolean 或输入值用 `useState` 往往更清楚。只有更新规则相互关联、action 类型增多或需要集中审计时，reducer 的结构化收益才明显。
+</AntiPattern>
+
+<Summary>
+- action 描述发生了什么，reducer 描述如何转换。
+- reducer 是纯函数。
+- useReducer 适合复杂、相关、可枚举的状态转换。
+- 它改善更新逻辑组织，不自动解决跨组件共享。
+</Summary>
+
+<FurtherReading items={[{ label: "React: Extracting State Logic into a Reducer", href: "https://react.dev/learn/extracting-state-logic-into-a-reducer" }, { label: "React: useReducer", href: "https://react.dev/reference/react/useReducer" }]} />
