@@ -1,4 +1,5 @@
 import { CHAT_STATUS } from "./contracts.js";
+import { normalizeFinishReason } from "./finishReason.js";
 
 export const INITIAL_CHAT_STATE = Object.freeze({
   messages: [],
@@ -101,6 +102,7 @@ export function chatReducer(state, action) {
         messages: updateAssistantMessage(state.messages, action.requestId, (message) => ({
           ...message,
           streaming: false,
+          finishReason: normalizeFinishReason(action.finishReason),
           ...(action.usage ? { usage: action.usage } : {}),
         })),
         status: CHAT_STATUS.IDLE,
@@ -116,6 +118,7 @@ export function chatReducer(state, action) {
         messages: updateAssistantMessage(state.messages, action.requestId, (message) => ({
           ...message,
           streaming: false,
+          finishReason: "error",
         })),
         status: CHAT_STATUS.ERROR,
         error: action.message || "AI assistant request failed",
@@ -131,6 +134,7 @@ export function chatReducer(state, action) {
           ...message,
           streaming: false,
           cancelled: true,
+          finishReason: "user_abort",
         })),
         status: CHAT_STATUS.CANCELLED,
         error: null,

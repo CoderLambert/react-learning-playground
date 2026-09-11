@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { buildMessages, SYSTEM_PROMPT } from "../src/prompt.js";
+import { AI_LEARNING_ASSISTANT_SYSTEM_PROMPT } from "../../../src/ai/assistantSystemPrompt.js";
 import { parseDeepSeekChunk, normalizeDeepSeekStream } from "../src/stream.js";
 import { validateRequest } from "../src/validation.js";
 import { handleRequest } from "../src/index.js";
@@ -49,11 +50,38 @@ test("validates provider-neutral request envelope", () => {
 });
 
 test("prompt prioritizes project note/source and citation behavior", () => {
-  const messages = buildMessages(validateRequest(requestBody()));
+  const messages = buildMessages(validateRequest(requestBody({
+    context: { ...context, conversationSummary: "durable facts from older turns" },
+  })));
+  assert.equal(SYSTEM_PROMPT, AI_LEARNING_ASSISTANT_SYSTEM_PROMPT);
+  assert.equal(messages[0].content, AI_LEARNING_ASSISTANT_SYSTEM_PROMPT);
   assert.match(SYSTEM_PROMPT, /当前 Note 与 Source/);
   assert.match(SYSTEM_PROMPT, /教学 Demo/);
+  assert.match(SYSTEM_PROMPT, /React 深度学习导师/);
+  assert.match(SYSTEM_PROMPT, /3～5 个要点就过早结束/);
+  assert.match(SYSTEM_PROMPT, /不要为了凑长度重复/);
   assert.match(messages.at(-1).content, /filename="PropsDemo.jsx"/);
   assert.match(messages.at(-1).content, /1 \| export function/);
+  assert.match(messages.at(-1).content, /<durable-summary>/);
+  assert.match(messages.at(-1).content, /durable facts from older turns/);
+});
+
+test("gateway normalizes provider finish reasons to the app contract", async () => {
+  const cases = [
+    ["stop", "stop"],
+    ["max_tokens", "length"],
+    ["cancelled", "user_abort"],
+    ["output-limit", "output_limit"],
+    ["content_filter", "error"],
+  ];
+
+  for (const [providerReason, expected] of cases) {
+    const events = await readLines(normalizeDeepSeekStream(sse([
+      `data: ${JSON.stringify({ choices: [{ delta: {}, finish_reason: providerReason }] })}`,
+      "data: [DONE]",
+    ])));
+    assert.equal(events.at(-1).finishReason, expected);
+  }
 });
 
 test("parses DeepSeek ChatCompletions SSE and normalizes app events", async () => {
@@ -150,7 +178,7 @@ test("gateway hides upstream body and streams normalized response", async () => 
       assert.match(init.headers.Authorization, /^Bearer /);
       const body = JSON.parse(init.body);
       assert.equal(body.stream, true);
-      assert.equal(body.max_tokens, 2048);
+      assert.equal(body.max_tokens, 16_384);
       return new Response(sse([
         'data: {"choices":[{"delta":{"content":"回答"},"finish_reason":null}]}',
         'data: {"choices":[{"delta":{},"finish_reason":"stop"}],"usage":{"total_tokens":7}}',

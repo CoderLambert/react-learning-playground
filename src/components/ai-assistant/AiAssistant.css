@@ -516,6 +516,19 @@
   transition: transform var(--transition-fast), background var(--transition-fast), border-color var(--transition-fast);
 }
 
+.ai-assistant-finish-reason {
+  margin: 6px 2px 0;
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.ai-assistant-message[data-finish-reason="output_limit"] .ai-assistant-finish-reason,
+.ai-assistant-message[data-finish-reason="length"] .ai-assistant-finish-reason {
+  color: var(--color-warning, #b45309);
+  font-weight: 700;
+}
+
 .ai-assistant-actions button:hover:not(:disabled) {
   transform: translateY(-1px);
 }

@@ -1,4 +1,8 @@
-import { sanitizePersistedMetadata, stableSnapshotHash } from "../storage/conversationStore.js";
+import {
+  sanitizePersistedMetadata,
+  sanitizeSensitiveText,
+  stableSnapshotHash,
+} from "../storage/conversationStore.js";
 
 const ACTIVE_MESSAGE_STATUSES = new Set(["loading", "streaming"]);
 
@@ -93,7 +97,7 @@ export class ConversationRepository {
       id: createId("msg", this.cryptoImpl),
       conversationId,
       role: role === "user" ? "user" : "assistant",
-      content: String(content),
+      content: sanitizeSensitiveText(content),
       status,
       usage: sanitizePersistedMetadata(usage),
       contextSnapshotId,
@@ -117,7 +121,7 @@ export class ConversationRepository {
     const current = await this.store.getMessage(id);
     if (!current) throw new Error(`Unknown message: ${id}`);
     const allowedPatch = {
-      ...(Object.hasOwn(patch, "content") ? { content: String(patch.content) } : {}),
+      ...(Object.hasOwn(patch, "content") ? { content: sanitizeSensitiveText(patch.content) } : {}),
       ...(Object.hasOwn(patch, "status") ? { status: patch.status } : {}),
       ...(Object.hasOwn(patch, "usage") ? { usage: sanitizePersistedMetadata(patch.usage) } : {}),
       ...(Object.hasOwn(patch, "metadata") ? { metadata: sanitizePersistedMetadata(patch.metadata) } : {}),
@@ -161,9 +165,14 @@ export class ConversationRepository {
     estimatedTokensBefore = null,
     estimatedTokensAfter = null,
     version = 1,
+    reason = "manual",
+    timestamp = null,
     metadata = null,
   }) {
     await this.requireConversation(conversationId);
+    const checkpointTimestamp = typeof timestamp === "string" && timestamp
+      ? timestamp
+      : this.timestamp();
     return this.store.putCompaction({
       id: createId("cmp", this.cryptoImpl),
       conversationId,
@@ -172,8 +181,10 @@ export class ConversationRepository {
       estimatedTokensBefore,
       estimatedTokensAfter,
       version,
+      reason: typeof reason === "string" && reason ? reason : "manual",
+      timestamp: checkpointTimestamp,
       metadata: sanitizePersistedMetadata(metadata),
-      createdAt: this.timestamp(),
+      createdAt: checkpointTimestamp,
     });
   }
 

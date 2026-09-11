@@ -5,6 +5,7 @@ import {
   ConversationRepository,
   MemoryConversationStore,
   StreamingMessagePersister,
+  createConversationStore,
   deriveConversationTitle,
   sanitizePersistedMetadata,
   stableSnapshotHash,
@@ -59,7 +60,7 @@ test("messages keep stable ordering and final streaming state", async () => {
 test("context snapshots are sanitized and deduplicated by stable hash", async () => {
   const { repository } = setup();
   const context = {
-    note: { name: "render.mdx", content: "note" },
+    note: { name: "render.mdx", content: "note with sk-context-secret123" },
     source: { name: "Demo.jsx", code: "const x = 1" },
     apiKey: "must-not-persist",
     nested: { authorization: "Bearer secret", safe: true },
@@ -70,6 +71,7 @@ test("context snapshots are sanitized and deduplicated by stable hash", async ()
   assert.equal(one.id, two.id);
   assert.equal(one.context.apiKey, undefined);
   assert.deepEqual(one.context.nested, { safe: true });
+  assert.equal(one.context.note.content, "note with [REDACTED]");
   assert.equal(stableSnapshotHash({ a: 1, b: 2 }), stableSnapshotHash({ b: 2, a: 1 }));
 });
 
@@ -86,6 +88,50 @@ test("archive hides a conversation by default and delete cascades messages and c
   await repository.deleteConversation(conversation.id);
   assert.equal((await repository.listMessages(conversation.id)).length, 0);
   assert.equal((await repository.listCompactions(conversation.id)).length, 0);
+});
+
+test("durable compaction records retain checkpoint reason and timestamp", async () => {
+  const { repository } = setup();
+  const conversation = await repository.createConversation();
+  const checkpoint = await repository.saveCompaction({
+    conversationId: conversation.id,
+    summary: { userGoal: "learn" },
+    coveredThroughMessageId: "m1",
+    estimatedTokensBefore: 100,
+    estimatedTokensAfter: 20,
+    version: 1,
+    reason: "automatic",
+    timestamp: "2026-09-12T00:00:00.000Z",
+  });
+
+  assert.equal(checkpoint.conversationId, conversation.id);
+  assert.equal(checkpoint.coveredThroughMessageId, "m1");
+  assert.equal(checkpoint.reason, "automatic");
+  assert.equal(checkpoint.timestamp, "2026-09-12T00:00:00.000Z");
+  assert.equal(checkpoint.createdAt, checkpoint.timestamp);
+});
+
+test("global history keeps learning units isolated without dropping archived records", async () => {
+  const { repository } = setup();
+  const propsOne = await repository.createConversation({ learningUnitId: "props" });
+  const propsTwo = await repository.createConversation({ learningUnitId: "props" });
+  const children = await repository.createConversation({ learningUnitId: "children" });
+  await repository.archiveConversation(propsTwo.id);
+
+  const globalHistory = await repository.listConversations({ includeArchived: true });
+  const currentPropsHistory = globalHistory.filter((item) => item.learningUnitId === "props" && !item.archived);
+  const currentChildrenHistory = globalHistory.filter((item) => item.learningUnitId === "children" && !item.archived);
+
+  assert.deepEqual(currentPropsHistory.map((item) => item.id), [propsOne.id]);
+  assert.deepEqual(currentChildrenHistory.map((item) => item.id), [children.id]);
+  assert.equal(globalHistory.length, 3);
+  assert.equal(globalHistory.find((item) => item.id === propsTwo.id)?.archived, true);
+});
+
+test("missing IndexedDB falls back to memory with a user-displayable reason", async () => {
+  const store = await createConversationStore({ indexedDb: null });
+  assert.equal(store.mode, "memory");
+  assert.equal(store.fallbackReason, "IndexedDB is unavailable");
 });
 
 test("recoverInterruptedMessages marks abandoned streaming records without dropping content", async () => {
@@ -151,6 +197,15 @@ test("secret-shaped metadata fields are discarded and message API has no API-key
   assert.deepEqual((await repository.getConversation(conversation.id)).metadata, { provider: "deepseek" });
   assert.deepEqual(message.metadata, { source: "composer" });
   assert.equal(Object.hasOwn(message, "apiKey"), false);
+
+  const redacted = await repository.appendMessage({
+    conversationId: conversation.id,
+    role: "user",
+    content: "Authorization: Bearer super-secret-token and sk-user-secret123",
+  });
+  assert.equal(redacted.content.includes("super-secret-token"), false);
+  assert.equal(redacted.content.includes("sk-user-secret123"), false);
+  assert.match(redacted.content, /\[REDACTED\]/);
 });
 
 test("title derivation is deterministic, whitespace-normalized, and bounded", () => {

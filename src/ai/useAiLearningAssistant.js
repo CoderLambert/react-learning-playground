@@ -1,24 +1,27 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { loadRawNote } from "../workbench/noteRegistry.js";
+import { AI_LEARNING_ASSISTANT_SYSTEM_PROMPT } from "./assistantSystemPrompt.js";
 import { createCompactionService } from "./compaction/compactionService.js";
 import { ConversationRepository, StreamingMessagePersister, createConversationStore } from "./conversations/index.js";
 import { buildContextBudget, selectContextWithinBudget } from "./context/contextBudget.js";
 import { buildAiContext } from "./contextBuilder.js";
 import { AiChatAbortError, createAiChatClient } from "./chatClient.js";
 import { INITIAL_CHAT_STATE, chatReducer } from "./chatReducer.js";
-import { CHAT_EVENT_TYPES, CHAT_STATUS } from "./contracts.js";
+import { CHAT_EVENT_TYPES, CHAT_LIMITS, CHAT_STATUS } from "./contracts.js";
 import {
   clearDeepSeekBrowserApiKey,
   loadDeepSeekBrowserSettings,
   saveDeepSeekBrowserSettings,
 } from "./deepseekBrowserSettings.js";
 import { createDeepSeekDirectClient } from "./deepseekDirectClient.js";
+import { normalizeFinishReason } from "./finishReason.js";
 import {
   adaptLearningContextForGateway,
   buildCompletedChatHistory,
 } from "./learningAssistantContext.js";
+import { createUnicodeOutputLimiter } from "./outputLimit.js";
 
-const CONTEXT_SYSTEM_PROMPT = "React Learning Playground assistant with current note/source grounding and source:// citations.";
+const GATEWAY_TRANSPORT_INPUT_CAP_TOKENS = 24 * 1024;
 
 function createRequestId() {
   if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
@@ -51,13 +54,17 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile } = {}) 
   });
   const [repository, setRepository] = useState(null);
   const [conversations, setConversations] = useState([]);
+  const [conversationStorage, setConversationStorage] = useState({ mode: "initializing", reason: null });
   const [activeConversationId, setActiveConversationId] = useState(null);
   const [latestCompaction, setLatestCompaction] = useState(null);
+  const [compactedMessageCount, setCompactedMessageCount] = useState(0);
   const [compacting, setCompacting] = useState(false);
   const [compactionNotice, setCompactionNotice] = useState(null);
+  const [contextSelectionNotice, setContextSelectionNotice] = useState(null);
   const abortControllerRef = useRef(null);
   const activeRequestIdRef = useRef(null);
   const compactionPromiseRef = useRef(null);
+  const hydrationRequestRef = useRef(0);
   const gatewayClient = useMemo(() => createAiChatClient(), []);
   const directClient = useMemo(() => createDeepSeekDirectClient({
     apiKey: deepSeekSettings.apiKey,
@@ -69,11 +76,14 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile } = {}) 
     : gatewayClient.configured
       ? "gateway"
       : "unconfigured";
+  const contextModelId = connectionMode === "browser"
+    ? deepSeekSettings.model
+    : "gateway-model-unknown";
   const learningUnitId = learningUnit?.id ?? null;
 
   const refreshConversations = useCallback(async (repo = repository) => {
     if (!repo) return [];
-    const next = await repo.listConversations();
+    const next = await repo.listConversations({ includeArchived: true });
     setConversations(next);
     return next;
   }, [repository]);
@@ -85,40 +95,60 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile } = {}) 
       await repo.recoverInterruptedMessages();
       if (cancelled) return;
       setRepository(repo);
-      setConversations(await repo.listConversations());
+      setConversationStorage({ mode: store.mode, reason: store.fallbackReason ?? null });
+      setConversations(await repo.listConversations({ includeArchived: true }));
     });
     return () => { cancelled = true; };
   }, []);
 
   const hydrateConversation = useCallback(async (conversationId) => {
+    const hydrationRequest = ++hydrationRequestRef.current;
+    const activeRequestId = activeRequestIdRef.current;
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = null;
+    activeRequestIdRef.current = null;
+    if (activeRequestId) dispatch({ type: "cancel", requestId: activeRequestId });
     if (!repository || !conversationId) {
       dispatch({ type: "hydrate", messages: [] });
       setLatestCompaction(null);
+      setCompactedMessageCount(0);
       setActiveConversationId(null);
       return;
     }
     const conversation = await repository.getConversation(conversationId);
-    if (!conversation || conversation.archived) return;
+    if (
+      hydrationRequest !== hydrationRequestRef.current ||
+      !conversation ||
+      conversation.archived ||
+      conversation.learningUnitId !== learningUnitId
+    ) return;
     const [messages, compactions] = await Promise.all([
       repository.listMessages(conversationId),
       repository.listCompactions(conversationId),
     ]);
-    abortControllerRef.current?.abort();
-    activeRequestIdRef.current = null;
+    if (hydrationRequest !== hydrationRequestRef.current) return;
     setActiveConversationId(conversationId);
-    setLatestCompaction(compactions.at(-1) ?? null);
+    const latest = compactions.at(-1) ?? null;
+    const coveredMessageIndex = latest?.coveredThroughMessageId
+      ? messages.findIndex((message) => message.id === latest.coveredThroughMessageId)
+      : -1;
+    setCompactedMessageCount(coveredMessageIndex + 1);
+    setLatestCompaction(latest);
     dispatch({ type: "hydrate", messages });
     setInputValue("");
-  }, [repository]);
+  }, [learningUnitId, repository]);
 
   useEffect(() => {
+    hydrationRequestRef.current += 1;
     abortControllerRef.current?.abort();
     abortControllerRef.current = null;
     activeRequestIdRef.current = null;
     dispatch({ type: "hydrate", messages: [] });
     setInputValue("");
     setLatestCompaction(null);
+    setCompactedMessageCount(0);
     setCompactionNotice(null);
+    setContextSelectionNotice(null);
 
     if (!learningUnitId) {
       setNoteState({ learningUnitId: null, rawNote: null, loading: false, error: null });
@@ -142,7 +172,7 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile } = {}) 
       });
 
     if (repository) {
-      void repository.listConversations().then((items) => {
+      void repository.listConversations({ includeArchived: true }).then((items) => {
         if (cancelled) return;
         setConversations(items);
         const latest = items.find((item) => item.learningUnitId === learningUnitId && !item.archived);
@@ -178,30 +208,37 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile } = {}) 
     [aiContext],
   );
 
+  const messagesSinceCompaction = useMemo(
+    () => chatState.messages.slice(compactedMessageCount),
+    [chatState.messages, compactedMessageCount],
+  );
   const completedHistory = useMemo(
-    () => buildCompletedChatHistory(chatState.messages),
-    [chatState.messages],
+    () => buildCompletedChatHistory(messagesSinceCompaction),
+    [messagesSinceCompaction],
   );
   const summaryText = typeof latestCompaction?.summary === "string"
     ? latestCompaction.summary
     : latestCompaction?.metadata?.serializedSummary ?? "";
-  const lastActualUsage = useMemo(() => {
-    for (let index = chatState.messages.length - 1; index >= 0; index -= 1) {
-      if (chatState.messages[index]?.usage) return normalizeUsage(chatState.messages[index].usage);
+  const lastActualUsage = (() => {
+    for (let index = messagesSinceCompaction.length - 1; index >= 0; index -= 1) {
+      const message = messagesSinceCompaction[index];
+      if (!message?.usage) continue;
+      return normalizeUsage(message.usage);
     }
     return null;
-  }, [chatState.messages]);
+  })();
 
   const contextBudget = useMemo(() => buildContextBudget({
-    modelId: deepSeekSettings.model,
-    systemPrompt: CONTEXT_SYSTEM_PROMPT,
+    modelId: contextModelId,
+    systemPrompt: AI_LEARNING_ASSISTANT_SYSTEM_PROMPT,
     note: aiContext?.note?.content ?? "",
     sources: aiContext?.sources ?? [],
+    activeSourceFile: aiContext?.activeSourceFile ?? activeSourceFile,
     summary: summaryText,
     history: completedHistory,
     input: inputValue,
     actualUsage: lastActualUsage,
-  }), [aiContext, completedHistory, deepSeekSettings.model, inputValue, lastActualUsage, summaryText]);
+  }), [activeSourceFile, aiContext, completedHistory, contextModelId, inputValue, lastActualUsage, summaryText]);
 
   const stop = useCallback(() => {
     const requestId = activeRequestIdRef.current;
@@ -220,20 +257,23 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile } = {}) 
     }
     const created = await repository.createConversation({
       learningUnitId,
-      model: deepSeekSettings.model,
+      model: contextModelId,
     });
     setActiveConversationId(created.id);
     await refreshConversations(repository);
     return created;
-  }, [activeConversationId, deepSeekSettings.model, learningUnitId, refreshConversations, repository]);
+  }, [activeConversationId, contextModelId, learningUnitId, refreshConversations, repository]);
 
   const newConversation = useCallback(async () => {
+    hydrationRequestRef.current += 1;
     abortControllerRef.current?.abort();
     abortControllerRef.current = null;
     activeRequestIdRef.current = null;
     setActiveConversationId(null);
     setLatestCompaction(null);
+    setCompactedMessageCount(0);
     setCompactionNotice(null);
+    setContextSelectionNotice(null);
     setInputValue("");
     dispatch({ type: "hydrate", messages: [] });
   }, []);
@@ -244,10 +284,10 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile } = {}) 
     await refreshConversations(repository);
   }, [refreshConversations, repository]);
 
-  const archiveConversation = useCallback(async (id) => {
+  const archiveConversation = useCallback(async (id, archived = true) => {
     if (!repository) return;
-    await repository.archiveConversation(id, true);
-    if (id === activeConversationId) await newConversation();
+    await repository.archiveConversation(id, archived);
+    if (archived && id === activeConversationId) await newConversation();
     await refreshConversations(repository);
   }, [activeConversationId, newConversation, refreshConversations, repository]);
 
@@ -259,17 +299,21 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile } = {}) 
   }, [activeConversationId, newConversation, refreshConversations, repository]);
 
   const saveConnectionSettings = useCallback((nextSettings) => {
+    hydrationRequestRef.current += 1;
     abortControllerRef.current?.abort();
     abortControllerRef.current = null;
     activeRequestIdRef.current = null;
     dispatch({ type: "hydrate", messages: [] });
     setActiveConversationId(null);
     setLatestCompaction(null);
+    setCompactedMessageCount(0);
+    setContextSelectionNotice(null);
     setInputValue("");
     setDeepSeekSettings(saveDeepSeekBrowserSettings(nextSettings));
   }, []);
 
   const clearConnectionSettings = useCallback(() => {
+    hydrationRequestRef.current += 1;
     abortControllerRef.current?.abort();
     abortControllerRef.current = null;
     activeRequestIdRef.current = null;
@@ -318,28 +362,41 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile } = {}) 
 
   const compactContext = useCallback(async (reason = "manual") => {
     if (compactionPromiseRef.current) return compactionPromiseRef.current;
-    if (!chatState.messages.length || !client.configured || !requestContext) return null;
+    if (!messagesSinceCompaction.length || !client.configured || !requestContext) {
+      if (reason === "manual" && chatState.messages.length) {
+        setCompactionNotice("当前没有需要继续压缩的新对话。完整对话仍保留。");
+      }
+      return null;
+    }
 
     const promise = (async () => {
       setCompacting(true);
       setCompactionNotice(null);
       const service = createCompactionService({ summarize: summarizeMessages });
+      const conversation = await ensureConversation();
+      const persistedMessages = repository && conversation
+        ? await repository.listMessages(conversation.id)
+        : [];
+      const coveredThroughMessageId = persistedMessages.at(-1)?.id
+        ?? chatState.messages.at(-1)?.id
+        ?? null;
       const result = await service.compact({
-        messages: chatState.messages,
+        conversationId: conversation?.id ?? null,
+        messages: messagesSinceCompaction,
         previousSummary: latestCompaction?.summary && typeof latestCompaction.summary === "object"
           ? latestCompaction.summary
           : null,
-        coveredThroughMessageId: chatState.messages.at(-1)?.id ?? null,
-        modelId: deepSeekSettings.model,
+        coveredThroughMessageId,
+        modelId: contextModelId,
         budgetInput: {
-          systemPrompt: CONTEXT_SYSTEM_PROMPT,
+          systemPrompt: AI_LEARNING_ASSISTANT_SYSTEM_PROMPT,
           note: aiContext?.note?.content ?? "",
           sources: aiContext?.sources ?? [],
+          activeSourceFile: aiContext?.activeSourceFile ?? activeSourceFile,
         },
         reason,
       });
 
-      const conversation = await ensureConversation();
       if (repository && conversation) {
         const stored = await repository.saveCompaction({
           conversationId: conversation.id,
@@ -348,15 +405,21 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile } = {}) 
           estimatedTokensBefore: result.checkpoint.estimatedTokensBefore,
           estimatedTokensAfter: result.checkpoint.estimatedTokensAfter,
           version: result.checkpoint.version,
+          reason: result.checkpoint.reason,
+          timestamp: result.checkpoint.timestamp,
           metadata: { reason, serializedSummary: result.serializedSummary },
         });
         setLatestCompaction(stored);
       } else {
         setLatestCompaction({
           summary: result.summary,
+          coveredThroughMessageId,
+          reason: result.checkpoint.reason,
+          timestamp: result.checkpoint.timestamp,
           metadata: { serializedSummary: result.serializedSummary },
         });
       }
+      setCompactedMessageCount(chatState.messages.length);
       setCompactionNotice(`上下文已从 ≈${result.checkpoint.estimatedTokensBefore} tokens 压缩到 ≈${result.checkpoint.estimatedTokensAfter} tokens。完整对话仍保留。`);
       return result;
     })().finally(() => {
@@ -366,76 +429,51 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile } = {}) 
 
     compactionPromiseRef.current = promise;
     return promise;
-  }, [aiContext, chatState.messages, client.configured, deepSeekSettings.model, ensureConversation, latestCompaction, repository, requestContext, summarizeMessages]);
+  }, [activeSourceFile, aiContext, chatState.messages, client.configured, contextModelId, ensureConversation, latestCompaction, messagesSinceCompaction, repository, requestContext, summarizeMessages]);
 
   const submit = useCallback(async (question) => {
     const normalizedQuestion = typeof question === "string" ? question.trim() : "";
-    if (!normalizedQuestion || !client.configured || !requestContext || noteState.loading) return;
+    if (
+      !normalizedQuestion ||
+      !client.configured ||
+      !requestContext ||
+      noteState.loading ||
+      activeRequestIdRef.current
+    ) return;
 
-    abortControllerRef.current?.abort();
     const controller = new AbortController();
     const requestId = createRequestId();
+    const requestGeneration = hydrationRequestRef.current;
     abortControllerRef.current = controller;
     activeRequestIdRef.current = requestId;
-
-    const conversation = await ensureConversation();
-    const snapshot = repository && conversation
-      ? await repository.saveContextSnapshot({
-          learningUnitId,
-          context: { ...requestContext, model: deepSeekSettings.model },
-        })
-      : null;
-
-    if (repository && conversation) {
-      await repository.appendMessage({
-        conversationId: conversation.id,
-        role: "user",
-        content: normalizedQuestion,
-        status: "complete",
-        contextSnapshotId: snapshot?.id ?? null,
-      });
-    }
-
-    let effectiveSummary = summaryText;
-    const submitBudget = buildContextBudget({
-      modelId: deepSeekSettings.model,
-      systemPrompt: CONTEXT_SYSTEM_PROMPT,
-      note: aiContext?.note?.content ?? "",
-      sources: aiContext?.sources ?? [],
-      summary: effectiveSummary,
-      history: completedHistory,
-      input: normalizedQuestion,
-      actualUsage: lastActualUsage,
-    });
-    if (submitBudget.shouldCompact && chatState.messages.length > 0) {
-      try {
-        const compacted = await compactContext("automatic");
-        effectiveSummary = compacted?.serializedSummary ?? effectiveSummary;
-      } catch (error) {
-        setCompactionNotice(`自动压缩失败，已保留原始上下文：${error?.message || "unknown error"}`);
-      }
-    }
-
-    const selected = selectContextWithinBudget({
-      modelId: deepSeekSettings.model,
-      systemPrompt: CONTEXT_SYSTEM_PROMPT,
-      note: aiContext?.note?.content ?? "",
-      sources: aiContext?.sources ?? [],
-      summary: effectiveSummary,
-      history: completedHistory,
-      input: normalizedQuestion,
-    });
-    const outboundContext = effectiveSummary
-      ? { ...requestContext, conversationSummary: effectiveSummary }
-      : requestContext;
-
     dispatch({ type: "request", requestId, question: normalizedQuestion });
+    dispatch({ type: "start", requestId });
     setInputValue("");
+    let conversation = null;
+    let snapshot = null;
+    let userRecord = null;
     let assistantRecord = null;
     let assistantRecordPromise = null;
     let persister = null;
     let assistantText = "";
+    let terminalEvent = null;
+    let outputLimitExceeded = false;
     let persistenceQueue = Promise.resolve();
+    const outputLimiter = createUnicodeOutputLimiter({
+      onOutputLimitExceeded() {
+        outputLimitExceeded = true;
+        controller.abort("output_limit");
+      },
+    });
+    const assertCurrentRequest = () => {
+      if (
+        controller.signal.aborted ||
+        activeRequestIdRef.current !== requestId ||
+        hydrationRequestRef.current !== requestGeneration
+      ) {
+        throw new AiChatAbortError();
+      }
+    };
 
     const ensureAssistantRecord = () => {
       if (assistantRecord) return Promise.resolve(assistantRecord);
@@ -466,6 +504,106 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile } = {}) 
     };
 
     try {
+      conversation = await ensureConversation();
+      assertCurrentRequest();
+
+      let effectiveSummary = summaryText;
+      let effectiveCompactedMessageCount = compactedMessageCount;
+      const submitBudget = buildContextBudget({
+        modelId: contextModelId,
+        systemPrompt: AI_LEARNING_ASSISTANT_SYSTEM_PROMPT,
+        note: aiContext?.note?.content ?? "",
+        sources: aiContext?.sources ?? [],
+        activeSourceFile: aiContext?.activeSourceFile ?? activeSourceFile,
+        summary: effectiveSummary,
+        history: completedHistory,
+        input: normalizedQuestion,
+        actualUsage: lastActualUsage,
+      });
+      if (submitBudget.shouldCompact && messagesSinceCompaction.length > 0) {
+        try {
+          const compacted = await compactContext("automatic");
+          assertCurrentRequest();
+          if (compacted) {
+            effectiveSummary = compacted.serializedSummary ?? effectiveSummary;
+            effectiveCompactedMessageCount = chatState.messages.length;
+          }
+        } catch (error) {
+          if (error instanceof AiChatAbortError || controller.signal.aborted) throw error;
+          setCompactionNotice(`自动压缩失败，已保留原始上下文：${error?.message || "unknown error"}`);
+        }
+      }
+
+      const requestHistory = buildCompletedChatHistory(
+        chatState.messages.slice(effectiveCompactedMessageCount),
+      );
+      const transportHistory = connectionMode === "gateway"
+        ? requestHistory.slice(-CHAT_LIMITS.maxHistoryMessages)
+        : requestHistory;
+      const transportPrunedMessageCount = requestHistory.length - transportHistory.length;
+      const selected = selectContextWithinBudget({
+        modelId: contextModelId,
+        transportInputCapTokens: connectionMode === "gateway"
+          ? GATEWAY_TRANSPORT_INPUT_CAP_TOKENS
+          : undefined,
+        systemPrompt: AI_LEARNING_ASSISTANT_SYSTEM_PROMPT,
+        note: aiContext?.note?.content ?? "",
+        sources: aiContext?.sources ?? [],
+        activeSourceFile: aiContext?.activeSourceFile ?? activeSourceFile,
+        summary: effectiveSummary,
+        history: transportHistory,
+        input: normalizedQuestion,
+      });
+      const selectionMetadata = {
+        ...selected.metadata,
+        prunedHistory: selected.metadata.prunedHistory || transportPrunedMessageCount > 0,
+        prunedMessageCount: selected.metadata.prunedMessageCount + transportPrunedMessageCount,
+        ...(connectionMode === "gateway"
+          ? { transportInputCapTokens: GATEWAY_TRANSPORT_INPUT_CAP_TOKENS }
+          : {}),
+      };
+      const selectionMessages = [];
+      if (selectionMetadata.truncatedNote) selectionMessages.push("当前 Note 已截断");
+      if (selectionMetadata.truncatedSources) selectionMessages.push("部分 Source 已截断或省略");
+      if (selectionMetadata.prunedHistory) {
+        selectionMessages.push(`已裁剪 ${selectionMetadata.prunedMessageCount} 条较早历史`);
+      }
+      setContextSelectionNotice(selectionMessages.length
+        ? `上下文已按可用预算裁剪：${selectionMessages.join("；")}。`
+        : null);
+
+      const outboundContext = {
+        ...requestContext,
+        note: requestContext.note && selected.context.note
+          ? { ...requestContext.note, content: selected.context.note }
+          : null,
+        sources: selected.context.sources,
+        activeSourceFile: selectionMetadata.activeSourceFile ?? requestContext.activeSourceFile,
+        ...(selected.context.summary ? { conversationSummary: selected.context.summary } : {}),
+      };
+      snapshot = repository && conversation
+        ? await repository.saveContextSnapshot({
+            learningUnitId,
+            context: {
+              ...outboundContext,
+              model: contextModelId,
+              selection: selectionMetadata,
+            },
+          })
+        : null;
+      assertCurrentRequest();
+
+      if (repository && conversation) {
+        userRecord = await repository.appendMessage({
+          conversationId: conversation.id,
+          role: "user",
+          content: normalizedQuestion,
+          status: "complete",
+          contextSnapshotId: snapshot?.id ?? null,
+        });
+        assertCurrentRequest();
+      }
+
       await client.stream(
         { question: normalizedQuestion, context: outboundContext, history: selected.context.history },
         {
@@ -476,41 +614,69 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile } = {}) 
               dispatch({ type: "start", requestId });
               void enqueuePersistence();
             } else if (event.type === CHAT_EVENT_TYPES.DELTA) {
-              assistantText += event.text;
-              dispatch({ type: "delta", requestId, text: event.text });
+              const limited = outputLimiter.push(event.text);
+              assistantText = limited.content;
+              if (limited.acceptedText) {
+                dispatch({ type: "delta", requestId, text: limited.acceptedText });
+              }
               const persistedText = assistantText;
               void enqueuePersistence(() => {
                 persister?.schedule({ content: persistedText, status: "streaming" });
               });
             } else if (event.type === CHAT_EVENT_TYPES.DONE) {
-              dispatch({ type: "done", requestId, usage: event.usage });
-              const persistedText = assistantText;
-              void enqueuePersistence(() => persister?.finalize({
-                content: persistedText,
-                status: "complete",
-                usage: normalizeUsage(event.usage),
-              }));
+              terminalEvent = event;
             }
           },
         },
       );
+      const finishReason = outputLimitExceeded
+        ? "output_limit"
+        : normalizeFinishReason(terminalEvent?.finishReason);
+      const usage = normalizeUsage(terminalEvent?.usage);
+      dispatch({ type: "done", requestId, finishReason, usage });
+      await enqueuePersistence(() => persister?.finalize({
+        content: assistantText,
+        status: "complete",
+        usage,
+        metadata: { finishReason },
+      }));
       await persistenceQueue;
       await persister?.flush();
       await refreshConversations(repository);
     } catch (error) {
       await persistenceQueue.catch(() => null);
-      if (error instanceof AiChatAbortError || controller.signal.aborted) {
-        dispatch({ type: "cancel", requestId });
+      if (outputLimitExceeded) {
+        dispatch({ type: "done", requestId, finishReason: "output_limit" });
         await ensureAssistantRecord();
-        await persister?.finalize({ content: assistantText, status: "interrupted" });
+        await persister?.finalize({
+          content: assistantText,
+          status: "complete",
+          metadata: { finishReason: "output_limit" },
+        });
+      } else if (error instanceof AiChatAbortError || controller.signal.aborted) {
+        dispatch({ type: "cancel", requestId });
+        if (assistantRecordPromise || assistantRecord) {
+          await ensureAssistantRecord();
+          await persister?.finalize({
+            content: assistantText,
+            status: "interrupted",
+            metadata: { finishReason: "user_abort" },
+          });
+        }
       } else {
         dispatch({
           type: "error",
           requestId,
           message: error?.message || "AI assistant request failed",
         });
-        await ensureAssistantRecord();
-        await persister?.finalize({ content: assistantText, status: "error" });
+        if (userRecord || assistantRecordPromise || assistantRecord) {
+          await ensureAssistantRecord();
+          await persister?.finalize({
+            content: assistantText,
+            status: "error",
+            metadata: { finishReason: "error" },
+          });
+        }
       }
       await refreshConversations(repository);
     } finally {
@@ -519,7 +685,7 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile } = {}) 
         abortControllerRef.current = null;
       }
     }
-  }, [aiContext, chatState.messages.length, client, compactContext, completedHistory, deepSeekSettings.model, ensureConversation, lastActualUsage, learningUnitId, noteState.loading, refreshConversations, repository, requestContext, summaryText]);
+  }, [activeSourceFile, aiContext, chatState.messages, client, compactContext, compactedMessageCount, completedHistory, connectionMode, contextModelId, ensureConversation, lastActualUsage, learningUnitId, messagesSinceCompaction, noteState.loading, refreshConversations, repository, requestContext, summaryText]);
 
   useEffect(() => () => abortControllerRef.current?.abort(), []);
 
@@ -543,6 +709,10 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile } = {}) 
     noticeParts.push("正在准备当前笔记和源码上下文…");
   }
   if (compactionNotice) noticeParts.push(compactionNotice);
+  if (contextSelectionNotice) noticeParts.push(contextSelectionNotice);
+  if (conversationStorage.mode === "memory") {
+    noticeParts.push("浏览器本地持久化不可用，本次会话仅保存在内存中。");
+  }
 
   return {
     configured: client.configured,
@@ -555,6 +725,9 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile } = {}) 
     compacting,
     compactContext: () => compactContext("manual"),
     conversations: visibleConversations,
+    conversationHistory: conversations,
+    conversationStorage,
+    learningUnitId,
     activeConversationId,
     selectConversation: hydrateConversation,
     renameConversation,

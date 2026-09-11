@@ -21,7 +21,7 @@ test("chatReducer accumulates one streaming assistant response without corruptin
     { type: "start", requestId: "r1" },
     { type: "delta", requestId: "r1", text: "因为 state " },
     { type: "delta", requestId: "r1", text: "发生了变化。" },
-    { type: "done", requestId: "r1", usage: { outputTokens: 8 } },
+    { type: "done", requestId: "r1", finishReason: "length", usage: { outputTokens: 8 } },
   ]);
 
   assert.equal(state.status, CHAT_STATUS.IDLE);
@@ -30,6 +30,7 @@ test("chatReducer accumulates one streaming assistant response without corruptin
   assert.equal(state.messages[0].role, "user");
   assert.equal(state.messages[1].content, "因为 state 发生了变化。");
   assert.equal(state.messages[1].streaming, false);
+  assert.equal(state.messages[1].finishReason, "length");
   assert.deepEqual(state.messages[1].usage, { outputTokens: 8 });
 });
 
@@ -42,12 +43,15 @@ test("chatReducer preserves previous content on error, supports cancel and reset
   assert.equal(errored.status, CHAT_STATUS.ERROR);
   assert.equal(errored.error, "upstream failed");
   assert.equal(errored.messages[1].content, "partial");
+  assert.equal(errored.messages[1].finishReason, "error");
 
-  const cancelled = chatReducer(
-    chatReducer({ ...INITIAL_CHAT_STATE, messages: [] }, { type: "request", requestId: "r2", question: "Q2" }),
+  const cancelled = [
+    { type: "request", requestId: "r2", question: "Q2" },
+    { type: "start", requestId: "r2" },
     { type: "cancel", requestId: "r2" },
-  );
+  ].reduce(chatReducer, { ...INITIAL_CHAT_STATE, messages: [] });
   assert.equal(cancelled.status, CHAT_STATUS.CANCELLED);
+  assert.equal(cancelled.messages[1].finishReason, "user_abort");
 
   assert.deepEqual(chatReducer(errored, { type: "reset" }), {
     ...INITIAL_CHAT_STATE,
@@ -60,7 +64,7 @@ test("ChatStreamParser handles arbitrary chunk boundaries and NDJSON/SSE data li
   const events = [
     ...parser.push('{"type":"start","requestId":"r1"}\n{"type":"del'),
     ...parser.push('ta","text":"你"}\ndata: {"type":"delta","text":"好"}\n'),
-    ...parser.push('{"type":"done"}'),
+    ...parser.push('{"type":"done","finishReason":"max_tokens"}'),
     ...parser.finish(),
   ];
 
@@ -68,7 +72,14 @@ test("ChatStreamParser handles arbitrary chunk boundaries and NDJSON/SSE data li
     { type: "start", requestId: "r1" },
     { type: "delta", text: "你" },
     { type: "delta", text: "好" },
-    { type: "done" },
+    { type: "done", finishReason: "length" },
+  ]);
+});
+
+test("ChatStreamParser supplies a normalized stop reason when a gateway omits it", () => {
+  const parser = new ChatStreamParser();
+  assert.deepEqual(parser.push('{"type":"done"}\n'), [
+    { type: "done", finishReason: "stop" },
   ]);
 });
 
@@ -95,8 +106,8 @@ test("buildChatRequest trims question/history and applies deterministic guards",
   });
 
   assert.equal(request.question, "explain this");
-  assert.equal(request.history.length, 20);
-  assert.equal(request.history[0].content, "m5");
+  assert.equal(request.history.length, 12);
+  assert.equal(request.history[0].content, "m13");
   assert.equal(request.client.historyTrimmed, true);
   assert.throws(
     () => buildChatRequest({ question: "x".repeat(4_001), context: {} }),

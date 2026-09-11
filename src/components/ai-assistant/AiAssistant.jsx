@@ -12,6 +12,13 @@ const DEFAULT_SUGGESTIONS = [
   "这个实现有哪些常见误区或边界？",
 ];
 
+const FINISH_REASON_COPY = Object.freeze({
+  length: "模型达到 provider token 上限，回答可能未完整结束。",
+  user_abort: "回答已由你停止。",
+  output_limit: "回答已达到 6000 字上限",
+  error: "回答因错误中断。",
+});
+
 function normalizeContextItems(contextSummary) {
   if (!contextSummary) return [];
 
@@ -126,12 +133,17 @@ function Message({ message, isStreaming, onCitationOpen }) {
   const role = message?.role === "user" ? "user" : "assistant";
   const content = typeof message?.content === "string" ? message.content : "";
   const isAssistant = role === "assistant";
+  const finishReason = isAssistant
+    ? message?.finishReason ?? message?.metadata?.finishReason ?? null
+    : null;
+  const finishReasonCopy = finishReason ? FINISH_REASON_COPY[finishReason] : null;
   const citations = isAssistant && content ? extractSourceCitations(content, { dedupe: true }) : [];
 
   return (
     <article
       className={`ai-assistant-message is-${role} ${isStreaming ? "is-streaming" : ""}`.trim()}
       data-message-role={role}
+      data-finish-reason={finishReason || undefined}
       aria-busy={isAssistant && isStreaming ? "true" : undefined}
     >
       <div className="ai-assistant-message-avatar" aria-hidden="true">
@@ -170,6 +182,14 @@ function Message({ message, isStreaming, onCitationOpen }) {
             </div>
           ) : null}
         </div>
+        {finishReasonCopy ? (
+          <p
+            className="ai-assistant-finish-reason"
+            role={finishReason === "output_limit" ? "status" : undefined}
+          >
+            {finishReasonCopy}
+          </p>
+        ) : null}
       </div>
     </article>
   );

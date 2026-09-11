@@ -1,4 +1,9 @@
-import { buildChatRequest, CHAT_EVENT_TYPES } from "./contracts.js";
+import {
+  buildChatRequest,
+  buildCompactionRequest,
+  CHAT_EVENT_TYPES,
+  isCompactionPrompt,
+} from "./contracts.js";
 import { parseChatEventStream } from "./streamProtocol.js";
 
 export class AiChatClientError extends Error {
@@ -40,6 +45,24 @@ async function readErrorMessage(response) {
   }
 }
 
+export function buildGatewayRequest(request) {
+  if (request?.purpose === "compaction" || request?.compaction) {
+    return buildCompactionRequest({
+      prompt: request?.compaction?.prompt ?? request?.prompt,
+      context: request?.context,
+    });
+  }
+
+  // Transitional adapter for the existing compactor call site. The long
+  // compaction material is no longer sent through the ordinary `question`
+  // field, so the 4K user-question guard remains intact.
+  if (isCompactionPrompt(request?.question)) {
+    return buildCompactionRequest({ prompt: request.question, context: request.context });
+  }
+
+  return buildChatRequest(request);
+}
+
 export function createAiChatClient({ endpoint = getConfiguredAiAssistantUrl(), fetchImpl = globalThis.fetch } = {}) {
   if (typeof fetchImpl !== "function") throw new TypeError("fetch implementation is required");
 
@@ -54,7 +77,7 @@ export function createAiChatClient({ endpoint = getConfiguredAiAssistantUrl(), f
         });
       }
 
-      const body = buildChatRequest(request);
+      const body = buildGatewayRequest(request);
       let response;
       try {
         response = await fetchImpl(endpoint, {

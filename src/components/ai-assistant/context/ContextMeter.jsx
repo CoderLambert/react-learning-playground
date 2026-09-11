@@ -3,6 +3,7 @@ import "./ContextMeter.css";
 
 const LABELS = Object.freeze({
   system: "System",
+  activeSource: "Active source",
   note: "Note",
   sources: "Sources",
   summary: "Summary",
@@ -19,6 +20,8 @@ export function ContextMeter({ budget, onCompact, compacting = false, disabled =
   const used = Number(budget.estimatedInputTokens) || 0;
   const soft = Number(budget.softBudgetTokens) || 0;
   const modelWindow = Number(budget.model?.contextWindowTokens) || 0;
+  const percentage = modelWindow > 0 ? Math.min(999, Math.max(0, (used / modelWindow) * 100)) : 0;
+  const official = budget.model?.official === true;
   const actual = budget.actualUsage;
   const level = budget.overSoftBudget ? "danger" : budget.shouldCompact ? "warning" : "normal";
 
@@ -33,9 +36,11 @@ export function ContextMeter({ budget, onCompact, compacting = false, disabled =
           onClick={() => setExpanded((value) => !value)}
         >
           <span>Context</span>
-          <strong>{formatTokens(used)} / {formatTokens(soft)}</strong>
-          <span className="ai-context-meter__window">of {formatTokens(modelWindow)} model window</span>
-          <span className="ai-context-meter__estimate">Estimated</span>
+          <strong>≈ {formatTokens(used)} / {formatTokens(modelWindow)}</strong>
+          <span className="ai-context-meter__percentage">{formatPercentage(percentage)}</span>
+          <span className="ai-context-meter__window">
+            {official ? "official window" : "estimated / unknown model"}
+          </span>
         </button>
 
         <button
@@ -50,9 +55,9 @@ export function ContextMeter({ budget, onCompact, compacting = false, disabled =
 
       <progress
         className="ai-context-meter__progress"
-        max={Math.max(soft, 1)}
-        value={Math.min(used, Math.max(soft, 1))}
-        aria-label="Estimated application context budget usage"
+        max={Math.max(modelWindow, 1)}
+        value={Math.min(used, Math.max(modelWindow, 1))}
+        aria-label="Estimated official model context window usage"
       />
 
       {expanded ? (
@@ -64,10 +69,18 @@ export function ContextMeter({ budget, onCompact, compacting = false, disabled =
                 <dd>≈ {formatTokens(value)}</dd>
               </div>
             ))}
+            <div className="ai-context-meter__row">
+              <dt>Application soft budget</dt>
+              <dd>≈ {formatTokens(soft)}</dd>
+            </div>
+            <div className="ai-context-meter__row">
+              <dt>Reserved for output</dt>
+              <dd>{formatTokens(budget.outputReserveTokens)}</dd>
+            </div>
           </dl>
           {actual ? (
             <p className="ai-context-meter__actual">
-              Last actual request: {formatTokens(actual.inputTokens)} input · {formatTokens(actual.outputTokens)} output
+              Last actual request: {formatTokens(actual.inputTokens)} input · {formatTokens(actual.outputTokens)} output · {formatTokens(actual.totalTokens)} total
             </p>
           ) : (
             <p className="ai-context-meter__actual">Actual provider usage not available yet.</p>
@@ -76,6 +89,13 @@ export function ContextMeter({ budget, onCompact, compacting = false, disabled =
       ) : null}
     </section>
   );
+}
+
+function formatPercentage(value) {
+  if (value === 0) return "0%";
+  if (value < 0.1) return "<0.1%";
+  if (value < 10) return `${value.toFixed(1)}%`;
+  return `${Math.round(value)}%`;
 }
 
 function formatTokens(value) {
