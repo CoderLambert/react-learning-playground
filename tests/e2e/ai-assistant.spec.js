@@ -83,7 +83,7 @@ test("changing demos resets the context-bound chat and prevents stale context", 
 
   await page.getByRole("button", { name: /Children 默认插槽/ }).click();
   await expect(page).toHaveURL(/demo=children/);
-  await expect(page.getByText("props question")).toHaveCount(0);
+  await expect(page.getByRole("log", { name: "AI 对话记录" }).getByText("props question", { exact: true })).toHaveCount(0);
 
   await page.getByRole("tab", { name: "AI" }).click();
   composer = page.getByRole("textbox", { name: "向 AI 助手提问" });
@@ -179,14 +179,15 @@ test("source citations open the Source inspector and highlight the requested ran
   await expect(page.locator('[data-source-line="2"][data-highlighted="true"]')).toBeVisible();
 });
 
-test("conversation history survives reload and stays scoped to the current learning unit", async ({ page }) => {
+test("conversation history is visible, survives reload, and keeps learning units isolated", async ({ page }) => {
   await page.route(GATEWAY_URL, async (route) => {
+    const body = route.request().postDataJSON();
     await route.fulfill({
       status: 200,
       contentType: "application/x-ndjson",
       body: normalizedStream(
         { type: "start" },
-        { type: "delta", text: "persisted answer" },
+        { type: "delta", text: `answer:${body.question}` },
         { type: "done" },
       ),
     });
@@ -194,21 +195,105 @@ test("conversation history survives reload and stays scoped to the current learn
 
   let composer = await openAiTab(page);
   let transcript = page.getByRole("log", { name: "AI 对话记录" });
-  let assistantMessage = transcript.locator('[data-message-role="assistant"]');
-  await composer.fill("remember this question");
+  const toolbar = page.getByLabel("AI 会话工具栏");
+  await expect(toolbar.getByRole("button", { name: "新对话", exact: true })).toHaveCount(1);
+  await expect(toolbar.getByText("模型", { exact: true })).toBeVisible();
+  await expect(toolbar.locator("summary")).toHaveText("历史会话 0");
+
+  await composer.fill("first saved question");
   await page.getByRole("button", { name: "发送" }).click();
-  await expect(assistantMessage).toHaveCount(1);
-  await expect(assistantMessage).toContainText("persisted answer");
-  await expect(transcript.getByText("remember this question", { exact: true })).toBeVisible();
+  await expect(transcript.locator('[data-message-role="assistant"]')).toHaveCount(1);
+  await expect(transcript.getByText("answer:first saved question", { exact: true })).toBeVisible();
+  await expect(toolbar.locator("summary")).toHaveText("历史会话 1");
+
+  await toolbar.getByRole("button", { name: "新对话", exact: true }).click();
+  await expect(transcript.getByText("first saved question", { exact: true })).toHaveCount(0);
+  await expect(toolbar.locator("summary")).toHaveText("历史会话 1");
+
+  await composer.fill("second saved question");
+  await page.getByRole("button", { name: "发送" }).click();
+  await expect(transcript.getByText("answer:second saved question", { exact: true })).toBeVisible();
+  await expect(toolbar.locator("summary")).toHaveText("历史会话 2");
+
+  await toolbar.locator("summary").click();
+  const historyPanel = toolbar.locator(".ai-conversation-popover__panel");
+  await expect(historyPanel.getByText("全部历史 · 2", { exact: true })).toBeVisible();
+  await historyPanel.getByRole("button", { name: /first saved question/ }).click();
+  await expect(transcript.getByText("first saved question", { exact: true })).toBeVisible();
+  await expect(transcript.getByText("second saved question", { exact: true })).toHaveCount(0);
 
   await page.reload();
   await page.getByRole("tab", { name: "AI" }).click();
   composer = page.getByRole("textbox", { name: "向 AI 助手提问" });
   transcript = page.getByRole("log", { name: "AI 对话记录" });
-  assistantMessage = transcript.locator('[data-message-role="assistant"]');
   await expect(composer).toBeEnabled();
-  await expect(transcript.getByText("remember this question", { exact: true })).toBeVisible();
-  await expect(assistantMessage).toHaveCount(1);
-  await expect(assistantMessage).toContainText("persisted answer");
-  await expect(page.locator(".ai-conversation-popover summary")).toContainText("会话");
+  await expect(transcript.getByText("second saved question", { exact: true })).toBeVisible();
+  await expect(transcript.locator('[data-message-role="assistant"]')).toHaveCount(1);
+  await expect(transcript.getByText("answer:second saved question", { exact: true })).toBeVisible();
+  await expect(page.locator(".ai-conversation-popover summary")).toHaveText("历史会话 2");
+
+  await page.getByRole("button", { name: /Children 默认插槽/ }).click();
+  await page.getByRole("tab", { name: "AI" }).click();
+  composer = page.getByRole("textbox", { name: "向 AI 助手提问" });
+  transcript = page.getByRole("log", { name: "AI 对话记录" });
+  await expect(transcript.getByText("second saved question", { exact: true })).toHaveCount(0);
+  await expect(page.locator(".ai-conversation-popover summary")).toHaveText("历史会话 2");
+
+  await composer.fill("children unit question");
+  await page.getByRole("button", { name: "发送" }).click();
+  await expect(transcript.getByText("answer:children unit question", { exact: true })).toBeVisible();
+  await page.locator(".ai-conversation-popover summary").click();
+  await expect(page.getByText("全部历史 · 3", { exact: true })).toBeVisible();
+  await expect(page.getByText("其他学习单元 · 2", { exact: true })).toBeVisible();
+  await expect(page.getByText("first saved question", { exact: true })).toBeVisible();
+  await expect(page.getByText("second saved question", { exact: true })).toBeVisible();
+});
+
+test("conversation history supports rename, archive, restore, and delete", async ({ page }) => {
+  await page.route(GATEWAY_URL, async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/x-ndjson",
+      body: normalizedStream({ type: "start" }, { type: "delta", text: "saved" }, { type: "done" }),
+    });
+  });
+
+  const composer = await openAiTab(page);
+  const toolbar = page.getByLabel("AI 会话工具栏");
+  await composer.fill("history actions question");
+  await page.getByRole("button", { name: "发送" }).click();
+  await expect(toolbar.locator("summary")).toHaveText("历史会话 1");
+  await toolbar.locator("summary").click();
+
+  const panel = toolbar.locator(".ai-conversation-popover__panel");
+  const item = panel.locator("li").filter({ hasText: "history actions question" });
+  await expect(item).toHaveCount(1);
+  await item.getByRole("button", { name: "重命名", exact: true }).click();
+  const renameInput = panel.getByRole("textbox", { name: "重命名会话" });
+  await expect(renameInput).toHaveCount(1);
+  await renameInput.fill("renamed history");
+  await renameInput.press("Enter");
+  await expect(panel.getByText("renamed history", { exact: true })).toBeVisible();
+
+  const renamedItem = panel.locator("li").filter({ hasText: "renamed history" });
+  await renamedItem.getByRole("button", { name: "归档", exact: true }).click();
+  await expect(toolbar.locator("summary")).toHaveText("历史会话 0");
+  const archivedItem = panel.locator("li").filter({ hasText: "renamed history" });
+  await expect(archivedItem).toHaveCount(1);
+  await archivedItem.getByRole("button", { name: "恢复", exact: true }).click();
+  await expect(toolbar.locator("summary")).toHaveText("历史会话 1");
+
+  const restoredItem = panel.locator("li").filter({ hasText: "renamed history" });
+  await restoredItem.getByRole("button", { name: "删除", exact: true }).click();
+  await expect(toolbar.locator("summary")).toHaveText("历史会话 0");
+  await expect(panel.getByText("renamed history", { exact: true })).toHaveCount(0);
+});
+
+test("IndexedDB unavailable mode shows an explicit memory-only warning", async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(window, "indexedDB", { configurable: true, value: undefined });
+  });
+
+  await openAiTab(page);
+  await expect(page.locator(".ai-assistant-notice")).toContainText("浏览器本地持久化不可用，本次会话仅保存在内存中。");
 });

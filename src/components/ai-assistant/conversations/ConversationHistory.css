@@ -1,0 +1,125 @@
+.ai-assistant-history-toolbar {
+  position: relative;
+  z-index: 4;
+  padding: 9px 12px;
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr);
+  align-items: start;
+  gap: 7px;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-surface);
+}
+
+.ai-assistant-history-toolbar > button,
+.ai-conversation-popover > summary {
+  min-height: 34px;
+  box-sizing: border-box;
+  padding: 7px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface);
+  color: var(--text-main);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.ai-assistant-history-toolbar > button:hover:not(:disabled),
+.ai-conversation-popover > summary:hover,
+.ai-assistant-history-toolbar > button:focus-visible,
+.ai-conversation-popover > summary:focus-visible {
+  border-color: var(--color-primary);
+  outline: none;
+}
+
+.ai-assistant-history-toolbar > button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.ai-conversation-popover {
+  position: relative;
+}
+
+.ai-conversation-popover > summary {
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+  list-style: none;
+}
+
+.ai-conversation-popover > summary::-webkit-details-marker {
+  display: none;
+}
+
+.ai-conversation-popover[open] > summary {
+  border-color: var(--color-primary);
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+.ai-conversation-popover__panel {
+  position: absolute;
+  top: calc(100% + 7px);
+  left: 0;
+  width: min(380px, calc(100vw - 32px));
+  max-height: min(520px, calc(100vh - 180px));
+  padding: 12px;
+  overflow: auto;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-lg);
+}
+
+.ai-conversation-history {
+  display: grid;
+  gap: 14px;
+}
+
+.ai-conversation-history__summary {
+  display: grid;
+  gap: 3px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.ai-conversation-history__summary strong {
+  font-size: 12px;
+}
+
+.ai-conversation-history__summary span {
+  color: var(--text-subtle);
+  font-size: 10.5px;
+  line-height: 1.45;
+}
+
+.ai-assistant-history-toolbar__model {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 7px;
+}
+
+.ai-assistant-history-toolbar__model > span {
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.ai-assistant-history-toolbar__model .ai-assistant-settings-slot {
+  min-width: 0;
+  margin: 0;
+}
+
+@media (max-width: 640px) {
+  .ai-assistant-history-toolbar {
+    grid-template-columns: auto auto;
+  }
+
+  .ai-assistant-history-toolbar__model {
+    grid-column: 1 / -1;
+  }
+}

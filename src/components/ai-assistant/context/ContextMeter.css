@@ -33,10 +33,15 @@
 }
 
 .ai-context-meter__window,
-.ai-context-meter__estimate,
+.ai-context-meter__percentage,
 .ai-context-meter__actual {
   opacity: 0.68;
   font-size: 0.78rem;
+}
+
+.ai-context-meter__percentage {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .ai-context-meter__compact {

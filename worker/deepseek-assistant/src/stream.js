@@ -1,3 +1,5 @@
+import { normalizeFinishReason } from "../../../src/ai/finishReason.js";
+
 const encoder = new TextEncoder();
 
 export function encodeEvent(event) {
@@ -14,7 +16,9 @@ export function parseDeepSeekChunk(line) {
   return {
     done: false,
     delta: typeof choice?.delta?.content === "string" ? choice.delta.content : "",
-    finishReason: choice?.finish_reason ?? null,
+    finishReason: choice?.finish_reason == null
+      ? null
+      : normalizeFinishReason(choice.finish_reason),
     usage: parsed?.usage ?? null,
   };
 }
@@ -60,7 +64,11 @@ export function normalizeDeepSeekStream(upstreamBody) {
             buffer = buffer.slice(boundary + 1);
             if (processLine(line)) {
               if (!cancelled) {
-                controller.enqueue(encodeEvent({ type: "done", finishReason, usage }));
+                controller.enqueue(encodeEvent({
+                  type: "done",
+                  finishReason: normalizeFinishReason(finishReason),
+                  usage,
+                }));
                 controller.close();
               }
               return;
@@ -72,12 +80,20 @@ export function normalizeDeepSeekStream(upstreamBody) {
 
         buffer += decoder.decode();
         if (buffer.trim() && processLine(buffer)) {
-          controller.enqueue(encodeEvent({ type: "done", finishReason, usage }));
+          controller.enqueue(encodeEvent({
+            type: "done",
+            finishReason: normalizeFinishReason(finishReason),
+            usage,
+          }));
           controller.close();
           return;
         }
 
-        controller.enqueue(encodeEvent({ type: "done", finishReason, usage }));
+        controller.enqueue(encodeEvent({
+          type: "done",
+          finishReason: normalizeFinishReason(finishReason),
+          usage,
+        }));
         controller.close();
       } catch {
         if (!cancelled) {

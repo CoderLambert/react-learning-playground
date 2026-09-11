@@ -1,3 +1,5 @@
+import { normalizeFinishReason } from "./finishReason.js";
+
 export const CHAT_EVENT_TYPES = Object.freeze({
   START: "start",
   DELTA: "delta",
@@ -14,8 +16,8 @@ export const CHAT_STATUS = Object.freeze({
 
 export const CHAT_LIMITS = Object.freeze({
   maxQuestionChars: 4_000,
-  maxHistoryMessages: 20,
-  maxHistoryMessageChars: 12_000,
+  maxHistoryMessages: 12,
+  maxHistoryMessageChars: 8_000,
   maxContextChars: 180_000,
 });
 
@@ -110,6 +112,9 @@ export function normalizeChatEvent(value) {
   return {
     type: value.type,
     ...(typeof value.requestId === "string" ? { requestId: value.requestId } : {}),
+    ...(value.type === CHAT_EVENT_TYPES.DONE
+      ? { finishReason: normalizeFinishReason(value.finishReason) }
+      : {}),
     ...(value.type === CHAT_EVENT_TYPES.DONE && value.usage && typeof value.usage === "object"
       ? { usage: value.usage }
       : {}),

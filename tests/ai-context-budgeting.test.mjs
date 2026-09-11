@@ -1,7 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { createCompactionService, normalizeStructuredSummary, shouldAutoCompact } from "../src/ai/compaction/compactionService.js";
+import {
+  REDACTED_SECRET,
+  createCompactionService,
+  normalizeStructuredSummary,
+  sanitizeCompactionText,
+  shouldAutoCompact,
+} from "../src/ai/compaction/compactionService.js";
 import { buildContextBudget, selectContextWithinBudget } from "../src/ai/context/contextBudget.js";
 import { getModelContextMetadata } from "../src/ai/context/modelMetadata.js";
 import { calibrateTokenEstimate, estimateTextTokens } from "../src/ai/context/tokenEstimator.js";
@@ -14,10 +20,26 @@ test("token estimator is explicitly approximate and calibratable", () => {
   assert.ok(calibrated > 1 && calibrated < 1.5);
 });
 
-test("DeepSeek V4 presets use the current 1M window and unknown models fall back safely", () => {
+test("DeepSeek official presets use the current 1M window and unknown models are estimated", () => {
+  assert.equal(getModelContextMetadata("deepseek-flash").contextWindowTokens, 1_048_576);
   assert.equal(getModelContextMetadata("deepseek-v4-pro").contextWindowTokens, 1_048_576);
   assert.equal(getModelContextMetadata("deepseek-v4-flash").contextWindowTokens, 1_048_576);
-  assert.equal(getModelContextMetadata("future-model").contextWindowTokens, 131_072);
+  assert.equal(getModelContextMetadata("deepseek-v4-flash").aliasOf, "deepseek-flash");
+  assert.equal(getModelContextMetadata("deepseek-v4-pro").official, true);
+  assert.equal(getModelContextMetadata("deepseek-v4-pro").officialMaxOutputTokens, 393_216);
+  const unknown = getModelContextMetadata("future-model");
+  assert.equal(unknown.contextWindowTokens, 131_072);
+  assert.equal(unknown.known, false);
+  assert.equal(unknown.official, false);
+  assert.equal(unknown.estimated, true);
+  assert.match(unknown.contextWindowLabel, /estimated|fallback/i);
+});
+
+test("runtime window overrides cannot masquerade as official metadata", () => {
+  const metadata = getModelContextMetadata("deepseek-v4-pro", { contextWindowTokens: 32_000 });
+  assert.equal(metadata.contextWindowTokens, 32_000);
+  assert.equal(metadata.official, false);
+  assert.equal(metadata.estimated, true);
 });
 
 test("budget arithmetic exposes breakdown, actual usage, warning and compaction states", () => {
@@ -35,12 +57,26 @@ test("budget arithmetic exposes breakdown, actual usage, warning and compaction 
   });
   assert.equal(Object.values(budget.breakdown).reduce((a, b) => a + b, 0), budget.estimatedInputTokens);
   assert.equal(budget.actualUsage.inputTokens, 91);
+  assert.equal(budget.actualUsage.outputTokens, 9);
+  assert.equal(budget.actualUsage.totalTokens, 100);
   assert.equal(budget.actualUsage.exact, true);
   assert.equal(budget.warning, true);
   assert.equal(budget.shouldCompact, true);
+  assert.equal(budget.budgetBasis, "actual-input");
 });
 
-test("selection always preserves current note/source and keeps the newest affordable message tail", () => {
+test("actual provider input usage can trigger compaction when fixture text is small", () => {
+  const budget = buildContextBudget({
+    modelId: "deepseek-v4-pro",
+    systemPrompt: "small fixture",
+    actualUsage: { prompt_tokens: 220_000, completion_tokens: 100, total_tokens: 220_100 },
+  });
+  assert.equal(budget.estimatedInputTokens < 100, true);
+  assert.equal(budget.budgetBasisTokens, 220_000);
+  assert.equal(budget.shouldCompact, true);
+});
+
+test("selection preserves affordable current note/source and keeps the newest message tail", () => {
   const history = [
     { id: "old", role: "user", content: "x".repeat(300) },
     { id: "mid", role: "assistant", content: "short" },
@@ -61,18 +97,61 @@ test("selection always preserves current note/source and keeps the newest afford
   assert.equal(result.context.sources[0].code, "1 | const demo = true;");
   assert.equal(result.context.history.at(-1)?.id, "new");
   assert.ok(result.metadata.prunedMessageIds.includes("old"));
+  assert.equal(result.metadata.prunedHistory, true);
+  assert.equal(result.metadata.withinProviderInputLimit, true);
 });
 
-test("fixed learning context over budget is reported instead of silently truncated", () => {
+test("oversized fixed context is pruned explicitly and cannot exceed provider input budget", () => {
   const result = selectContextWithinBudget({
     modelId: "future-model",
-    softBudgetTokens: 10,
+    softBudgetTokens: 20,
+    outputReserveTokens: 5,
+    modelOverrides: { contextWindowTokens: 25, defaultSoftBudgetTokens: 20 },
     note: "笔记".repeat(100),
     sources: [{ name: "A.jsx", code: "source".repeat(100) }],
+    history: [{ id: "old", role: "user", content: "history" }],
   });
   assert.equal(result.metadata.fixedContextOverBudget, true);
-  assert.equal(result.context.note.length > 0, true);
+  assert.equal(result.metadata.truncatedSources, true);
+  assert.equal(result.metadata.truncatedNote, true);
+  assert.equal(result.metadata.prunedHistory, true);
   assert.equal(result.context.sources.length, 1);
+  assert.ok(result.context.sources[0].code.length > 0);
+  assert.equal(result.context.note, "");
+  assert.equal(result.estimatedSelectedTokens <= 20, true);
+  assert.equal(result.estimatedSelectedTokens <= result.maxInputTokens, true);
+});
+
+test("active source is selected before note and other sources", () => {
+  const result = selectContextWithinBudget({
+    modelId: "test",
+    softBudgetTokens: 24,
+    modelOverrides: {
+      contextWindowTokens: 40,
+      defaultSoftBudgetTokens: 24,
+      defaultOutputReserveTokens: 8,
+    },
+    activeSourceFile: "active.jsx",
+    note: "笔记".repeat(100),
+    sources: [
+      { name: "other.js", code: "other".repeat(100) },
+      { name: "active.jsx", code: "active".repeat(100) },
+    ],
+  });
+  assert.equal(result.context.sources[0].name, "active.jsx");
+  assert.ok(result.context.sources[0].code.length > 0);
+  assert.equal(result.context.note, "");
+  assert.equal(result.metadata.sourceSelections[0].active, true);
+  assert.equal(result.metadata.sourceSelections[1].omitted, true);
+  assert.deepEqual(result.metadata.priority, [
+    "system",
+    "input",
+    "activeSource",
+    "note",
+    "sources",
+    "summary",
+    "history",
+  ]);
 });
 
 test("structured summary normalizes the stable compaction contract", () => {
@@ -90,15 +169,45 @@ test("structured summary normalizes the stable compaction contract", () => {
   assert.deepEqual(summary.conclusions, ["keep browser history"]);
 });
 
+test("compaction summaries and summarizer input redact credential-shaped text", async () => {
+  assert.equal(sanitizeCompactionText("Authorization: Bearer top.secret-token"), `Authorization: ${REDACTED_SECRET}`);
+  assert.equal(sanitizeCompactionText("key sk-1234567890abcdef"), `key ${REDACTED_SECRET}`);
+
+  let summarizedMessages;
+  const service = createCompactionService({
+    summarize: async ({ messages }) => {
+      summarizedMessages = messages;
+      return {
+        userGoal: "API key: sk-1234567890abcdef",
+        establishedFacts: ["Authorization=Bearer abc.def.ghi"],
+      };
+    },
+  });
+  const result = await service.compact({
+    messages: [{ id: "m1", content: "use sk-1234567890abcdef", metadata: { apiKey: "raw" } }],
+  });
+  assert.equal(summarizedMessages[0].content.includes("sk-1234567890abcdef"), false);
+  assert.equal(summarizedMessages[0].metadata, undefined);
+  assert.equal(JSON.stringify(result.summary).includes("sk-1234567890abcdef"), false);
+  assert.match(result.summary.userGoal, /\[REDACTED\]/);
+});
+
 test("manual compaction preserves original messages and returns a checkpoint", async () => {
   const messages = [{ id: "m1", role: "user", content: "hello" }];
   const service = createCompactionService({
     summarize: async () => ({ userGoal: "learn", establishedFacts: ["fact"] }),
     now: () => "2026-09-11T00:00:00.000Z",
   });
-  const result = await service.compact({ messages, modelId: "future-model" });
+  const result = await service.compact({
+    conversationId: "conversation-1",
+    messages,
+    modelId: "future-model",
+  });
+  assert.equal(result.checkpoint.conversationId, "conversation-1");
   assert.equal(result.checkpoint.coveredThroughMessageId, "m1");
+  assert.equal(result.checkpoint.timestamp, "2026-09-11T00:00:00.000Z");
   assert.equal(result.checkpoint.createdAt, "2026-09-11T00:00:00.000Z");
+  assert.equal(result.checkpoint.reason, "manual");
   assert.equal(messages.length, 1);
   assert.equal(result.originalMessages, messages);
 });

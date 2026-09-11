@@ -16,6 +16,8 @@ function formatConversationTime(value) {
 export function ConversationList({
   conversations = [],
   activeConversationId = null,
+  heading = "会话",
+  emptyMessage = "还没有保存的会话。",
   onNew,
   onSelect,
   onRename,
@@ -42,14 +44,16 @@ export function ConversationList({
   return (
     <nav className={`ai-conversation-list ${className}`.trim()} aria-label="AI 会话">
       <div className="ai-conversation-list__header">
-        <strong>会话</strong>
-        <button type="button" onClick={() => onNew?.()} disabled={disabled}>
-          新对话
-        </button>
+        <strong>{heading}</strong>
+        {onNew ? (
+          <button type="button" onClick={() => onNew()} disabled={disabled}>
+            新对话
+          </button>
+        ) : null}
       </div>
 
       {conversations.length === 0 ? (
-        <p className="ai-conversation-list__empty">还没有保存的会话。</p>
+        <p className="ai-conversation-list__empty">{emptyMessage}</p>
       ) : (
         <ul>
           {conversations.map((conversation) => {
@@ -76,7 +80,7 @@ export function ConversationList({
                       disabled={disabled}
                     />
                   </form>
-                ) : (
+                ) : onSelect ? (
                   <button
                     type="button"
                     className="ai-conversation-list__select"
@@ -85,14 +89,27 @@ export function ConversationList({
                     disabled={disabled}
                   >
                     <span>{conversation.title || "新对话"}</span>
-                    <small>{formatConversationTime(conversation.lastMessageAt ?? conversation.updatedAt)}</small>
+                    <small>
+                      {conversation.learningUnitLabel ? `${conversation.learningUnitLabel} · ` : ""}
+                      {formatConversationTime(conversation.lastMessageAt ?? conversation.updatedAt)}
+                    </small>
                   </button>
+                ) : (
+                  <div className="ai-conversation-list__select is-static">
+                    <span>{conversation.title || "新对话"}</span>
+                    <small>
+                      {conversation.learningUnitLabel ? `${conversation.learningUnitLabel} · ` : ""}
+                      {formatConversationTime(conversation.lastMessageAt ?? conversation.updatedAt)}
+                    </small>
+                  </div>
                 )}
 
                 <div className="ai-conversation-list__actions" aria-label={`${conversation.title || "新对话"} 操作`}>
                   <button type="button" onClick={() => startRename(conversation)} disabled={disabled || editing}>重命名</button>
                   {onArchive ? (
-                    <button type="button" onClick={() => onArchive(conversation.id)} disabled={disabled}>归档</button>
+                    <button type="button" onClick={() => onArchive(conversation.id, !conversation.archived)} disabled={disabled}>
+                      {conversation.archived ? "恢复" : "归档"}
+                    </button>
                   ) : null}
                   {onDelete ? (
                     <button type="button" onClick={() => onDelete(conversation.id)} disabled={disabled}>删除</button>

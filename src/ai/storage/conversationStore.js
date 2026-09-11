@@ -2,6 +2,23 @@ const DB_NAME = "react-learning-ai";
 const DB_VERSION = 1;
 
 const SECRET_KEY_PATTERN = /^(api[-_]?key|authorization|access[-_]?token|refresh[-_]?token|secret)$/i;
+export const REDACTED_SECRET = "[REDACTED]";
+
+export function sanitizeSensitiveText(value) {
+  let result = typeof value === "string" ? value : String(value ?? "");
+  result = result.replace(
+    /\b(authorization)\b(\s*[:=]\s*)Bearer\s+[A-Za-z0-9._~+/=-]+/giu,
+    (_match, label, separator) => `${label}${separator}${REDACTED_SECRET}`,
+  );
+  result = result.replace(/\bBearer\s+[A-Za-z0-9._~+/=-]+/giu, `Bearer ${REDACTED_SECRET}`);
+  result = result.replace(/\bsk-[A-Za-z0-9_-]{8,}\b/gu, REDACTED_SECRET);
+  result = result.replace(
+    /\b(api[-_ ]?key|authorization|access[-_ ]?token|refresh[-_ ]?token|auth[-_ ]?token|secret)\b(\s*[:=]\s*)(?:\[[^\]]*\]|"[^"]*"|'[^']*'|[^\s,;}\]]+)/giu,
+    (_match, label, separator) => `${label}${separator}${REDACTED_SECRET}`,
+  );
+  result = result.replace(/\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/gu, REDACTED_SECRET);
+  return result;
+}
 
 function nowIso(clock = Date) {
   return new clock().toISOString();
@@ -12,6 +29,7 @@ function cloneValue(value) {
 }
 
 export function sanitizePersistedMetadata(value) {
+  if (typeof value === "string") return sanitizeSensitiveText(value);
   if (value == null || typeof value !== "object") return value;
   if (Array.isArray(value)) return value.map(sanitizePersistedMetadata);
 
@@ -285,7 +303,9 @@ export async function createConversationStore({
 } = {}) {
   if (!indexedDb) {
     if (!fallback) throw new Error("IndexedDB is unavailable");
-    return new MemoryConversationStore();
+    const memory = new MemoryConversationStore();
+    memory.fallbackReason = "IndexedDB is unavailable";
+    return memory;
   }
 
   try {

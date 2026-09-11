@@ -1,4 +1,5 @@
 import { normalizeChatEvent } from "./contracts.js";
+import { normalizeFinishReason } from "./finishReason.js";
 
 function parseRecord(record) {
   const trimmed = record.trim();
@@ -13,7 +14,12 @@ function parseRecord(record) {
   } catch (error) {
     throw new SyntaxError(`invalid AI stream event JSON: ${error.message}`);
   }
-  return normalizeChatEvent(parsed);
+  const event = normalizeChatEvent(parsed);
+  if (event.type !== "done") return event;
+  return {
+    ...event,
+    finishReason: normalizeFinishReason(parsed.finishReason),
+  };
 }
 
 export class ChatStreamParser {

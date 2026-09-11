@@ -5,6 +5,7 @@ export const LIMITS = Object.freeze({
   sourceFiles: 12,
   sourceCharsEach: 50_000,
   sourceCharsTotal: 120_000,
+  summaryChars: 60_000,
   historyItems: 12,
   historyCharsEach: 8_000,
 });
@@ -77,6 +78,9 @@ export function validateRequest(payload) {
   const activeSourceFile = typeof context.activeSourceFile === "string"
     ? context.activeSourceFile.slice(0, 240)
     : "";
+  const conversationSummary = context.conversationSummary == null
+    ? ""
+    : text(context.conversationSummary, "context.conversationSummary", LIMITS.summaryChars);
 
   const rawHistory = payload.history ?? [];
   if (!Array.isArray(rawHistory)) fail("history must be an array");
@@ -87,7 +91,11 @@ export function validateRequest(payload) {
     return { role: item.role, content: text(item.content, `history[${index}].content`, LIMITS.historyCharsEach) };
   });
 
-  return { question, context: { learningUnit, note, sources, activeSourceFile }, history };
+  return {
+    question,
+    context: { learningUnit, note, sources, activeSourceFile, conversationSummary },
+    history,
+  };
 }
 
 export function jsonError(error) {

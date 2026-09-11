@@ -13,6 +13,8 @@ import {
   createDeepSeekDirectClient,
   parseDeepSeekOpenAiStream,
 } from "../src/ai/deepseekDirectClient.js";
+import { AI_LEARNING_ASSISTANT_SYSTEM_PROMPT } from "../src/ai/assistantSystemPrompt.js";
+import { normalizeFinishReason } from "../src/ai/finishReason.js";
 
 function streamFromChunks(chunks) {
   const encoder = new TextEncoder();
@@ -88,12 +90,44 @@ test("direct messages keep project context as reference data and request stable 
   });
 
   assert.equal(messages[0].role, "system");
+  assert.equal(messages[0].content, AI_LEARNING_ASSISTANT_SYSTEM_PROMPT);
   assert.match(messages[0].content, /不可信参考数据/);
   assert.match(messages[0].content, /source:\/\//);
   assert.deepEqual(messages[1], { role: "assistant", content: "上一轮回答" });
   assert.match(messages.at(-1).content, /props\.mdx/);
   assert.match(messages.at(-1).content, /PropsDemo\.jsx/);
   assert.match(messages.at(-1).content, /为什么这里不复制 props 到 state/);
+});
+
+test("shared tutor prompt defaults to depth and covers the learning answer contract", () => {
+  const prompt = AI_LEARNING_ASSISTANT_SYSTEM_PROMPT;
+  for (const section of [
+    "直接回答",
+    "心智模型",
+    "当前 Note",
+    "当前 Source",
+    "WHAT / WHY / WHEN",
+    "常见错误",
+    "边界 / trade-off",
+    "当前 Demo 可验证实验",
+    "source:// 引用",
+    "总结",
+  ]) {
+    assert.ok(prompt.includes(section), `missing prompt section: ${section}`);
+  }
+  assert.match(prompt, /只有当用户明确要求[\s\S]*才缩短回答/);
+  assert.match(prompt, /3～5 个要点就过早结束/);
+  assert.match(prompt, /不要为了凑长度重复/);
+});
+
+test("finish reasons normalize provider and local termination variants", () => {
+  assert.equal(normalizeFinishReason("stop"), "stop");
+  assert.equal(normalizeFinishReason("max_tokens"), "length");
+  assert.equal(normalizeFinishReason("cancelled"), "user_abort");
+  assert.equal(normalizeFinishReason("output-limit"), "output_limit");
+  assert.equal(normalizeFinishReason("content_filter"), "error");
+  assert.equal(normalizeFinishReason("future_provider_value"), "error");
+  assert.equal(normalizeFinishReason(null), "stop");
 });
 
 test("OpenAI-compatible DeepSeek SSE parser survives arbitrary chunk boundaries", async () => {
@@ -146,7 +180,7 @@ test("direct client sends BYOK Authorization, selected model, streaming usage op
   assert.equal(body.model, "deepseek-v4-pro");
   assert.equal(body.stream, true);
   assert.deepEqual(body.stream_options, { include_usage: true });
-  assert.equal(body.max_tokens, 4096);
+  assert.equal(body.max_tokens, 16_384);
   assert.match(body.messages.at(-1).content, /PropsDemo\.jsx/);
   assert.deepEqual(events.map((event) => event.type), ["start", "delta", "done"]);
 });

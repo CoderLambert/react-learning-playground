@@ -73,6 +73,10 @@
   cursor: pointer;
 }
 
+.ai-conversation-list__select.is-static {
+  cursor: default;
+}
+
 .ai-conversation-list__select span {
   overflow: hidden;
   text-overflow: ellipsis;

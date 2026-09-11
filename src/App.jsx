@@ -6,7 +6,7 @@ import { ChapterCheckpoint } from "./components/ChapterCheckpoint";
 import { getCheckpointChapter } from "./components/chapterCheckpointMap";
 import { AiAssistant, DeepSeekSettings } from "./components/ai-assistant";
 import { ContextMeter } from "./components/ai-assistant/context/ContextMeter.jsx";
-import { ConversationList } from "./components/ai-assistant/conversations/ConversationList.jsx";
+import { ConversationHistory } from "./components/ai-assistant/conversations/ConversationHistory.jsx";
 import { LearningInspector } from "./components/learning-inspector";
 import { NoteToc } from "./components/notes/NoteToc";
 import { NoteViewer } from "./components/notes/NoteViewer";
@@ -105,20 +105,48 @@ export default function App() {
     />
   );
 
+  const learningUnitLabels = Object.fromEntries(demos.map((demo) => [demo.id, demo.label]));
+  const conversationHistoryCount = aiAssistant.conversationHistory.filter(
+    (conversation) => !conversation.archived,
+  ).length;
   const conversationNavigation = (
-    <details className="ai-conversation-popover">
-      <summary>会话 · {aiAssistant.conversations.length}</summary>
-      <ConversationList
-        conversations={aiAssistant.conversations}
-        activeConversationId={aiAssistant.activeConversationId}
-        onNew={aiAssistant.reset}
-        onSelect={aiAssistant.selectConversation}
-        onRename={aiAssistant.renameConversation}
-        onArchive={aiAssistant.archiveConversation}
-        onDelete={aiAssistant.deleteConversation}
+    <div className="ai-assistant-history-toolbar" aria-label="AI 会话工具栏">
+      <button
+        type="button"
+        onClick={aiAssistant.reset}
         disabled={aiAssistant.status === "streaming"}
-      />
-    </details>
+      >
+        新对话
+      </button>
+      <details className="ai-conversation-popover">
+        <summary>历史会话 {conversationHistoryCount}</summary>
+        <div className="ai-conversation-popover__panel">
+          <ConversationHistory
+            conversations={aiAssistant.conversationHistory}
+            activeConversationId={aiAssistant.activeConversationId}
+            learningUnitId={currentLearningUnit?.id}
+            learningUnitLabels={learningUnitLabels}
+            onSelect={aiAssistant.selectConversation}
+            onRename={aiAssistant.renameConversation}
+            onArchive={aiAssistant.archiveConversation}
+            onDelete={aiAssistant.deleteConversation}
+            disabled={aiAssistant.status === "streaming"}
+          />
+        </div>
+      </details>
+      <div className="ai-assistant-history-toolbar__model">
+        <span>模型</span>
+        <div className="ai-assistant-settings-slot">
+          <DeepSeekSettings
+            settings={aiAssistant.deepSeekSettings}
+            connectionMode={aiAssistant.connectionMode}
+            onSave={aiAssistant.saveConnectionSettings}
+            onClear={aiAssistant.clearConnectionSettings}
+            disabled={aiAssistant.settingsDisabled}
+          />
+        </div>
+      </div>
+    </div>
   );
 
   const inspector = currentLearningUnit ? (
@@ -157,7 +185,6 @@ export default function App() {
           inputValue={aiAssistant.inputValue}
           onInputChange={aiAssistant.setInputValue}
           onSubmit={aiAssistant.submit}
-          onReset={aiAssistant.reset}
           onStop={aiAssistant.stop}
           onCitationOpen={handleCitationOpen}
           disabled={aiAssistant.disabled}
@@ -172,15 +199,6 @@ export default function App() {
               onCompact={aiAssistant.compactContext}
               compacting={aiAssistant.compacting}
               disabled={!aiAssistant.configured || aiAssistant.messages.length === 0}
-            />
-          )}
-          settings={(
-            <DeepSeekSettings
-              settings={aiAssistant.deepSeekSettings}
-              connectionMode={aiAssistant.connectionMode}
-              onSave={aiAssistant.saveConnectionSettings}
-              onClear={aiAssistant.clearConnectionSettings}
-              disabled={aiAssistant.settingsDisabled}
             />
           )}
         />

@@ -10,7 +10,7 @@ export function deepSeekConfig(env) {
   return {
     base: (env.DEEPSEEK_API_BASE || "https://api.deepseek.com").replace(/\/$/, ""),
     model: env.DEEPSEEK_MODEL || "deepseek-v4-flash",
-    maxTokens: numberEnv(env.MAX_OUTPUT_TOKENS, 2048, 128, 8192),
+    maxTokens: numberEnv(env.MAX_OUTPUT_TOKENS, 16 * 1024, 128, 384 * 1024),
     timeoutMs: numberEnv(env.UPSTREAM_TIMEOUT_MS, 45_000, 5_000, 120_000),
   };
 }
