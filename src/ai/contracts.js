@@ -60,8 +60,10 @@ export function normalizeHistory(history = [], limits = CHAT_LIMITS) {
 export function serializeContext(context, limits = CHAT_LIMITS) {
   assertPlainObject(context, "context");
   const serialized = JSON.stringify(context);
-  const { text, truncated } = truncateText(serialized, limits.maxContextChars);
-  return { serialized: text, truncated };
+  if (serialized.length > limits.maxContextChars) {
+    throw new RangeError(`context exceeds ${limits.maxContextChars} serialized characters`);
+  }
+  return serialized;
 }
 
 export function buildChatRequest({ question, context, history = [] }, limits = CHAT_LIMITS) {
@@ -72,14 +74,13 @@ export function buildChatRequest({ question, context, history = [] }, limits = C
   }
 
   const normalizedHistory = normalizeHistory(history, limits);
-  const { serialized: contextJson, truncated: contextTruncated } = serializeContext(context, limits);
+  const contextJson = serializeContext(context, limits);
 
   return {
     question: normalizedQuestion,
     context: JSON.parse(contextJson),
     history: normalizedHistory,
     client: {
-      contextTruncated,
       historyTrimmed: history.length > limits.maxHistoryMessages,
     },
   };
