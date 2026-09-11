@@ -102,8 +102,6 @@ export function useDemoUrlState({
       fallbackDemoId,
     );
 
-    setDemoId(urlState.demoId);
-
     if (urlState.hasDemoParam && !urlState.isValid && urlState.demoId) {
       writeDemoUrl(urlState.demoId, {
         history: windowTarget.history,

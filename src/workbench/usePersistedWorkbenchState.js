@@ -21,19 +21,16 @@ export function usePersistedWorkbenchState({
     [storage, viewportWidth],
   );
   const [state, setState] = useState(initialState);
+  const resolvedState = useMemo(() => {
+    const inspectorWidth = clampInspectorWidth(state.inspectorWidth, viewportWidth);
+    return inspectorWidth === state.inspectorWidth
+      ? state
+      : { ...state, inspectorWidth };
+  }, [state, viewportWidth]);
 
   useEffect(() => {
-    persistWorkbenchState(state, { storage, viewportWidth });
-  }, [state, storage, viewportWidth]);
-
-  useEffect(() => {
-    setState((current) => {
-      const nextWidth = clampInspectorWidth(current.inspectorWidth, viewportWidth);
-      return nextWidth === current.inspectorWidth
-        ? current
-        : { ...current, inspectorWidth: nextWidth };
-    });
-  }, [viewportWidth]);
+    persistWorkbenchState(resolvedState, { storage, viewportWidth });
+  }, [resolvedState, storage, viewportWidth]);
 
   const setNavigationCollapsed = useCallback((value) => {
     setState((current) => ({
@@ -87,7 +84,7 @@ export function usePersistedWorkbenchState({
   }, [storage, viewportWidth]);
 
   return {
-    state,
+    state: resolvedState,
     setNavigationCollapsed,
     setInspectorOpen,
     setInspectorWidth,
