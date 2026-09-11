@@ -18,6 +18,12 @@ function hasUnsafeFileName(fileName) {
   );
 }
 
+function encodeSourceFileName(fileName) {
+  return encodeURIComponent(fileName).replace(/[()]/g, (character) =>
+    character === "(" ? "%28" : "%29",
+  );
+}
+
 export function normalizeSourceCitation(citation) {
   if (!citation || typeof citation !== "object") return null;
 
@@ -52,7 +58,7 @@ export function serializeSourceCitationUrl(citation) {
     ? `L${normalized.startLine}`
     : `L${normalized.startLine}-L${normalized.endLine}`;
 
-  return `${SOURCE_PROTOCOL_PREFIX}${encodeURIComponent(normalized.fileName)}#${range}`;
+  return `${SOURCE_PROTOCOL_PREFIX}${encodeSourceFileName(normalized.fileName)}#${range}`;
 }
 
 export function parseSourceCitationUrl(href) {
@@ -83,7 +89,10 @@ export function serializeSourceCitationMarkdown(citation) {
   if (!normalized) return null;
 
   const href = serializeSourceCitationUrl(normalized);
-  const fallbackLabel = `${normalized.fileName}:${formatSourceCitationLines(normalized.startLine, normalized.endLine).replace("–L", "-")}`;
+  const range = normalized.endLine === normalized.startLine
+    ? `L${normalized.startLine}`
+    : `L${normalized.startLine}-L${normalized.endLine}`;
+  const fallbackLabel = `${normalized.fileName}:${range}`;
   const label = escapeMarkdownLabel(normalized.label ?? fallbackLabel);
   return `[${label}](${href})`;
 }
