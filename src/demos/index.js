@@ -5,6 +5,10 @@ import { MultiSlotsDemo } from "./MultiSlotsDemo";
 import { ConditionalRenderingDemo } from "./ConditionalRenderingDemo";
 import { RenderingListsKeyDemo } from "./RenderingListsKeyDemo";
 import { PropDrillingDemo } from "./PropDrillingDemo";
+import { EventPropagationDemo } from "./EventPropagationDemo";
+import { StateSnapshotQueueDemo } from "./StateSnapshotQueueDemo";
+import { ImmutableStateDemo } from "./ImmutableStateDemo";
+import { RenderCommitDemo } from "./RenderCommitDemo";
 import { StateDryDemo } from "./StateDryDemo";
 import { ControlledUncontrolledDemo } from "./ControlledUncontrolledDemo";
 import { LiftingStateUpDemo } from "./LiftingStateUpDemo";
@@ -32,6 +36,7 @@ import { UrlStateDemo } from "./UrlStateDemo";
 import { NestedRoutesDemo } from "./NestedRoutesDemo";
 import { NavigationBoundaryDemo } from "./NavigationBoundaryDemo";
 import { RouteDataBoundaryDemo } from "./RouteDataBoundaryDemo";
+import { TypeScriptReactDemo } from "./TypeScriptReactDemo";
 
 // 源码原始字符串（Vite ?raw 原生支持）
 import componentJsxPureRenderRaw from "./ComponentJsxPureRenderDemo.jsx?raw";
@@ -47,6 +52,10 @@ import pannelRaw from "../components/Pannel.jsx?raw";
 import conditionalRenderingRaw from "./ConditionalRenderingDemo.jsx?raw";
 import renderingListsKeyRaw from "./RenderingListsKeyDemo.jsx?raw";
 import propDrillingRaw from "./PropDrillingDemo.jsx?raw";
+import eventPropagationRaw from "./EventPropagationDemo.jsx?raw";
+import stateSnapshotQueueRaw from "./StateSnapshotQueueDemo.jsx?raw";
+import immutableStateRaw from "./ImmutableStateDemo.jsx?raw";
+import renderCommitRaw from "./RenderCommitDemo.jsx?raw";
 import stateDryRaw from "./StateDryDemo.jsx?raw";
 import controlledUncontrolledRaw from "./ControlledUncontrolledDemo.jsx?raw";
 import liftingStateUpRaw from "./LiftingStateUpDemo.jsx?raw";
@@ -74,16 +83,21 @@ import urlStateRaw from "./UrlStateDemo.jsx?raw";
 import nestedRoutesRaw from "./NestedRoutesDemo.jsx?raw";
 import navigationBoundaryRaw from "./NavigationBoundaryDemo.jsx?raw";
 import routeDataBoundaryRaw from "./RouteDataBoundaryDemo.jsx?raw";
+import typeScriptReactRaw from "./TypeScriptReactDemo.jsx?raw";
+import reactBoundariesRaw from "./typescript-samples/react-boundaries.tsx?raw";
+import genericPatternsRaw from "./typescript-samples/generic-patterns.tsx?raw";
 
 // @demo-imports
 
 export const CATEGORIES = [
   { id: "components", name: "组件通信与插槽", icon: "🧩" },
+  { id: "render-model", name: "事件、State 与渲染模型", icon: "🔁" },
   { id: "state", name: "状态管理与演进", icon: "⚡" },
   { id: "effects", name: "Hooks 与副作用深度", icon: "🎣" },
   { id: "forms", name: "Forms 与 React 19 Actions", icon: "📝" },
   { id: "performance", name: "性能模型与优化", icon: "🚀" },
   { id: "routing", name: "Router 与页面状态", icon: "🧭" },
+  { id: "typescript", name: "TypeScript for React", icon: "🔷" },
 ];
 
 export const demos = [
@@ -94,6 +108,10 @@ export const demos = [
   { id: "conditional-rendering", label: "条件渲染与业务四态", category: "components", badge: "分支", description: "用 if、early return、三元表达式与 && 将 loading/empty/error/success 清晰映射为 UI", Component: ConditionalRenderingDemo, files: [{ name: "ConditionalRenderingDemo.jsx", code: conditionalRenderingRaw }] },
   { id: "rendering-lists-key", label: "列表渲染与 key 身份", category: "components", badge: "核心", description: "通过可编辑列表排序实验理解 stable key、index key 与组件 State 身份匹配", Component: RenderingListsKeyDemo, files: [{ name: "RenderingListsKeyDemo.jsx", code: renderingListsKeyRaw }] },
   { id: "prop-drilling", label: "属性逐层透传解法", category: "components", badge: "解耦", description: "对比逐层透传 (Drilling)、组件组合 (Children) 与 Context API", Component: PropDrillingDemo, files: [{ name: "PropDrillingDemo.jsx", code: propDrillingRaw }] },
+  { id: "event-propagation", label: "Event Handler 与事件传播", category: "render-model", badge: "事件", description: "观察 handler 传递、capture/bubble、stopPropagation、preventDefault 与 Event/Effect 的职责边界", Component: EventPropagationDemo, files: [{ name: "EventPropagationDemo.jsx", code: eventPropagationRaw }] },
+  { id: "state-snapshot-queue", label: "State Snapshot、Batching 与 Update Queue", category: "render-model", badge: "核心", description: "把 useState、snapshot、batching 与 functional updater 的不可见时序变成可观察日志", Component: StateSnapshotQueueDemo, files: [{ name: "StateSnapshotQueueDemo.jsx", code: stateSnapshotQueueRaw }] },
+  { id: "immutable-state", label: "对象 / 数组 State 不可变更新", category: "render-model", badge: "不可变", description: "观察 nested copy、append/remove/replace/sort 与 reference identity，理解为什么 mutation 会破坏更新模型", Component: ImmutableStateDemo, files: [{ name: "ImmutableStateDemo.jsx", code: immutableStateRaw }] },
+  { id: "render-commit", label: "Trigger → Render → Commit", category: "render-model", badge: "渲染模型", description: "区分触发、Render、Commit 与 Browser Paint，并观察 render 不等于 DOM 一定变化", Component: RenderCommitDemo, files: [{ name: "RenderCommitDemo.jsx", code: renderCommitRaw }] },
   { id: "state-dry", label: "State 结构设计与单一数据源", category: "state", badge: "核心", description: "避免矛盾、冗余、重复与过深 State，通过派生计算和扁平化降低同步风险", Component: StateDryDemo, files: [{ name: "StateDryDemo.jsx", code: stateDryRaw }] },
   { id: "controlled-uncontrolled", label: "受控与非受控组件", category: "state", badge: "所有权", description: "从组件 API 理解 State ownership：value + onChange 与 defaultValue 的边界", Component: ControlledUncontrolledDemo, files: [{ name: "ControlledUncontrolledDemo.jsx", code: controlledUncontrolledRaw }] },
   { id: "lifting-state-up", label: "状态提升与协同联动", category: "state", badge: "协同", description: "兄弟组件状态共享、受控输入与向最近共同祖先提升", Component: LiftingStateUpDemo, files: [{ name: "LiftingStateUpDemo.jsx", code: liftingStateUpRaw }] },
@@ -121,5 +139,6 @@ export const demos = [
   { id: "nested-routes", label: "Nested Routes 与 Outlet", category: "routing", badge: "架构", description: "可视化父子 Route 匹配链、Outlet 插槽、Index Route 与无 path Layout Route 的职责边界", Component: NestedRoutesDemo, files: [{ name: "NestedRoutesDemo.jsx", code: nestedRoutesRaw }] },
   { id: "navigation-boundary", label: "Navigation 与 Route Boundary", category: "routing", badge: "导航", description: "区分声明式链接与程序式导航，可视化 history push/replace/back/forward 与 Not Found 边界", Component: NavigationBoundaryDemo, files: [{ name: "NavigationBoundaryDemo.jsx", code: navigationBoundaryRaw }] },
   { id: "route-data-boundary", label: "Route Loader 数据边界", category: "routing", badge: "数据", description: "可视化 route match → loader(params) → pending → loader data / nearest error boundary 的页面数据流程", Component: RouteDataBoundaryDemo, files: [{ name: "RouteDataBoundaryDemo.jsx", code: routeDataBoundaryRaw }] },
+  { id: "typescript-react", label: "TypeScript for React 类型边界", category: "typescript", badge: "工程", description: "用 Props/children/event/state/ref/generic 建立组件 contract，运行 JSX 实验并查看真实 TSX 类型源码", Component: TypeScriptReactDemo, files: [{ name: "TypeScriptReactDemo.jsx", code: typeScriptReactRaw }, { name: "react-boundaries.tsx", code: reactBoundariesRaw }, { name: "generic-patterns.tsx", code: genericPatternsRaw }] },
   // @demo-entries
 ];
