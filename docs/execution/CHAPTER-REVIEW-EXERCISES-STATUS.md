@@ -42,18 +42,18 @@ Total: 65 questions, 36 exercises.
 
 ## Validation
 
-PR-triggered `React Learning Verify` run `34566975858` on commit `d1f5458e601c34749340f9d6815f872606d121b4` completed successfully before the lint-cleanup follow-up commit:
+PR-triggered `React Learning Verify` run `34567160110` validated executable commit `e5d4da5393b90831b76c49d3f841323c8b680236` after the Fast Refresh cleanup:
 
-- `npm ci`: **PASS** — 122 packages installed; 0 vulnerabilities.
-- `npm run lint`: **PASS** — 0 errors. The first run reported 23 warnings, including one newly introduced Fast Refresh warning in `ChapterCheckpoint.jsx`; that new warning is removed by the follow-up split into `chapterCheckpointMap.js`.
-- `npm run build`: **PASS** — Vite production build completed.
-- `npm run test:e2e`: **PASS** — 12 Chromium tests passed in 22.8s, including both new checkpoint tests.
-- production preview smoke: **PASS** — base-path preview became healthy and returned the expected app root.
+- `npm ci`: **PASS** — 122 packages installed; audit reported 0 vulnerabilities.
+- `npm run lint`: **PASS** — 0 errors and 22 pre-existing repository warnings. The checkpoint feature adds no new lint warning.
+- `npm run build`: **PASS** — Vite production build completed successfully.
+- `npm run test:e2e`: **PASS** — 12 Chromium tests passed in 22.1s, including both chapter-checkpoint tests.
+- production preview smoke: **PASS** — `/react-learning-playground/` became healthy and returned the expected app root.
 
-The follow-up commit must receive the same PR CI gate before merge; no PASS is inferred for the new head until that workflow completes.
+The final status-only documentation commit changes no executable source; the PR's final-head CI remains the merge gate.
 
 ## Manual debt
 
 - Exercises intentionally have no answer key.
-- Existing repository lint warnings outside this feature remain separate cleanup debt; this feature should add no new warning after the follow-up split.
+- Existing repository lint warnings outside this feature remain separate cleanup debt.
 - Content-review branches may later refine wording; this feature is structurally isolated so those edits can be reconciled without changing checkpoint architecture.
