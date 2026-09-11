@@ -1,4 +1,4 @@
-export {
+import {
   DEFAULT_INSPECTOR_STATE,
   INSPECTOR_TABS,
   WORKBENCH_CSS_VARS,
@@ -18,3 +18,21 @@ export {
 export { toLearningUnit } from "./contracts";
 export { WorkbenchShell } from "./WorkbenchShell";
 export { WorkbenchNavigation } from "./WorkbenchNavigation";
+export {
+  DEFAULT_PERSISTED_WORKBENCH_STATE,
+  clampInspectorWidth,
+  clearPersistedWorkbenchState,
+  getBrowserStorage,
+  persistWorkbenchState,
+  readPersistedWorkbenchState,
+} from "./stateStorage";
+export { usePersistedWorkbenchState } from "./usePersistedWorkbenchState";
+export {
+  DEMO_QUERY_PARAM,
+  buildDemoUrl,
+  getLearningUnitIds,
+  readDemoUrlState,
+  resolveDemoId,
+  useDemoUrlState,
+  writeDemoUrl,
+} from "./demoUrlState";

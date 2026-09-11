@@ -1,0 +1,50 @@
+name: Workbench State URL Verify
+
+on:
+  pull_request:
+    branches:
+      - integration/react-learning-workbench
+      - main
+    paths:
+      - "src/workbench/**"
+      - "tests/workbench-state-url.test.mjs"
+      - ".github/workflows/workbench-state-url-verify.yml"
+      - "package.json"
+      - "package-lock.json"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Focused state and URL tests
+        run: node --test tests/workbench-state-url.test.mjs
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Browser E2E
+        env:
+          CI: "true"
+        run: npm run test:e2e
