@@ -1,0 +1,63 @@
+import { chromium } from "@playwright/test";
+
+const [kind, url] = process.argv.slice(2);
+if (!kind || !url) throw new Error("usage: node smoke.mjs <router|query|next> <url>");
+
+const browser = await chromium.launch({ headless: true });
+try {
+  const page = await browser.newPage();
+  const pageErrors = [];
+  const consoleErrors = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+  page.on("console", (message) => {
+    if (message.type() === "error") consoleErrors.push(message.text());
+  });
+
+  await page.goto(url, { waitUntil: "networkidle" });
+
+  if (kind === "router") {
+    await page.getByRole("link", { name: "Alpha", exact: true }).click();
+    await page.getByRole("heading", { name: "Alpha" }).waitFor();
+    await page.getByRole("link", { name: "Activity child" }).click();
+    await page.getByRole("heading", { name: "Nested activity" }).waitFor();
+    await page.getByRole("link", { name: "404 boundary" }).click();
+    await page.getByRole("alert").waitFor();
+  } else if (kind === "query") {
+    await page.getByText("Server item 1").waitFor();
+    const primary = await page.getByTestId("primary-request").textContent();
+    const mirror = await page.getByTestId("mirror-request").textContent();
+    if (primary !== mirror) throw new Error(`query observers did not share request: ${primary} vs ${mirror}`);
+
+    await page.getByRole("button", { name: "Run deterministic flaky query" }).click();
+    await page.getByText("retry recovered", { exact: false }).waitFor();
+
+    await page.getByRole("textbox", { name: "New item" }).fill("fail mutation");
+    await page.getByRole("button", { name: "Add" }).click();
+    await page.getByText("fail mutation", { exact: true }).waitFor();
+    await page.getByText("mock server rejected mutation", { exact: false }).waitFor();
+    await page.getByText("fail mutation", { exact: true }).waitFor({ state: "detached" });
+
+    const expectedHttp500s = consoleErrors.filter((message) => message.includes("status of 500"));
+    if (expectedHttp500s.length < 3) {
+      throw new Error(`expected retry + rollback HTTP 500 evidence, got ${expectedHttp500s.length}`);
+    }
+  } else if (kind === "next") {
+    await page.getByRole("heading", { name: /Next.js 16 App Router/ }).waitFor();
+    await page.getByPlaceholder("note persisted in server memory").fill("CI Server Action note");
+    await page.getByRole("button", { name: "Run Server Action" }).click();
+    await page.getByRole("status").getByText("Server saved note", { exact: false }).waitFor();
+    await page.getByText("CI Server Action note", { exact: true }).waitFor();
+  } else {
+    throw new Error(`unknown smoke kind: ${kind}`);
+  }
+
+  const unexpectedConsoleErrors = kind === "query"
+    ? consoleErrors.filter((message) => !message.includes("status of 500"))
+    : consoleErrors;
+  const diagnostics = [...pageErrors, ...unexpectedConsoleErrors];
+  if (diagnostics.length) throw new Error(diagnostics.join("\n"));
+
+  console.log(`PASS ${kind} interaction smoke ${url}`);
+} finally {
+  await browser.close();
+}
