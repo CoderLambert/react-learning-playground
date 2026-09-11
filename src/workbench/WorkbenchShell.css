@@ -5,10 +5,11 @@
     var(--workbench-current-nav-width)
     minmax(0, 1fr)
     minmax(0, var(--workbench-inspector-width));
-  min-height: 100vh;
+  height: 100dvh;
+  min-height: 0;
   width: 100%;
   background: var(--bg-page);
-  overflow-x: clip;
+  overflow: hidden;
 }
 
 .workbench-shell[data-navigation-collapsed="true"] {
@@ -35,14 +36,19 @@
 .workbench-content-slot {
   grid-column: 2;
   min-width: 0;
+  min-height: 0;
   width: 100%;
+  overflow: auto;
 }
 
 .workbench-inspector-slot {
   grid-column: 3;
   min-width: 0;
+  min-height: 0;
   width: min(var(--workbench-inspector-width), var(--workbench-inspector-max-viewport-width));
   max-width: var(--workbench-inspector-max-width);
+  height: 100%;
+  overflow: hidden;
   border-left: 1px solid var(--border-color);
   background: var(--bg-surface);
 }
@@ -353,11 +359,13 @@
 }
 
 @media (max-width: 900px) {
-  .workbench-shell,
+.workbench-shell,
   .workbench-shell[data-navigation-collapsed="true"],
   .workbench-shell[data-inspector-open="false"] {
     display: block;
+    height: auto;
     min-height: 100vh;
+    overflow: visible;
   }
 
   .workbench-navigation-slot {
@@ -395,11 +403,13 @@
 
   .workbench-content-slot {
     width: 100%;
+    overflow: visible;
   }
 
   .workbench-inspector-slot {
     width: 100%;
     max-width: none;
+    height: auto;
     border-left: 0;
   }
 }
