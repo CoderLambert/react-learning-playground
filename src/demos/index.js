@@ -16,6 +16,10 @@ import { UseRefDemo } from "./UseRefDemo";
 import { UseEffectCorrectUsageDemo } from "./UseEffectCorrectUsageDemo";
 import { NotNeedEffectDemo } from "./NotNeedEffectDemo";
 import { LifecycleOfReactiveEffectsDemo } from "./LifecycleOfReactiveEffectsDemo";
+import { EventVsEffectDemo } from "./EventVsEffectDemo";
+import { EffectEventDemo } from "./EffectEventDemo";
+import { CustomHooksDemo } from "./CustomHooksDemo";
+import { AdvancedRefDemo } from "./AdvancedRefDemo";
 import { ControlledFormDemo } from "./ControlledFormDemo";
 import { FormDataModelingDemo } from "./FormDataModelingDemo";
 import { FormActionDemo } from "./FormActionDemo";
@@ -32,6 +36,7 @@ import { UrlStateDemo } from "./UrlStateDemo";
 import { NestedRoutesDemo } from "./NestedRoutesDemo";
 import { NavigationBoundaryDemo } from "./NavigationBoundaryDemo";
 import { RouteDataBoundaryDemo } from "./RouteDataBoundaryDemo";
+import { TestingStrategyDemo } from "./TestingStrategyDemo";
 
 // 源码原始字符串（Vite ?raw 原生支持）
 import componentJsxPureRenderRaw from "./ComponentJsxPureRenderDemo.jsx?raw";
@@ -58,6 +63,10 @@ import useRefRaw from "./UseRefDemo.jsx?raw";
 import useEffectCorrectUsageRaw from "./UseEffectCorrectUsageDemo.jsx?raw";
 import notNeedEffectRaw from "./NotNeedEffectDemo.jsx?raw";
 import lifecycleRaw from "./LifecycleOfReactiveEffectsDemo.jsx?raw";
+import eventVsEffectRaw from "./EventVsEffectDemo.jsx?raw";
+import effectEventRaw from "./EffectEventDemo.jsx?raw";
+import customHooksRaw from "./CustomHooksDemo.jsx?raw";
+import advancedRefRaw from "./AdvancedRefDemo.jsx?raw";
 import controlledFormRaw from "./ControlledFormDemo.jsx?raw";
 import formDataModelingRaw from "./FormDataModelingDemo.jsx?raw";
 import formActionRaw from "./FormActionDemo.jsx?raw";
@@ -74,6 +83,9 @@ import urlStateRaw from "./UrlStateDemo.jsx?raw";
 import nestedRoutesRaw from "./NestedRoutesDemo.jsx?raw";
 import navigationBoundaryRaw from "./NavigationBoundaryDemo.jsx?raw";
 import routeDataBoundaryRaw from "./RouteDataBoundaryDemo.jsx?raw";
+import testingStrategyRaw from "./TestingStrategyDemo.jsx?raw";
+import rtlBehaviorRaw from "./testing-samples/behavior.test.jsx?raw";
+import playwrightSpecRaw from "./testing-samples/app.spec.js?raw";
 
 // @demo-imports
 
@@ -84,6 +96,7 @@ export const CATEGORIES = [
   { id: "forms", name: "Forms 与 React 19 Actions", icon: "📝" },
   { id: "performance", name: "性能模型与优化", icon: "🚀" },
   { id: "routing", name: "Router 与页面状态", icon: "🧭" },
+  { id: "testing", name: "Testing 与质量边界", icon: "🧪" },
 ];
 
 export const demos = [
@@ -105,6 +118,10 @@ export const demos = [
   { id: "use-effect-correct-usage", label: "useEffect 正确用法与心智", category: "effects", badge: "同步", description: "与外部系统同步、定时器与事件监听的清理函数 (Cleanup) 闭环", Component: UseEffectCorrectUsageDemo, files: [{ name: "UseEffectCorrectUsageDemo.jsx", code: useEffectCorrectUsageRaw }] },
   { id: "not-need-effect", label: "无需 Effect 的常见反模式", category: "effects", badge: "避坑", description: "官方避坑指南：衍生数据计算、用户事件触发与依赖同步陷阱", Component: NotNeedEffectDemo, files: [{ name: "NotNeedEffectDemo.jsx", code: notNeedEffectRaw }] },
   { id: "lifecycle-of-reactive-effects", label: "响应式 Effect 生命周期与依赖", category: "effects", badge: "深度", description: "响应式值追踪、依赖闭环、使用 Ref 与函数式更新解耦依赖", Component: LifecycleOfReactiveEffectsDemo, files: [{ name: "LifecycleOfReactiveEffectsDemo.jsx", code: lifecycleRaw }] },
+  { id: "event-vs-effect", label: "Event vs Effect 因果边界", category: "effects", badge: "核心", description: "区分用户动作与外部系统同步，避免用 State + Effect 间接编排业务事件", Component: EventVsEffectDemo, files: [{ name: "EventVsEffectDemo.jsx", code: eventVsEffectRaw }] },
+  { id: "effect-event", label: "useEffectEvent 非响应式逻辑", category: "effects", badge: "React 19.2", description: "读取最新 committed props/state，同时避免无关值变化导致 Effect 重新同步", Component: EffectEventDemo, files: [{ name: "EffectEventDemo.jsx", code: effectEventRaw }] },
+  { id: "custom-hooks", label: "Custom Hooks 复用状态逻辑", category: "effects", badge: "抽象", description: "复用 stateful logic 与 Effect 封装，同时保持每次 Hook 调用的 State 独立", Component: CustomHooksDemo, files: [{ name: "CustomHooksDemo.jsx", code: customHooksRaw }] },
+  { id: "advanced-ref", label: "Layout Effect 与高级 Ref", category: "effects", badge: "P2", description: "布局测量、imperative handle、React 19 ref-as-prop 与 forwardRef 历史边界", Component: AdvancedRefDemo, files: [{ name: "AdvancedRefDemo.jsx", code: advancedRefRaw }] },
   { id: "controlled-form", label: "Controlled Form 与实时校验", category: "forms", badge: "基础", description: "input / textarea / select / checkbox / radio 的受控数据流、派生校验与提交快照", Component: ControlledFormDemo, files: [{ name: "ControlledFormDemo.jsx", code: controlledFormRaw }] },
   { id: "form-data-modeling", label: "FormData 与提交状态建模", category: "forms", badge: "建模", description: "非受控字段、提交时读取 FormData、get/getAll 与领域 payload 转换", Component: FormDataModelingDemo, files: [{ name: "FormDataModelingDemo.jsx", code: formDataModelingRaw }] },
   { id: "form-action", label: "React 19 form action / formAction", category: "forms", badge: "React 19", description: "函数 action、按钮级 formAction、FormData 与异步 Action / Transition 提交模型", Component: FormActionDemo, files: [{ name: "FormActionDemo.jsx", code: formActionRaw }] },
@@ -121,5 +138,6 @@ export const demos = [
   { id: "nested-routes", label: "Nested Routes 与 Outlet", category: "routing", badge: "架构", description: "可视化父子 Route 匹配链、Outlet 插槽、Index Route 与无 path Layout Route 的职责边界", Component: NestedRoutesDemo, files: [{ name: "NestedRoutesDemo.jsx", code: nestedRoutesRaw }] },
   { id: "navigation-boundary", label: "Navigation 与 Route Boundary", category: "routing", badge: "导航", description: "区分声明式链接与程序式导航，可视化 history push/replace/back/forward 与 Not Found 边界", Component: NavigationBoundaryDemo, files: [{ name: "NavigationBoundaryDemo.jsx", code: navigationBoundaryRaw }] },
   { id: "route-data-boundary", label: "Route Loader 数据边界", category: "routing", badge: "数据", description: "可视化 route match → loader(params) → pending → loader data / nearest error boundary 的页面数据流程", Component: RouteDataBoundaryDemo, files: [{ name: "RouteDataBoundaryDemo.jsx", code: routeDataBoundaryRaw }] },
+  { id: "testing-strategy", label: "Vitest / RTL / Playwright 测试分层", category: "testing", badge: "工程", description: "以用户行为为中心理解 unit、integration、E2E 分工、异步查询与 mock 边界", Component: TestingStrategyDemo, files: [{ name: "TestingStrategyDemo.jsx", code: testingStrategyRaw }, { name: "behavior.test.jsx", code: rtlBehaviorRaw }, { name: "app.spec.js", code: playwrightSpecRaw }] },
   // @demo-entries
 ];
