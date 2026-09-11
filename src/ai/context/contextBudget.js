@@ -60,7 +60,7 @@ export function buildContextBudget({
 /**
  * Assemble model input in priority order. System/current learning context is
  * never silently discarded. Summary is preferred over old history, while the
- * newest complete messages are selected from the tail with explicit pruning
+ * newest complete contiguous message tail is selected with explicit pruning
  * metadata when budget is exceeded.
  */
 export function selectContextWithinBudget({
@@ -97,7 +97,7 @@ export function selectContextWithinBudget({
   for (let index = normalizedHistory.length - 1; index >= 0; index -= 1) {
     const message = normalizedHistory[index];
     const cost = estimateMessagesTokens([message], { calibration }).tokens;
-    if (cost > remaining) continue;
+    if (cost > remaining) break;
     recentHistory.unshift(message);
     remaining -= cost;
   }
