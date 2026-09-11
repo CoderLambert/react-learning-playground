@@ -32,12 +32,13 @@ test("AI assistant sends current note, numbered source and active source context
   });
 
   const composer = await openAiTab(page);
-  await expect(page.getByText("props.mdx")).toBeVisible();
-  await expect(page.getByText("PropsBasicsDemo.jsx", { exact: true })).toBeVisible();
+  const assistant = page.getByRole("region", { name: "AI 学习助手" });
+  await expect(assistant.getByText("props.mdx", { exact: true })).toBeVisible();
+  await expect(assistant.getByText("PropsBasicsDemo.jsx", { exact: true })).toBeVisible();
 
   await composer.fill("结合当前代码解释 props");
   await page.getByRole("button", { name: "发送" }).click();
-  await expect(page.getByText("回答:props:PropsBasicsDemo.jsx")).toBeVisible();
+  await expect(assistant.getByText("回答:props:PropsBasicsDemo.jsx")).toBeVisible();
 
   expect(requests).toHaveLength(1);
   const first = requests[0];
@@ -51,7 +52,7 @@ test("AI assistant sends current note, numbered source and active source context
   await page.getByRole("tab", { name: "源码" }).click();
   await page.getByRole("tab", { name: "UserCard.jsx" }).click();
   await page.getByRole("tab", { name: "AI" }).click();
-  await expect(page.getByText("UserCard.jsx", { exact: true }).last()).toBeVisible();
+  await expect(assistant.getByText("UserCard.jsx", { exact: true })).toBeVisible();
 
   await composer.fill("分析当前选中的辅助文件");
   await page.getByRole("button", { name: "发送" }).click();
