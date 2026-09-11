@@ -37,7 +37,7 @@ export function normalizeCodeBlockOptions(options) {
       : DEFAULT_CODE_FONT_SIZE;
     normalized.lineHeight = Math.max(
       MIN_RENDERABLE_LINE_HEIGHT,
-      resolvedFontSize * lineHeight,
+      Math.round(resolvedFontSize * lineHeight * 100) / 100,
     );
   }
 
