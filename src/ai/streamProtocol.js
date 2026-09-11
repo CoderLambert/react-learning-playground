@@ -1,4 +1,4 @@
-import { normalizeChatEvent } from "./contracts";
+import { normalizeChatEvent } from "./contracts.js";
 
 function parseRecord(record) {
   const trimmed = record.trim();
