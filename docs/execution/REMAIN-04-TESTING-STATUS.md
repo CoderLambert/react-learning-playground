@@ -41,13 +41,15 @@ Implemented in this continuation branch:
 
 ### Chapter 04 executable gate
 
-- `npm ci`: PENDING / not executed in this environment
-- `npm run lint`: PENDING / not executed in this environment
-- `npm run build`: PENDING / not executed in this environment
-- `npm run preview` HTTP/browser smoke: PENDING / not executed in this environment
-- cleanup/manual interaction smoke: PENDING
+Deterministic verification was executed by GitHub Actions workflow `React Learning Verify` on branch head `dd5052fd20251bac454d4d121ff33946025593eb`, run `34561160806`.
 
-No PASS has been claimed without executable evidence.
+- `npm ci`: PASS
+- `npm run lint`: PASS
+- `npm run build`: PASS
+- `npm run preview` HTTP smoke at `/react-learning-playground/`: PASS
+- cleanup/manual browser interaction smoke: PENDING / manual evidence
+
+The HTTP smoke does not claim interactive browser, console, or narrow-screen validation.
 
 ## Chapter 11 — Testing slice
 
@@ -63,13 +65,14 @@ No PASS has been claimed without executable evidence.
 - [x] Added raw reference sample `testing-samples/app.spec.js`
 - [x] Demo and all raw sources registered in CodeViewer
 
-The repository intentionally does **not** add Vitest / Testing Library / Playwright dependencies in this slice. The sample test files are CodeViewer reference sources only; they are not claimed as executed tests. This avoids adding a test toolchain merely for documentation while another integration worker is responsible for final executable CI strategy.
+The repository intentionally does **not** add Vitest / Testing Library / Playwright dependencies in this slice. The sample test files are CodeViewer reference sources only; they are not claimed as executed tests. This avoids adding a test toolchain merely for documentation while preserving accurate tool boundaries.
 
 ### Testing executable gate
 
-- Runtime demo build/lint: PENDING
+- Runtime demo install/lint/build/preview HTTP smoke: PASS via GitHub Actions run `34561160806`
 - Vitest/RTL sample execution: NOT CONFIGURED / NOT CLAIMED
 - Playwright sample execution: NOT CONFIGURED / NOT CLAIMED
+- real-browser E2E/manual interaction validation: PENDING
 
 ## Source calibration
 
@@ -77,8 +80,10 @@ The repository intentionally does **not** add Vitest / Testing Library / Playwri
 - React official current documentation is the primary source for Effect Events, Custom Hooks, layout effects, imperative handles and ref-as-prop.
 - Testing Library, Vitest and Playwright official documentation define the testing-tool boundaries.
 
-## Next
+## Current disposition
 
-1. Run executable lint/build/preview validation when CI/local execution is available.
-2. Fix only failures attributable to this branch.
-3. Merge this continuation PR into `integration/react-complete-learning` after review/verification policy allows it.
+- Chapter 04 content: COMPLETE
+- Chapter 11 Testing slice content: COMPLETE
+- deterministic runtime gate: PASS
+- manual browser/console/narrow-screen cleanup smoke: PENDING
+- PR #7 remains open for final integration; no duplicate code changes should be made unless a regression is found.
