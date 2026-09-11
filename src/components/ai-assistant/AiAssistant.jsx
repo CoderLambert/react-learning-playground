@@ -1,4 +1,6 @@
 import { useId } from "react";
+import MarkdownRender from "markstream-react";
+import "markstream-react/index.css";
 import "./AiAssistant.css";
 
 const DEFAULT_SUGGESTIONS = [
@@ -91,18 +93,64 @@ function ContextChips({ contextSummary }) {
   );
 }
 
+function AssistantMarkdown({ content, isStreaming }) {
+  return (
+    <div className="ai-assistant-markdown">
+      <MarkdownRender
+        mode="chat"
+        content={content}
+        final={!isStreaming}
+        htmlPolicy="escape"
+        typewriter={isStreaming}
+        smoothStreaming={isStreaming ? "auto" : false}
+        fade={!isStreaming}
+        showTooltips
+        codeBlockOptions={{
+          fontFamily: "var(--font-mono)",
+          fontSize: 12,
+          lineHeight: 1.6,
+          maxHeight: 420,
+          padding: 12,
+          tabSize: 2,
+        }}
+      />
+    </div>
+  );
+}
+
 function Message({ message, isStreaming }) {
   const role = message?.role === "user" ? "user" : "assistant";
   const content = typeof message?.content === "string" ? message.content : "";
+  const isAssistant = role === "assistant";
 
   return (
     <article
       className={`ai-assistant-message is-${role} ${isStreaming ? "is-streaming" : ""}`.trim()}
       data-message-role={role}
+      aria-busy={isAssistant && isStreaming ? "true" : undefined}
     >
-      <header>{role === "user" ? "你" : "AI 助手"}</header>
-      <div className="ai-assistant-message-content">
-        {content ? <p>{content}</p> : isStreaming ? <span className="ai-assistant-thinking">正在生成回答…</span> : null}
+      <div className="ai-assistant-message-avatar" aria-hidden="true">
+        {isAssistant ? "AI" : "你"}
+      </div>
+      <div className="ai-assistant-message-body">
+        <header className="ai-assistant-message-header">
+          <strong>{isAssistant ? "AI 学习助手" : "你"}</strong>
+          {isAssistant && isStreaming ? <span>生成中</span> : null}
+        </header>
+        <div className="ai-assistant-message-content">
+          {content ? (
+            isAssistant ? (
+              <AssistantMarkdown content={content} isStreaming={isStreaming} />
+            ) : (
+              <p className="ai-assistant-user-copy">{content}</p>
+            )
+          ) : isStreaming ? (
+            <span className="ai-assistant-thinking">
+              <span aria-hidden="true" className="ai-assistant-thinking-dots"><i /><i /><i /></span>
+              正在组织回答
+            </span>
+          ) : null}
+        </div>
       </div>
     </article>
   );

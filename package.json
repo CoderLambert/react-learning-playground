@@ -17,9 +17,11 @@
   },
   "dependencies": {
     "@mdx-js/react": "^3.1.1",
+    "markstream-react": "^2.0.12",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "shiki": "^4.4.3"
+    "shiki": "^4.4.3",
+    "stream-diffs": "^0.0.2"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
