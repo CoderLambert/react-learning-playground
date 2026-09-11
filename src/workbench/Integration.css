@@ -1,0 +1,191 @@
+.workbench-main {
+  min-width: 0;
+  min-height: 100vh;
+}
+
+.workbench-app-content {
+  max-width: none;
+  width: 100%;
+  margin: 0;
+  padding: 28px clamp(18px, 3vw, 40px) 48px;
+}
+
+.workbench-notes-pane {
+  display: grid;
+  gap: 18px;
+}
+
+.note-toc {
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface-secondary);
+  padding: 12px 14px;
+}
+
+.note-toc-title {
+  margin-bottom: 8px;
+  color: var(--text-main);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.note-toc-list {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.note-toc-item {
+  margin: 4px 0;
+  font-size: 12px;
+}
+
+.note-toc-item a {
+  color: var(--text-muted);
+  text-decoration: none;
+}
+
+.note-toc-item a:hover,
+.note-toc-item a:focus-visible {
+  color: var(--color-primary);
+}
+
+.note-toc-level-3 {
+  margin-left: 12px;
+}
+
+.note-runtime-content {
+  min-width: 0;
+  line-height: 1.72;
+  color: var(--text-main);
+}
+
+.note-runtime-content h1,
+.note-runtime-content h2,
+.note-runtime-content h3 {
+  scroll-margin-top: 76px;
+}
+
+.note-runtime-content h1 {
+  font-size: 24px;
+  margin: 0 0 18px;
+}
+
+.note-runtime-content h2 {
+  margin: 28px 0 12px;
+  font-size: 18px;
+}
+
+.note-runtime-content h3 {
+  margin: 20px 0 10px;
+  font-size: 15px;
+}
+
+.note-runtime-content p,
+.note-runtime-content li {
+  font-size: 13.5px;
+}
+
+.note-runtime-state {
+  padding: 18px;
+  border: 1px dashed var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+  background: var(--bg-surface-secondary);
+}
+
+.note-runtime-state-error {
+  color: var(--color-danger-text);
+  border-color: var(--color-danger-border);
+  background: var(--color-danger-light);
+}
+
+.workbench-all-demo-heading {
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.workbench-all-demo-heading h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.workbench-all-demo-heading > span:last-child {
+  font-size: 12px;
+  color: var(--text-subtle);
+}
+
+.workbench-code-loading {
+  padding: 12px 18px;
+  color: var(--text-subtle);
+  font-size: 12.5px;
+}
+
+.workbench-focus-mode .workbench-navigation-slot,
+.workbench-focus-mode .workbench-content-slot {
+  visibility: hidden;
+}
+
+.workbench-focus-mode .workbench-inspector-slot {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  width: 100vw;
+  max-width: none;
+  border: 0;
+}
+
+@media (max-width: 900px) {
+  .workbench-mobile-menu-toggle {
+    display: inline-flex;
+  }
+
+  .workbench-app-content {
+    padding: 18px 14px 36px;
+  }
+
+  .top-bar {
+    padding-inline: 14px;
+  }
+
+  .breadcrumb-category,
+  .breadcrumb-sep {
+    display: none;
+  }
+
+  .workbench-inspector-toggle {
+    display: none;
+  }
+
+  .workbench-inspector-slot {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    background: var(--bg-surface);
+  }
+
+  .workbench-shell[data-inspector-open="false"] .workbench-inspector-slot {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .top-bar-right {
+    gap: 6px;
+  }
+
+  .view-mode-btn {
+    padding-inline: 8px;
+  }
+
+  .breadcrumb-current {
+    max-width: 42vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
