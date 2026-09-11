@@ -34,7 +34,7 @@ test.describe("narrow viewport", () => {
     await expect(menu).toBeVisible();
     await menu.press("Enter");
     await expect(page.locator(".workbench-shell")).toHaveAttribute("data-mobile-navigation-open", "true");
-    await page.getByRole("textbox", { name: "搜索知识点或关键词" }).fill("Modal Focus");
+    await page.getByRole("searchbox", { name: "搜索知识点或关键词" }).fill("Modal Focus");
     await page.locator("button.workbench-navigation-item").filter({ hasText: "Modal Focus" }).click();
     await expect(page.locator(".workbench-shell")).toHaveAttribute("data-mobile-navigation-open", "false");
     await expect(page.locator(".demo-page h2.demo-title")).toContainText("Modal Focus");
