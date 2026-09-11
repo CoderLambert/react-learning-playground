@@ -4,7 +4,12 @@
 
 <MentalModel title="先问：外部系统在哪里？">如果答案是“没有”，这段逻辑很可能不属于 Effect。React 已经会在 props/state 改变时重新 render，你可以直接计算派生值。</MentalModel>
 
-<Compare leftTitle="通常不需要 Effect" rightTitle="通常需要 Effect" leftItems={["根据 props/state 计算 fullName", "过滤/排序列表", "点击后发请求或提交", "用 key 重置子树"]} rightItems={["订阅浏览器/第三方 API", "连接 WebSocket", "控制非 React widget", "同步定时器或事件监听"]} />
+<Compare
+  leftTitle="通常不需要 Effect"
+  rightTitle="通常需要 Effect"
+  left={<ul><li>根据 props/state 计算 fullName</li><li>过滤/排序列表</li><li>点击后发请求或提交</li><li>用 key 重置子树</li></ul>}
+  right={<ul><li>订阅浏览器/第三方 API</li><li>连接 WebSocket</li><li>控制非 React widget</li><li>同步定时器或事件监听</li></ul>}
+/>
 
 <Experiment title="删除同步链">
 在中间 Demo 比较“Effect 把派生值写回 State”和“render 直接计算”。连续修改输入，观察前者多一次 render/commit，并存在短暂旧值与依赖维护成本。
@@ -16,6 +21,11 @@
 
 <Boundary>昂贵计算与“是否需要 Effect”是两个问题。昂贵纯计算仍然是 render 逻辑；必要时再根据测量结果考虑 memoization。</Boundary>
 
-<Summary items={["无外部系统先不用 Effect", "派生数据在 render 计算", "用户动作在 handler 处理", "减少重复 State 与同步链"]} />
+<Summary>
+- 无外部系统先不用 Effect
+- 派生数据在 render 计算
+- 用户动作在 handler 处理
+- 减少重复 State 与同步链
+</Summary>
 
-<FurtherReading links={[{label:"React: You Might Not Need an Effect",href:"https://react.dev/learn/you-might-not-need-an-effect"}]} />
+<FurtherReading items={[{label:"React: You Might Not Need an Effect",href:"https://react.dev/learn/you-might-not-need-an-effect"}]} />
