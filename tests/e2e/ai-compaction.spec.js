@@ -113,7 +113,7 @@ test("manual compaction persists a durable checkpoint without deleting full hist
   expect(chainedStored.compactions).toHaveLength(2);
 });
 
-test("provider actual usage triggers one automatic compaction and does not chain stale usage", async ({ page }) => {
+test("provider actual usage stays telemetry and does not trigger stale automatic compaction", async ({ page }) => {
   const requests = [];
   await page.route(GATEWAY_URL, async (route) => {
     const body = route.request().postDataJSON();
@@ -141,17 +141,14 @@ test("provider actual usage triggers one automatic compaction and does not chain
 
   const composer = await openAssistant(page);
   await submit(page, composer, "high usage seed");
-  await submit(page, composer, "after automatic compaction");
-
-  const summaryRequests = requests.filter(isCompactionRequest);
-  expect(summaryRequests).toHaveLength(1);
-  const afterCompaction = requests.find((request) => request.question === "after automatic compaction");
-  expect(afterCompaction.context.conversationSummary).toContain("理解当前 React Demo");
-  await expect(page.locator(".ai-assistant-notice")).toContainText("完整对话仍保留");
-
+  await submit(page, composer, "after high provider usage");
   await submit(page, composer, "low usage follow-up");
-  expect(requests.filter(isCompactionRequest)).toHaveLength(1);
+
+  expect(requests.filter(isCompactionRequest)).toHaveLength(0);
+  const secondRequest = requests.find((request) => request.question === "after high provider usage");
+  expect(secondRequest.context.conversationSummary ?? "").toBe("");
+
   const stored = await readAiDatabase(page);
-  expect(stored.compactions).toHaveLength(1);
+  expect(stored.compactions).toHaveLength(0);
   expect(stored.messages).toHaveLength(6);
 });
