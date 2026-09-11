@@ -32,20 +32,55 @@ function PlaceTree({ id, places }) {
   );
 }
 
+function FactRow({ label, value, bad = false }) {
+  return (
+    <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+      <span>{label}</span>
+      <strong style={{ color: bad ? "var(--color-danger)" : undefined }}>{value}</strong>
+    </div>
+  );
+}
+
 export function StateDryDemo() {
   const [firstName, setFirstName] = useState("张");
   const [lastName, setLastName] = useState("三丰");
-  const fullName = `${firstName} ${lastName}`.trim();
+  const [storedFullName, setStoredFullName] = useState("张 三丰");
+  const derivedFullName = `${firstName} ${lastName}`.trim();
+  const fullNameIsStale = storedFullName !== derivedFullName;
+
+  const [isSending, setIsSending] = useState(false);
+  const [isSent, setIsSent] = useState(false);
+  const [status, setStatus] = useState("typing");
+  const booleansContradict = isSending && isSent;
 
   const [cartItems, setCartItems] = useState(INITIAL_CART_ITEMS);
   const [selectedId, setSelectedId] = useState(1);
+  const [selectedCopy, setSelectedCopy] = useState(INITIAL_CART_ITEMS[0]);
+  const selectedItem = cartItems.find((item) => item.id === selectedId) ?? null;
+  const selectedCopyIsStale =
+    selectedItem != null &&
+    selectedCopy != null &&
+    (selectedItem.id !== selectedCopy.id || selectedItem.count !== selectedCopy.count);
 
   const totalCount = cartItems.reduce((sum, item) => sum + item.count, 0);
   const totalPrice = cartItems.reduce((sum, item) => sum + item.price * item.count, 0);
-  const selectedItem = cartItems.find((item) => item.id === selectedId) ?? null;
 
-  const [status, setStatus] = useState("typing");
   const [places, setPlaces] = useState(INITIAL_PLACES);
+
+  function changeSourceNameOnly() {
+    setFirstName("李");
+    setLastName("无忌");
+  }
+
+  function syncStoredName() {
+    setStoredFullName(derivedFullName);
+  }
+
+  function resetNameExperiment() {
+    setFirstName("张");
+    setLastName("三丰");
+    setStoredFullName("张 三丰");
+  }
 
   function updateCount(id, delta) {
     setCartItems((items) =>
@@ -57,6 +92,27 @@ export function StateDryDemo() {
         )
         .filter((item) => item.count > 0),
     );
+  }
+
+  function chooseProduct(item) {
+    setSelectedId(item.id);
+    setSelectedCopy(item);
+  }
+
+  function syncSelectedCopy() {
+    if (selectedItem) setSelectedCopy(selectedItem);
+  }
+
+  function resetCartExperiment() {
+    setCartItems(INITIAL_CART_ITEMS);
+    setSelectedId(1);
+    setSelectedCopy(INITIAL_CART_ITEMS[0]);
+  }
+
+  function resetStatusExperiment() {
+    setIsSending(false);
+    setIsSent(false);
+    setStatus("typing");
   }
 
   function removePlace(parentId, childId) {
@@ -78,132 +134,109 @@ export function StateDryDemo() {
     <div>
       <div className="demo-header-card">
         <div className="demo-header-top">
-          <div>
-            <h2 className="demo-title">
-              <span>🧪</span> State 结构设计：让不可能状态无法出现
-            </h2>
-          </div>
+          <h2 className="demo-title">
+            <span>🧪</span> State 结构设计：先制造错误状态，再消除它
+          </h2>
           <span className="badge badge-green">State Modeling</span>
         </div>
         <p className="demo-desc">
-          State 的关键不是“能不能存”，而是<strong>应该存什么</strong>。良好的结构应减少同步负担：相关数据一起变化时可合并、互斥状态避免用多个 boolean、可计算值不重复存、同一实体不复制两份，并尽量避免难以更新的深层嵌套。
+          好的 State shape 不只是“代码更短”，而是让<strong>可以表示的错误状态更少</strong>。下面先故意保存重复事实、互相矛盾的 boolean 和实体副本，再比较只保存最小事实的模型。
         </p>
-        <div className="demo-meta-tags">
-          <span className="badge badge-gray">Single Source of Truth</span>
-          <span className="badge badge-gray">Avoid Contradictions</span>
-          <span className="badge badge-gray">Avoid Duplication</span>
-          <span className="badge badge-gray">Normalize Deep State</span>
-        </div>
       </div>
 
       <div className="demo-section">
         <div className="demo-section-header">
-          <h3 className="demo-section-title">1. 冗余 State：能计算，就不要再存一份</h3>
+          <h3 className="demo-section-title">1. 冗余 State：两个字段描述同一事实</h3>
           <p className="demo-section-desc">
-            <code>fullName</code> 完全由两个输入决定，因此直接在 render 中计算；不需要第三个 state，也不需要 Effect 去同步。
+            <code>storedFullName</code> 与 <code>firstName + lastName</code> 都声称自己代表“姓名”。只要某条更新路径漏同步，它们就能互相矛盾。
           </p>
         </div>
 
-        <div className="comparison-container">
-          <div className="comparison-card bad">
-            <div className="comparison-header bad">❌ 冗余状态 + Effect 同步</div>
-            <pre style={{ margin: 0, padding: 8, fontSize: 12, overflowX: "auto" }}>{`const [first, setFirst] = useState('');
-const [last, setLast] = useState('');
-const [fullName, setFullName] = useState('');
-
-useEffect(() => {
-  setFullName(first + ' ' + last);
-}, [first, last]);`}</pre>
-          </div>
-          <div className="comparison-card good">
-            <div className="comparison-header good">✅ 渲染期派生</div>
-            <pre style={{ margin: 0, padding: 8, fontSize: 12, overflowX: "auto" }}>{`const [first, setFirst] = useState('');
-const [last, setLast] = useState('');
-const fullName = \`${"${first} ${last}"}\`.trim();`}</pre>
-          </div>
-        </div>
-
-        <div style={{ display: "flex", gap: 12, alignItems: "end", flexWrap: "wrap", marginTop: 16 }}>
-          <label style={{ fontSize: 12, color: "var(--text-muted)" }}>
+        <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+          <label>
             姓氏
             <input className="form-input" value={firstName} onChange={(event) => setFirstName(event.target.value)} />
           </label>
-          <label style={{ fontSize: 12, color: "var(--text-muted)" }}>
+          <label>
             名字
             <input className="form-input" value={lastName} onChange={(event) => setLastName(event.target.value)} />
           </label>
-          <strong style={{ paddingBottom: 8, color: "var(--color-primary)" }}>{fullName || "（空）"}</strong>
-        </div>
-      </div>
-
-      <div className="demo-section">
-        <div className="demo-section-header">
-          <h3 className="demo-section-title">2. 矛盾 State：用一个 status 表示互斥状态</h3>
-          <p className="demo-section-desc">
-            <code>isSending</code> + <code>isSent</code> 可能同时为 true，形成业务上不可能的组合。一个有限状态值更容易推理，也更容易扩展 error / retry。
-          </p>
         </div>
 
-        <div className="comparison-container">
+        <div className="demo-grid-2" style={{ marginTop: 14 }}>
           <div className="comparison-card bad">
-            <div className="comparison-header bad">❌ 两个 boolean 可产生 4 种组合</div>
-            <pre style={{ margin: 0, padding: 8, fontSize: 12 }}>{`isSending = true
-isSent = true // “正在发送”又“已发送”`}</pre>
+            <div className="comparison-header bad">❌ 重复保存：需要人为同步</div>
+            <FactRow label="storedFullName" value={storedFullName || "（空）"} bad={fullNameIsStale} />
+            <button className="btn btn-secondary btn-sm" style={{ marginTop: 10 }} onClick={syncStoredName}>
+              手动同步副本
+            </button>
           </div>
           <div className="comparison-card good">
-            <div className="comparison-header good">✅ 一个 status 只允许合法状态</div>
-            <pre style={{ margin: 0, padding: 8, fontSize: 12 }}>{`status = 'typing'
-status = 'sending'
-status = 'sent'`}</pre>
+            <div className="comparison-header good">✅ 派生：每次 render 只有一个答案</div>
+            <FactRow label="derivedFullName" value={derivedFullName || "（空）"} />
+            <code>const fullName = firstName + lastName</code>
           </div>
         </div>
 
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 14 }}>
-          {["typing", "sending", "sent"].map((nextStatus) => (
-            <button
-              key={nextStatus}
-              className={`btn ${status === nextStatus ? "btn-primary" : "btn-secondary"} btn-sm`}
-              onClick={() => setStatus(nextStatus)}
-            >
-              {nextStatus}
-            </button>
-          ))}
-          <span className="badge badge-blue">当前唯一事实：status = {status}</span>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>
+          <button className="btn btn-danger btn-sm" onClick={changeSourceNameOnly}>只改事实来源，故意漏同步</button>
+          <button className="btn btn-outline btn-sm" onClick={resetNameExperiment}>重置实验</button>
+          <span className={`badge ${fullNameIsStale ? "badge-red" : "badge-green"}`}>
+            {fullNameIsStale ? "已制造不一致" : "当前一致"}
+          </span>
         </div>
       </div>
 
       <div className="demo-section">
         <div className="demo-section-header">
-          <h3 className="demo-section-title">3. 重复 State：保存 ID，而不是复制整条实体</h3>
+          <h3 className="demo-section-title">2. 矛盾 State：独立 boolean 扩大非法组合空间</h3>
           <p className="demo-section-desc">
-            商品实体只存在 <code>cartItems</code> 中；选中状态只保存 <code>selectedId</code>。这样商品数量更新后，选中详情自然读取到最新对象，不需要额外同步 selectedItem 副本。
+            “正在发送”和“已经发送”在这个业务模型中应互斥。两个独立 boolean 能表示 4 种组合，其中至少一种没有业务含义；一个 <code>status</code> 只枚举允许的状态。
           </p>
         </div>
 
-        <div style={{ display: "grid", gap: 10 }}>
+        <div className="demo-grid-2">
+          <div className="comparison-card bad">
+            <div className="comparison-header bad">❌ 两个独立事实来源</div>
+            <label><input type="checkbox" checked={isSending} onChange={(event) => setIsSending(event.target.checked)} /> isSending</label>
+            <label style={{ marginLeft: 12 }}><input type="checkbox" checked={isSent} onChange={(event) => setIsSent(event.target.checked)} /> isSent</label>
+            <div className={`demo-alert ${booleansContradict ? "demo-alert-warning" : "demo-alert-info"}`} style={{ marginTop: 10 }}>
+              {booleansContradict ? "矛盾：正在发送，同时又已经发送。" : "继续切换两个 checkbox，观察可表示的组合。"}
+            </div>
+          </div>
+          <div className="comparison-card good">
+            <div className="comparison-header good">✅ 一个 status 枚举合法状态</div>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+              {["typing", "sending", "sent"].map((nextStatus) => (
+                <button
+                  key={nextStatus}
+                  className={`btn ${status === nextStatus ? "btn-primary" : "btn-secondary"} btn-sm`}
+                  onClick={() => setStatus(nextStatus)}
+                >
+                  {nextStatus}
+                </button>
+              ))}
+            </div>
+            <FactRow label="status" value={status} />
+          </div>
+        </div>
+        <button className="btn btn-outline btn-sm" style={{ marginTop: 10 }} onClick={resetStatusExperiment}>重置实验</button>
+      </div>
+
+      <div className="demo-section">
+        <div className="demo-section-header">
+          <h3 className="demo-section-title">3. 重复实体：保存 ID，比保存对象副本更稳</h3>
+          <p className="demo-section-desc">
+            左侧故意保存 <code>selectedCopy</code>；右侧只保存 <code>selectedId</code> 并从 <code>cartItems</code> 查当前实体。更新商品数量时，不同步对象副本即可看到 stale copy。
+          </p>
+        </div>
+
+        <div style={{ display: "grid", gap: 8 }}>
           {cartItems.map((item) => (
-            <div
-              key={item.id}
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                gap: 12,
-                alignItems: "center",
-                padding: "10px 12px",
-                border: "1px solid var(--border-color)",
-                borderRadius: "var(--radius-sm)",
-                background: selectedId === item.id ? "var(--color-primary-light)" : "var(--bg-surface)",
-              }}
-            >
-              <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <input
-                  type="radio"
-                  name="selected-product"
-                  checked={selectedId === item.id}
-                  onChange={() => setSelectedId(item.id)}
-                />
-                <span>{item.name}</span>
-              </label>
+            <div key={item.id} style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", padding: "10px 12px", border: "1px solid var(--border-color)", borderRadius: "var(--radius-sm)" }}>
+              <button className="btn btn-secondary btn-sm" onClick={() => chooseProduct(item)}>
+                选择 {item.name}
+              </button>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <button className="btn btn-secondary btn-sm" onClick={() => updateCount(item.id, -1)}>-1</button>
                 <strong>{item.count}</strong>
@@ -213,51 +246,50 @@ status = 'sent'`}</pre>
           ))}
         </div>
 
-        <div className="demo-alert demo-alert-info">
-          <div className="demo-alert-title">当前派生结果</div>
-          <div>总件数：{totalCount}；总金额：¥{totalPrice.toFixed(2)}</div>
-          <div>
-            选中项：{selectedItem ? `${selectedItem.name} × ${selectedItem.count}` : "无（原商品可能已删除）"}
+        <div className="demo-grid-2" style={{ marginTop: 14 }}>
+          <div className="comparison-card bad">
+            <div className="comparison-header bad">❌ selectedCopy</div>
+            <div>{selectedCopy ? `${selectedCopy.name} × ${selectedCopy.count}` : "无"}</div>
+            <button className="btn btn-secondary btn-sm" style={{ marginTop: 10 }} onClick={syncSelectedCopy}>手动同步对象副本</button>
           </div>
+          <div className="comparison-card good">
+            <div className="comparison-header good">✅ selectedId → 派生当前对象</div>
+            <div>{selectedItem ? `${selectedItem.name} × ${selectedItem.count}` : "无"}</div>
+            <div style={{ marginTop: 8 }}>总件数：{totalCount}；总金额：¥{totalPrice.toFixed(2)}</div>
+          </div>
+        </div>
+
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
+          <span className={`badge ${selectedCopyIsStale ? "badge-red" : "badge-green"}`}>
+            {selectedCopyIsStale ? "对象副本已经过期" : "当前一致"}
+          </span>
+          <button className="btn btn-outline btn-sm" onClick={resetCartExperiment}>重置实验</button>
         </div>
       </div>
 
       <div className="demo-section">
         <div className="demo-section-header">
-          <h3 className="demo-section-title">4. 深层嵌套：复杂树状数据优先考虑扁平化</h3>
+          <h3 className="demo-section-title">4. 深层结构：难更新时再考虑 normalization</h3>
           <p className="demo-section-desc">
-            当更新一个叶子节点需要一路复制祖先对象时，更新代码容易变长。这里把实体放进 ID → entity 的映射，父节点只保存 childIds；删除关系只需要更新直接父节点。
+            扁平化不是目标本身。当树很深、同一实体被多处引用或局部更新需要复制多层祖先时，ID → entity 映射通常更容易维护。
           </p>
         </div>
-
         <div className="demo-grid-2">
           <div style={{ padding: 14, border: "1px solid var(--border-color)", borderRadius: "var(--radius-sm)" }}>
             <strong>当前树</strong>
-            <ul style={{ marginBottom: 0 }}>
-              <PlaceTree id={0} places={places} />
-            </ul>
+            <ul style={{ marginBottom: 0 }}><PlaceTree id={0} places={places} /></ul>
           </div>
           <div style={{ padding: 14, border: "1px solid var(--border-color)", borderRadius: "var(--radius-sm)" }}>
-            <strong>关系操作</strong>
-            <p style={{ fontSize: 13, color: "var(--text-muted)" }}>
-              删除“前端 → React 学习站”的关系，只更新 parent.childIds，不需要深拷贝整棵树。
-            </p>
-            <button className="btn btn-danger btn-sm" onClick={() => removePlace(1, 3)}>
-              移除 React 学习站
-            </button>
-            <button className="btn btn-outline btn-sm" style={{ marginLeft: 8 }} onClick={() => setPlaces(INITIAL_PLACES)}>
-              重置
-            </button>
+            <p>移除“前端 → React 学习站”只更新直接父节点的 <code>childIds</code>。</p>
+            <button className="btn btn-danger btn-sm" onClick={() => removePlace(1, 3)}>移除关系</button>
+            <button className="btn btn-outline btn-sm" style={{ marginLeft: 8 }} onClick={() => setPlaces(INITIAL_PLACES)}>重置</button>
           </div>
         </div>
       </div>
 
       <div className="demo-alert demo-alert-tip">
-        <div className="demo-alert-title">State 结构检查清单</div>
-        <div>① 总是一起更新的数据，考虑组合；② 不要允许互相矛盾的 boolean；③ 可派生的数据不要存；④ 同一实体避免复制；⑤ 深层结构难更新时考虑 normalization。</div>
-        <div>
-          项目边界：这里不是要求“所有 state 都扁平化”。如果嵌套结构很浅且天然一起更新，保持对象结构反而更直观；重构目标是降低出错概率，而不是追求某种固定形状。
-        </div>
+        <div className="demo-alert-title">项目判断规则</div>
+        <div>如果一个值能由现有 props/state 完整得到，就先派生；如果两个字段必须永远同步，先问是否其实只需要一个事实来源；如果多个 boolean 在描述同一状态机，考虑一个枚举状态；如果保存了实体对象副本，优先保存稳定 ID 并从 canonical collection 查当前对象。</div>
       </div>
     </div>
   );
