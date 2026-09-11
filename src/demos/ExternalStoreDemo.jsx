@@ -1,19 +1,29 @@
 import { useSyncExternalStore } from "react";
 
 let value = 0;
-let snapshot = { value, version: 0 };
+let snapshot = { value, version: 0, listenerCount: 0 };
 const listeners = new Set();
+
+function notifySnapshotChange() {
+  setTimeout(() => listeners.forEach((listener) => listener()), 0);
+}
 
 function emit(nextValue) {
   value = nextValue;
-  snapshot = { value, version: snapshot.version + 1 };
-  listeners.forEach((listener) => listener());
+  snapshot = { value, version: snapshot.version + 1, listenerCount: listeners.size };
+  notifySnapshotChange();
 }
 
 const counterStore = {
   subscribe(listener) {
     listeners.add(listener);
-    return () => listeners.delete(listener);
+    snapshot = { ...snapshot, version: snapshot.version + 1, listenerCount: listeners.size };
+    notifySnapshotChange();
+    return () => {
+      listeners.delete(listener);
+      snapshot = { ...snapshot, version: snapshot.version + 1, listenerCount: listeners.size };
+      notifySnapshotChange();
+    };
   },
   getSnapshot() {
     return snapshot;
@@ -24,9 +34,6 @@ const counterStore = {
   reset() {
     emit(0);
   },
-  getListenerCount() {
-    return listeners.size;
-  },
 };
 
 function StoreReader({ label }) {
@@ -35,7 +42,7 @@ function StoreReader({ label }) {
     <div className="demo-alert demo-alert-tip">
       <strong>{label}</strong>
       <p>snapshot.value = {current.value} · version = {current.version}</p>
-      <p>当前订阅者：{counterStore.getListenerCount()}</p>
+      <p>当前订阅者：{current.listenerCount}</p>
     </div>
   );
 }

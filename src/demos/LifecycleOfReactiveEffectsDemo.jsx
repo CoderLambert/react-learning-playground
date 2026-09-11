@@ -40,17 +40,17 @@ export function LifecycleOfReactiveEffectsDemo() {
   });
 
   useEffect(() => {
-    addLog("success", `🟢 [Setup] 建立房间 #${roomId} 的 Socket 同步`);
     const socket = connectChatSocket(roomId, onMessage);
 
     return () => {
       socket.close();
-      addLog("error", `🔴 [Cleanup] 关闭房间 #${roomId} 的 Socket 同步`);
     };
   }, [roomId]);
 
   function handleSwitchRoom(nextRoom) {
     if (nextRoom === roomId) return;
+    addLog("error", `🔴 [Cleanup] 关闭房间 #${roomId} 的 Socket 同步`);
+    addLog("success", `🟢 [Setup] 建立房间 #${nextRoom} 的 Socket 同步`);
     setRoomId(nextRoom);
     setMessages([]);
   }
