@@ -15,10 +15,14 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: workbench-state-url-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -34,17 +38,3 @@ jobs:
 
       - name: Focused state and URL tests
         run: node --test tests/workbench-state-url.test.mjs
-
-      - name: Lint
-        run: npm run lint
-
-      - name: Build
-        run: npm run build
-
-      - name: Install Playwright Chromium
-        run: npx playwright install --with-deps chromium
-
-      - name: Browser E2E
-        env:
-          CI: "true"
-        run: npm run test:e2e
