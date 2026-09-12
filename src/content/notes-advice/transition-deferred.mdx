@@ -3,42 +3,48 @@
 ## 当前结论
 
 - Gate A Correctness：PASS
-- Gate B Demo Contract：FAIL
+- Gate B Demo Contract：PASS
 - Gate C Mental Model：PASS
-- 综合：React 19.2 语义基本准确，但 Note 的实验范围超过 Demo 实际提供的可观察对照。
+
+## 当前 verdict
+
+本课现在有可执行的 Direct vs Deferred 对照，并把“后台 render 可中断”从实验观察收窄为 React 19.2 的机制事实；当前 Demo 不再冒充能识别某一次被丢弃的 render attempt。
 
 ## 事实与版本边界
 
-`useTransition` 把其中的 State update 标记为非阻塞 Transition；受控文本输入自身不能由 Transition 更新。`useDeferredValue` 让消费者先继续看到旧值，再尝试用新值做可中断的后台 render；它没有固定延迟，也不会自动减少网络请求。当前核心解释与官方 React 19.2 文档一致。
+`useTransition` 把其中的 State update 标记为非阻塞 Transition；受控文本输入自身不能由 Transition 更新。`useDeferredValue` 让消费者先继续看到旧值，再尝试用新值做后台 render。该后台 render 在机制上可中断；如果新的 value 到来，React 可以重新开始后台工作。
 
-需要保持一个重要细节：`startTransition` 的 callback 本身会立即执行，延迟/可中断的是其中标记的 State 更新及其渲染工作，不应把 `startTransition` 类比成 `setTimeout`。
+需要保持两个边界：
+
+- `startTransition` callback 本身会立即执行，非阻塞/可中断的是其中标记更新对应的渲染工作；它不是 `setTimeout`。
+- `useDeferredValue` 没有固定毫秒延迟，也不会自动减少网络请求。
 
 ## Mental Model
 
-“输入必须立即响应，昂贵结果可以稍后跟上”能够正确区分 urgent 与 non-urgent UX。Note 也正确指出 Transition/deferred 不会让计算本身消失。
+“输入必须立即响应，昂贵结果可以稍后跟上”能够正确区分 urgent 与 non-urgent UX。学习者可以解释：什么时候控制更新源并使用 Transition；什么时候保留上游同步 state、只延迟下游消费；为什么这两者都不是 debounce。
 
-## Demo ↔ Note
+## Demo ↔ Note ↔ Source
 
-Demo 实际提供两个实验：
+当前实验已经对齐：
 
-1. tab：`tab` urgent 更新，`visibleTab` 在 Transition 中更新，并展示 `isPending`；
-2. search：`query` 同步更新，`deferredQuery` 驱动昂贵结果，并展示 stale 状态。
+1. 搜索区提供 Direct / Deferred 两种真实模式，使用同一个受控 `query` 和同一个昂贵结果组件。
+2. Direct 模式下结果直接消费 `query`；Deferred 模式下结果消费 `deferredQuery`，并展示 `input`、`result query` 与 `stale`。
+3. `ExpensiveResults` 使用 `memo`，避免父组件 urgent render 在 deferred value 尚未变化时无条件重做昂贵结果工作，更接近 React 官方推荐的 deferred-render 边界。
+4. tab 区继续展示 urgent selection、Transition 中的 `visibleTab` 与 `isPending`。
+5. Note 明确说明当前 Demo 没有 render-attempt/abandon instrumentation，因此不能把某次具体后台 render 标记为“已被中断”。
 
-但 Note 要求“比较直接更新、Transition 和 deferred value”，当前没有同一昂贵工作下的 direct-update control。Note 还要求观察“新的输入如何打断尚未提交的后台 render”，Demo 只有最终值/stale 标记，没有 render-attempt instrumentation，因此无法直接证明某次后台 render 被中断并重启。
+Gate B 因此从 FAIL 更新为 PASS。
 
-因此 Gate B 为 FAIL。
+## 重要边界 / 反例
 
-## 缺失边界 / 反例
+如果昂贵工作本身可以通过数据结构、缓存、虚拟列表或拆分计算真正消除，应优先降低实际成本；Transition/Deferred 主要调整调度和呈现优先级，不是替代算法优化。
 
-可补充：若只是把 `deferredQuery` 传给一个仍会因为父 render 而昂贵重算的子树，收益依赖组件边界/跳过旧 props render 的能力；React 官方性能示例通常配合 `memo` 说明这一点。当前 Demo 的 `ExpensiveResults` 并未 memo，因此它在父组件 urgent render 时仍会执行，只是拿到旧 `deferredQuery`，教学上可能夸大输入响应改善。
+对于远程搜索，`useDeferredValue` 仍可能让每次输入触发请求；请求频率需要另行使用 debounce/throttle/cache/请求去重或框架数据层策略。
 
-## 清晰度与工程决策
+## 清晰度与生产决策
 
-决策规则应区分：能控制 setState 发生位置时用 Transition；不能控制上游更新、只想延迟消费时用 deferred value；请求节流仍交给 debounce/throttle/cache。
+生产决策规则现在足够明确：能控制非紧急 `setState` 的触发位置时考虑 Transition；不能控制上游更新、只想让昂贵消费者滞后时考虑 deferred value；受控 input 保持 urgent；不要把调度 API 当请求层或计算消除工具。
 
 ## 建议修改
 
-1. 要么把 Note 的实验收窄到 Demo 真实存在的 Transition/deferred 两条路径；要么增加 direct-update control。
-2. 不要宣称 Demo 已“观察到后台 render 被中断”，除非增加可归因 instrumentation。
-3. 评估给昂贵结果组件增加 `memo`，让 deferred-value 性能实验更接近官方推荐模型。
-4. 明确 `startTransition` callback 立即执行，非阻塞的是标记后的更新/render。
+当前没有阻塞 Gate 的修改。后续如果要教学“被中断的 render attempt”，应单独设计可信 instrumentation，并明确 development Strict Mode、Profiler/日志本身对观测的影响，而不是从最终 DOM 值反推 React 内部尝试次数。

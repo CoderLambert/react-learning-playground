@@ -1,8 +1,8 @@
-import { useDeferredValue, useMemo, useState, useTransition } from "react";
+import { memo, useDeferredValue, useMemo, useState, useTransition } from "react";
 
 const ITEMS = Array.from({ length: 900 }, (_, index) => `React learning item ${index + 1}`);
 
-function ExpensiveResults({ query }) {
+const ExpensiveResults = memo(function ExpensiveResults({ query }) {
   const normalized = query.trim().toLowerCase();
   const results = ITEMS.filter((item) => item.toLowerCase().includes(normalized));
 
@@ -17,15 +17,17 @@ function ExpensiveResults({ query }) {
       <ul>{results.slice(0, 8).map((item) => <li key={item}>{item}</li>)}</ul>
     </div>
   );
-}
+});
 
 export function TransitionDeferredDemo() {
   const [tab, setTab] = useState("overview");
   const [visibleTab, setVisibleTab] = useState("overview");
   const [isPending, startTransition] = useTransition();
   const [query, setQuery] = useState("");
+  const [searchMode, setSearchMode] = useState("deferred");
   const deferredQuery = useDeferredValue(query);
-  const isStale = query !== deferredQuery;
+  const resultQuery = searchMode === "deferred" ? deferredQuery : query;
+  const isStale = searchMode === "deferred" && query !== deferredQuery;
 
   const tabContent = useMemo(() => {
     let total = 0;
@@ -71,7 +73,15 @@ export function TransitionDeferredDemo() {
 
       <div className="demo-section">
         <div className="demo-section-header">
-          <h3 className="demo-section-title"><span>🔎</span> useDeferredValue：输入保持即时，结果允许落后</h3>
+          <h3 className="demo-section-title"><span>🔎</span> useDeferredValue：直接消费 vs 延迟消费</h3>
+        </div>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
+          <button type="button" className="btn" aria-pressed={searchMode === "direct"} onClick={() => setSearchMode("direct")}>
+            Direct
+          </button>
+          <button type="button" className="btn" aria-pressed={searchMode === "deferred"} onClick={() => setSearchMode("deferred")}>
+            Deferred
+          </button>
         </div>
         <label>
           搜索
@@ -79,20 +89,20 @@ export function TransitionDeferredDemo() {
         </label>
         <div style={{ opacity: isStale ? 0.55 : 1, marginTop: 12 }}>
           <div className="demo-alert">
-            input value = <code>{query || "(empty)"}</code> · deferred value = <code>{deferredQuery || "(empty)"}</code> · stale = {String(isStale)}
+            mode = <code>{searchMode}</code> · input = <code>{query || "(empty)"}</code> · result query = <code>{resultQuery || "(empty)"}</code> · stale = {String(isStale)}
           </div>
-          <ExpensiveResults query={deferredQuery} />
+          <ExpensiveResults query={resultQuery} />
         </div>
       </div>
 
       <div className="demo-grid-2">
         <div className="demo-alert demo-alert-tip">
           <div className="demo-alert-title">Deferred ≠ debounce</div>
-          <p>Deferred 没有固定毫秒延迟，会尽快开始后台 render，且可被更紧急更新打断；它本身也不会减少网络请求。</p>
+          <p>Deferred 没有固定毫秒延迟，会尽快开始后台 render，且后台工作在机制上可被更紧急更新打断；它本身也不会减少网络请求。</p>
         </div>
         <div className="demo-alert demo-alert-warning">
-          <div className="demo-alert-title">不要把受控 input 自身放进 Transition</div>
-          <p>输入框 value 的更新应保持 urgent。把昂贵结果区、页面切换等非紧急更新放到 Transition/Deferred 层。</p>
+          <div className="demo-alert-title">这个 Demo 能证明什么？</div>
+          <p>它能观察 direct/deferred 的结果值、stale 状态和输入体验；它没有记录 React 丢弃的 render attempt，因此不能把某一次后台 render 标记为“已被中断”。</p>
         </div>
       </div>
     </div>
