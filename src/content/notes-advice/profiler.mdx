@@ -2,16 +2,16 @@
 
 ## 当前结论
 
-- Gate A Correctness：PARTIAL
+- Gate A Correctness：PASS
 - Gate B Demo Contract：PASS
 - Gate C Mental Model：PASS
-- 综合：核心 Profiler 指标、实验和“先测量再优化”的心智模型成立，但 production profiling 的版本/构建边界需要更明确。
+- 综合：Profiler 指标、实验、production profiling 边界和“先测量再优化”的心智模型现已对齐。
 
 ## 事实与版本边界
 
-React 19.2 中 `<Profiler>` 的 `onRender` 会在被测子树 commit 后提供 `actualDuration`、`baseDuration`、`startTime`、`commitTime` 等数据。`actualDuration` 是本次更新实际用于渲染 Profiler 子树的时间；`baseDuration` 是基于各组件最近 render duration 汇总出的“无优化重渲染整棵子树”的估算成本。
+React 19.2 中 `<Profiler>` 的 `onRender` 会在被测子树 commit 后提供 `actualDuration`、`baseDuration`、`startTime`、`commitTime` 等数据。`actualDuration` 是本次更新实际用于渲染 Profiler 子树的时间；`baseDuration` 是根据各组件最近 render duration 汇总出的“无优化重渲染整棵子树”的估算成本，不是关闭 memoization 后的一次真实计时。
 
-当前 Note 的主要问题是“需要接近真实用户时应验证 production build”这句话容易被理解成普通 production build 仍能直接采集 `<Profiler>` 数据。React 官方明确说明 profiling instrumentation 在普通 production build 中默认关闭；若要在生产优化级别下继续使用 `<Profiler>`，必须使用 profiling-enabled production build。
+Note 已明确普通 production build 默认关闭 profiling instrumentation。若要在接近生产优化条件下继续采集 `<Profiler>` 数据，需要使用 profiling-enabled production build / 对应 profiling 工具链，而不能把普通 production bundle 当成可直接运行 `onRender` 的环境。
 
 ## Mental Model
 
@@ -19,30 +19,22 @@ React 19.2 中 `<Profiler>` 的 `onRender` 会在被测子树 commit 后提供 `
 
 ## Demo ↔ Note
 
-Demo 的 `Profiler` 真正包裹 `ExpensiveList`，并记录真实 `actualDuration` / `baseDuration`。它还提供：
+Demo 的 `Profiler` 真正包裹 `ExpensiveList`，并记录真实 `actualDuration` / `baseDuration`。它提供 query 变化、无关父级更新、普通列表 vs `memo` 列表以及多条 sample 记录，因此 Note 声明的核心实验可以执行。
 
-- query 变化：相关 props 更新；
-- parent `themeTick`：无关父级更新；
-- 普通列表 vs `memo` 列表：比较 memoization 对 actual duration 的影响；
-- 多条 sample 记录：避免只看单次值。
-
-因此 Note 所声明的核心实验可实际执行，Gate B 通过。
-
-需要注意：`onRender` 中写入 `samples` 会引发当前 Demo 自身额外一次 parent render；代码用 `samplesUpdateRef` 跳过由采样 UI 自己触发的下一次记录。这是教学 harness 的实现细节，最好在 Source 说明里标注，以免学习者把它当成通用 profiler 聚合模式。
+`onRender` 中写入 samples 会引发教学 UI 自身更新；代码使用防护避免采样展示继续污染下一条记录。这属于 harness 实现细节，不改变实验事实，但不应被学习者照搬成通用遥测架构。
 
 ## 缺失边界 / 反例
 
-建议增加两个边界：
+当前关键边界已覆盖：
 
-1. 普通 production build 默认关闭 Profiler instrumentation；生产级测量需要 profiling build，或使用 React DevTools/浏览器 Performance tracks 的相应 profiling 配置。
-2. `baseDuration` 是估算值，不是“关闭 memoization 后实际一定会花费的时间”，不应作为绝对基准。
+1. 普通 production build 默认关闭 profiling instrumentation；
+2. `baseDuration` 是估算值；
+3. `<Profiler>` 只覆盖 React render/commit 相关数据，完整页面性能仍需浏览器 Performance/Network 等工具。
 
 ## 清晰度与工程决策
 
-当前“趋势而非单次数字”“相同操作复测”“React Profiler 与浏览器 Performance/Network 互补”都很好。生产决策应再明确：只有当测量证明 React render 本身是主要瓶颈时，才优先做 memoization；否则继续定位脚本、布局、绘制、网络或第三方代码。
+生产决策已明确：只有测量证明 React render 本身是主要瓶颈时，才优先做 memoization；否则继续定位脚本、布局、绘制、网络或第三方代码。
 
 ## 建议修改
 
-1. 将“验证 production build”改成“用 production-like/profiling-enabled build 复测；普通 production build 默认关闭 Profiler”。
-2. 把 `baseDuration` 明确写成估算的 worst-case render cost，而非实测基线。
-3. 在 Demo/Source 注释中说明 `samplesUpdateRef` 只是防止采样结果 UI 自己再次污染记录的教学防护。
+当前硬 Gate 已全部通过。后续若继续扩展，可在 Source 注释中补充采样 UI 防污染逻辑的教学目的，但不是 correctness blocker。
