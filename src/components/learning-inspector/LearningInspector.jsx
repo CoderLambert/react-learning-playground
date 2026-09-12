@@ -1,14 +1,12 @@
 import { useCallback, useEffect, useRef } from "react";
 import {
   DEFAULT_INSPECTOR_STATE,
-  INSPECTOR_TABS,
   WORKBENCH_DIMENSIONS,
 } from "../../workbench/constants";
+import { resolveInspectorPanels } from "../../workbench/inspectorPanels.js";
 import { clampInspectorWidth } from "./inspectorDimensions";
 import { useInspectorScrollMemory } from "./useInspectorScrollMemory";
 import "./LearningInspector.css";
-
-const TAB_LABELS = Object.freeze({ notes: "笔记", source: "源码", ai: "AI" });
 
 export function LearningInspector({
   learningUnit,
@@ -20,6 +18,7 @@ export function LearningInspector({
   notes,
   source,
   ai,
+  panels,
   className = "",
 }) {
   const {
@@ -31,6 +30,7 @@ export function LearningInspector({
   const resizeStateRef = useRef(null);
   const animationFrameRef = useRef(null);
   const { getPaneProps } = useInspectorScrollMemory(learningUnit?.id ?? "unknown");
+  const resolvedPanels = panels ?? resolveInspectorPanels({ notes, source, ai });
 
   const emitWidth = useCallback(
     (nextWidth) => {
@@ -194,72 +194,51 @@ export function LearningInspector({
         </header>
 
         <div className="learning-inspector-tabs" role="tablist" aria-label="学习面板内容">
-          {INSPECTOR_TABS.map((tab) => {
-            const selected = activeTab === tab;
+          {resolvedPanels.map((panel) => {
+            const selected = activeTab === panel.id;
             return (
               <button
-                key={tab}
-                id={`learning-inspector-tab-${tab}`}
+                key={panel.id}
+                id={`learning-inspector-tab-${panel.id}`}
                 type="button"
                 role="tab"
                 className={`learning-inspector-tab ${selected ? "is-active" : ""}`}
                 aria-selected={selected}
-                aria-controls={`learning-inspector-panel-${tab}`}
+                aria-controls={`learning-inspector-panel-${panel.id}`}
                 tabIndex={selected ? 0 : -1}
-                onClick={() => onTabChange?.(tab)}
+                onClick={() => onTabChange?.(panel.id)}
               >
-                {TAB_LABELS[tab] ?? tab}
+                {panel.label ?? panel.id}
               </button>
             );
           })}
         </div>
 
         <div className="learning-inspector-body">
-          <section
-            {...getPaneProps("notes")}
-            id="learning-inspector-panel-notes"
-            role="tabpanel"
-            aria-labelledby="learning-inspector-tab-notes"
-            hidden={activeTab !== "notes"}
-            className="learning-inspector-pane"
-          >
-            {notes ?? <InspectorPlaceholder kind="notes" />}
-          </section>
-
-          <section
-            {...getPaneProps("source")}
-            id="learning-inspector-panel-source"
-            role="tabpanel"
-            aria-labelledby="learning-inspector-tab-source"
-            hidden={activeTab !== "source"}
-            className="learning-inspector-pane"
-          >
-            {source ?? <InspectorPlaceholder kind="source" />}
-          </section>
-
-          <section
-            {...getPaneProps("ai")}
-            id="learning-inspector-panel-ai"
-            role="tabpanel"
-            aria-labelledby="learning-inspector-tab-ai"
-            hidden={activeTab !== "ai"}
-            className="learning-inspector-pane"
-          >
-            {ai ?? <InspectorPlaceholder kind="ai" />}
-          </section>
+          {resolvedPanels.map((panel) => (
+            <section
+              key={panel.id}
+              {...getPaneProps(panel.id)}
+              id={`learning-inspector-panel-${panel.id}`}
+              role="tabpanel"
+              aria-labelledby={`learning-inspector-tab-${panel.id}`}
+              hidden={activeTab !== panel.id}
+              className="learning-inspector-pane"
+            >
+              {panel.content ?? <InspectorPlaceholder panel={panel} />}
+            </section>
+          ))}
         </div>
       </div>
     </aside>
   );
 }
 
-function InspectorPlaceholder({ kind }) {
-  const labels = {
-    notes: ["笔记区域", "等待 MDX Runtime 注入当前知识点笔记。"],
-    source: ["源码区域", "等待 SourceViewer 注入当前 Demo 源码。"],
-    ai: ["AI 区域", "等待 AI 学习助手注入当前笔记与源码上下文。"],
-  };
-  const [title, description] = labels[kind] ?? labels.notes;
+function InspectorPlaceholder({ panel }) {
+  const [title, description] = panel?.placeholder ?? [
+    `${panel?.label ?? "内容"}区域`,
+    "当前面板暂未提供内容。",
+  ];
 
   return (
     <div className="learning-inspector-placeholder">
