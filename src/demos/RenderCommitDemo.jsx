@@ -1,28 +1,52 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export function RenderCommitDemo() {
   const [count, setCount] = useState(0);
   const [themeTick, setThemeTick] = useState(0);
-  const [observation, setObservation] = useState("尚未触发更新");
   const countNodeRef = useRef(null);
+  const observationNodeRef = useRef(null);
+  const mutationSeenRef = useRef(false);
+  const pendingLabelRef = useRef("");
 
   const text = `Count: ${count}`;
 
-  function observeAfterCommit(label) {
+  useEffect(() => {
+    const node = countNodeRef.current;
+    if (!node) return undefined;
+
+    const observer = new MutationObserver(() => {
+      mutationSeenRef.current = true;
+      if (observationNodeRef.current) {
+        observationNodeRef.current.textContent = `${pendingLabelRef.current || "更新"} → MutationObserver：Count DOM 发生了 mutation`;
+      }
+    });
+
+    observer.observe(node, { childList: true, characterData: true, subtree: true });
+    return () => observer.disconnect();
+  }, []);
+
+  function observeNextBrowserFrame(label) {
+    pendingLabelRef.current = label;
+    mutationSeenRef.current = false;
+    if (observationNodeRef.current) {
+      observationNodeRef.current.textContent = `${label} → 等待观察 Count DOM`;
+    }
+
     requestAnimationFrame(() => {
-      const domText = countNodeRef.current?.textContent ?? "(DOM unavailable)";
-      setObservation(`${label} → 浏览器在 React commit 后读到：${domText}`);
+      if (!mutationSeenRef.current && observationNodeRef.current) {
+        observationNodeRef.current.textContent = `${label} → 下一浏览器帧：未观察到 Count DOM mutation`;
+      }
     });
   }
 
   function updateCount() {
+    observeNextBrowserFrame("count state 更新");
     setCount((c) => c + 1);
-    observeAfterCommit("count state 更新");
   }
 
   function updateUnrelatedState() {
+    observeNextBrowserFrame("无关 state 更新");
     setThemeTick((t) => t + 1);
-    observeAfterCommit("无关 state 更新");
   }
 
   return (
@@ -30,7 +54,7 @@ export function RenderCommitDemo() {
       <div className="demo-header-card">
         <div className="demo-header-top"><h2 className="demo-title"><span>🏗️</span> Trigger → Render → Commit</h2><span className="badge badge-blue">02-06</span></div>
         <p className="demo-desc">更新先触发 React 调用组件计算下一份 UI（Render），再把必要变化提交到宿主环境（浏览器里通常是 DOM Commit）。组件发生 render，不代表某个 DOM 节点一定会改变。</p>
-        <div className="demo-meta-tags"><span className="badge badge-gray">Trigger</span><span className="badge badge-gray">Render</span><span className="badge badge-gray">Commit</span><span className="badge badge-gray">Paint</span></div>
+        <div className="demo-meta-tags"><span className="badge badge-gray">Trigger</span><span className="badge badge-gray">Render</span><span className="badge badge-gray">Commit</span><span className="badge badge-gray">DOM mutation</span></div>
       </div>
 
       <div className="demo-section">
@@ -42,7 +66,7 @@ export function RenderCommitDemo() {
           <div style={{ padding: 16, background: "var(--bg-surface-secondary)", borderRadius: 10 }}>
             <strong ref={countNodeRef} style={{ fontSize: 28 }}>{text}</strong>
             <div style={{ marginTop: 12 }}>themeTick：{themeTick}</div>
-            <div className="demo-alert demo-alert-tip" style={{ marginTop: 12 }}>{observation}</div>
+            <div ref={observationNodeRef} className="demo-alert demo-alert-tip" style={{ marginTop: 12 }}>尚未触发更新</div>
           </div>
         </div>
       </div>
@@ -55,7 +79,8 @@ export function RenderCommitDemo() {
         <p><strong>4 Browser Paint：</strong>浏览器在 DOM 更新后进行布局与绘制；它不是 React 的 render phase，而且浏览器何时实际绘制由浏览器调度决定。</p>
       </div>
 
-      <div className="demo-alert demo-alert-warning"><strong>反模式：</strong>为了“统计 render 次数”而在组件函数执行期间修改 ref 或外部计数器，本身就会破坏纯 render 约束。调试 render 行为优先使用 React DevTools Profiler；业务副作用放事件处理器，外部系统同步放 Effect。</div>
+      <div className="demo-alert demo-alert-tip"><strong>实验探针：</strong>这里用 <code>MutationObserver</code> 只观察 Count 节点是否真的发生 DOM mutation；<code>requestAnimationFrame</code> 仅用于在下一浏览器帧给出“未观察到 mutation”的结果，它不是 React commit callback，也不统计组件 render 次数。</div>
+      <div className="demo-alert demo-alert-warning" style={{ marginTop: 10 }}><strong>反模式：</strong>不要为了“统计 render 次数”而在组件函数执行期间修改 ref 或外部计数器，这会给纯 render 引入副作用。需要组件执行/耗时证据时使用 React DevTools Profiler；需要浏览器 layout/paint 证据时使用浏览器 Performance 工具。</div>
     </div>
   );
 }

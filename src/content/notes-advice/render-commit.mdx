@@ -2,29 +2,27 @@
 
 ## Verdict
 
-心智模型基本准确，但 Note 的核心实验目前无法按描述执行：Note 要求“观察 render 日志并找出组件重新执行但 DOM 不变”，Demo 没有 render 日志或任何可观察的组件执行计数，只能看到按钮操作后读取到的 DOM 文本。因此 Demo Contract 未通过。
+核心心智模型准确，且 Demo/Note 现在只承诺它们真正能证明的现象：两次 state 更新都会让 React 处理更新，但 Count 节点是否发生 DOM mutation 由 `MutationObserver` 直接观察。原先把 `requestAnimationFrame` 暗示成“commit 后读数”的问题已消除，也不再声称 Demo 提供不存在的 render 日志。Gate A/B/C 均通过。
 
 ## Hard gates
 
-- **Gate A — Correctness: PASS with wording caution**。Trigger → Render → Commit 是 React 官方教学模型；组件 render 后 React 只把必要的最小 DOM 操作提交到浏览器。Browser paint 属于浏览器阶段，不等同 React render/commit。render 必须纯，因为 React 可以重复调用渲染逻辑。
-- **Gate B — Demo Contract: FAIL**。`DemoReference` 要求“记录 trigger、组件执行和可见 DOM 变化”，Experiment 还明确说“观察 render 日志”，但 Demo 没有 render log/计数。`requestAnimationFrame` 只在后续帧读取 DOM 文本，不能证明组件函数执行次数。
-- **Gate C — Mental Model: PASS**。学习者能理解“组件重新计算 ≠ 某个 DOM 节点必然变化”，但当前实验无法自己验证 render 这一半。
+- **Gate A — Correctness: PASS**。Trigger → Render → Commit 与 React 19.2 官方教学模型一致；React 只把必要变化提交到宿主环境，browser paint 是浏览器阶段。`requestAnimationFrame` 被明确限定为浏览器帧 API，不再承担 React commit instrumentation 的含义。
+- **Gate B — Demo Contract: PASS**。Experiment 现在要求比较 count 更新与无关 state 更新时 Count 节点的真实 DOM mutation；Demo 通过 `MutationObserver` 实际提供这一证据。Note 不再承诺不存在的 render 日志或组件执行计数。
+- **Gate C — Mental Model: PASS**。学习者可以区分“请求更新 / React 计算 / 某个 DOM 节点真的改变 / 浏览器绘制”这些不同层级，并知道何时应使用 React Profiler 或浏览器 Performance 工具。
 
-## Important gaps / boundaries
+## Important boundaries
 
-1. 不要把 `requestAnimationFrame` 教成 React 的“commit callback”。它是浏览器帧调度 API；这个 Demo 只是利用下一帧时机读取已经提交的 DOM，并不能直接观察 React commit 内部事件。
-2. `useLayoutEffect` 可以观察 commit 后、浏览器 repaint 前的同步 Effect 时机，但本课若引入它会增加额外概念；更简单的方案是明确 Demo 只比较状态更新后的 DOM 结果。
-3. 开发环境 Strict Mode 可能额外调用 render 逻辑用于发现纯度问题；若未来加入 render counter，需要明确 development-only 影响，不能把 dev 次数当 production 次数。
-4. “重新 render 不等于昂贵 DOM 操作”正确，但 Profiler 测量的是 React render/commit 性能信息，并不等价于浏览器完整 layout/paint 性能分析。
+1. `MutationObserver` 只证明被观察 DOM 子树发生了 mutation，不等价于完整 React commit tracing。
+2. `requestAnimationFrame` 只在下一浏览器帧结束观察窗口；它不是 commit callback，也不提供 render 次数。
+3. 开发 Strict Mode、并发调度等会影响组件函数执行行为，因此没有在 render 中写 ref/外部计数器制造教学数字。
+4. React DevTools Profiler 用于 React render/commit 成本；浏览器 layout/paint 仍需浏览器性能工具，两者不要混用。
 
 ## Clarity / engineering usefulness
 
-Note 的阶段拆分很清楚，问题主要是实验承诺过度。当前 Demo 已经能很好展示“更新无关 state 时 Count 文本不变”，只需要让 Note 与可观察事实对齐，或补真正的 render instrumentation。
+现在实验与课程边界更干净：Demo 负责真实可见的 DOM 证据，Note 负责解释 React 阶段模型；没有为了“看起来可观测”而伪造内部生命周期。
 
 ## Recommended changes
 
-- 二选一：
-  1. 在 Demo 增加开发教学用 render 记录，并清楚标注 Strict Mode 会影响开发环境次数；同时把“DOM 文本是否变化”作为另一列观察结果。
-  2. 更简单：收窄 Note，删除“观察 render 日志/组件执行次数”，改成“触发两个 state 更新并比较 Count DOM 是否改变”，把 render 发生这一点通过 Source/React 模型解释。
-- 将 `requestAnimationFrame` 文案从“React commit 后读到”改成“下一浏览器帧读取当前 DOM”，避免暗示它是 commit 生命周期钩子。
-- production decision rule：**render 次数只是诊断信号；先确认实际计算成本和 commit/浏览器工作，再决定是否优化。**
+当前无阻塞修改。若以后希望直接教学组件执行次数，应另设专门 Profiler/Strict Mode 实验，而不是在本课 render 期间增加有副作用的计数器。
+
+生产决策规则：**先判断成本发生在 React 计算、DOM commit，还是浏览器 layout/paint，再选择对应工具测量；不要用单一 render 次数替代性能证据。**

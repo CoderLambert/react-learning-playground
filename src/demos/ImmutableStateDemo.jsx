@@ -10,16 +10,34 @@ const initialTasks = [
   { id: 2, title: "掌握不可变更新", done: false },
 ];
 
+const initialMutationProbe = {
+  city: "London",
+};
+
 export function ImmutableStateDemo() {
   const [profile, setProfile] = useState(initialProfile);
   const [tasks, setTasks] = useState(initialTasks);
   const [previousProfile, setPreviousProfile] = useState(initialProfile);
+  const [mutationProbe, setMutationProbe] = useState(initialMutationProbe);
+  const [unrelatedRender, setUnrelatedRender] = useState(0);
 
   function changeCity() {
     setPreviousProfile(profile);
     setProfile((current) => ({
       ...current,
       address: { ...current.address, city: current.address.city === "London" ? "Tokyo" : "London" },
+    }));
+  }
+
+  function mutateSameReference() {
+    mutationProbe.city = mutationProbe.city === "London" ? "Tokyo" : "London";
+    setMutationProbe(mutationProbe);
+  }
+
+  function updateProbeWithCopy() {
+    setMutationProbe((current) => ({
+      ...current,
+      city: current.city === "London" ? "Tokyo" : "London",
     }));
   }
 
@@ -52,7 +70,7 @@ export function ImmutableStateDemo() {
           <div>
             <h3 className="demo-section-title">嵌套对象</h3>
             <p>{profile.name} · {profile.address.city}, {profile.address.country}</p>
-            <button className="btn" type="button" onClick={changeCity}>切换城市</button>
+            <button className="btn" type="button" onClick={changeCity}>切换城市（copy）</button>
             <div className="demo-alert demo-alert-tip" style={{ marginTop: 12 }}>上一个对象 === 当前对象：<strong>{String(previousProfile === profile)}</strong><br />未修改字段复用，修改路径创建新对象。</div>
           </div>
           <div>
@@ -60,6 +78,19 @@ export function ImmutableStateDemo() {
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}><button className="btn" onClick={addTask}>append</button><button className="btn" onClick={removeDone}>remove done</button><button className="btn" onClick={reverse}>copy + reverse</button></div>
             {tasks.map((task) => <label key={task.id} style={{ display: "flex", gap: 8, padding: "6px 0" }}><input type="checkbox" checked={task.done} onChange={() => toggleTask(task.id)} />{task.title}</label>)}
           </div>
+        </div>
+      </div>
+
+      <div className="demo-section">
+        <h3 className="demo-section-title">反例实验：mutate + set 同一个引用</h3>
+        <p>React 当前渲染出的城市：<strong>{mutationProbe.city}</strong> · 无关 render 次数：{unrelatedRender}</p>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <button className="btn" type="button" onClick={mutateSameReference}>错误：mutate + set 同引用</button>
+          <button className="btn" type="button" onClick={() => setUnrelatedRender((count) => count + 1)}>触发一次无关 render</button>
+          <button className="btn" type="button" onClick={updateProbeWithCopy}>正确：copy + set 新引用</button>
+        </div>
+        <div className="demo-alert demo-alert-warning" style={{ marginTop: 12 }}>
+          先点“错误”按钮：对象已经在事件处理器里被改写，但 setter 收到的仍是同一个对象引用，React 可以跳过这次更新，所以 DOM 不一定立刻变化。再触发一次无关 render，先前被偷偷改写的值会暴露出来——这正是 mutation 破坏旧 snapshot 的问题。
         </div>
       </div>
 
