@@ -2,20 +2,37 @@
 
 Transition 让某些更新以非阻塞方式在后台渲染；`useDeferredValue` 让一部分 UI 暂时继续使用旧值，同时 React 尝试用新值完成后台 render。
 
-<MentalModel title="输入必须立即响应，昂贵结果可以稍后跟上">urgent update 负责输入框、按钮反馈等直接交互；transition/deferred work 负责允许被新更新打断、稍后提交的非紧急 UI。它们不是让计算消失，而是改变调度与呈现方式。</MentalModel>
+<MentalModel title="输入必须立即响应，昂贵结果可以稍后跟上">urgent update 负责输入框、按钮反馈等直接交互；transition/deferred work 负责允许稍后提交的非紧急 UI。它们不会让计算消失，而是改变调度与呈现优先级。</MentalModel>
 
-<Compare leftTitle="useTransition" rightTitle="useDeferredValue" leftItems={["你控制触发更新的位置", "startTransition 包住非紧急 setState", "isPending 可表达过渡状态"]} rightItems={["你拿到一个可能滞后的值", "适合无法控制上游 setState 时延迟消费", "旧内容可保持并标记 stale"]} />
+<Compare
+  leftTitle="useTransition"
+  rightTitle="useDeferredValue"
+  left={["你控制触发更新的位置", "startTransition 包住非紧急 setState", "isPending 可表达过渡状态"]}
+  right={["你拿到一个可能滞后的值", "适合无法控制上游 setState 时延迟消费", "旧内容可保持并标记 stale"]}
+/>
 
-<Experiment title="快速输入并制造慢列表">
-运行中间 Demo 连续快速键入。比较直接更新、Transition 和 deferred value：观察输入是否保持响应、结果区是否暂时显示旧内容，以及新的输入如何打断尚未提交的后台 render。
+<Experiment title="先比较 Direct / Deferred，再观察 Transition">
+在搜索区先选择 Direct，快速输入并观察昂贵结果直接跟随 `query`；再切到 Deferred，重复输入，观察 `input` 与 `result query` 暂时分离以及 `stale` 状态。然后在上方快速切换 tab，观察 urgent tab selection 与 Transition 中的内容更新如何分开，以及 `isPending` 如何反映过渡状态。
 </Experiment>
 
-<Observation>Transition 不适合控制文本输入本身；输入的 State 应同步更新。`useDeferredValue` 也不是 debounce：它没有固定毫秒延迟，而是与 React 渲染调度协作。</Observation>
+<DemoReference action="在 Direct 与 Deferred 两种模式下输入同样的查询，再快速切换 tab" observe="比较输入值、结果 query、stale、urgent tab、committed content 与 isPending；不要把某次未提交 render 解释为已经被 Demo 直接捕获。" />
+
+<Observation>Transition 不适合控制文本输入本身；输入的 State 应同步更新。`useDeferredValue` 也不是 debounce：它没有固定毫秒延迟，而是与 React 渲染调度协作。`startTransition` 的 callback 会立即执行，非阻塞/可中断的是被标记更新对应的渲染工作，而不是 callback 像定时器一样延后执行。</Observation>
 
 <AntiPattern title="把所有更新都包进 startTransition">非紧急只是 UX 语义，不是“性能优化开关”。错误标记会延迟本应立即反馈的界面。</AntiPattern>
 
-<Boundary>网络请求的频率控制仍可能需要 debounce/throttle/cache；Transition 主要协调 React render，不替代请求层策略。</Boundary>
+<Boundary title="机制事实 ≠ 当前 Demo 的直接证据">
+React 19.2 的 `useDeferredValue` 后台 render 在机制上可以被更紧急更新打断并重新开始；但当前 Demo 没有记录 render attempt/abandon，因此只能直接观察旧值继续显示、`stale` 状态与最终提交结果，不能声称已经定位到某一次后台 render 被中断。网络请求的频率控制也仍可能需要 debounce/throttle/cache；Transition/Deferred 不替代请求层策略。
+</Boundary>
 
-<Summary items={["urgent UI 保持即时", "Transition 标记可中断的非紧急更新", "deferred value 允许消费者暂时用旧值", "它们不是 debounce"]} />
+<Boundary title="为什么昂贵结果组件使用 memo">
+Deferred 模式下，父组件的 urgent render 仍会发生。把昂贵结果子树用 `memo` 隔离后，当它收到的 `resultQuery` 仍是旧值时可以跳过重复工作；随后 React 再用新的 deferred value 尝试后台 render。否则父 render 自身仍可能重新执行昂贵子树，掩盖 deferred value 想表达的调度边界。
+</Boundary>
 
-<FurtherReading links={[{label:"React: useTransition",href:"https://react.dev/reference/react/useTransition"},{label:"React: useDeferredValue",href:"https://react.dev/reference/react/useDeferredValue"}]} />
+<Summary>
+- urgent UI 保持即时；Transition 标记非紧急更新。
+- `useDeferredValue` 让消费者暂时使用旧值，并可显式标记 stale。
+- Direct/Deferred 对照能观察呈现差异，但当前 Demo 不声称捕获 React 内部被丢弃的 render attempt。
+- Transition/Deferred 都不是 debounce，也不会自动减少请求或计算总量。
+</Summary>
+<FurtherReading items={[{label:"React: useTransition",href:"https://react.dev/reference/react/useTransition"},{label:"React: useDeferredValue",href:"https://react.dev/reference/react/useDeferredValue"}]} />

@@ -1,0 +1,51 @@
+# not-need-effect 审核建议
+
+## 当前结论
+
+- Gate A Correctness：**PASS**
+- Gate B Demo Contract：**PASS**
+- Gate C Mental Model：**PASS**
+
+## 当前判断
+
+核心判断正确：可在 render 中派生的数据不应再复制到 State 并通过 Effect 同步；由明确用户动作触发的业务逻辑通常应留在对应 Event Handler；`key` 可以表达“这是另一个组件身份”，从而重置子树 State。
+
+原 Note 曾声称 Demo 可以实际比较“Effect 把派生值写回 State”和“render 直接计算”，并观察前者多一次 render/commit 和短暂旧值；但 Demo 的错误版本只是静态代码。现在 Experiment 已收窄到 Demo 真正可执行的三组交互：render 派生过滤、Event Handler 购买日志、以及 `key` 身份切换后的草稿重置，并明确静态反模式代码不是 render-count 实验。因此 Demo / Note / Source 不再互相过度承诺。
+
+## 事实与 React 19.2 边界
+
+React 官方把 Effect 定位为与 React 外部系统同步的 escape hatch。若值可以由现有 props/state 在 render 中计算，额外保存派生 State 再在 Effect 中同步会形成不必要的级联更新；明确用户动作的因果逻辑通常也应留在对应 Event Handler。
+
+“无外部系统先不用 Effect”是良好默认判断，但不是机械禁令。浏览器 API、网络连接、第三方 widget 等外部同步仍是 Effect 的典型用途。
+
+## Mental Model
+
+学习者现在可以回答：
+
+- 为什么重复保存可派生数据会制造第二份事实来源；
+- 为什么用户点击导致的业务动作属于 Event Handler，而不是“看到某个 State 变化后再猜发生了什么”；
+- 为什么 `key` 重置表达的是组件身份变化，而不是一个通用的“清空 State 技巧”。
+
+## Demo ↔ Note
+
+三项 Note 实验均能在 Demo 中真实执行：
+
+1. 搜索词/分类改变后，列表由当前输入直接派生；
+2. 点击购买后，日志由当前点击 handler 直接产生；
+3. 输入留言后切换用户，`key={userId}` 触发新的组件身份和新的本地 State。
+
+静态“Effect + derived State”代码块被明确标注为反模式说明，不再冒充可观测的双路径性能实验。
+
+## 边界 / 反例
+
+- 昂贵纯计算仍属于 render 逻辑；是否 memoize 应由实际成本和测量决定。
+- `key` 重置只适用于切换实体后确实应丢弃本地状态的产品语义；若需要按实体保留草稿，应改变 State ownership。
+- “不需要 Effect”不等于“不能有 side effect”；由用户动作直接触发的 side effect 应放在对应事件路径中。
+
+## 生产决策规则
+
+先问值是否能由当前 props/state 计算；再问逻辑是否由明确用户动作直接触发；只有当组件需要因为“被渲染/当前同步目标存在”而与 React 外部系统保持同步时，才优先考虑 Effect。
+
+## 建议修改
+
+本轮硬 Gate 已关闭。后续若希望教学“额外 render pass”的性能证据，应另加真正的双路径 instrumentation，而不要仅靠静态代码块声称已在 Demo 中观察到 render 次数。

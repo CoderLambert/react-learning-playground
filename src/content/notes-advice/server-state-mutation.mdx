@@ -1,0 +1,48 @@
+# server-state-mutation 审核建议
+
+## 当前结论
+
+- Gate A Correctness：PASS
+- Gate B Demo Contract：PASS
+- Gate C Mental Model：PASS
+- 综合：请求竞态、Abort/race guard、query identity 与 optimistic confirm/rollback 都有可执行实验，并明确与 TanStack Query runtime 区分。
+
+## 事实与版本边界
+
+Abort 只表示客户端协作取消；它不能倒推服务端一定没有收到或处理请求，因此仍需要 stale-result guard、幂等性和服务端一致性设计。当前 Note 的边界表述准确。
+
+TanStack Query v5 会向 queryFn 提供 `AbortSignal`。默认情况下，已经变成 unused 的 query Promise 可以继续完成并进入 cache；当 queryFn 真正消费 signal 时，底层 Promise/请求可随取消协作终止，并使 query 状态回退。Demo 的说明与当前官方文档一致。
+
+Optimistic Updates 官方文档同样区分两条路径：仅在单个 UI 展示时可利用 mutation variables；需要共享 cache 时可在 `onMutate` 中 cancel 相关查询、snapshot 旧值、`setQueryData`，失败时 rollback，settled 后再 invalidation/refetch。Demo 的定位准确。
+
+## Mental Model
+
+“网络响应顺序与用户意图顺序是两条时间线”是本课最重要的模型。取消旧工作与阻止旧结果提交是两道不同防线；optimistic state 又必须有最终 confirm/rollback 路径。这些规则能迁移到任意数据层，而不是只记 TanStack API。
+
+## Demo ↔ Note
+
+Demo 可真实执行 Note 中的实验：
+
+- 先 slow、立即 fast：前一个请求被 abort，同时 request id guard 防止旧结果提交；
+- `cancel current`：直接观察 AbortError 路径；
+- pagination 区域明确展示 page 进入 query key；
+- optimistic add 立即生成 pending item；
+- 切换 `failNext` 可分别观察成功 confirm 与失败 rollback。
+
+因此 Gate B 通过。分页这里只教学 query identity，没有真实分页 fetch；Note 的核心 Experiment 也没有声称分页请求本身可执行，所以不构成 contract mismatch。
+
+## 缺失边界 / 反例
+
+建议补充并发 mutation 的边界。当前 `failNext` 是全局布尔值，若连续快速触发多个 optimistic mutation，哪个请求消费失败标记及 confirm 顺序并不是一个健壮的并发 mutation 模型。真实项目应给每次 mutation 独立 identity/context，并处理并发 optimistic 更新的顺序与冲突。
+
+另外，临时 id 和服务端 canonical id 的替换可能影响 React key/本地 UI identity；生产系统通常需要稳定 client mutation id 或明确 reconciliation 策略，而不是只用 `Date.now()`。
+
+## 清晰度与工程决策
+
+当前生产规则较完整：query 负责读取生命周期，mutation 负责写入；共享 cache optimistic update 要先防止 refetch 覆盖，再保留 rollback snapshot，最后由服务端结果/invalidation 收敛。领域级幂等、冲突和事务不应推给 React 或查询库。
+
+## 建议修改
+
+1. 增加“并发 optimistic mutations 需要独立 mutation identity/context”的边界。
+2. 提醒 optimistic 临时 id → canonical id 的 reconciliation 可能影响 UI identity。
+3. 保留 Demo 非 TanStack runtime 的显式声明，避免把教学 `requestIdRef` / `failNext` 当库 API 行为。

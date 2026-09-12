@@ -1,0 +1,25 @@
+# form-action 审核建议
+
+## 当前结论
+
+- Gate A Correctness：**PASS**
+- Gate B Demo Contract：**PASS**
+- Gate C Mental Model：**PASS**
+
+## 审核要点
+
+Note 与 React 19.2 `<form action={fn}>` 语义一致：函数 Action 接收本次 `FormData`，函数 `action` 可以被提交按钮的 `formAction` 覆盖；成功后 React 会重置表单中的非受控字段。Demo 的 publish / saveDraft 两条路径是真实可执行的不同提交意图，和 Note 的 Experiment 对齐。
+
+“Action 不是 onSubmit 的语法糖”这一点也表达得好：`onSubmit` 仍用于直接处理 submit event / `preventDefault()` 等事件级需求，而函数 Action 进入 React 的 Action/Transition 提交模型。
+
+## 边界与生产决策
+
+- Action 负责组织 pending/error/optimistic 等提交流程，不替代业务校验、鉴权、幂等性或服务端事务。
+- 非受控字段的自动 reset 只发生在 Action 成功后；受控字段仍由 React State 决定是否清空。
+- 如果 Action 抛出异常，可由最近的 Error Boundary 处理；预期业务错误通常更适合作为显式结果返回并渲染。
+
+## 建议修改
+
+1. Timeline 可把“成功提交”改成“Action 成功完成”，避免与服务器一定成功绑定。
+2. 可提醒学习者 `formAction` 不需要额外把“点击了哪个按钮”存入 State，这是 Demo 已经体现的工程优势。
+3. 当前 Note/Demo 已形成完整实验闭环，不需要额外模板化扩写。

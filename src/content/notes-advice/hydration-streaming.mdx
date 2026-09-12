@@ -1,0 +1,45 @@
+# hydration-streaming 审核建议
+
+## 当前结论
+
+- Gate A Correctness：PASS
+- Gate B Demo Contract：PASS（本分支明确模拟边界后）
+- Gate C Mental Model：PASS
+- 综合：HTML 可见、streaming boundary reveal、客户端 JavaScript 执行和 hydration 完成被正确拆成不同阶段。原 Experiment 容易让学习者误以为当前 SPA Demo 真正在执行 `hydrateRoot` 并测量“按钮何时可交互”；本分支已明确它只是 streaming 阶段与 MATCH/MISMATCH 契约模拟器。
+
+## 事实与 React 19.2 边界
+
+React 官方将 `hydrateRoot` 定义为把 React 连接到由 `react-dom/server` 预先生成的 HTML；客户端初始输出应与服务端标记一致，mismatch 应视为 bug。开发模式会报告 mismatch，但 React 不保证修补所有属性差异。
+
+`renderToPipeableStream` / `renderToReadableStream` 允许 HTML 按 Suspense 边界逐步输出；真实 flush、网络传输、资源加载和 hydration 调度仍受 runtime / Framework 组织。Streaming SSR 与 RSC payload 不是同一概念。
+
+## Mental Model
+
+本课能让学习者区分“用户已经看到 HTML”和“React 已经建立客户端交互能力”这两个里程碑，也能解释为什么随机数、当前时间或首屏直接读取 browser-only 状态会造成 hydration mismatch。
+
+## Demo ↔ Note
+
+当前 Demo 能真实做到的是：
+
+- 手动 reveal shell / fallback / replacement 三个概念阶段；
+- 对比固定 server HTML 与可修改的 client-first-render 字符串；
+- 显示 MATCH / MISMATCH，并说明 mismatch 不是普通业务同步；
+- 展示 PipeableStream / ReadableStream 的 runtime 边界说明。
+
+它不能真实执行服务端 stream、浏览器逐块解析或 `hydrateRoot`；页面中的“模拟 hydrateRoot”按钮本身已经运行在一个 hydrated/client-rendered React 应用里。本分支已把 Note 的 Experiment、DemoReference 和 Boundary 改成这一事实，因此 Gate B 通过。
+
+## 缺失边界 / 反例
+
+建议后续增加一个真正的 SSR fixture 或 Framework integration test，再观察 response chunk、服务端 HTML 与 hydration console error。否则不要用当前模拟器给出真实 TTFB/FCP/INP 或“某按钮何时可点击”的性能结论。
+
+另一个重要边界是 `suppressHydrationWarning` 只适用于不可避免的局部差异，不能递归修复整棵子树的错误模型，也不能作为随机首屏输出的常规方案。
+
+## 清晰度与工程决策
+
+生产决策规则应是：先保证首屏输入确定且 server/client 一致；需要提前可见内容时使用框架支持的 SSR/streaming；需要测交互就绪时在真实 runtime 测量，而不是从 HTML 到达时间推断。
+
+## 建议修改
+
+1. 保留“当前 Demo 是概念模拟器”的显式文字。
+2. 后续真实 SSR 示例应捕获 hydration mismatch warning，而不是继续扩大字符串对比模拟。
+3. 性能课程中明确区分 server flush、HTML paint、JS download、hydration 和真实用户交互指标。

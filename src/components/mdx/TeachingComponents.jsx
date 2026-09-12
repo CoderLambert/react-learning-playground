@@ -49,12 +49,25 @@ export function Summary({ title = "核心结论", children }) {
   return <TeachingBlock tone="summary" eyebrow="Summary" title={title}>{children}</TeachingBlock>;
 }
 
-export function Compare({ left, right, leftTitle = "错误模型", rightTitle = "推荐模型", children }) {
+export function Compare({
+  left,
+  right,
+  leftTitle = "错误模型",
+  rightTitle = "推荐模型",
+  children,
+}) {
   if (children && left == null && right == null) return <TeachingBlock eyebrow="对比">{children}</TeachingBlock>;
+
   return (
     <section className="mdx-compare" aria-label="方案对比">
-      <article className="mdx-compare-pane mdx-compare-bad"><h3>{leftTitle}</h3><div>{left}</div></article>
-      <article className="mdx-compare-pane mdx-compare-good"><h3>{rightTitle}</h3><div>{right}</div></article>
+      <article className="mdx-compare-pane mdx-compare-bad">
+        <h3>{leftTitle}</h3>
+        <div>{left}</div>
+      </article>
+      <article className="mdx-compare-pane mdx-compare-good">
+        <h3>{rightTitle}</h3>
+        <div>{right}</div>
+      </article>
     </section>
   );
 }

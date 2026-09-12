@@ -171,7 +171,7 @@ export function ComponentJsxPureRenderDemo() {
           <div className="demo-alert-title">为什么 React 强调 Purity？</div>
           <div>
             React 在开发环境的 StrictMode 中会额外调用组件函数来帮助发现非纯逻辑；并发渲染也可能暂停、丢弃或重新开始一次 render。
-            因此 render 只能计算 JSX。网络请求、写日志服务、修改 DOM、写外部变量等副作用应放在事件处理器，确实由“组件正在显示”驱动的外部同步再考虑 Effect。
+            因此 render 只负责计算 UI。副作用应离开 render：由明确用户动作触发的工作通常放在 Event Handler；需要让当前 UI 与 React 外部系统持续保持同步时再考虑 Effect；数据获取还应结合所用框架或数据层的职责边界判断。
           </div>
         </div>
       </div>

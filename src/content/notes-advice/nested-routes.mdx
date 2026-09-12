@@ -1,0 +1,46 @@
+# nested-routes 审核建议
+
+## 当前结论
+
+- Gate A Correctness：PASS
+- Gate B Demo Contract：PASS（本分支对 Note 的实验描述收口后）
+- Gate C Mental Model：PASS
+- 综合：route tree / layout / Outlet / index route / pathless layout route 的模型准确。原 Note 要求观察真实浏览器历史与生命周期，但 Demo 明确只是 route-match 模拟器；本分支已把 Experiment / DemoReference 改为当前 Demo 真正能观察的 matched chain 与 Outlet 边界。
+
+## 事实与版本边界
+
+Nested routing、Outlet、index route、layout route 都属于具体 Router/Framework 的路由能力，不是 React Core API。React 只负责组件组合和渲染；Note 已明确这一层边界。
+
+“父布局继续存在”应理解为同一父 route 仍位于新旧 matched route chain 中时，Router 可以复用该布局实例和其状态边界，而不是由 URL 斜杠数量自动保证组件永不重建。重建还会受 route identity、key、Router 实现和应用结构影响。
+
+## Mental Model
+
+本课最有价值的模型是“URL 信息架构 → route match chain → layout / Outlet 组合树”。学习者不应把 nested route 记成字符串拼接规则，而应知道每一级 route 可以承担布局、数据、错误和 pending 边界，Outlet 是下一层匹配结果进入父布局的位置。
+
+## Demo ↔ Note
+
+当前 Demo 没有安装 React Router，并明确说明它只展示等价的 match 结果。修复 Note 后，实验可以真实完成：
+
+- 比较 `/dashboard` 与 `/dashboard/settings` 的共同 matched chain；
+- 识别 `DashboardLayout` 是共同父层、变化发生在最深层 Outlet 内容；
+- 用 `/dashboard/projects/42` 观察多层 nesting；
+- 用 `/login` 观察 pathless `AuthLayout` 不增加 URL segment；
+- 用 Dashboard index 观察父 URL 精确匹配时默认子内容进入 Outlet。
+
+不再声称这个模拟器能证明真实 Router 的浏览器历史或组件 mount/unmount 行为，因此 Gate B 通过。
+
+## 缺失边界 / 反例
+
+建议补充 route hierarchy 不一定等同于文件目录 hierarchy，也不一定与 URL segments 一一对应。现代 Framework Router 可能通过 route groups、layout routes、pathless routes 等机制组织 UI 边界而不改变 URL。
+
+另外，“共享 layout”不是把所有跨页面 state 都提升到根 layout 的理由。状态仍应放在最小能够表达其生命周期/所有权的边界。
+
+## 清晰度与工程决策
+
+生产决策规则已经明确：页面有稳定 shell + 局部变化时，用 route tree 表达边界；不要在根组件里复制 pathname 判断形成第二套路由状态机。URL 信息架构和 UI 布局应联合设计，但不要机械绑定。
+
+## 建议修改
+
+1. 保留“当前 Demo 是 match 模拟器，不是 Router runtime”的显式声明。
+2. 补充父 layout 是否保留取决于 route identity / key / Router 行为，避免“共同路径必然不重建”的误读。
+3. 后续若仓库真正接入 Router，可把本课升级为真实 Outlet + layout state preservation 实验，再恢复生命周期观察。

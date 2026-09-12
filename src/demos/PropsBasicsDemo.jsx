@@ -218,7 +218,7 @@ export function PropsBasicsDemo() {
           <span>💡</span> Props 核心心智模型
         </div>
         <div>
-          1. <strong>单向只读性</strong>：Props 永远由父级决定，子组件严禁直接修改入参对象（如 <code>props.price = 99</code> 会违背 React 纯函数规范并可能引发不可预测的副作用）。
+          1. <strong>单向只读性</strong>：Props 是当前 render 的只读快照。子组件不应直接修改入参对象；例如 <code>props.price = 99</code> 会破坏组件基于输入进行局部推理的前提，并可能产生难以调试的不一致输出。
         </div>
         <div>
           2. <strong>衍生计算优先</strong>：如果一个值可以通过已有 props/state 简单计算得到，直接在组件函数体内声明局部变量，切忌将其拷贝存入新的 state 中。

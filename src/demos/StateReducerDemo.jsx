@@ -11,7 +11,7 @@ const initialState = {
 
 // ==========================================
 // 2. 纯函数 Reducer：集中管理所有状态转移逻辑
-// 严禁在 Reducer 中触发副作用（如网络请求、计时器或直接修改全局对象）
+// 时间、随机数、网络请求等非确定性输入应在事件边界产生，再通过 action 传入。
 // ==========================================
 function counterReducer(state, action) {
   switch (action.type) {
@@ -20,7 +20,7 @@ function counterReducer(state, action) {
       return {
         ...state,
         count: nextCount,
-        history: [{ type: `+${state.step}`, from: state.count, to: nextCount, time: new Date().toLocaleTimeString() }, ...state.history.slice(0, 7)],
+        history: [{ type: `+${state.step}`, from: state.count, to: nextCount, time: action.at }, ...state.history.slice(0, 7)],
       };
     }
 
@@ -29,7 +29,7 @@ function counterReducer(state, action) {
       return {
         ...state,
         count: nextCount,
-        history: [{ type: `-${state.step}`, from: state.count, to: nextCount, time: new Date().toLocaleTimeString() }, ...state.history.slice(0, 7)],
+        history: [{ type: `-${state.step}`, from: state.count, to: nextCount, time: action.at }, ...state.history.slice(0, 7)],
       };
     }
 
@@ -44,7 +44,7 @@ function counterReducer(state, action) {
       return {
         ...state,
         count: 0,
-        history: [{ type: "RESET", from: state.count, to: 0, time: new Date().toLocaleTimeString() }, ...state.history.slice(0, 7)],
+        history: [{ type: "RESET", from: state.count, to: 0, time: action.at }, ...state.history.slice(0, 7)],
       };
     }
 
@@ -67,6 +67,10 @@ function counterReducer(state, action) {
 export function StateReducerDemo() {
   const [state, dispatch] = useReducer(counterReducer, initialState);
 
+  function dispatchAudited(type) {
+    dispatch({ type, at: new Date().toLocaleTimeString() });
+  }
+
   return (
     <div>
       {/* 头部说明卡片 */}
@@ -74,18 +78,18 @@ export function StateReducerDemo() {
         <div className="demo-header-top">
           <div>
             <h2 className="demo-title">
-              <span>⚙️</span> 使用 Reducer 替换 State（useReducer 状态机模式）
+              <span>⚙️</span> 使用 Reducer 替换 State（useReducer 状态转换模式）
             </h2>
           </div>
-          <span className="badge badge-purple">架构级状态管理</span>
+          <span className="badge badge-purple">结构化状态更新</span>
         </div>
         <p className="demo-desc">
-          当一个组件的状态逻辑变得复杂（包含多个相互关联的子字段，或者下一个状态依赖于上一个状态的深层计算）时，将状态更新提取为<strong>外部纯函数 Reducer</strong> 能让逻辑清晰可测，并通过统一的 <code>dispatch(action)</code> 驱动变更。
+          当一个组件的状态逻辑变得复杂（包含多个相互关联的子字段，或者多个事件共享更新规则）时，将状态更新提取为<strong>外部纯函数 Reducer</strong> 能让转换逻辑更集中、可审计，并通过统一的 <code>dispatch(action)</code> 驱动变更。
         </p>
         <div className="demo-meta-tags">
           <span className="badge badge-gray">纯函数 Reducer</span>
           <span className="badge badge-gray">统一 Action 调度 (Dispatch)</span>
-          <span className="badge badge-gray">时间旅行轨迹 (State History)</span>
+          <span className="badge badge-gray">状态变更轨迹 (State History)</span>
         </div>
       </div>
 
@@ -93,10 +97,10 @@ export function StateReducerDemo() {
       <div className="demo-section">
         <div className="demo-section-header">
           <h3 className="demo-section-title">
-            <span>🎮</span> 状态机工作台
+            <span>🎮</span> 状态转换工作台
           </h3>
           <p className="demo-section-desc">
-            点击操作按钮调度 Action，观察当前计数与历史记录流转：
+            点击操作按钮调度 Action，观察当前计数与历史记录流转。日志时间在事件处理阶段生成并随 action 传入，Reducer 本身保持确定性：
           </p>
         </div>
 
@@ -134,14 +138,14 @@ export function StateReducerDemo() {
               <button
                 className="btn btn-secondary"
                 style={{ flex: 1 }}
-                onClick={() => dispatch({ type: "DECREMENT" })}
+                onClick={() => dispatchAudited("DECREMENT")}
               >
                 -{state.step}
               </button>
               <button
                 className="btn btn-primary"
                 style={{ flex: 1 }}
-                onClick={() => dispatch({ type: "INCREMENT" })}
+                onClick={() => dispatchAudited("INCREMENT")}
               >
                 +{state.step}
               </button>
@@ -158,7 +162,7 @@ export function StateReducerDemo() {
               </button>
               <button
                 className="btn btn-danger btn-sm"
-                onClick={() => dispatch({ type: "RESET" })}
+                onClick={() => dispatchAudited("RESET")}
               >
                 🔄 重置归零
               </button>
@@ -221,21 +225,21 @@ export function StateReducerDemo() {
               <span>🔹</span> 何时首选 useState？
             </div>
             <ul style={{ margin: 0, paddingLeft: "18px", fontSize: "13px", color: "var(--text-muted)", display: "flex", flexDirection: "column", gap: "6px" }}>
-              <li>单一基础数据类型（布尔值、字符串、数字）。</li>
-              <li>组件逻辑简短，状态更新互不干涉。</li>
-              <li>开发快速原型，没有深度的多步骤业务分支。</li>
+              <li>状态简单，更新规则直接。</li>
+              <li>多个状态值之间没有需要集中表达的转换规则。</li>
+              <li>提取 reducer 只会增加间接层，而不会改善可读性或测试边界。</li>
             </ul>
           </div>
 
           <div className="comparison-card" style={{ borderColor: "var(--border-color)" }}>
             <div className="comparison-header" style={{ color: "var(--color-purple)" }}>
-              <span>🔸</span> 何时首选 useReducer？
+              <span>🔸</span> 何时考虑 useReducer？
             </div>
             <ul style={{ margin: 0, paddingLeft: "18px", fontSize: "13px", color: "var(--text-muted)", display: "flex", flexDirection: "column", gap: "6px" }}>
-              <li>状态是一个包含多个关联字段的对象。</li>
-              <li>下一个状态强依赖于上一个状态的历史快照。</li>
-              <li>需要单测状态机逻辑（Reducer 可脱离 React 单独跑 Jest/Vitest 测试）。</li>
-              <li>需要结合 Context 实现跨层级分发（参考下一个案例）。</li>
+              <li>同一份状态有多种相关更新路径，需要集中描述转换规则。</li>
+              <li>事件语义比散落的 setter 更容易审计和调试。</li>
+              <li>复杂状态更新逻辑值得脱离组件做独立测试。</li>
+              <li>需要把 dispatch 与 Context 组合用于跨层级操作时，可在下一课继续讨论所有权与传播边界。</li>
             </ul>
           </div>
         </div>

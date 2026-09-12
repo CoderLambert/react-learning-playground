@@ -1,0 +1,46 @@
+# url-state 审核建议
+
+## 当前结论
+
+- Gate A Correctness：PASS
+- Gate B Demo Contract：PASS（本分支修复后）
+- Gate C Mental Model：PASS
+- 综合：Note 的“URL 是页面级可寻址状态”模型准确；原 Demo 只修改组件内 `useState`，无法执行 Note 声称的地址栏、刷新、Back/Forward 实验，本分支已改为真实 History API + `popstate` 实验。
+
+## 事实与版本边界
+
+URL / History 不是 React Core 状态模型。React Router 等 Router/Framework 通常负责 location、search params、导航、route data 与 pending 状态；React 负责根据当前输入渲染。Note 已明确这一职责边界。
+
+浏览器层面，`history.pushState()` 会增加 session history entry 并更新 URL，但不会主动触发 `popstate`；用户执行 Back/Forward、激活不同 history entry 时才触发 `popstate`。因此 Demo 对主动写 URL 使用自定义通知让外部 store 立即刷新，对历史导航仍依赖真实 `popstate`。这属于教学桥接，不应被包装成 Router API。
+
+## Mental Model
+
+本课最重要的模型不是“把 state 放进 query string”，而是先问谁拥有该语义：如果状态需要刷新恢复、链接分享、历史重放和外部寻址，URL 往往应该成为 authoritative state；组件只从 URL 派生当前 UI，不再维护同义的第二份本地 state。
+
+## Demo ↔ Note
+
+修复后 Demo 可以真实完成 Note 的实验：
+
+- 修改 `q` / `category` 会直接更新浏览器地址栏；
+- UI 从 `window.location.search` 的当前 snapshot 派生；
+- Back / Forward 激活历史条目后通过真实 `popstate` 恢复对应 UI；
+- 刷新页面后 search params 仍在，UI 从 URL 重建；
+- Demo 只拥有 `q` / `category`，其他 query 参数被保留，避免破坏宿主页面状态。
+
+因此 Gate B 通过。Demo 仍明确说明生产应用应使用 Router navigation/search API，而不是在业务组件中自行广播 history 变化。
+
+## 缺失边界 / 反例
+
+可以进一步补充 URL schema 边界：search params 是不可信字符串输入，需要解析、默认值、枚举校验和 canonicalization。复杂筛选也应考虑 URL 长度、隐私与可读性，不是所有可持久化状态都适合进入 URL。
+
+另一个重要边界是 history 写入策略：连续输入搜索词时每个字符都 `push` 会制造大量 history entries；生产 Router 常根据交互语义选择 push、replace 或 debounce。
+
+## 清晰度与工程决策
+
+当前决策规则明确：资源 identity、tab、筛选、排序、分页等页面语义优先 URL；modal 临时动画、hover、输入法组合等短生命周期 UI 留在组件；server response 本身属于 server-state/cache 层，URL 只保存查询意图。
+
+## 建议修改
+
+1. 补充 search params 的解析/校验/canonicalization 边界。
+2. 补充高频输入场景选择 `replace` / debounce，避免 history pollution。
+3. 保留 Demo 中“History API 是实验工具，真实项目交给 Router”的显式声明。

@@ -1,0 +1,54 @@
+# lifecycle-of-reactive-effects 审核建议
+
+## 当前结论
+
+- Gate A Correctness：**PASS**
+- Gate B Demo Contract：**PASS**
+- Gate C Mental Model：**PASS**
+
+## 当前判断
+
+Note 对 reactive values、cleanup → setup 和“不要通过删依赖控制执行次数”的解释准确；`useEffectEvent` 也被正确限制在 Effect 内部触发的非响应式逻辑。
+
+原 Demo 只在点击 handler 中预测“之后会 cleanup/setup”，并没有真实生命周期证据；Note 同时要求观察函数式 updater 如何移除不必要依赖，因此 Gate B 只能 PARTIAL。本轮已把这些教学结论改成真正可执行的实验。
+
+## 事实与 React 19.2 边界
+
+React 官方建议从“Effect 开始同步 / 停止同步”理解生命周期，而不是把 Effect 机械映射成组件 mount/update/unmount。依赖列表应匹配 Effect 实际读取的 reactive values；若依赖不合理，应先改变代码，再调整依赖，而不是禁用 `exhaustive-deps`。
+
+函数式 updater 只在“下一个 State 由上一个 State 计算”时消除对旧 State 的读取。它不是通用的依赖删除技巧。当前消息回调使用 `setMessages(prev => ...)`，所以连接 Effect 不读取 `messages`，消息到达不会成为重连条件。
+
+开发环境 Strict Mode 可能额外执行一次 setup → cleanup → setup 压力测试；这属于开发期验证边界，不能把首次额外日志误写成生产环境固定行为。
+
+## Demo ↔ Note
+
+现在 Note 声称的三组实验都能直接完成：
+
+1. 切换房间：真实 Effect cleanup 记录旧房间关闭，随后真实 setup 记录新房间建立；
+2. 只切换静音：不会产生 cleanup/setup，证明 `isMuted` 不决定连接同步目标；
+3. 等待消息：`setMessages(prev => ...)` 持续更新消息列表，但不会重建连接，Source 与日志共同证明 `messages` 不再是连接 Effect 的 reactive read。
+
+生命周期日志由 Effect setup/cleanup 自身产生，不再由事件 handler 预报，因此 Gate B 通过。
+
+## Mental Model
+
+学习者现在可以回答：
+
+- 为什么房间变化要求重新同步，而静音变化不要求；
+- 为什么 cleanup 必须对应上一次 setup 建立的外部同步；
+- 为什么函数式 updater 能改变数据依赖，但不能移除真正参与同步目标的值；
+- 何时应考虑 Effect Event，而不是把最新值强行加入同步依赖。
+
+## 边界 / 反例
+
+- 若新的 State 并不是由旧 State 计算，函数式 updater 并不能“证明”依赖可删除。
+- `useEffectEvent` 不是稳定 callback identity 工具，也不是普通点击 handler 的替代品。
+- 生命周期 instrumentation 本身会更新教学日志 State；这些日志用于证明 setup/cleanup 因果，不应被当作性能基准。
+
+## 生产决策规则
+
+先定义 Effect 究竟同步哪个外部系统、什么值决定该同步关系；再确保 cleanup 与 setup 成对；若某个依赖只是为了计算下一个 State，优先重构成 updater；若只是需要读取最新 committed 值而不希望其触发重同步，再评估 Effect Event。
+
+## 建议修改
+
+本轮硬 Gate 已关闭。后续无需继续扩展此课，除非课程新增连接失败、异步竞态或真实 socket 生命周期等新的教学目标。

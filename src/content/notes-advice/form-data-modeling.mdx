@@ -1,0 +1,24 @@
+# form-data-modeling 审核建议
+
+## 当前结论
+
+- Gate A Correctness：**PASS**
+- Gate B Demo Contract：**PASS**
+- Gate C Mental Model：**PASS**
+
+## 复核结论
+
+FormData 的事实边界保持准确：它读取浏览器表单在提交时的快照；重复字段应使用 `getAll()`；值可能是 `string` 或 `File`；`Object.fromEntries(formData)` 不会自动完成领域类型转换，也会把重复键折叠成单值语义。
+
+Experiment 已收敛到 Demo 真正支持的现象：修改非受控字段时右侧 React 输出不随每次输入更新，submit 后才通过 `new FormData(event.currentTarget)` 一次性读取，并用 `get()` / `getAll()` / `has()` 转成 payload。此前并不存在的 controlled side-by-side 实验已从 Experiment 移到 Boundary 作为生产决策规则。
+
+## 边界与生产决策
+
+- FormData 是 transport snapshot，不是类型安全领域模型；提交边界仍需 validation / coercion。
+- “非受控”不等于“不受约束”：HTML constraint validation、服务端校验和领域校验仍有各自职责。
+- 同一表单可以混合 controlled 与 uncontrolled 字段；选择依据是 React 是否需要在提交前实时消费某字段值。
+- 实时验证、即时预览、条件 UI 或跨字段联动通常需要 React State；只关心最终提交值的字段可以由浏览器持有。
+
+## 后续可选增强
+
+可以增加 `File` 字段展示 `FormDataEntryValue` 的边界，但这不是当前主实验通过 Gate B 的必要条件。

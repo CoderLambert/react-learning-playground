@@ -1,28 +1,55 @@
-import { useSyncExternalStore } from "react";
+import { useState, useSyncExternalStore } from "react";
 
 let value = 0;
-let snapshot = { value, version: 0, listenerCount: 0 };
+let version = 0;
+let snapshot = { value, version };
 const listeners = new Set();
 
-function notifySnapshotChange() {
-  setTimeout(() => listeners.forEach((listener) => listener()), 0);
+let lifecycleSequence = 0;
+let lifecycleSnapshot = { listenerCount: 0, events: [] };
+const lifecycleListeners = new Set();
+
+function publishLifecycle(type) {
+  lifecycleSequence += 1;
+  lifecycleSnapshot = {
+    listenerCount: listeners.size,
+    events: [
+      ...lifecycleSnapshot.events,
+      { id: lifecycleSequence, type, listenerCount: listeners.size },
+    ].slice(-8),
+  };
+  lifecycleListeners.forEach((listener) => listener());
 }
+
+const lifecycleStore = {
+  subscribe(listener) {
+    lifecycleListeners.add(listener);
+    return () => lifecycleListeners.delete(listener);
+  },
+  getSnapshot() {
+    return lifecycleSnapshot;
+  },
+  clear() {
+    lifecycleSnapshot = { ...lifecycleSnapshot, events: [] };
+    lifecycleListeners.forEach((listener) => listener());
+  },
+};
 
 function emit(nextValue) {
   value = nextValue;
-  snapshot = { value, version: snapshot.version + 1, listenerCount: listeners.size };
-  notifySnapshotChange();
+  version += 1;
+  snapshot = { value, version };
+  listeners.forEach((listener) => listener());
 }
 
 const counterStore = {
   subscribe(listener) {
     listeners.add(listener);
-    snapshot = { ...snapshot, version: snapshot.version + 1, listenerCount: listeners.size };
-    notifySnapshotChange();
+    publishLifecycle("subscribe");
+
     return () => {
       listeners.delete(listener);
-      snapshot = { ...snapshot, version: snapshot.version + 1, listenerCount: listeners.size };
-      notifySnapshotChange();
+      publishLifecycle("unsubscribe");
     };
   },
   getSnapshot() {
@@ -42,12 +69,38 @@ function StoreReader({ label }) {
     <div className="demo-alert demo-alert-tip">
       <strong>{label}</strong>
       <p>snapshot.value = {current.value} · version = {current.version}</p>
-      <p>当前订阅者：{current.listenerCount}</p>
+      <p>这个组件没有复制 counter 到 React State；它始终读取 external snapshot。</p>
+    </div>
+  );
+}
+
+function SubscriptionInspector() {
+  const lifecycle = useSyncExternalStore(lifecycleStore.subscribe, lifecycleStore.getSnapshot);
+
+  return (
+    <div className="demo-alert demo-alert-info" style={{ marginTop: 12 }}>
+      <div className="demo-alert-title">真实 subscribe / unsubscribe 记录</div>
+      <p>counterStore 当前订阅者：<strong>{lifecycle.listenerCount}</strong></p>
+      {lifecycle.events.length === 0 ? (
+        <p>暂无记录。</p>
+      ) : (
+        <ol style={{ marginBottom: 8 }}>
+          {lifecycle.events.map((event) => (
+            <li key={event.id}>
+              {event.type} → listenerCount = {event.listenerCount}
+            </li>
+          ))}
+        </ol>
+      )}
+      <button type="button" className="btn btn-sm" onClick={lifecycleStore.clear}>清空生命周期记录</button>
+      <p style={{ marginTop: 8, marginBottom: 0 }}>开发 Strict Mode 下可能看到额外的 subscribe → unsubscribe → subscribe 验证周期；判断 cleanup 时关注最终订阅数量和成对释放，而不是假设 setup 只发生一次。</p>
     </div>
   );
 }
 
 export function ExternalStoreDemo() {
+  const [showReaderB, setShowReaderB] = useState(true);
+
   return (
     <div>
       <div className="demo-header-card">
@@ -57,15 +110,23 @@ export function ExternalStoreDemo() {
       </div>
 
       <div className="demo-section">
-        <div className="demo-section-header"><h3 className="demo-section-title"><span>🎮</span> 两个组件订阅同一个 React 外部 Store</h3><p className="demo-section-desc">点击按钮直接修改 React 之外的 store。两个 Reader 不共享 React State，却都从同一 external source 读取一致快照。</p></div>
-        <div style={{ display: "flex", gap: 8, marginBottom: 14 }}><button className="btn btn-primary" onClick={counterStore.increment}>externalStore.increment()</button><button className="btn" onClick={counterStore.reset}>reset</button></div>
-        <div className="demo-grid-2"><StoreReader label="Reader A" /><StoreReader label="Reader B" /></div>
+        <div className="demo-section-header"><h3 className="demo-section-title"><span>🎮</span> 两个组件订阅同一个 React 外部 Store</h3><p className="demo-section-desc">点击按钮直接修改 React 之外的 store。Reader 不共享 React State，却都从同一 external source 读取一致快照。再卸载 Reader B，观察 counterStore 的真实 cleanup。</p></div>
+        <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
+          <button className="btn btn-primary" onClick={counterStore.increment}>externalStore.increment()</button>
+          <button className="btn" onClick={counterStore.reset}>reset</button>
+          <button className="btn" type="button" onClick={() => setShowReaderB((value) => !value)}>{showReaderB ? "卸载 Reader B" : "挂载 Reader B"}</button>
+        </div>
+        <div className="demo-grid-2">
+          <StoreReader label="Reader A" />
+          {showReaderB ? <StoreReader label="Reader B" /> : <div className="demo-alert">Reader B 已卸载。</div>}
+        </div>
+        <SubscriptionInspector />
       </div>
 
       <div className="demo-section">
         <div className="demo-section-header"><h3 className="demo-section-title"><span>🧠</span> getSnapshot 为什么不能每次都 return {'{ value }'}？</h3></div>
         <div className="demo-alert demo-alert-warning"><strong>反模式：</strong>如果 store 没变化时 getSnapshot 仍创建全新对象，React 会看到一个新的 identity。官方要求未变化期间重复调用 getSnapshot 必须返回相同值；可变 store 应缓存 immutable snapshot。</div>
-        <div className="demo-alert demo-alert-tip" style={{ marginTop: 10 }}><strong>正确模型：</strong>store 变化 → notify subscribers → React 再读 snapshot → Object.is 比较 → 必要时 render。</div>
+        <div className="demo-alert demo-alert-tip" style={{ marginTop: 10 }}><strong>正确模型：</strong>store 变化 → notify subscribers → React 再读 snapshot → Object.is 比较 → 必要时 render。生命周期统计与业务 snapshot 在本 Demo 中分开，避免为了“显示订阅数量”反过来篡改业务快照。</div>
       </div>
 
       <div className="demo-section">

@@ -1,4 +1,11 @@
-import { useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from "react";
+import {
+  useRef,
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+  type ReactElement,
+  type ReactNode,
+} from "react";
 
 type ProfileCardProps = {
   name: string;
@@ -29,18 +36,26 @@ export function ProfileCard({ name, children, onRename }: ProfileCardProps) {
         Focus
       </button>
       <button type="submit">Save</button>
-      {renderLoadState({ status: "success", data: children }, (content) => content)}
+      {children}
     </form>
   );
+}
+
+type SingleElementSlotProps = {
+  child: ReactElement;
+};
+
+export function SingleElementSlot({ child }: SingleElementSlotProps) {
+  return <div className="slot">{child}</div>;
 }
 
 type LoadState<T> =
   | { status: "idle" }
   | { status: "loading" }
   | { status: "success"; data: T }
-  | { status: "error"; message: string };
+  | { status: "error"; error: Error };
 
-function renderLoadState<T>(state: LoadState<T>, renderData: (data: T) => ReactNode) {
+export function renderLoadState<T>(state: LoadState<T>, renderData: (data: T) => ReactNode) {
   switch (state.status) {
     case "idle":
       return "尚未请求";
@@ -49,6 +64,54 @@ function renderLoadState<T>(state: LoadState<T>, renderData: (data: T) => ReactN
     case "success":
       return renderData(state.data);
     case "error":
-      return `失败：${state.message}`;
+      return `失败：${state.error.message}`;
   }
+}
+
+type TabValue = "overview" | "activity" | "settings";
+
+type ControlledTabsProps = {
+  value: TabValue;
+  onValueChange: (nextValue: TabValue) => void;
+};
+
+export function ControlledTabs({ value, onValueChange }: ControlledTabsProps) {
+  const tabs: readonly TabValue[] = ["overview", "activity", "settings"];
+
+  return (
+    <div>
+      {tabs.map((tab) => (
+        <button
+          key={tab}
+          type="button"
+          aria-pressed={value === tab}
+          onClick={() => onValueChange(tab)}
+        >
+          {tab}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+export function TypeErrorExamples() {
+  // These are compile-time assertions for a future `tsc` gate.
+  // They are not meant to be executed in the browser Demo.
+
+  // @ts-expect-error ReactElement intentionally rejects a primitive string here.
+  const invalidElement = <SingleElementSlot child="plain text" />;
+
+  // @ts-expect-error Controlled contract requires both value and onValueChange.
+  const incompleteControlledTabs = <ControlledTabs value="overview" />;
+
+  // @ts-expect-error success state requires data; error belongs to another union branch.
+  const impossibleState: LoadState<string> = { status: "success", error: new Error("wrong branch") };
+
+  return (
+    <>
+      {invalidElement}
+      {incompleteControlledTabs}
+      {renderLoadState(impossibleState, (value) => value)}
+    </>
+  );
 }

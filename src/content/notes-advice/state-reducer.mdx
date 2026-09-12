@@ -1,0 +1,40 @@
+# state-reducer.mdx 审核记录
+
+## 当前结论
+
+**需要修订后再作为参考课。** Gate A：PARTIAL；Gate B：FAIL；Gate C：PASS。
+
+## Correctness / React 19.2
+
+- `useReducer` 的 reducer 必须是纯函数；React Strict Mode 在开发环境会额外调用 reducer/initializer 来帮助暴露 accidental impurity。
+- 本轮已修复 Demo 的实质错误：原 reducer 内部调用 `new Date()` 生成日志时间，使同一 `(state, action)` 可能产生不同结果。时间戳现在在事件处理阶段生成并通过 action 传入，reducer 只消费输入。
+- “状态机模式”容易过度概括。`useReducer` 只是结构化状态转换机制；只有状态/事件/转移约束被明确建模时，才适合进一步称为有限状态机。
+
+## Mental model
+
+主模型基本正确：action 描述发生了什么，reducer 从当前 state + action 计算 next state。建议再强调：`dispatch` 是更新请求，当前 render 中读取到的 state 不会被同步改写；reducer 的价值主要是集中转换规则，而不是“对象字段多”本身。
+
+## Demo ↔ Note
+
+当前 Gate B 不通过：
+
+- Note 的 DemoReference 写的是 `add/update/remove`，真实 Demo 只有 `INCREMENT / DECREMENT / SET_STEP / RESET / UNDO`。
+- Note 要求“确认 reducer 不产生副作用”，但 UI 只能观察转换结果，不能凭结果证明 reducer 纯净；纯度应由 Source/测试和代码约束验证。
+- Demo 的历史记录能观察 `from → to`，但并没有展示完整 action payload 或 reducer 调用次数，因此不要把它描述成完整 reducer trace。
+
+## 缺失边界 / 反例
+
+建议加入一个最小边界：复杂对象并不自动意味着 `useReducer`；真正信号是多条更新路径共享规则、状态转换需要集中表达、或 reducer 值得独立测试。反过来，简单 state 即使是对象也完全可以继续使用 `useState`。
+
+## 清晰度与工程决策
+
+Demo 的选型文案本轮已收紧，避免“基础类型一定 useState / 对象一定 useReducer”之类机械规则。Note 也应使用同一决策标准，并把“Context + reducer”定位为一种组合方式，而不是 `useReducer` 自带跨组件共享能力。
+
+## 建议修改
+
+1. 把 Experiment/DemoReference 的 action 名称改成真实 Demo 的 action。
+2. 将“观察并确认 reducer 无副作用”改为“在 Source 中检查 reducer 仅依赖 state/action；在 Demo 中观察相同 action 语义产生可预测转换”。
+3. 把标题中的“状态机模式”降级为“状态转换 / reducer 模式”，或明确它与真正 FSM 的差别。
+4. 增加项目决策规则：当更新规则比状态形状本身更复杂、更值得集中审计/测试时考虑 reducer。
+
+官方基线：React `Extracting State Logic into a Reducer`、`useReducer`。

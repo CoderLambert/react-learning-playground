@@ -1,0 +1,38 @@
+# reference-equality 审核建议
+
+## 当前结论
+
+- Gate A Correctness：PASS
+- Gate B Demo Contract：PASS
+- Gate C Mental Model：PASS
+- 综合：Note 与 Demo 高度一致，能把 JavaScript identity 与 React dependency/memo 边界连接起来。
+
+## 事实与版本边界
+
+对象、数组、函数按引用 identity 参与 `Object.is`；React 的 Hook dependency 比较以及 `memo` 默认 prop 比较都会使用 `Object.is`。新引用本身不是错误，也不等于性能问题。当前表述准确。
+
+“多种缓存机制”建议保持具体，不要泛化成 React 所有缓存都只基于引用 identity；不同库/缓存层可能使用不同 key 与比较协议。
+
+## Mental Model
+
+“只有 identity 被某个协议消费时，它才成为架构信号”是本课最有价值的结论。它能够避免学习者机械使用 `useMemo` / `useCallback`。
+
+## Demo ↔ Note
+
+Demo 真正保存上一轮对象/数组/函数引用，并在下一次用户触发时用 `Object.is` 比较；模块级对象与函数保持相同 identity，render 内字面量获得新 identity。Note 描述的实验完全可执行。
+
+需要注意：`renderRound` 是教学轮次编号，不是 React 实际 render instrumentation；当前 Note 没有把它误称为真实 render count，因此没有契约问题。
+
+## 缺失边界 / 反例
+
+可增加一个重要边界：primitive 的 `Object.is` 也存在 `NaN` 与 `-0/+0` 等 JavaScript 语义细节，但对本课 React 性能主线不是必要内容，不应喧宾夺主。
+
+## 清晰度与工程决策
+
+工程决策规则清楚：先找 identity consumer，再决定是否稳定引用。建议继续保持这一顺序，而不是把“对象 prop → useMemo”写成默认公式。
+
+## 建议修改
+
+1. 把“多种缓存机制”收窄为明确示例，避免过度泛化。
+2. 保持当前 Demo；无需为展示 identity 再增加复杂 memoization。
+3. 可在结尾增加一句：不可变更新利用引用变化表达新值，稳定引用优化则是在确认 identity consumer 后减少不必要变化，两者目标不同。

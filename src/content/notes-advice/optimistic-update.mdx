@@ -1,0 +1,32 @@
+# optimistic-update 审核建议
+
+## 当前结论
+
+- Gate A Correctness：**PASS**
+- Gate B Demo Contract：**PASS**
+- Gate C Mental Model：**PASS**
+
+## 主要结论
+
+Note 对 `useOptimistic` 的核心模型准确：传入的 canonical value 是 Action 结束后的事实来源；optimistic state 只在 Action pending 期间提供临时投影。React 19.2 要求 optimistic setter 在 Action / Transition 中调用；当前 Demo 把它放在 `<form action={addCommentAction}>` 的 Action 内，契约正确。
+
+此前 Demo 把“业务拒绝后正常返回”笼统标成“服务器失败”，容易让学习者误以为它演示了 Action throw / Error Boundary。现在 Demo 与 Note 都明确：勾选路径只是服务端未确认、Action 正常结束、canonical state 不更新，因此 optimistic layer 消失。真正抛异常属于另一条错误处理路径。
+
+## Mental Model
+
+“canonical 是事实来源，optimistic 是 Action 期间的临时投影”清晰且可迁移。学习者能够解释：为什么 UI 可以立即变化、为什么未确认时无需长期保存第二份数组、为什么 Action 完成后会重新以 canonical value 为准。
+
+## Demo ↔ Note
+
+成功路径真实展示 optimistic item 立即出现，随后 canonical State 更新并收敛。拒绝路径真实展示 optimistic item 先出现，随后 Action 正常结束且 canonical 未更新，临时项消失。Demo 文案、Note 和 Source 现在对这两个路径的语义一致，Gate B 通过。
+
+## 边界与生产决策
+
+- optimistic state 不是第二个长期 store；Action 结束后以 canonical value 为准。
+- reducer / updater 必须保持纯函数。
+- 高风险或不可逆操作不一定适合先显示成功态；是否 optimistic 是产品风险决策，不是 API 偏好。
+- 真正的网络异常 / Action throw 还需要明确错误反馈、catch 或 Error Boundary、重试、幂等与冲突策略；当前实验不伪装这条路径。
+
+## 建议修改
+
+当前硬 Gate 已全部通过。后续若扩展异常教学，应新增真正 throw 的隔离实验，而不是复用“业务拒绝正常返回”路径并改名。

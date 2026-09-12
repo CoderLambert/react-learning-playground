@@ -1,0 +1,49 @@
+# rendering-strategies 审核建议
+
+## 当前结论
+
+- Gate A Correctness：PASS
+- Gate B Demo Contract：PASS（本分支修正实验契约后）
+- Gate C Mental Model：PASS
+- 综合：本课最重要的价值是把 CSR/SSG/SSR 的“HTML 何时生成”与 RSC 的“组件在哪里执行/如何传输”拆成两条轴。原 Experiment 却要求 Demo 把 RSC 当成第四个可切换策略，反而破坏了正文的核心模型；本分支已修正为 Demo 只比较 CSR/SSG/SSR，并要求学习者解释为什么 RSC 不应成为第四个互斥按钮。
+
+## 事实与 React 19.2 边界
+
+`hydrateRoot` 用于把 React 连接到服务器环境已经生成的 HTML；它要求客户端首屏树与服务端标记匹配，框架通常会代为调用。hydration 因此是“在已有服务端 HTML 上建立客户端 React 行为”，不是 SSR 本身。
+
+React Server Components 不发送组件模块本身到浏览器，Server Components 不能使用 `useState` 等交互 API；需要交互时与 Client Components 组合。React 官方也明确说明没有用于标记 Server Component 的 directive：`"use server"` 标记的是 Server Functions，而不是 Server Components。
+
+Server Functions 在 React 19 中是稳定语义，但框架/打包器实现 RSC/Server Functions 的底层 API 在 React 19.x minor 之间仍可能变化。因此课程把传输协议、打包、路由和部署落地归到 Framework 边界是必要的。
+
+## Mental Model
+
+学习者可以回答：
+
+- CSR/SSG/SSR 在比较什么：HTML 的生成时机与位置；
+- hydration 在解决什么：把客户端逻辑接到已有服务端标记；
+- RSC 在比较什么：组件执行位置与 Server/Client module boundary；
+- 为什么 SSR + RSC 可以同时存在，而不是二选一。
+
+这比把四个缩写放在同一张“优缺点表”更接近现代 React 框架的实际模型。
+
+## Demo ↔ Note
+
+Demo 当前只有 CSR、SSG、SSR 三个按钮，并展示对应生成时间线；它没有 RSC runtime 或 hydration instrumentation。原 Note 的 `逐项切换 CSR / SSG / SSR / RSC` 无法执行。
+
+本分支已把 Experiment / DemoReference 改为：先用 Demo 比较三种 HTML 生成策略，再返回 Note 解释 RSC 为什么是另一条轴。这样 Demo 的缺席反而成为模型验证的一部分，而不是缺失按钮，因此 Gate B 通过。
+
+## 缺失边界 / 反例
+
+“SSG = 永久静态”与“SSR = 每次请求都从零动态生成”都过度简化。现代框架可能有 revalidation、CDN/cache、partial prerendering 等混合策略；这些属于 Framework 产品能力，不应反推成 React Core 语义。
+
+同样，“Client Component = 只在浏览器 render”是错误心智模型。支持 RSC 的框架可以先服务端预渲染 Client Component 输出，再在浏览器 hydration 获得交互能力。
+
+## 清晰度与工程决策
+
+生产决策不应先选缩写，而应先问：页面内容何时可确定、请求是否依赖用户/权限、多久变化、首屏 HTML 是否必要、哪些代码/依赖必须留在服务端、哪些交互必须进入客户端 bundle。再由所用框架映射到具体策略。
+
+## 建议修改
+
+1. 保持 Demo 只有 CSR/SSG/SSR，不要为“完整四项”把 RSC 错塞入互斥枚举。
+2. 后续 RSC 课程用独立 Server/Client boundary Demo 验证组件执行与序列化边界。
+3. 可增加“Client Component 不等于 `ssr: false`”反例，这是现代 App Router 学习中最常见误区之一。

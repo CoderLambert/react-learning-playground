@@ -21,7 +21,7 @@ export function SelectList<T>({ items, getKey, renderItem, onSelect }: SelectLis
   );
 }
 
-function useHistory<T>(initialValue: T) {
+export function useHistory<T>(initialValue: T) {
   const [current, setCurrent] = useState<T>(initialValue);
   const [history, setHistory] = useState<T[]>([initialValue]);
 
@@ -34,18 +34,19 @@ function useHistory<T>(initialValue: T) {
 }
 
 type User = { id: string; name: string };
+type Product = { sku: string; label: string };
 
 const users: User[] = [
   { id: "u1", name: "Ada" },
   { id: "u2", name: "Lin" },
 ];
 
-export function Example() {
+export function GenericExample() {
   const selected = useHistory<User | null>(null);
 
   return (
     <>
-      <SelectList
+      <SelectList<User>
         items={users}
         getKey={(user) => user.id}
         renderItem={(user) => user.name}
@@ -53,5 +54,25 @@ export function Example() {
       />
       <p>Selected: {selected.current?.name ?? "none"}</p>
     </>
+  );
+}
+
+export function GenericTypeErrorExamples() {
+  const selected = useHistory<User | null>(null);
+  const product: Product = { sku: "p1", label: "Book" };
+
+  // @ts-expect-error update keeps the same T chosen by useHistory<User | null>.
+  selected.update(product);
+
+  // @ts-expect-error SelectList<User> keeps renderItem's input tied to User.
+  const wrongRenderer: (item: User) => ReactNode = (item: Product) => item.label;
+
+  return (
+    <SelectList<User>
+      items={users}
+      getKey={(user) => user.id}
+      renderItem={wrongRenderer}
+      onSelect={selected.update}
+    />
   );
 }

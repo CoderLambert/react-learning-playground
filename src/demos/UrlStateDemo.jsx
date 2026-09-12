@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 
 const PRODUCTS = [
   { id: 1, name: "React 性能手册", category: "book" },
@@ -6,6 +6,24 @@ const PRODUCTS = [
   { id: 3, name: "React 实验课程", category: "course" },
   { id: 4, name: "Web Accessibility 课程", category: "course" },
 ];
+
+const URL_STATE_EVENT = "url-state-demo:navigate";
+
+function getSearchSnapshot() {
+  return typeof window === "undefined" ? "" : window.location.search;
+}
+
+function subscribeToUrlState(onStoreChange) {
+  if (typeof window === "undefined") return () => {};
+
+  window.addEventListener("popstate", onStoreChange);
+  window.addEventListener(URL_STATE_EVENT, onStoreChange);
+
+  return () => {
+    window.removeEventListener("popstate", onStoreChange);
+    window.removeEventListener(URL_STATE_EVENT, onStoreChange);
+  };
+}
 
 function readUrlState(search) {
   const params = new URLSearchParams(search);
@@ -16,15 +34,28 @@ function readUrlState(search) {
 }
 
 function writeUrlState({ query, category }) {
-  const params = new URLSearchParams();
-  if (query) params.set("q", query);
-  if (category !== "all") params.set("category", category);
-  const search = params.toString();
-  return search ? `?${search}` : "";
+  const url = new URL(window.location.href);
+
+  if (query) url.searchParams.set("q", query);
+  else url.searchParams.delete("q");
+
+  if (category !== "all") url.searchParams.set("category", category);
+  else url.searchParams.delete("category");
+
+  window.history.pushState(window.history.state, "", url);
+  window.dispatchEvent(new Event(URL_STATE_EVENT));
+}
+
+function resetUrlState() {
+  const url = new URL(window.location.href);
+  url.searchParams.delete("q");
+  url.searchParams.delete("category");
+  window.history.pushState(window.history.state, "", url);
+  window.dispatchEvent(new Event(URL_STATE_EVENT));
 }
 
 export function UrlStateDemo() {
-  const [search, setSearch] = useState("?q=react&category=book");
+  const search = useSyncExternalStore(subscribeToUrlState, getSearchSnapshot, () => "");
   const { query, category } = readUrlState(search);
 
   const visibleProducts = useMemo(() => {
@@ -37,7 +68,7 @@ export function UrlStateDemo() {
   }, [query, category]);
 
   function updateUrlState(patch) {
-    setSearch(writeUrlState({ query, category, ...patch }));
+    writeUrlState({ query, category, ...patch });
   }
 
   return (
@@ -65,7 +96,8 @@ export function UrlStateDemo() {
         <div className="demo-section-header">
           <h3 className="demo-section-title"><span>🎮</span> URL 状态实验台</h3>
           <p className="demo-section-desc">
-            这里用 URLSearchParams 模拟 Router 的 search params。输入和筛选直接修改“URL”，列表再从 URL 派生；不会同时维护一份重复的 filter State。
+            这里直接使用浏览器 History API 修改当前地址栏的 search params，并从 <code>window.location.search</code> 订阅当前值。
+            未知参数会被保留；本实验只拥有 <code>q</code> 与 <code>category</code>。Back / Forward 会通过真实 <code>popstate</code> 恢复 UI。
           </p>
         </div>
 
@@ -90,13 +122,13 @@ export function UrlStateDemo() {
               <option value="course">课程</option>
             </select>
 
-            <button className="btn" style={{ marginTop: 14 }} onClick={() => setSearch("")}>重置 URL 状态</button>
+            <button className="btn" style={{ marginTop: 14 }} onClick={resetUrlState}>重置 URL 状态</button>
           </div>
 
           <div>
-            <div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 8 }}>当前可分享 URL</div>
+            <div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 8 }}>当前地址栏 search</div>
             <code style={{ display: "block", padding: 12, overflowWrap: "anywhere" }}>
-              /products{search || "（无 search params）"}
+              {search || "（无 search params）"}
             </code>
             <div style={{ marginTop: 14, display: "grid", gap: 8 }}>
               {visibleProducts.length === 0 ? (
@@ -144,6 +176,14 @@ export function UrlStateDemo() {
         <p>
           同时维护 <code>searchParams</code> 和一套完全相同的 <code>filterState</code>，再用 Effect 双向同步，容易形成循环更新和状态漂移。
           优先选择一个 Source of Truth，再从它派生 UI。
+        </p>
+      </div>
+
+      <div className="demo-alert demo-alert-tip">
+        <div className="demo-alert-title"><span>📌</span> 与真实 Router 的边界</div>
+        <p>
+          本实验直接使用浏览器 History API，是为了让地址栏、刷新和 Back / Forward 真实可观察；生产应用通常应通过 Router 的 search/navigation API 完成同一职责，
+          让 Router 同时处理匹配、数据和导航状态，而不是在业务组件中自行广播自定义 history 事件。
         </p>
       </div>
     </div>

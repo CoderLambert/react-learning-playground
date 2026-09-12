@@ -25,7 +25,7 @@ function ResultPanel({ status }) {
     return (
       <div className="demo-alert demo-alert-tip">
         <div className="demo-alert-title">📭 Empty</div>
-        <div>当前没有订单。空态是一个独立业务状态，不应该伪装成“成功但数组长度为 0”的隐式分支。</div>
+        <div>当前没有订单。这个教学状态机把 Empty 显式列成一个互斥分支；真实项目若它能由“请求已成功 + items.length === 0”可靠推导，就不要再保存重复的 isEmpty State。</div>
       </div>
     );
   }

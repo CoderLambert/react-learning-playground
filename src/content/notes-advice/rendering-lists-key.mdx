@@ -1,0 +1,28 @@
+# Review: 列表渲染与 key 身份
+
+## Verdict
+
+这篇课的核心实验非常强：可编辑行 + 重排能直接把“state 跟实体还是跟位置”变成可观察现象。React 19.2 语义基本准确，可以作为本章较好的参考课。
+
+## Hard gates
+
+- **Gate A — Correctness: PASS**。React 官方明确要求 key 在兄弟范围唯一且稳定，不应在 render 中生成；index key 在插入、删除、重排时容易造成状态错配。Note 对 key 参与 state preservation/reset 的说明与官方模型一致。
+- **Gate B — Demo Contract: PASS**。输入备注、切换 index/stable id、反转、删除、恢复都可执行，且能直接观察局部 state 的归属变化。
+- **Gate C — Mental Model: PASS**。学习者能回答 key 为什么存在、什么时候 index 会出问题、为什么 random key 导致重建，以及何时可有意改变 key 来 reset subtree。
+
+## Important gaps / boundaries
+
+1. `key` 不是组件 prop，子组件不会收到它；如果业务逻辑需要 id，必须单独传 `id`/`taskId`。这是一个高价值边界，建议补进 Note。
+2. “按 type + key 匹配”适合作为工程心智模型，但不要扩写成 React reconciler 内部算法承诺。官方更稳妥的表述是：位置、组件类型与显式 key 共同影响身份/state preservation。
+3. index key 不是语法错误，也不是永远错误；静态、不重排、不插删、无局部身份需求的列表中可能没有可观察问题。当前 Note 已有这个边界，可保留。
+4. stable key 应来自数据身份，而不是可编辑展示字段；例如名称/title 改变不应导致 key 改变。
+
+## Clarity / engineering usefulness
+
+实验先预测再观察的设计很好。Note 没有过度卡片化，production decision rule 也已经接近可直接使用。
+
+## Recommended changes
+
+- 增加“`key` 不会透传给组件”的 Boundary，并给出 `<Row key={item.id} itemId={item.id} />` 形式。
+- 将 Flow 中“下一次 render 按 type + key 匹配”略收敛为“React 使用树中位置以及显式 key/type 判断身份”，避免把教学模型写成实现细节承诺。
+- decision rule 可固定为：**只要列表项有可持续身份或列表结构会变化，就从数据模型提供稳定 key；不要从当前数组位置或当前 render 临时生成。**

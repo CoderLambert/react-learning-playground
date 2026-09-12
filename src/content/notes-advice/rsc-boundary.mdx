@@ -1,0 +1,46 @@
+# rsc-boundary 审核建议
+
+## 当前结论
+
+- Gate A Correctness：PASS
+- Gate B Demo Contract：PASS
+- Gate C Mental Model：PASS
+- 综合：课程正确把 RSC 解释为 Server/Client module execution boundary，而不是 SSR 的别名，也没有把 `"use server"` 错当成 Server Component 标记。Demo 是能力矩阵/协议时间线模拟，不冒充真实 RSC bundler runtime。
+
+## 事实与 React 19.2 边界
+
+React 官方明确说明 Server Components 没有专用 directive；`"use server"` 用于 Server Functions。Server Components 不发送其组件实现到浏览器，因此不能使用 `useState` 等交互 API；需要交互时与 `"use client"` 边界下的 Client Components 组合。
+
+Client Component 也不等于“首屏只在浏览器 render”。支持 RSC + prerender/SSR 的框架可以在服务器先生成 Client Component 的初始 UI，再在浏览器加载对应客户端模块并 hydration。
+
+React 19 的 Server Functions 是稳定语义，但 React 官方仍提醒：框架/打包器实现 RSC/Server Functions 所依赖的底层 API 不保证在 React 19.x minor 之间遵守 semver。因此裸 Vite SPA 不能仅因 React 版本支持 RSC API 就自动获得完整 RSC 架构。
+
+## Mental Model
+
+本课能够让学习者先问“这个模块需要哪种运行时能力”，再决定边界，而不是按整页做 Server/Client 二选一。数据库/文件/secret 属于服务端能力，state/event/browser API 属于 Client boundary；Server Component 可以组合交互叶子，而不是把整个祖先树推到客户端。
+
+## Demo ↔ Note
+
+Demo 的矩阵与 Note 对齐：
+
+- Server modules：无本地交互 state，可直接接 server data layer，不作为该组件模块进入浏览器 JS graph；
+- Client modules：承担 state/browser event，不直接访问服务端 data layer，并进入客户端模块图；
+- payload 时间线明确区分 RSC execution、client references、可能的 SSR initial HTML、client hydration。
+
+它没有执行真正的 RSC protocol 或 bundler transform，但 Note 的实验只要求检查能力矩阵并判断边界，因此 Gate B 通过。
+
+## 缺失边界 / 反例
+
+建议补充“server/client 文件后缀不是 React 标准”。Demo 中 `.server` / `.client` 是教学命名，实际框架更常通过 `"use client"`、route/module convention 或 bundler graph 判定边界，不能把文件名后缀当成 React API。
+
+还应强调 serializable props 边界与安全：Server → Client 传值必须满足框架/React 支持的序列化约束；secret 不能因为经过 Server Component prop 就安全地发送到 Client Component。
+
+## 清晰度与工程决策
+
+生产规则合理：默认让非交互工作留在 Server graph；只有真正需要事件、state、Effect、browser API 的叶子进入 Client graph；但不要为了最小 bundle 把边界切得过碎，API 可理解性和维护成本仍是约束。
+
+## 建议修改
+
+1. 明确 `.server` / `.client` 仅为 Demo 命名，不是 React 19.2 文件约定。
+2. 增加 Server → Client serializable props 与 secret 泄漏边界。
+3. 若未来接入真实 RSC framework，再用真实 module graph / payload 验证替代当前概念时间线。

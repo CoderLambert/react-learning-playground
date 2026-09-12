@@ -1,38 +1,38 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 const SERIES = [[12, 24, 18], [8, 32, 21]];
 
-function FakeChart({ series, seriesKey }) {
+function FakeChart({ series, seriesKey, onLifecycle }) {
   const hostRef = useRef(null);
   const instanceId = `series-${seriesKey}`;
 
   useEffect(() => {
     const host = hostRef.current;
     host.textContent = `第三方 Chart 实例 ${instanceId} · ${series.join(" / ")}`;
+    onLifecycle(`setup ${instanceId}`);
 
     return () => {
       host.textContent = "";
+      onLifecycle(`cleanup ${instanceId}`);
     };
-  }, [instanceId, series]);
-
-  const events = [
-    ...(seriesKey > 0 ? [`cleanup series-${seriesKey - 1}`] : []),
-    `setup ${instanceId}`,
-  ];
+  }, [instanceId, onLifecycle, series]);
 
   return (
-    <div>
-      <div ref={hostRef} style={{ padding: 14, border: "1px dashed var(--border-color)", borderRadius: 8 }} />
-      <pre style={{ whiteSpace: "pre-wrap", fontSize: 12 }}>{events.slice(-6).join("\n") || "等待 setup"}</pre>
-    </div>
+    <div ref={hostRef} style={{ padding: 14, border: "1px dashed var(--border-color)", borderRadius: 8 }} />
   );
 }
 
 export function PortalThirdPartyDemo() {
   const [open, setOpen] = useState(false);
   const [seriesKey, setSeriesKey] = useState(0);
+  const [chartMounted, setChartMounted] = useState(true);
+  const [lifecycleEvents, setLifecycleEvents] = useState([]);
   const series = SERIES[seriesKey % SERIES.length];
+
+  const recordLifecycle = useCallback((event) => {
+    setLifecycleEvents((current) => [...current, event].slice(-8));
+  }, []);
 
   return (
     <div onClick={() => console.log("React parent 收到 portal child 的冒泡事件") }>
@@ -57,9 +57,15 @@ export function PortalThirdPartyDemo() {
       </div>
 
       <div className="demo-section">
-        <div className="demo-section-header"><h3 className="demo-section-title"><span>📈</span> 第三方 DOM 生命周期</h3><p className="demo-section-desc">模拟图表/地图/编辑器：依赖变化时 cleanup old → setup new；卸载时 cleanup，避免重复 listener、observer、worker 或实例泄漏。</p></div>
-        <button className="btn" onClick={() => setSeriesKey((key) => key + 1)}>切换 series，触发重建</button>
-        <div style={{ marginTop: 12 }}><FakeChart series={series} seriesKey={seriesKey} /></div>
+        <div className="demo-section-header"><h3 className="demo-section-title"><span>📈</span> 第三方 DOM 生命周期</h3><p className="demo-section-desc">模拟图表/地图/编辑器：依赖变化时 cleanup old → setup new；卸载时 cleanup，避免重复 listener、observer、worker 或实例泄漏。下面日志由 Effect 的真实 setup/cleanup 写入，而不是根据按钮状态预测。</p></div>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <button className="btn" onClick={() => setSeriesKey((key) => key + 1)} disabled={!chartMounted}>切换 series，触发重建</button>
+          <button className="btn btn-secondary" onClick={() => setChartMounted((mounted) => !mounted)}>{chartMounted ? "卸载第三方实例" : "重新挂载第三方实例"}</button>
+        </div>
+        <div style={{ marginTop: 12 }}>
+          {chartMounted ? <FakeChart series={series} seriesKey={seriesKey} onLifecycle={recordLifecycle} /> : <div className="demo-alert">第三方实例当前已卸载。</div>}
+          <pre style={{ whiteSpace: "pre-wrap", fontSize: 12, marginTop: 10 }}>{lifecycleEvents.join("\n") || "等待 Effect setup"}</pre>
+        </div>
       </div>
 
       <div className="demo-grid-2">
