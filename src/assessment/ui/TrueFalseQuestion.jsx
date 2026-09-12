@@ -23,10 +23,16 @@ export function TrueFalseQuestion({ question, value = null, feedback = null, onC
           const correct = revealAnswer && option.value === question.content.correct;
           const incorrect = revealAnswer && selected && !correct;
           return (
-            <label key={String(option.value)} className={cn("block", disabled ? "cursor-default" : "cursor-pointer")}>
+            <label
+              key={String(option.value)}
+              className={cn("relative block", disabled ? "cursor-default" : "cursor-pointer")}
+            >
               <input
                 type="radio"
-                className="peer sr-only"
+                className={cn(
+                  "peer absolute inset-0 z-10 m-0 h-full w-full opacity-0",
+                  disabled ? "cursor-default" : "cursor-pointer",
+                )}
                 name={`assessment-${question.id}`}
                 value={String(option.value)}
                 aria-label={option.label}
@@ -35,9 +41,9 @@ export function TrueFalseQuestion({ question, value = null, feedback = null, onC
               />
               <span
                 className={cn(
-                  "flex min-h-14 w-full items-center gap-3 rounded-lg border px-3.5 py-3 text-sm font-semibold transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-[var(--color-primary)] peer-focus-visible:ring-offset-2",
+                  "pointer-events-none flex min-h-14 w-full items-center gap-3 rounded-lg border px-3.5 py-3 text-sm font-semibold transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-[var(--color-primary)] peer-focus-visible:ring-offset-2",
                   "border-[var(--border-color)] bg-[var(--bg-surface)] text-[var(--text-main)]",
-                  !disabled && "hover:border-[var(--border-hover)] hover:bg-[var(--bg-surface-secondary)]",
+                  !disabled && "peer-hover:border-[var(--border-hover)] peer-hover:bg-[var(--bg-surface-secondary)]",
                   selected && !revealAnswer && "border-[var(--color-primary)] bg-[var(--color-primary-light)]",
                   correct && "border-[var(--color-success-border)] bg-[var(--color-success-light)] text-[var(--color-success-text)]",
                   incorrect && "border-[var(--color-danger-border)] bg-[var(--color-danger-light)] text-[var(--color-danger-text)]",
