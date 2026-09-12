@@ -67,6 +67,12 @@ function buildAgentMessages({ question, context, history = [] }) {
   ];
 }
 
+function shouldUseAssessmentAgent(question) {
+  const normalized = String(question ?? "");
+  return /assessment_(?:list|create|update|retire)_questions?/i.test(normalized)
+    || /(?:出题|评测题|测验题|练习题)/.test(normalized);
+}
+
 export function useAiLearningAssistant({ learningUnit, activeSourceFile, assessmentRuntime = null } = {}) {
   const [chatState, dispatch] = useReducer(chatReducer, INITIAL_CHAT_STATE);
   const [inputValue, setInputValue] = useState("");
@@ -633,7 +639,10 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile, assessm
         assertCurrentRequest();
       }
 
-      if (agentRunner) {
+      // Keep the established chat transport for ordinary conversation. The
+      // AgentRunner is opt-in for assessment requests so existing chat,
+      // citation, compaction, and abort flows retain their wire contract.
+      if (agentRunner && shouldUseAssessmentAgent(normalizedQuestion)) {
         const agentContext = createToolExecutionContext({
           learningUnitId,
           conversationId: conversation?.id ?? `conversation-${requestId}`,
