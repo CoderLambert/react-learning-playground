@@ -1,0 +1,48 @@
+# server-functions-framework 审核建议
+
+## 当前结论
+
+- Gate A Correctness：PASS
+- Gate B Demo Contract：PASS（本分支修复可观察实验后）
+- Gate C Mental Model：PASS
+- 综合：课程正确把 Server Function 视为跨网络的服务端执行边界，并强调客户端引用、按钮可见性、TypeScript 类型都不是授权。原 Demo 的“调用 updateOrder()”按钮是空 handler，无法执行 Note 声称的 mutation 实验；本分支已把它改为明确标注的授权决策模拟器，并同步收紧 Note 的证据范围。
+
+## 事实与 React 19.2 边界
+
+React 官方当前定义：`"use server"` 标记 Server Functions；它不是 Server Component 标记。Server Function 参数来自客户端时必须视为不可信输入，服务端必须验证调用者是否有权执行 mutation。
+
+React 官方还指出 Server Functions 应在 Transition 中调用；作为 `<form action>` / `formAction` 传入时 React 会按 Action 语义调用。Server Functions 适合更新服务端状态，不推荐把它们当作普通 data-fetching cache API。
+
+React 19 的 Server Function 用户模型稳定，但框架/打包器实现这些能力所依赖的底层 API 在 React 19.x minor 之间仍不保证 semver。endpoint、server reference、CSRF、revalidation、部署等必须按具体 Framework 当前文档实现。
+
+## Mental Model
+
+学习者可以回答：为什么 Server Function 从调用者视角像函数、从安全视角却必须按远程请求处理；为什么 UI 隐藏与客户端 schema 不是授权；什么时候框架内部 Server Function 合适，什么时候应提供显式 HTTP API。
+
+## Demo ↔ Note
+
+原 Demo 的调用按钮没有任何行为，因此 Gate B 原本失败。本分支现在：
+
+- 允许切换“模拟服务端已验证权限”；
+- 点击“模拟请求 updateOrder()”记录请求时的授权 snapshot；
+- 显示 `mutation accepted` 或 `403 / mutation rejected`；
+- 明确声明这只是 trust-boundary/security-decision 模拟器，不发真实 Server Function 网络请求；
+- Note 的 Experiment / DemoReference 同步限定为授权决策与 threat modeling，不再声称验证 Framework endpoint/revalidation。
+
+因此当前 Gate B 通过。
+
+## 缺失边界 / 反例
+
+安全课程还可以增加 TOCTOU / object-level authorization 反例：即使用户整体有“编辑订单”权限，也必须在 mutation 时验证其是否能修改这个具体 `orderId`，并对服务端重新读取的当前资源状态做约束。
+
+还应避免让“CSRF 防护由框架负责”被误读成无需关注。不同 Framework 的 origin checks、same-site cookie、server reference 策略不同，真实项目仍要确认当前部署和认证模型。
+
+## 清晰度与工程决策
+
+生产规则明确：框架内部、与 route/action/revalidation 强绑定的 mutation 可考虑 Server Function；需要跨应用、第三方或稳定公开契约时显式 HTTP API 往往更合适。无论采用哪种入口，认证、对象级授权、输入校验和审计都属于服务端责任。
+
+## 建议修改
+
+1. 保留 Demo 中“这是安全决策模拟，不是真实 Server Function runtime”的声明。
+2. 增加 object-level authorization / stale-resource 反例。
+3. 若未来接入真实 RSC Framework，再用集成测试验证 endpoint、序列化、Transition/error/revalidation，而不是继续强化本地模拟器。
