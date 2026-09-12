@@ -139,6 +139,9 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile, assessm
       await store.recoverInterruptedRuns();
       if (!cancelled) setAgentAuditStore(store);
     }).catch(() => {
+      // createAgentRunStore normally supplies a Memory fallback. If a custom
+      // browser blocks even that initialization, chat remains available and
+      // assessment authoring is simply unavailable until the next load.
       if (!cancelled) setAgentAuditStore(null);
     });
     return () => { cancelled = true; };
@@ -474,7 +477,13 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile, assessm
 
   const submit = useCallback(async (question) => {
     const normalizedQuestion = typeof question === "string" ? question.trim() : "";
-    if (!normalizedQuestion || !client.configured || !requestContext || noteState.loading || activeRequestIdRef.current) return;
+    if (
+      !normalizedQuestion ||
+      !client.configured ||
+      !requestContext ||
+      noteState.loading ||
+      activeRequestIdRef.current
+    ) return;
 
     const controller = new AbortController();
     const requestId = createRequestId();
@@ -501,7 +510,11 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile, assessm
       },
     });
     const assertCurrentRequest = () => {
-      if (controller.signal.aborted || activeRequestIdRef.current !== requestId || hydrationRequestRef.current !== requestGeneration) {
+      if (
+        controller.signal.aborted ||
+        activeRequestIdRef.current !== requestId ||
+        hydrationRequestRef.current !== requestGeneration
+      ) {
         throw new AiChatAbortError();
       }
     };
@@ -565,14 +578,18 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile, assessm
         }
       }
 
-      const requestHistory = buildCompletedChatHistory(chatState.messages.slice(effectiveCompactedMessageCount));
+      const requestHistory = buildCompletedChatHistory(
+        chatState.messages.slice(effectiveCompactedMessageCount),
+      );
       const transportHistory = connectionMode === "gateway"
         ? requestHistory.slice(-CHAT_LIMITS.maxHistoryMessages)
         : requestHistory;
       const transportPrunedMessageCount = requestHistory.length - transportHistory.length;
       const selected = selectContextWithinBudget({
         modelId: contextModelId,
-        transportInputCapTokens: connectionMode === "gateway" ? GATEWAY_TRANSPORT_INPUT_CAP_TOKENS : undefined,
+        transportInputCapTokens: connectionMode === "gateway"
+          ? GATEWAY_TRANSPORT_INPUT_CAP_TOKENS
+          : undefined,
         systemPrompt: AI_LEARNING_ASSISTANT_SYSTEM_PROMPT,
         note: aiContext?.note?.content ?? "",
         sources: aiContext?.sources ?? [],
@@ -585,17 +602,25 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile, assessm
         ...selected.metadata,
         prunedHistory: selected.metadata.prunedHistory || transportPrunedMessageCount > 0,
         prunedMessageCount: selected.metadata.prunedMessageCount + transportPrunedMessageCount,
-        ...(connectionMode === "gateway" ? { transportInputCapTokens: GATEWAY_TRANSPORT_INPUT_CAP_TOKENS } : {}),
+        ...(connectionMode === "gateway"
+          ? { transportInputCapTokens: GATEWAY_TRANSPORT_INPUT_CAP_TOKENS }
+          : {}),
       };
       const selectionMessages = [];
       if (selectionMetadata.truncatedNote) selectionMessages.push("当前 Note 已截断");
       if (selectionMetadata.truncatedSources) selectionMessages.push("部分 Source 已截断或省略");
-      if (selectionMetadata.prunedHistory) selectionMessages.push(`已裁剪 ${selectionMetadata.prunedMessageCount} 条较早历史`);
-      setContextSelectionNotice(selectionMessages.length ? `上下文已按可用预算裁剪：${selectionMessages.join("；")}。` : null);
+      if (selectionMetadata.prunedHistory) {
+        selectionMessages.push(`已裁剪 ${selectionMetadata.prunedMessageCount} 条较早历史`);
+      }
+      setContextSelectionNotice(selectionMessages.length
+        ? `上下文已按可用预算裁剪：${selectionMessages.join("；")}。`
+        : null);
 
       const outboundContext = {
         ...requestContext,
-        note: requestContext.note && selected.context.note ? { ...requestContext.note, content: selected.context.note } : null,
+        note: requestContext.note && selected.context.note
+          ? { ...requestContext.note, content: selected.context.note }
+          : null,
         sources: selected.context.sources,
         activeSourceFile: selectionMetadata.activeSourceFile ?? requestContext.activeSourceFile,
         ...(selected.context.summary ? { conversationSummary: selected.context.summary } : {}),
@@ -603,7 +628,11 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile, assessm
       snapshot = repository && conversation
         ? await repository.saveContextSnapshot({
             learningUnitId,
-            context: { ...outboundContext, model: contextModelId, selection: selectionMetadata },
+            context: {
+              ...outboundContext,
+              model: contextModelId,
+              selection: selectionMetadata,
+            },
           })
         : null;
       assertCurrentRequest();
@@ -619,6 +648,8 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile, assessm
         assertCurrentRequest();
       }
 
+      // Capability is explicit UI/runtime state, never inferred from natural
+      // language. Ordinary chat continues through the no-tools transport.
       if (mode === "assessment_authoring" && agentRunner) {
         const agentContext = createToolExecutionContext({
           learningUnitId,
@@ -630,9 +661,16 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile, assessm
           actor: { type: "ai_agent", model: contextModelId },
         });
         await agentRunner.run({
-          messages: buildAgentMessages({ question: normalizedQuestion, context: outboundContext, history: selected.context.history }),
+          messages: buildAgentMessages({
+            question: normalizedQuestion,
+            context: outboundContext,
+            history: selected.context.history,
+          }),
           context: agentContext,
           signal: controller.signal,
+          // Provider wire contracts deliberately only distinguish chat and
+          // compaction. Capability selection happened above; this remains a
+          // normal tool-enabled chat turn on both direct and gateway clients.
           purpose: "chat",
           onEvent(event) {
             if (activeRequestIdRef.current !== requestId) return;
@@ -642,9 +680,13 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile, assessm
             } else if (event.type === MODEL_TURN_EVENT_TYPES.TEXT_DELTA) {
               const limited = outputLimiter.push(event.text);
               assistantText = limited.content;
-              if (limited.acceptedText) dispatch({ type: "delta", requestId, text: limited.acceptedText });
+              if (limited.acceptedText) {
+                dispatch({ type: "delta", requestId, text: limited.acceptedText });
+              }
               const persistedText = assistantText;
-              void enqueuePersistence(() => { persister?.schedule({ content: persistedText, status: "streaming" }); });
+              void enqueuePersistence(() => {
+                persister?.schedule({ content: persistedText, status: "streaming" });
+              });
             } else if (event.type === MODEL_TURN_EVENT_TYPES.TURN_COMPLETE) {
               terminalEvent = event;
             }
@@ -663,15 +705,23 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile, assessm
               } else if (event.type === CHAT_EVENT_TYPES.DELTA) {
                 const limited = outputLimiter.push(event.text);
                 assistantText = limited.content;
-                if (limited.acceptedText) dispatch({ type: "delta", requestId, text: limited.acceptedText });
+                if (limited.acceptedText) {
+                  dispatch({ type: "delta", requestId, text: limited.acceptedText });
+                }
                 const persistedText = assistantText;
-                void enqueuePersistence(() => { persister?.schedule({ content: persistedText, status: "streaming" }); });
-              } else if (event.type === CHAT_EVENT_TYPES.DONE) terminalEvent = event;
+                void enqueuePersistence(() => {
+                  persister?.schedule({ content: persistedText, status: "streaming" });
+                });
+              } else if (event.type === CHAT_EVENT_TYPES.DONE) {
+                terminalEvent = event;
+              }
             },
           },
         );
       }
-      const finishReason = outputLimitExceeded ? "output_limit" : normalizeFinishReason(terminalEvent?.finishReason);
+      const finishReason = outputLimitExceeded
+        ? "output_limit"
+        : normalizeFinishReason(terminalEvent?.finishReason);
       const usage = normalizeUsage(terminalEvent?.usage);
       dispatch({ type: "done", requestId, finishReason, usage });
       await enqueuePersistence(() => persister?.finalize({
@@ -688,18 +738,34 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile, assessm
       if (outputLimitExceeded) {
         dispatch({ type: "done", requestId, finishReason: "output_limit" });
         await ensureAssistantRecord();
-        await persister?.finalize({ content: assistantText, status: "complete", metadata: { finishReason: "output_limit" } });
+        await persister?.finalize({
+          content: assistantText,
+          status: "complete",
+          metadata: { finishReason: "output_limit" },
+        });
       } else if (error instanceof AiChatAbortError || controller.signal.aborted) {
         dispatch({ type: "cancel", requestId });
         if (assistantRecordPromise || assistantRecord) {
           await ensureAssistantRecord();
-          await persister?.finalize({ content: assistantText, status: "interrupted", metadata: { finishReason: "user_abort" } });
+          await persister?.finalize({
+            content: assistantText,
+            status: "interrupted",
+            metadata: { finishReason: "user_abort" },
+          });
         }
       } else {
-        dispatch({ type: "error", requestId, message: error?.message || "AI assistant request failed" });
+        dispatch({
+          type: "error",
+          requestId,
+          message: error?.message || "AI assistant request failed",
+        });
         if (userRecord || assistantRecordPromise || assistantRecord) {
           await ensureAssistantRecord();
-          await persister?.finalize({ content: assistantText, status: "error", metadata: { finishReason: "error" } });
+          await persister?.finalize({
+            content: assistantText,
+            status: "error",
+            metadata: { finishReason: "error" },
+          });
         }
       }
       await refreshConversations(repository);
