@@ -2,44 +2,44 @@
 
 ## 当前结论
 
-**主线可靠，存在少量边界与措辞问题。** Gate A：PASS；Gate B：PASS；Gate C：PASS。
+- Gate A Correctness：PASS
+- Gate B Demo Contract：PASS
+- Gate C Mental Model：PASS
+- 综合：本轮关闭了原 advice 中仍残留的两个措辞问题；Note、Demo 与 Source 现在对 `useRef` 的 render 边界、计时器句柄和 `useLayoutEffect` 适用范围保持一致。
 
 ## Correctness / React 19.2
 
-- `useRef` 在后续 render 中返回同一个 ref 对象；修改 `ref.current` 不会触发 React render。
-- DOM ref 在节点提交后由 React 写入，在节点移除时恢复为 `null`。
-- “render 中不要读写 `ref.current`”应保留官方限定：**除可预测的初始化模式外**。React 官方允许类似 `if (ref.current === null) ref.current = new Thing()` 的一次性确定性初始化。
-- Demo 把 `setInterval` 示例称为“高精度秒表”不准确；浏览器 interval 并不提供高精度计时保证。这不影响 ref 教学，但建议改成普通“计时器”。
+- `useRef` 在后续 render 中返回同一个 ref 对象；修改 `ref.current` 不会请求 React 重新 render。
+- DOM ref 在对应节点提交后由 React 写入，在节点移除时恢复为 `null`。
+- React 官方规则是**通常不要在 render 中读写 `ref.current`**，但存在确定性初始化的窄例外，例如仅当 `ref.current === null` 时创建并保存同一个对象。课程现在明确保留这个例外，不再使用“只能在事件/Effect 中操作”的误导性绝对表述。
+- `setInterval` 不提供高精度计时保证。Demo 已从“高精度秒表”改为普通计时器句柄示例，并明确它只用于说明 ref 持有外部句柄。
+- 课程不再使用模糊的“Concurrent Mode”作为理由；核心理由是 render 必须可预测且保持纯，React 可以重复调用组件函数来检测或执行渲染工作。
 
 ## Mental model
 
-“State 是渲染输入，Ref 是 React 保留但不会纳入更新调度的可变容器”足够清晰。建议补一句：ref 的用途不是“所有不想重渲染的数据”，而是**值不参与当前 JSX 计算，但需要跨 render 保留或连接外部系统**。
+“State 是渲染输入；Ref 是 React 保留但不会纳入更新调度的可变容器”是可靠主线。进一步的生产规则是：**影响 JSX → State；不参与 JSX、但需要跨 render 保存 → Ref；需要连接 DOM/浏览器/第三方命令式 API → Ref + 对应事件或 Effect。**
 
 ## Demo ↔ Note
 
-实验基本成立：
+当前实验契约一致：
 
-- DOM focus 可以直接观察；
-- timer handle 存在 ref，而可见秒数存在 state，形成正确对照；
-- Note 关于“单独修改 ref.current 不会立即更新屏幕”的结论与 React 语义一致。
-
-需要注意：当前 Demo 没有提供一个“ref counter 写入但 JSX 不更新”的显式按钮实验，因此这条现象主要由计时器 handle 的 Source 说明，而不是视觉对照直接证明。仍可接受，但可以更明确区分“可观察 UI”与“从 Source 验证”。
+- DOM focus / scroll 是直接可观察的命令式 ref 用法；
+- 可见秒数由 State 驱动，interval ID 由 Ref 跨 render 保存；
+- Note 不再虚构“Ref 计数按钮”实验，而是明确让学习者从 Source 验证句柄写入不驱动 UI；
+- Demo 也明确说明 `setInterval` 不是高精度时钟。
 
 ## 缺失边界 / 反例
 
-- 不要把 ref 当成 state 的同步版本；如果值参与渲染，仍应使用 state。
-- 保存 DOM 节点只是 ref 的一种用途；timer/request/第三方实例等不参与 JSX 的外部句柄同样合适。
-- `useLayoutEffect` 只在必须在浏览器 paint 前测量/修改布局时使用；普通外部同步优先 `useEffect`，避免把 layout effect 与 ref 绑定成固定组合。
+- Ref 不是“State 的同步版本”；如果值参与渲染，应使用 State。
+- 可预测的一次性初始化是 render 中访问 ref 的窄例外，不能扩展成任意 mutable render cache。
+- `useLayoutEffect` 只在必须在浏览器 paint 前测量/同步布局时优先使用；普通外部同步通常用 `useEffect`。
 
 ## 清晰度与工程决策
 
-建议将项目规则压缩成：**影响 JSX → state；只需跨 render 保存且不驱动 UI → ref；需要直接访问 DOM/外部 imperative API → ref + 合适的事件/Effect。**
+当前 Note 与 Demo 都已给出足够明确的选择规则，不需要继续扩展成 Ref API 百科。后续如果增加 imperative handle、第三方实例或测量布局，应放到对应高级课程，而不是把所有 escape hatch 塞进本课。
 
 ## 建议修改
 
-1. Demo 将“高精度秒表”改为“计时器”，删除精度暗示。
-2. “切勿在 render 读写 ref”补充官方的可预测一次性初始化例外，避免误导高级用法。
-3. Note 可增加“从 Source 验证 timer handle 不驱动 UI”的说明，避免把不可见的 ref 变化包装成完全可视化实验。
-4. 明确 `useLayoutEffect` 是 paint 前布局需求的工具，不是操作 DOM ref 的默认伴侣。
+本轮硬 Gate 与原残留措辞均已关闭。除非教学目标发生变化，不需要继续修改。
 
 官方基线：React `useRef`、`Referencing Values with Refs`、`Manipulating the DOM with Refs`。

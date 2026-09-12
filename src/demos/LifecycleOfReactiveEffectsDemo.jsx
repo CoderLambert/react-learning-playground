@@ -1,4 +1,4 @@
-import { useEffect, useEffectEvent, useState } from "react";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
 
 function connectChatSocket(roomId, onMessage) {
   const timerId = setInterval(() => {
@@ -20,36 +20,52 @@ export function LifecycleOfReactiveEffectsDemo() {
   const [roomId, setRoomId] = useState("101");
   const [messages, setMessages] = useState([]);
   const [isMuted, setIsMuted] = useState(false);
-  const [lifecycleLogs, setLifecycleLogs] = useState([
-    { type: "success", text: "🟢 初始房间将由 Effect 建立同步", time: new Date().toLocaleTimeString() },
-  ]);
+  const [lifecycleLogs, setLifecycleLogs] = useState([]);
+  const logSequenceRef = useRef(0);
 
-  function addLog(type, text) {
+  const addLifecycleLog = useEffectEvent((type, text) => {
+    logSequenceRef.current += 1;
     setLifecycleLogs((prev) => [
-      { type, text, time: new Date().toLocaleTimeString() },
+      {
+        type,
+        text: `#${logSequenceRef.current} ${text}`,
+        time: new Date().toLocaleTimeString(),
+      },
       ...prev.slice(0, 19),
     ]);
-  }
+  });
 
-  const onMessage = useEffectEvent((newMessage) => {
-    setMessages((prev) => [newMessage, ...prev.slice(0, 7)]);
-    addLog(
-      isMuted ? "warn" : "info",
-      isMuted ? "🔕 收到消息；当前静音，不播放提示音" : `📩 收到新消息并播放提示音: ${newMessage.text}`,
-    );
+  const notifyForMessage = useEffectEvent((newMessage) => {
+    setLifecycleLogs((prev) => [
+      {
+        type: isMuted ? "warn" : "info",
+        text: isMuted
+          ? `🔕 收到消息；当前静音，不播放提示音：${newMessage.text}`
+          : `📩 收到新消息并播放提示音：${newMessage.text}`,
+        time: new Date().toLocaleTimeString(),
+      },
+      ...prev.slice(0, 19),
+    ]);
   });
 
   useEffect(() => {
-    const socket = connectChatSocket(roomId, onMessage);
+    addLifecycleLog("success", `🟢 setup：建立房间 #${roomId} 的连接`);
+
+    const socket = connectChatSocket(roomId, (newMessage) => {
+      // 函数式 updater 让 Effect 回调无需读取 messages。
+      // 因此消息列表更新不会成为“重新建立连接”的依赖。
+      setMessages((prev) => [newMessage, ...prev.slice(0, 7)]);
+      notifyForMessage(newMessage);
+    });
 
     return () => {
       socket.close();
+      addLifecycleLog("warn", `🧹 cleanup：关闭房间 #${roomId} 的连接`);
     };
   }, [roomId]);
 
   function handleSwitchRoom(nextRoom) {
     if (nextRoom === roomId) return;
-    addLog("info", `🔁 请求从房间 #${roomId} 切换到 #${nextRoom}；提交后 Effect 将先清理旧连接，再建立新连接`);
     setRoomId(nextRoom);
     setMessages([]);
   }
@@ -67,6 +83,7 @@ export function LifecycleOfReactiveEffectsDemo() {
         <div className="demo-meta-tags">
           <span className="badge badge-gray">Reactive Values</span>
           <span className="badge badge-gray">Cleanup → Setup</span>
+          <span className="badge badge-gray">Functional Updater</span>
           <span className="badge badge-gray">Effect Event</span>
         </div>
       </div>
@@ -74,7 +91,9 @@ export function LifecycleOfReactiveEffectsDemo() {
       <div className="demo-section">
         <div className="demo-section-header">
           <h3 className="demo-section-title"><span>🎮</span> 实时聊天室连接模拟器</h3>
-          <p className="demo-section-desc">切换房间会改变同步目标，因此需要断开旧连接再建立新连接；静音只影响“收到消息后做什么”，不应该重新建立 Socket。</p>
+          <p className="demo-section-desc">
+            切换房间会改变同步目标，因此需要断开旧连接再建立新连接；静音只影响“收到消息后做什么”，不应该重新建立 Socket。右侧日志中的 setup/cleanup 由 Effect 本身记录，不是点击 handler 的预测。
+          </p>
         </div>
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px", marginBottom: "16px", padding: "12px 16px", background: "var(--bg-surface-secondary)", borderRadius: "var(--radius-sm)" }}>
@@ -110,12 +129,15 @@ export function LifecycleOfReactiveEffectsDemo() {
                 ))
               )}
             </div>
+            <p style={{ margin: "8px 0 0", fontSize: "12px", color: "var(--text-subtle)" }}>
+              等待多条消息：列表会持续更新，但不会出现新的 cleanup/setup。Source 中的 <code>setMessages(prev =&gt; ...)</code> 没有读取 <code>messages</code>，因此消息变化不是连接 Effect 的依赖。
+            </p>
           </div>
 
           <div>
-            <div style={{ fontSize: "13px", fontWeight: "600", marginBottom: "8px", color: "var(--text-main)" }}>同步行为日志</div>
+            <div style={{ fontSize: "13px", fontWeight: "600", marginBottom: "8px", color: "var(--text-main)" }}>真实 Effect 同步日志</div>
             <div className="demo-console" style={{ height: "220px", maxHeight: "220px" }}>
-              <div className="demo-console-header"><span>SYNC BEHAVIOR LOG</span><span>{lifecycleLogs.length} 条记录</span></div>
+              <div className="demo-console-header"><span>EFFECT SETUP / CLEANUP LOG</span><span>{lifecycleLogs.length} 条记录</span></div>
               {lifecycleLogs.map((log, index) => <div key={`${log.time}-${index}`} className={`demo-console-log ${log.type}`}>[{log.time}] {log.text}</div>)}
             </div>
           </div>
@@ -128,13 +150,17 @@ export function LifecycleOfReactiveEffectsDemo() {
           <p>依赖数组描述 setup 读取了哪些响应式值。这里 <code>roomId</code> 决定连接目标，所以它必须是依赖；不能为了减少重连而把真实依赖删掉。</p>
         </div>
         <div className="demo-alert demo-alert-tip">
-          <div className="demo-alert-title">非响应式逻辑用 Effect Event</div>
-          <p><code>isMuted</code> 只在外部连接触发“收到消息”时读取最新 committed 值。React 19.2 的 <code>useEffectEvent</code> 可以表达这类逻辑，而无需把静音切换变成重新连接的理由。</p>
+          <div className="demo-alert-title">先改变代码，再改变依赖</div>
+          <p>消息追加使用函数式 updater，因此连接 Effect 不必读取 <code>messages</code>。静音则通过 <code>useEffectEvent</code> 在消息到达时读取最新 committed 值；两者都不是通过禁用 linter 来“逃避”依赖。</p>
         </div>
       </div>
 
       <div className="demo-alert demo-alert-warning" style={{ marginTop: 12 }}>
-        <strong>边界：</strong><code>useEffectEvent</code> 不是逃避依赖的工具，也不能作为普通点击 handler 随处调用。它用于 Effect 内部触发的非响应式事件逻辑；真正决定外部同步关系的值仍必须留在依赖中。
+        <strong>开发环境边界：</strong>启用 Strict Mode 时，React 会额外执行一次开发期 setup → cleanup → setup 压力测试，所以首次进入页面可能看到额外生命周期日志。判断依赖变化时应看日志因果，而不是假设 setup 只会执行一次。
+      </div>
+
+      <div className="demo-alert demo-alert-warning" style={{ marginTop: 12 }}>
+        <strong>Effect Event 边界：</strong><code>useEffectEvent</code> 不是逃避依赖的工具，也不能作为普通点击 handler 随处调用。它用于 Effect 内部触发的非响应式事件逻辑；真正决定外部同步关系的值仍必须留在依赖中。
       </div>
     </div>
   );

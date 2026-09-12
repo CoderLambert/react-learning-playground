@@ -11,15 +11,15 @@
   right={["订阅浏览器/第三方 API", "连接 WebSocket", "控制非 React widget", "同步定时器或事件监听"]}
 />
 
-<Experiment title="删除同步链">
-在中间 Demo 比较“Effect 把派生值写回 State”和“render 直接计算”。连续修改输入，观察前者多一次 render/commit，并存在短暂旧值与依赖维护成本。
+<Experiment title="从三个真实交互判断 Effect 是否必要">
+在中间 Demo 完成三组实验：① 连续修改搜索词和分类，确认商品列表直接由当前 `query/category` 在 render 中派生；② 点击“购买”，确认日志由对应 Event Handler 直接产生；③ 先输入留言草稿，再切换用户，确认 `key={userId}` 让新的组件身份获得新的本地 State。Demo 中的“Effect + 派生 State”代码块只是反模式说明，不是可执行的 render-count 对照实验。
 </Experiment>
 
-<Observation>派生值直接计算把事实来源保持为一份；Effect + State 会形成“源 State → render → Effect → 第二份 State → 再 render”的链条。</Observation>
+<Observation>派生值直接计算把事实来源保持为一份。若改成“源 State → render → Effect → 第二份 State”，React 还需要在 Effect 更新 State 后再进行一次 render；官方文档因此建议把这类可计算数据留在 render，而不是额外同步一份 State。</Observation>
 
 <AntiPattern title="Effect 驱动内部数据流水线">多个 Effect 互相 setState 会让因果关系分散，并产生额外 render。把事件因果放回 handler，把可计算数据放回 render。</AntiPattern>
 
-<Boundary>昂贵计算与“是否需要 Effect”是两个问题。昂贵纯计算仍然是 render 逻辑；必要时再根据测量结果考虑 memoization。</Boundary>
+<Boundary>昂贵计算与“是否需要 Effect”是两个问题。昂贵纯计算仍然是 render 逻辑；必要时再根据测量结果考虑 memoization。`key` 重置也只适用于产品语义确实是“切换身份后丢弃旧本地状态”的场景；若需要按实体保留草稿，应重新设计 State ownership。</Boundary>
 
 <Summary>
 - 无外部系统先不用 Effect

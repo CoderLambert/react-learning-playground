@@ -6,21 +6,21 @@
 
 <Timeline steps={["commit A", "setup(A)", "依赖改变", "cleanup(A)", "setup(B)", "再次改变", "cleanup(B)", "setup(C)"]} />
 
-<Experiment title="改变不同依赖">
-使用中间 Demo 分别改变连接目标、普通 UI State 与可通过函数式更新解耦的值。观察哪些变化真正要求重新同步，以及 cleanup/setup 的顺序。
+<Experiment title="用真实日志区分哪些变化需要重新同步">
+在中间 Demo 做三步：① 从房间 101 切换到 102，观察右侧日志由 Effect cleanup/setup 自身记录“关闭旧连接 → 建立新连接”；② 只切换静音，确认没有新的 cleanup/setup，因为静音不决定连接目标；③ 等待多条消息到达，确认消息列表通过 `setMessages(prev => ...)` 持续更新，但连接仍不重建。Source 可以看到 Effect 因而无需读取 `messages`，依赖仍只有真正决定同步目标的 `roomId`。
 </Experiment>
 
-<Observation>函数式 State updater 可以让更新基于 React 提供的最新值，从而避免仅为了读取旧 State 而增加不必要依赖；这不是“骗过 linter”，而是改变数据依赖。</Observation>
+<Observation>函数式 State updater 可以让“下一个 State 由上一个 State 计算”的更新不必读取旧 State。这里消息回调把 `setMessages([...messages, next])` 重构为 `setMessages(prev => [...])` 后，连接 Effect 不再需要 `messages` 这个 reactive read，因此收到消息不会变成重新连接的理由。这不是“骗过 linter”，而是改变了代码的数据依赖。</Observation>
 
-<AntiPattern title="禁用 exhaustive-deps">忽略依赖检查会把 Effect 固定在旧闭包上，常见结果是 stale props/state、错误订阅或无法重连。</AntiPattern>
+<AntiPattern title="禁用 exhaustive-deps">忽略依赖检查会把 Effect 固定在旧闭包上，常见结果是 stale props/state、错误订阅或无法重连。若依赖列表看起来不合理，应先改变 Effect 或周围代码，再让依赖与新代码一致。</AntiPattern>
 
-<Boundary>如果某段逻辑不应该因某个值变化而重新同步，先确认它是否真属于 Effect；若它需要读取最新 committed 值但不参与响应性，可评估 Effect Event。</Boundary>
+<Boundary>如果某段逻辑不应该因某个值变化而重新同步，先确认它是否真属于 Effect；若它需要读取最新 committed 值但不参与响应性，可评估 Effect Event。开发环境启用 Strict Mode 时，React 会额外执行一次 setup → cleanup → setup 压力测试，因此初次进入 Demo 可能出现额外生命周期日志；这不代表生产环境每次都执行两次。</Boundary>
 
 <Summary>
 - Effect 生命周期围绕同步过程。
 - 依赖来自实际 reactive reads。
 - 每次重同步先 cleanup 旧过程。
-- 通过重构依赖而不是删除依赖解决循环。
+- 通过重构代码而不是删除依赖解决过度重同步。
 </Summary>
 
 <FurtherReading items={[{label:"React: Lifecycle of Reactive Effects",href:"https://react.dev/learn/lifecycle-of-reactive-effects"},{label:"React: Removing Effect Dependencies",href:"https://react.dev/learn/removing-effect-dependencies"}]} />
