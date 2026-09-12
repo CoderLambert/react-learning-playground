@@ -96,6 +96,20 @@ export function updateAnswer(attempt, question, patch, now = Date.now()) {
   };
 }
 
+export function resetAnswer(attempt, question, now = Date.now()) {
+  return {
+    ...attempt,
+    status: attempt.status === "completed" ? "reopened" : attempt.status,
+    completedAt: attempt.status === "completed" ? null : attempt.completedAt,
+    currentQuestionId: question.id,
+    updatedAt: nowIso(now),
+    answers: {
+      ...attempt.answers,
+      [question.id]: createBlankAnswer(question, now),
+    },
+  };
+}
+
 export function navigateAttempt(attempt, questionId, now = Date.now()) {
   return { ...attempt, currentQuestionId: questionId, updatedAt: nowIso(now) };
 }
