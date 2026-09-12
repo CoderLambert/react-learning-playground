@@ -1,0 +1,46 @@
+# navigation-boundary 审核建议
+
+## 当前结论
+
+- Gate A Correctness：PASS
+- Gate B Demo Contract：PASS（本分支收口 Note 后）
+- Gate C Mental Model：PASS
+- 综合：原 Note 主要讲异步 pending navigation，但 Demo 实际只模拟 push / replace / Back / Forward / 404，属于明显 Demo Contract 不一致。本分支已把 Note 重心改回 Demo 真正可执行的 location + history + route match 边界，并把 pending navigation 明确放到真实 Router runtime 的边界说明。
+
+## 事实与版本边界
+
+React Router 当前区分 Declarative、Data、Framework 模式。普通用户导航应优先使用 `Link` / `NavLink`；`useNavigate` 用于程序式导航。Data / Framework 模式中，loader/action 数据流程内的跳转通常更适合 `redirect`。`replace` 替换当前 history entry，而 `navigate(delta)` / Back / Forward 在已有历史条目之间移动。
+
+Pending navigation 不是 React Core 的通用 loading state；在 React Router Data / Framework 模式中可通过 `useNavigation` 等 Router API 读取。当前仓库没有安装 React Router，所以 Demo 不能声称验证 loader/pending/redirect runtime。
+
+## Mental Model
+
+本课应该先建立“导航 = location + history + route match 的状态转换”模型，再讨论 Router 模式附加的 data/pending 能力。这样学习者能解释为什么 push、replace、Back/Forward 的历史语义不同，也能理解 404 是 route matching 的边界，而不是组件内部的一个普通条件分支。
+
+## Demo ↔ Note
+
+当前 Demo 可真实执行：
+
+- 连续导航观察本地模拟 history stack 新增 entry；
+- `replace → /account` 观察当前 entry 被替换；
+- Back / Forward 移动游标而不创建新 entry；
+- 打开 `/missing-page` 观察 unmatched route → Not Found boundary；
+- 对照说明理解 `Link` / `NavLink`、`redirect`、`useNavigate` 的职责差异。
+
+Demo 明确写明这是 history 语义模拟，不是真实 Router runtime。修复后的 Note 不再要求“慢导航/pending UI”这一不存在的实验，因此 Gate B 通过。
+
+## 缺失边界 / 反例
+
+建议后续真实接入 Router 时单独增加 pending-navigation lesson/experiment：slow loader、navigation location、局部 pending UI、redirect/error boundary，并区分 Declarative 模式与 Data/Framework 模式能力。
+
+另外应提醒 `replace` 是产品语义决策：登录重定向、canonicalization 等场景可能适合替换，但普通可回退页面不应为了“少一条 history”随意 replace。
+
+## 清晰度与工程决策
+
+当前生产规则更清楚：能表达为真实链接的用户导航优先链接；程序式导航仅用于命令式流程；push / replace 按“用户是否应该回到上一 entry”决定；unmatched URL 必须有明确 route boundary。
+
+## 建议修改
+
+1. 保留“Demo 是 history 模拟器，不验证 Router pending runtime”的明确声明。
+2. 若未来增加真实 Router，另做 pending/navigation data 实验，不要让一个本地数组同时承担两套教学目标。
+3. 在生产决策规则中增加“是否应允许 Back 返回”作为 push vs replace 的判断问题。
