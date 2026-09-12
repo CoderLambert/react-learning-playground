@@ -14,14 +14,12 @@ import {
   updateAnswer,
 } from "./practiceAttempt.js";
 
-function promptId(chapter, prompt, index) {
-  let hash = 0;
-  for (const char of prompt) hash = (Math.imul(hash, 31) + char.charCodeAt(0)) | 0;
-  return `chapter-${chapter}-practice-${index + 1}-${Math.abs(hash).toString(36)}`;
+function promptId(chapter, index) {
+  return `chapter-${chapter}-practice-${index + 1}`;
 }
 
 export function toPracticeQuestions(chapter, prompts = []) {
-  return prompts.map((prompt, index) => ({ id: promptId(chapter, prompt, index), kind: "free-text", prompt }));
+  return prompts.map((prompt, index) => ({ id: promptId(chapter, index), kind: "free-text", prompt }));
 }
 
 function createInitialAttempt(repository, chapter, questions) {
