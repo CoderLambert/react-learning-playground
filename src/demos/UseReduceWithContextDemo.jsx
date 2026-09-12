@@ -35,24 +35,6 @@ function useEffectProbe(prefix) {
   return badgeRef;
 }
 
-function useTaskState() {
-  const value = useContext(TaskStateContext);
-  if (!value) throw new Error("useTaskState 必须在 TaskProvider 内使用");
-  return value;
-}
-
-function useTaskDispatch() {
-  const value = useContext(TaskDispatchContext);
-  if (!value) throw new Error("useTaskDispatch 必须在 TaskProvider 内使用");
-  return value;
-}
-
-function useSingleTaskContext() {
-  const value = useContext(SingleTaskContext);
-  if (!value) throw new Error("useSingleTaskContext 必须在 SingleTaskProvider 内使用");
-  return value;
-}
-
 function TaskProvider({ children }) {
   const [tasks, dispatch] = useReducer(taskReducer, initialTasks);
 
@@ -74,10 +56,12 @@ function SingleTaskProvider({ children }) {
 }
 
 function AddButton({ mode }) {
-  const splitDispatch = mode === "split" ? useTaskDispatch() : null;
-  const singleValue = mode === "single" ? useSingleTaskContext() : null;
-  const dispatch = splitDispatch ?? singleValue.dispatch;
+  const splitDispatch = useContext(TaskDispatchContext);
+  const singleValue = useContext(SingleTaskContext);
+  const dispatch = mode === "split" ? splitDispatch : singleValue?.dispatch;
   const badgeRef = useEffectProbe(mode === "single" ? "单 Context 写组件" : "双 Context 写组件");
+
+  if (!dispatch) throw new Error("AddButton 缺少对应 Context Provider");
 
   return (
     <div style={{ padding: 12, border: "1px solid var(--border-color)", borderRadius: 8 }}>
@@ -98,12 +82,14 @@ function AddButton({ mode }) {
 }
 
 function TaskList({ mode }) {
-  const splitTasks = mode === "split" ? useTaskState() : null;
-  const splitDispatch = mode === "split" ? useTaskDispatch() : null;
-  const singleValue = mode === "single" ? useSingleTaskContext() : null;
-  const tasks = splitTasks ?? singleValue.tasks;
-  const dispatch = splitDispatch ?? singleValue.dispatch;
+  const splitTasks = useContext(TaskStateContext);
+  const splitDispatch = useContext(TaskDispatchContext);
+  const singleValue = useContext(SingleTaskContext);
+  const tasks = mode === "split" ? splitTasks : singleValue?.tasks;
+  const dispatch = mode === "split" ? splitDispatch : singleValue?.dispatch;
   const badgeRef = useEffectProbe(mode === "single" ? "单 Context 读组件" : "双 Context 读组件");
+
+  if (!tasks || !dispatch) throw new Error("TaskList 缺少对应 Context Provider");
 
   return (
     <div style={{ padding: 12, border: "1px solid var(--border-color)", borderRadius: 8 }}>
