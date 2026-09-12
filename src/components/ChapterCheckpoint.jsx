@@ -1,3 +1,5 @@
+import { getChapterNextStep, getIntegrationLab } from "./chapterCheckpointMap";
+
 const CHECKPOINTS = {
   1: {
     title: "Chapter 01 · UI 与组件模型",
@@ -189,6 +191,8 @@ const CHECKPOINTS = {
 export function ChapterCheckpoint({ chapter }) {
   const checkpoint = CHECKPOINTS[chapter];
   if (!checkpoint) return null;
+  const nextStep = getChapterNextStep(chapter);
+  const integrationLab = getIntegrationLab(chapter);
 
   return (
     <section className="demo-section" data-chapter-checkpoint={chapter} aria-labelledby={`chapter-${chapter}-checkpoint-title`}>
@@ -214,6 +218,49 @@ export function ChapterCheckpoint({ chapter }) {
           </ol>
         </div>
       </div>
+
+      {integrationLab && (
+        <div
+          className="demo-alert demo-alert-info"
+          data-integration-lab={integrationLab.id}
+          style={{ margin: "16px 0 0" }}
+        >
+          <div className="demo-alert-title" id={`chapter-${chapter}-integration-lab-title`}>
+            <span aria-hidden="true">🧪</span>
+            <span>{integrationLab.title}</span>
+          </div>
+          <p>{integrationLab.description}</p>
+          {integrationLab.path && <p><strong>本章路径：</strong>{integrationLab.path}</p>}
+          <div className="demo-grid-2" style={{ marginTop: 12 }}>
+            <div>
+              <strong>Core Demo 教什么</strong>
+              <p>{integrationLab.coreDemo}</p>
+            </div>
+            <div>
+              <strong>Real Lab 验证什么</strong>
+              <p>{integrationLab.realLab}</p>
+            </div>
+          </div>
+          <p style={{ marginBottom: 0 }}>
+            <a href={integrationLab.repositoryUrl} target="_blank" rel="noreferrer">
+              打开 Lab README / Source ↗
+            </a>
+            <span> · 运行命令：<code>{integrationLab.command}</code></span>
+          </p>
+        </div>
+      )}
+
+      {nextStep && (
+        <div
+          className="demo-alert demo-alert-success"
+          data-chapter-next-step={chapter}
+          style={{ margin: "16px 0 0" }}
+        >
+          <div className="demo-alert-title">➡️ 下一步</div>
+          <p>{nextStep.understood} {nextStep.next}</p>
+          <strong>{nextStep.target}</strong>
+        </div>
+      )}
     </section>
   );
 }
