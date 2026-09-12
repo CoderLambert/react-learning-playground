@@ -23,58 +23,72 @@ export function AssessmentRunner({
   chapter,
   title = `Chapter ${chapter} Practice`,
   questions = [],
-  repository = new AttemptRepository(),
+  repository = null,
   onAskAi,
   onCopySummary,
 }) {
+  const fallbackRepositoryRef = useRef(null);
+  if (!fallbackRepositoryRef.current) fallbackRepositoryRef.current = new AttemptRepository();
+  const activeRepository = repository ?? fallbackRepositoryRef.current;
+
   const validQuestions = useMemo(() => normalizeQuestions(questions), [questions]);
-  const [attempts, setAttempts] = useState(() => repository.listAttempts(chapter));
+  const [attempts, setAttempts] = useState(() => activeRepository.listAttempts(chapter));
   const [filter, setFilter] = useState("all");
   const visibleQuestions = useMemo(
     () => filterQuestions({ questions: validQuestions, attempts, filter }),
     [validQuestions, attempts, filter],
   );
-  const session = repository.getSession(chapter);
+  const session = activeRepository.getSession(chapter);
   const initialId = session?.currentQuestionId && validQuestions.some((item) => item.id === session.currentQuestionId)
     ? session.currentQuestionId
     : validQuestions[0]?.id ?? null;
   const [currentId, setCurrentId] = useState(initialId);
   const currentIndex = Math.max(0, visibleQuestions.findIndex((question) => question.id === currentId));
   const current = visibleQuestions[currentIndex] ?? visibleQuestions[0] ?? null;
-  const currentAttempt = current ? repository.getAttempt({ chapter, question: current }) : null;
+  const currentAttempt = current ? activeRepository.getAttempt({ chapter, question: current }) : null;
   const [answer, setAnswer] = useState(currentAttempt?.answer ?? "");
   const [confidence, setConfidence] = useState(currentAttempt?.confidence ?? "unset");
   const [selfAssessment, setSelfAssessment] = useState(currentAttempt?.selfAssessment ?? "unset");
   const answerRef = useRef(null);
 
   useEffect(() => {
+    setAttempts(activeRepository.listAttempts(chapter));
+    const restored = activeRepository.getSession(chapter);
+    const nextId = restored?.currentQuestionId && validQuestions.some((item) => item.id === restored.currentQuestionId)
+      ? restored.currentQuestionId
+      : validQuestions[0]?.id ?? null;
+    setCurrentId(nextId);
+  }, [activeRepository, chapter, validQuestions]);
+
+  useEffect(() => {
     if (!current) return;
-    const attempt = repository.getAttempt({ chapter, question: current });
+    const attempt = activeRepository.getAttempt({ chapter, question: current });
     setAnswer(attempt?.answer ?? "");
     setConfidence(attempt?.confidence ?? "unset");
     setSelfAssessment(attempt?.selfAssessment ?? "unset");
     setCurrentId(current.id);
-    repository.saveSession({ chapter, currentQuestionId: current.id, completed: false });
-  }, [chapter, current?.id, current?.prompt, current?.kind, repository]);
+    activeRepository.saveSession({ chapter, currentQuestionId: current.id, completed: false });
+  }, [activeRepository, chapter, current?.id, current?.prompt, current?.kind]);
 
   useEffect(() => {
     if (!current) return undefined;
     const timeout = setTimeout(() => {
       if (!answer.trim() && confidence === "unset" && selfAssessment === "unset") return;
-      repository.saveAttempt({
+      const existing = activeRepository.getAttempt({ chapter, question: current });
+      activeRepository.saveAttempt({
         chapter,
         question: current,
         answer,
         confidence,
         selfAssessment,
-        status: answer.trim() ? "draft" : "draft",
+        status: existing?.status === "answered" ? "answered" : "draft",
       });
-      setAttempts(repository.listAttempts(chapter));
+      setAttempts(activeRepository.listAttempts(chapter));
     }, 350);
     return () => clearTimeout(timeout);
-  }, [answer, chapter, confidence, current, repository, selfAssessment]);
+  }, [activeRepository, answer, chapter, confidence, current, selfAssessment]);
 
-  const refreshAttempts = () => setAttempts(repository.listAttempts(chapter));
+  const refreshAttempts = () => setAttempts(activeRepository.listAttempts(chapter));
 
   const moveTo = (offset) => {
     if (!visibleQuestions.length) return;
@@ -85,14 +99,14 @@ export function AssessmentRunner({
 
   const saveCurrent = (status = "answered") => {
     if (!current) return;
-    repository.saveAttempt({ chapter, question: current, answer, confidence, selfAssessment, status });
+    activeRepository.saveAttempt({ chapter, question: current, answer, confidence, selfAssessment, status });
     refreshAttempts();
   };
 
   const saveAndContinue = () => {
     saveCurrent("answered");
     if (currentIndex < visibleQuestions.length - 1) moveTo(1);
-    else repository.saveSession({ chapter, currentQuestionId: current?.id ?? null, completed: true });
+    else activeRepository.saveSession({ chapter, currentQuestionId: current?.id ?? null, completed: true });
   };
 
   const skipCurrent = () => {
@@ -104,7 +118,7 @@ export function AssessmentRunner({
 
   const handleAskAi = () => {
     if (!current || !onAskAi) return;
-    const attempt = repository.getAttempt({ chapter, question: current }) ?? {
+    const attempt = activeRepository.getAttempt({ chapter, question: current }) ?? {
       answer,
       confidence,
       selfAssessment,
@@ -146,11 +160,7 @@ export function AssessmentRunner({
       </header>
 
       <div className="assessment-runner__filters" aria-label="题目筛选">
-        {[
-          ["all", "全部"],
-          ["incomplete", "未完成"],
-          ["needs-review", "需复习"],
-        ].map(([value, label]) => (
+        {[["all", "全部"], ["incomplete", "未完成"], ["needs-review", "需复习"]].map(([value, label]) => (
           <button key={value} type="button" aria-pressed={filter === value} onClick={() => setFilter(value)}>{label}</button>
         ))}
       </div>
