@@ -10,6 +10,8 @@ Custom Hook 是以 `use` 开头、可以调用其他 Hooks 的函数。它抽取
 在中间 Demo 同时挂载多个使用同一 Custom Hook 的消费者，分别触发局部变化。观察 Hook 代码被复用，但每个组件的 State 生命周期仍由自己的 render tree 身份决定。
 </Experiment>
 
+<DemoReference action="在 Demo 中同时操作多个 Custom Hook 消费者" observe="比较多个消费者的局部变化，确认复用的是状态逻辑而不是同一份 React State 实例。" />
+
 <Observation>好的 Custom Hook API 通常描述领域意图，例如 `useChatRoom`，而不是简单包装 `useEffectOnce` 之类试图绕开 React 数据流的工具。</Observation>
 
 <AntiPattern title="把任意 helper 都改成 Hook">不使用 Hooks 的纯函数不需要 `use` 前缀。也不要用 Custom Hook 隐藏错误 Effect；抽象不会修复错误心智模型。</AntiPattern>

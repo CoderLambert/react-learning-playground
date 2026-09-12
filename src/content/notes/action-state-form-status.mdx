@@ -10,6 +10,8 @@
 运行中间 Demo，提交表单并查看外层 Action state 与 Submit 子组件的 form status。注意 `useFormStatus` 必须在目标 form 的后代中调用，不能在渲染该 form 的同一组件里期待读取自身状态。
 </Experiment>
 
+<DemoReference action="在 Demo 中提交表单并观察 Submit 子组件" observe="比较外层 Action state、pending 与 form 后代读取到的提交状态；确认 useFormStatus 只读取父 form 上下文。" />
+
 <Observation>Action state 适合承载服务端/业务结果，例如字段错误或成功消息；pending 是过渡状态，不应复制成另一份手工 State。</Observation>
 
 <AntiPattern title="手工同步 isSubmitting">如果 Action API 已提供 pending，再用 Effect 维护第二份 `isSubmitting` 会制造竞争和重复事实来源。</AntiPattern>

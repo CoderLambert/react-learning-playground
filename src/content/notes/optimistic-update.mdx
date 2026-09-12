@@ -10,6 +10,8 @@
 在中间 Demo 提交评论，先观察临时评论立即出现；勾选“模拟业务拒绝”后再次提交，观察 Action 正常结束但 canonical 未更新时，未确认的临时项自动回退。这个实验没有模拟 Action throw / Error Boundary。
 </Experiment>
 
+<DemoReference action="提交一条评论，再切换模拟业务拒绝后提交另一条" observe="比较 optimistic 项目立即出现、服务端确认后的 canonical 收敛，以及业务拒绝且 Action 正常结束时临时项目的回退。" />
+
 <Observation>乐观 UI 的关键不是“提前 setState”，而是明确 canonical 与 optimistic 两层。只要 canonical 没有被确认更新，Action 结束后 optimistic 投影就会消失，不需要长期维护第二份数组。</Observation>
 
 <AntiPattern title="把 optimistic 结果永久写进两份 State">维护 `realItems` 与 `optimisticItems` 两套长期 State 会增加合并、去重和回滚复杂度。</AntiPattern>

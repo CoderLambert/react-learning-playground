@@ -10,6 +10,8 @@
 在中间 Demo 做三步：① 从房间 101 切换到 102，观察右侧日志由 Effect cleanup/setup 自身记录“关闭旧连接 → 建立新连接”；② 只切换静音，确认没有新的 cleanup/setup，因为静音不决定连接目标；③ 等待多条消息到达，确认消息列表通过 `setMessages(prev => ...)` 持续更新，但连接仍不重建。Source 可以看到 Effect 因而无需读取 `messages`，依赖仍只有真正决定同步目标的 `roomId`。
 </Experiment>
 
+<DemoReference action="切换房间、切换静音并等待实时消息" observe="比较真实 Effect 日志中的 cleanup/setup、消息列表更新和静音提示；确认消息与静音不会改变连接 Effect 的 roomId 依赖。" />
+
 <Observation>函数式 State updater 可以让“下一个 State 由上一个 State 计算”的更新不必读取旧 State。这里消息回调把 `setMessages([...messages, next])` 重构为 `setMessages(prev => [...])` 后，连接 Effect 不再需要 `messages` 这个 reactive read，因此收到消息不会变成重新连接的理由。这不是“骗过 linter”，而是改变了代码的数据依赖。</Observation>
 
 <AntiPattern title="禁用 exhaustive-deps">忽略依赖检查会把 Effect 固定在旧闭包上，常见结果是 stale props/state、错误订阅或无法重连。若依赖列表看起来不合理，应先改变 Effect 或周围代码，再让依赖与新代码一致。</AntiPattern>

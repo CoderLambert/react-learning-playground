@@ -10,6 +10,8 @@
 运行中间 Demo，用同一表单分别点击默认提交按钮和带 `formAction` 的按钮。观察两条 Action 收到相同表单快照，但执行不同业务意图。
 </Experiment>
 
+<DemoReference action="分别点击默认提交和 formAction 按钮" observe="比较两条 Action 收到的 FormData 快照与不同业务意图，以及 pending/完成后的表单行为。" />
+
 <Observation>函数 Action 成功后，React 会重置表单中的非受控字段；受控字段仍由你的 State 决定，因此 reset 策略必须与字段所有权一致。</Observation>
 
 <AntiPattern title="把 action 当成自动 API 层">Action 组织提交状态与过渡，但业务校验、鉴权、错误模型和服务器一致性仍需应用自己负责。</AntiPattern>

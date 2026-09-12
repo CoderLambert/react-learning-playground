@@ -10,6 +10,8 @@
 在中间 Demo 修改标题、优先级、协作者和通知选项。输入期间右侧 React 输出不会跟随每次键入更新；点击提交后，再观察 `FormData` 如何一次性读取当前字段，并经 `get()`、`getAll()`、`has()` 转换成业务 payload。
 </Experiment>
 
+<DemoReference action="填写标题、优先级、协作者和通知选项后提交" observe="比较输入期间不更新的 React 输出与提交后的 FormData payload，确认 get/getAll/has 分别承担什么读取职责。" />
+
 <Observation>`get()` 只返回一个同名字段值；checkbox group / multi-select 等多值字段应使用 `getAll()`。FormData 的值还可能是 `File`，不能假设全部是 string。</Observation>
 
 <AntiPattern title="把 FormData 当类型安全领域对象">直接 `Object.fromEntries(formData)` 可能丢失重复键语义，也不会自动把字符串转换为业务类型。</AntiPattern>

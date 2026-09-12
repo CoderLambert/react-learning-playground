@@ -15,6 +15,8 @@
 在中间 Demo 完成三组实验：① 连续修改搜索词和分类，确认商品列表直接由当前 `query/category` 在 render 中派生；② 点击“购买”，确认日志由对应 Event Handler 直接产生；③ 先输入留言草稿，再切换用户，确认 `key={userId}` 让新的组件身份获得新的本地 State。Demo 中的“Effect + 派生 State”代码块只是反模式说明，不是可执行的 render-count 对照实验。
 </Experiment>
 
+<DemoReference action="修改搜索词/分类、点击购买并切换用户" observe="观察 render 派生列表、Event Handler 购买日志和 key 切换后的草稿重置；不要把静态反模式代码当作性能实验。" />
+
 <Observation>派生值直接计算把事实来源保持为一份。若改成“源 State → render → Effect → 第二份 State”，React 还需要在 Effect 更新 State 后再进行一次 render；官方文档因此建议把这类可计算数据留在 render，而不是额外同步一份 State。</Observation>
 
 <AntiPattern title="Effect 驱动内部数据流水线">多个 Effect 互相 setState 会让因果关系分散，并产生额外 render。把事件因果放回 handler，把可计算数据放回 render。</AntiPattern>

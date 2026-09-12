@@ -10,6 +10,8 @@
 运行中间 Demo，切换 measured box 的宽度，观察 `useLayoutEffect` 在 DOM 提交后读取新的布局宽度；再通过父组件 ref 调用子组件只暴露的 `focus()` / `select()`。这个 Demo 展示的是 Layout Effect 的布局测量用途和最小 imperative handle，并不包含 `useEffect` 的 side-by-side 时序对照。
 </Experiment>
 
+<DemoReference action="切换 measured box 宽度，并用父组件 ref 触发 focus/select" observe="查看提交后的布局宽度和子组件暴露的最小命令式 API；不要把它解读成 useEffect 与 useLayoutEffect 的完整时序对照。" />
+
 <Observation>`useLayoutEffect` 不是“更强的 useEffect”。它的同步执行会延迟 paint，应只用于必须在用户看到画面前完成的布局读取/修正。普通 Effect 与 Layout Effect 的主要决策边界是“是否必须在 repaint 前完成”，而不是默认追求更早执行。</Observation>
 
 <AntiPattern title="默认使用 useLayoutEffect">普通订阅、网络同步、日志等不需要阻塞 paint。也不要把整个 DOM 节点无条件暴露给父组件，优先暴露窄接口。</AntiPattern>
