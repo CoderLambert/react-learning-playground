@@ -1,0 +1,16 @@
+import{d as e,p as t}from"./index-BfATlDky.js";var n=t();function r(t){let r={code:`code`,h1:`h1`,li:`li`,p:`p`,ul:`ul`,...e(),...t.components},{AntiPattern:i,Boundary:o,DemoReference:s,Experiment:c,Flow:l,FurtherReading:u,MentalModel:d,Observation:f,Summary:p}=r;return i||a(`AntiPattern`,!0),o||a(`Boundary`,!0),s||a(`DemoReference`,!0),c||a(`Experiment`,!0),l||a(`Flow`,!0),u||a(`FurtherReading`,!0),d||a(`MentalModel`,!0),f||a(`Observation`,!0),p||a(`Summary`,!0),(0,n.jsxs)(n.Fragment,{children:[(0,n.jsx)(r.h1,{id:`useref跨渲染保存不会驱动-ui的值`,children:`useRef：跨渲染保存“不会驱动 UI”的值`}),`
+`,(0,n.jsxs)(r.p,{children:[(0,n.jsx)(r.code,{children:`useRef`}),` 返回一个稳定对象；修改 `,(0,n.jsx)(r.code,{children:`ref.current`}),` 不会触发重新渲染，因此它适合保存 DOM 节点、计时器句柄和其他不参与视觉输出的可变值。`]}),`
+`,(0,n.jsx)(d,{title:`Ref 是组件实例里的可变口袋`,children:(0,n.jsx)(r.p,{children:`State 是渲染输入；Ref 是 React 在组件生命周期内替你保留、但不会加入渲染调度的可变容器。渲染需要知道的值应放 State，不需要反映到 JSX 的值才考虑 Ref。`})}),`
+`,(0,n.jsx)(l,{items:[`render 创建/复用同一个 ref 对象`,`commit 后 DOM ref 指向真实节点`,`事件或 Effect 中读写 ref.current`,`写 ref 不触发 render`]}),`
+`,(0,n.jsx)(c,{title:`跟随中间 Demo`,children:(0,n.jsxs)(r.p,{children:[`在 Demo 中使用 DOM ref 完成输入框聚焦与消息区滚动，再观察计时器：可见秒数由 State 驱动，interval 句柄保存在 Ref 中。Source 能验证 `,(0,n.jsx)(r.code,{children:`timerIdRef.current`}),` 可以跨 render 保存，但句柄变化本身不会请求新的 render；DOM ref 则只能在对应节点已经提交后可靠使用。`]})}),`
+`,(0,n.jsx)(s,{action:`使用 focus/scroll 控件并启动计时器`,observe:`比较由 State 驱动的可见秒数与保存在 Ref 中的 interval 句柄，确认 ref 变化本身不会触发 render。`}),`
+`,(0,n.jsxs)(f,{children:[`Ref 的稳定身份与 `,(0,n.jsx)(r.code,{children:`current`}),` 的可变性是两件事。React 保留 ref 对象，但不会追踪 `,(0,n.jsx)(r.code,{children:`current`}),` 的变化来决定是否渲染。`]}),`
+`,(0,n.jsxs)(i,{title:`用 Ref 逃避 State`,children:[`如果一个值改变后 UI 应立即变化，却把它只放进 Ref，会得到过期界面。通常不要在 render 中读写 `,(0,n.jsx)(r.code,{children:`ref.current`}),`，因为这会破坏渲染的可预测性；官方允许的窄例外是确定性的一次性初始化，例如仅当 `,(0,n.jsx)(r.code,{children:`ref.current === null`}),` 时创建并保存同一个对象。`]}),`
+`,(0,n.jsxs)(o,{children:[`Ref 是 escape hatch。优先用 props/state 表达声明式数据流；只有值不参与 JSX 计算但需要跨 render 保存，或必须与 DOM、浏览器 API、非 React 生命周期对象交互时再使用。`,(0,n.jsx)(r.code,{children:`useLayoutEffect`}),` 也不是 ref 的默认伴侣：只有必须在浏览器 paint 前测量或同步布局时才优先考虑它，普通外部同步通常使用 `,(0,n.jsx)(r.code,{children:`useEffect`}),`。`]}),`
+`,(0,n.jsx)(p,{children:(0,n.jsxs)(r.ul,{children:[`
+`,(0,n.jsx)(r.li,{children:`Ref 跨 render 保留同一容器。`}),`
+`,(0,n.jsx)(r.li,{children:`写 current 不触发 render。`}),`
+`,(0,n.jsx)(r.li,{children:`DOM ref 在 commit 后可用。`}),`
+`,(0,n.jsx)(r.li,{children:`影响 JSX 的数据用 State。`}),`
+`]})}),`
+`,(0,n.jsx)(u,{items:[{label:`React: Referencing Values with Refs`,href:`https://react.dev/learn/referencing-values-with-refs`},{label:`React: Manipulating the DOM with Refs`,href:`https://react.dev/learn/manipulating-the-dom-with-refs`},{label:`React: useRef`,href:`https://react.dev/reference/react/useRef`}]})]})}function i(t={}){let{wrapper:i}={...e(),...t.components};return i?(0,n.jsx)(i,{...t,children:(0,n.jsx)(r,{...t})}):r(t)}function a(e,t){throw Error(`Expected `+(t?`component`:`object`)+" `"+e+"` to be defined: you likely forgot to import, pass, or provide it.")}export{i as default};

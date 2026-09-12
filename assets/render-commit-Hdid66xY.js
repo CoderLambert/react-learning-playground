@@ -1,0 +1,15 @@
+import{d as e,p as t}from"./index-BfATlDky.js";var n=t();function r(t){let r={code:`code`,h1:`h1`,li:`li`,p:`p`,ul:`ul`,...e(),...t.components},{AntiPattern:i,Boundary:o,DemoReference:s,Experiment:c,FurtherReading:l,MentalModel:u,Summary:d,Timeline:f}=r;return i||a(`AntiPattern`,!0),o||a(`Boundary`,!0),s||a(`DemoReference`,!0),c||a(`Experiment`,!0),l||a(`FurtherReading`,!0),u||a(`MentalModel`,!0),d||a(`Summary`,!0),f||a(`Timeline`,!0),(0,n.jsxs)(n.Fragment,{children:[(0,n.jsx)(r.h1,{id:`trigger--render--commit`,children:`Trigger → Render → Commit`}),`
+`,(0,n.jsx)(u,{title:`render 是计算，commit 才是应用变化`,children:(0,n.jsx)(r.p,{children:`一次 UI 更新可以拆成 Trigger、Render、Commit。Trigger 请求更新；Render 调用组件计算下一棵 UI；Commit 把必要变化应用到 DOM。浏览器随后才有机会 paint。组件 render 了，不代表对应 DOM 一定改变。`})}),`
+`,(0,n.jsx)(c,{title:`比较 state 更新与真实 DOM mutation`,children:(0,n.jsxs)(r.p,{children:[`在中间 Demo 里分别点击“更新 count”和“只更新无关 state”。两次操作都会请求 React 更新，但 `,(0,n.jsx)(r.code,{children:`MutationObserver`}),` 只观察 Count 节点本身：count 改变时会看到该节点发生 DOM mutation；只改 `,(0,n.jsx)(r.code,{children:`themeTick`}),` 时，Count 节点文本保持不变。这个实验验证的是“某次更新不等于某个 DOM 节点必然改变”，而不是用浏览器 API伪装成 React render/commit 计数器。`]})}),`
+`,(0,n.jsx)(s,{action:`分别更新 count 与无关 state，并查看 Count 节点的 MutationObserver 结果`,observe:`count 更新会改变 Count DOM；无关 state 更新不会改变 Count DOM。requestAnimationFrame 只负责下一浏览器帧的观察收尾，不是 React commit callback。`}),`
+`,(0,n.jsx)(f,{steps:[`Trigger：初始挂载或 state 更新`,`Render：React 调用组件计算元素树`,`Reconciliation：确定需要提交的差异`,`Commit：更新 DOM / refs 等`,`Browser Paint：浏览器绘制像素`]}),`
+`,(0,n.jsx)(o,{title:`Demo 没有伪造 render 次数`,children:(0,n.jsx)(r.p,{children:`组件函数执行次数受开发 Strict Mode、并发调度等因素影响。本课不在 render 期间写 ref / 外部计数器来制造“可视化次数”，因为那会给纯 render 引入副作用。需要组件 render/commit 性能证据时使用 React DevTools Profiler；需要 layout/paint 证据时使用浏览器 Performance 工具。`})}),`
+`,(0,n.jsx)(o,{title:`requestAnimationFrame 属于浏览器，不属于 React 生命周期`,children:(0,n.jsxs)(r.p,{children:[`Demo 用 `,(0,n.jsx)(r.code,{children:`requestAnimationFrame`}),` 只是在下一浏览器帧确认观察窗口内没有 Count DOM mutation。它不能告诉你 React commit 的内部时刻，也不能证明组件函数执行了几次。`]})}),`
+`,(0,n.jsx)(i,{title:`用 render 次数直接推断性能问题`,children:(0,n.jsx)(r.p,{children:`重新 render 并不等于昂贵 DOM 操作。优化前应先测量 React 计算成本、实际 commit 工作，以及必要时的浏览器 layout/paint；不要仅凭“render 次数多”就加入 memoization。`})}),`
+`,(0,n.jsx)(d,{children:(0,n.jsxs)(r.ul,{children:[`
+`,(0,n.jsx)(r.li,{children:`Trigger 请求工作，Render 计算 UI，Commit 修改宿主环境。`}),`
+`,(0,n.jsx)(r.li,{children:`render ≠ DOM update ≠ browser paint。`}),`
+`,(0,n.jsxs)(r.li,{children:[`本 Demo 用真实 DOM mutation 证据比较两个更新路径，不把 `,(0,n.jsx)(r.code,{children:`requestAnimationFrame`}),` 当 commit hook。`]}),`
+`,(0,n.jsx)(r.li,{children:`性能判断应基于正确层级的测量，而非只数 render 次数。`}),`
+`]})}),`
+`,(0,n.jsx)(l,{items:[{label:`React: Render and Commit`,href:`https://react.dev/learn/render-and-commit`},{label:`React: Keeping Components Pure`,href:`https://react.dev/learn/keeping-components-pure`}]})]})}function i(t={}){let{wrapper:i}={...e(),...t.components};return i?(0,n.jsx)(i,{...t,children:(0,n.jsx)(r,{...t})}):r(t)}function a(e,t){throw Error(`Expected `+(t?`component`:`object`)+" `"+e+"` to be defined: you likely forgot to import, pass, or provide it.")}export{i as default};
