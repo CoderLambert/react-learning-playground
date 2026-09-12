@@ -1,5 +1,7 @@
 const DB_NAME = "react-learning-ai";
-const DB_VERSION = 1;
+// Keep AI audit records in the same AI database as conversations, but in
+// separate stores. Assessment data deliberately lives in its own database.
+const DB_VERSION = 2;
 
 const SECRET_KEY_PATTERN = /^(api[-_]?key|authorization|access[-_]?token|refresh[-_]?token|secret)$/i;
 export const REDACTED_SECRET = "[REDACTED]";
@@ -98,6 +100,18 @@ function openIndexedDb(indexedDb, name = DB_NAME) {
         const compactions = db.createObjectStore("compactions", { keyPath: "id" });
         compactions.createIndex("conversationId", "conversationId");
         compactions.createIndex("conversationCreated", ["conversationId", "createdAt"]);
+      }
+      if (!db.objectStoreNames.contains("agentRuns")) {
+        const runs = db.createObjectStore("agentRuns", { keyPath: "id" });
+        runs.createIndex("status", "status");
+        runs.createIndex("conversationId", "conversationId");
+        runs.createIndex("createdAt", "createdAt");
+      }
+      if (!db.objectStoreNames.contains("toolExecutions")) {
+        const executions = db.createObjectStore("toolExecutions", { keyPath: "id" });
+        executions.createIndex("agentRunId", "agentRunId");
+        executions.createIndex("toolCallId", "toolCallId");
+        executions.createIndex("startedAt", "startedAt");
       }
     };
     request.onsuccess = () => resolve(request.result);
@@ -321,7 +335,10 @@ export async function createConversationStore({
 export const conversationStorageSchema = Object.freeze({
   name: DB_NAME,
   version: DB_VERSION,
-  stores: Object.freeze(["conversations", "messages", "contextSnapshots", "compactions"]),
+  stores: Object.freeze(["conversations", "messages", "contextSnapshots", "compactions", "agentRuns", "toolExecutions"]),
 });
 
-export { nowIso };
+// Exported for the agent audit adapter. It intentionally shares the AI DB
+// migration path with conversation persistence rather than opening a second,
+// competing database with the same name.
+export { nowIso, openIndexedDb };
