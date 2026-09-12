@@ -1,4 +1,10 @@
 /**
+ * @typedef {Object} LearningSourceFile
+ * @property {string} name Stable file identity shown across inline, inspector and AI citation surfaces.
+ * @property {string} code Authoritative source text. Learning surfaces must render this instead of duplicating snippets.
+ */
+
+/**
  * Future normalized learning-unit shape used by Workbench consumers.
  * The existing demo registry remains authoritative during the migration.
  *
@@ -16,7 +22,7 @@
  * @property {string} title
  * @property {import("react").ComponentType} component
  * @property {string[]} keywords
- * @property {Array<{name: string, code: string}>} sources
+ * @property {LearningSourceFile[]} sources
  * @property {string | undefined} description
  * @property {string | undefined} badge
  * @property {object} registryEntry Original registry entry for compatibility during migration.
@@ -66,7 +72,7 @@ export function toLearningUnit(demo) {
  *
  * @typedef {Object} LearningInspectorState
  * @property {boolean} open
- * @property {"notes" | "source"} activeTab
+ * @property {"notes" | "source" | "ai"} activeTab
  * @property {boolean} focusMode
  * @property {number} width
  * @property {string | null} sourceFile
@@ -76,7 +82,7 @@ export function toLearningUnit(demo) {
  * @typedef {Object} LearningInspectorProps
  * @property {LearningUnit} learningUnit
  * @property {LearningInspectorState} state
- * @property {(tab: "notes" | "source") => void} onTabChange
+ * @property {(tab: "notes" | "source" | "ai") => void} onTabChange
  * @property {(open: boolean) => void} onOpenChange
  * @property {(focusMode: boolean) => void} onFocusModeChange
  * @property {(width: number) => void} onWidthChange
