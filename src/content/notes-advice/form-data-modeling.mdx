@@ -3,25 +3,22 @@
 ## 当前结论
 
 - Gate A Correctness：**PASS**
-- Gate B Demo Contract：**PARTIAL**
+- Gate B Demo Contract：**PASS**
 - Gate C Mental Model：**PASS**
 
-## 主要问题
+## 复核结论
 
-FormData 的事实边界讲得准确：它读取浏览器表单在提交时的快照；重复字段应使用 `getAll()`；值可能是 `string` 或 `File`；`Object.fromEntries(formData)` 不会自动完成领域类型转换，也会把重复键折叠成单值语义。
+FormData 的事实边界保持准确：它读取浏览器表单在提交时的快照；重复字段应使用 `getAll()`；值可能是 `string` 或 `File`；`Object.fromEntries(formData)` 不会自动完成领域类型转换，也会把重复键折叠成单值语义。
 
-Demo 可以真实观察非受控字段在输入过程中不写入 React State，并在 submit 时通过 `new FormData(event.currentTarget)` 转成 payload。checkbox group、布尔 `has()` 和字符串字段都有可执行示例。
-
-但 Note 的 Experiment 还要求“再对比需要实时联动的字段，判断什么时候 controlled 更合适”。当前 Demo 没有 controlled 字段或 side-by-side 对照，只有说明文字，因此这部分不是可执行实验。
+Experiment 已收敛到 Demo 真正支持的现象：修改非受控字段时右侧 React 输出不随每次输入更新，submit 后才通过 `new FormData(event.currentTarget)` 一次性读取，并用 `get()` / `getAll()` / `has()` 转成 payload。此前并不存在的 controlled side-by-side 实验已从 Experiment 移到 Boundary 作为生产决策规则。
 
 ## 边界与生产决策
 
 - FormData 是 transport snapshot，不是类型安全领域模型；提交边界仍需 validation / coercion。
-- “非受控”不等于“不受约束”：HTML constraint validation、服务端校验和领域校验仍然存在各自职责。
+- “非受控”不等于“不受约束”：HTML constraint validation、服务端校验和领域校验仍有各自职责。
 - 同一表单可以混合 controlled 与 uncontrolled 字段；选择依据是 React 是否需要在提交前实时消费某字段值。
+- 实时验证、即时预览、条件 UI 或跨字段联动通常需要 React State；只关心最终提交值的字段可以由浏览器持有。
 
-## 建议修改
+## 后续可选增强
 
-1. 将 Experiment 收窄为当前 Demo 能真实证明的“输入期间 React 不持有字段值；submit 时一次性读取并转换”。
-2. 如果要比较 controlled/uncontrolled，增加一个需要实时预览或跨字段联动的 controlled 对照；否则把比较放到 Boundary，而不是 Experiment。
-3. 可补充文件字段的边界示例，强调 `FormDataEntryValue` 不总是 string，但不必为此扩大主 Demo。
+可以增加 `File` 字段展示 `FormDataEntryValue` 的边界，但这不是当前主实验通过 Gate B 的必要条件。
