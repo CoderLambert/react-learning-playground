@@ -1,3 +1,5 @@
+import Ajv from "ajv";
+
 import {
   AGENT_ERROR_CODES,
   AgentError,
@@ -5,35 +7,39 @@ import {
   normalizeAgentToolCall,
 } from "./agentContracts.js";
 
-function matchesType(value, type) {
-  if (type === "array") return Array.isArray(value);
-  if (type === "object") return Boolean(value) && typeof value === "object" && !Array.isArray(value);
-  if (type === "integer") return Number.isInteger(value);
-  if (type === "number") return typeof value === "number" && Number.isFinite(value);
-  return typeof value === type;
-}
-
-function validateObjectSchema(value, schema, path = "arguments") {
-  if (!schema || schema.type !== "object") return;
-  if (!matchesType(value, "object")) throw new TypeError(`${path} must be an object`);
-  for (const key of schema.required ?? []) {
-    if (!(key in value)) throw new TypeError(`${path}.${key} is required`);
-  }
-  for (const [key, property] of Object.entries(schema.properties ?? {})) {
-    if (!(key in value) || value[key] == null || !property?.type) continue;
-    if (!matchesType(value[key], property.type)) throw new TypeError(`${path}.${key} must be ${property.type}`);
-    if (Array.isArray(property.enum) && !property.enum.includes(value[key])) {
-      throw new TypeError(`${path}.${key} is not an allowed value`);
-    }
-  }
+function createSchemaValidationError(errors) {
+  const error = new TypeError("tool arguments do not match the input schema");
+  error.details = errors?.map(({ instancePath, keyword, message, params }) => ({
+    instancePath,
+    keyword,
+    message,
+    params,
+  })) ?? [];
+  return error;
 }
 
 export class ToolExecutor {
-  constructor({ registry, policy }) {
+  #ajv;
+  #validators = new WeakMap();
+
+  constructor({ registry, policy, schemaValidator } = {}) {
     if (!registry?.get) throw new TypeError("tool registry is required");
     if (!policy?.assertAllowed) throw new TypeError("tool policy is required");
     this.registry = registry;
     this.policy = policy;
+    this.#ajv = schemaValidator ?? new Ajv({ allErrors: true, strict: true });
+    if (!this.#ajv || typeof this.#ajv.compile !== "function") {
+      throw new TypeError("schemaValidator must provide compile()");
+    }
+  }
+
+  #validateArguments(value, schema) {
+    let validate = this.#validators.get(schema);
+    if (!validate) {
+      validate = this.#ajv.compile(schema);
+      this.#validators.set(schema, validate);
+    }
+    if (!validate(value)) throw createSchemaValidationError(validate.errors);
   }
 
   async execute(rawCall, context, { signal } = {}) {
@@ -51,7 +57,7 @@ export class ToolExecutor {
     try {
       if (signal?.aborted) throw new AgentError(AGENT_ERROR_CODES.ABORTED, "tool execution aborted");
       this.policy.assertAllowed(tool);
-      validateObjectSchema(call.arguments, tool.inputSchema);
+      this.#validateArguments(call.arguments, tool.inputSchema);
       const executionContext = context && typeof context === "object"
         ? Object.freeze({ ...context, toolCallId: call.id })
         : context;
