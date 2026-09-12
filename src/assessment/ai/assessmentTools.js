@@ -1,4 +1,10 @@
 import { TOOL_POLICIES } from "../../ai/agent/agentContracts.js";
+import {
+  assessmentCreateQuestionsInputSchema,
+  assessmentListQuestionsInputSchema,
+  assessmentRetireQuestionInputSchema,
+  assessmentUpdateQuestionInputSchema,
+} from "./assessmentToolSchemas.js";
 
 export const ASSESSMENT_TOOL_NAMES = Object.freeze({
   LIST_QUESTIONS: "assessment_list_questions",
@@ -66,44 +72,6 @@ function assertAssessmentService(service) {
   return service;
 }
 
-const listSchema = Object.freeze({
-  type: "object",
-  properties: {
-    status: { type: "string", enum: ["active", "retired"] },
-  },
-  additionalProperties: false,
-});
-
-const createSchema = Object.freeze({
-  type: "object",
-  properties: {
-    questions: { type: "array", items: { type: "object" } },
-  },
-  required: ["questions"],
-  additionalProperties: false,
-});
-
-const updateSchema = Object.freeze({
-  type: "object",
-  properties: {
-    questionId: { type: "string" },
-    expectedRevision: { type: "integer" },
-    patch: { type: "object" },
-  },
-  required: ["questionId", "expectedRevision", "patch"],
-  additionalProperties: false,
-});
-
-const retireSchema = Object.freeze({
-  type: "object",
-  properties: {
-    questionId: { type: "string" },
-    expectedRevision: { type: "integer" },
-  },
-  required: ["questionId", "expectedRevision"],
-  additionalProperties: false,
-});
-
 /**
  * Create the Assessment-specific tool definitions for the generic agent
  * runtime. The model owns only business arguments; all scope and mutation
@@ -117,7 +85,7 @@ export function createAssessmentToolDefinitions({ assessmentService } = {}) {
       name: ASSESSMENT_TOOL_NAMES.LIST_QUESTIONS,
       description: "List assessment questions in the current learning unit.",
       policy: TOOL_POLICIES.QUERY,
-      inputSchema: listSchema,
+      inputSchema: assessmentListQuestionsInputSchema,
       handler: async (argumentsValue, context, execution) => {
         const args = assertArguments(argumentsValue);
         const trusted = trustedServiceInput(assertTrustedContext(context), execution);
@@ -128,7 +96,7 @@ export function createAssessmentToolDefinitions({ assessmentService } = {}) {
       name: ASSESSMENT_TOOL_NAMES.CREATE_QUESTIONS,
       description: "Create assessment questions in the current learning unit.",
       policy: TOOL_POLICIES.COMMAND,
-      inputSchema: createSchema,
+      inputSchema: assessmentCreateQuestionsInputSchema,
       handler: async (argumentsValue, context, execution) => {
         const args = assertArguments(argumentsValue);
         const trusted = trustedServiceInput(assertTrustedContext(context), execution);
@@ -139,7 +107,7 @@ export function createAssessmentToolDefinitions({ assessmentService } = {}) {
       name: ASSESSMENT_TOOL_NAMES.UPDATE_QUESTION,
       description: "Update mutable business fields on an assessment question.",
       policy: TOOL_POLICIES.COMMAND,
-      inputSchema: updateSchema,
+      inputSchema: assessmentUpdateQuestionInputSchema,
       handler: async (argumentsValue, context, execution) => {
         const args = assertArguments(argumentsValue);
         const trusted = trustedServiceInput(assertTrustedContext(context), execution);
@@ -155,7 +123,7 @@ export function createAssessmentToolDefinitions({ assessmentService } = {}) {
       name: ASSESSMENT_TOOL_NAMES.RETIRE_QUESTION,
       description: "Retire an assessment question without deleting it.",
       policy: TOOL_POLICIES.COMMAND,
-      inputSchema: retireSchema,
+      inputSchema: assessmentRetireQuestionInputSchema,
       handler: async (argumentsValue, context, execution) => {
         const args = assertArguments(argumentsValue);
         const trusted = trustedServiceInput(assertTrustedContext(context), execution);
