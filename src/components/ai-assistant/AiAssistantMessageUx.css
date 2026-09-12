@@ -1,0 +1,101 @@
+.ai-assistant-message-actions {
+  margin-top: 6px;
+  display: flex;
+  justify-content: flex-start;
+  gap: 6px;
+}
+
+.ai-assistant-message.is-user .ai-assistant-message-actions {
+  justify-content: flex-end;
+}
+
+.ai-assistant-message-action {
+  padding: 4px 7px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-subtle);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.ai-assistant-message-action:hover:not(:disabled) {
+  border-color: var(--border-color);
+  background: var(--bg-surface-secondary);
+  color: var(--text-main);
+}
+
+.ai-assistant-message-action:focus-visible,
+.ai-assistant-back-to-latest:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.ai-assistant-message-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.ai-assistant-transcript-wrap {
+  min-height: 180px;
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+.ai-assistant-transcript-wrap .ai-assistant-transcript {
+  height: 100%;
+  min-height: 180px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.ai-assistant-back-to-latest {
+  position: absolute;
+  right: 18px;
+  bottom: 12px;
+  z-index: 2;
+  padding: 6px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  background: var(--bg-surface);
+  color: var(--text-main);
+  box-shadow: var(--shadow-sm);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.ai-assistant-toast {
+  position: absolute;
+  right: 14px;
+  bottom: 92px;
+  z-index: 4;
+  max-width: min(320px, calc(100% - 28px));
+  padding: 8px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 9px;
+  background: var(--bg-surface);
+  color: var(--text-main);
+  box-shadow: var(--shadow-md);
+  font-size: 12px;
+}
+
+.ai-assistant-toast.is-error {
+  border-color: color-mix(in srgb, #d64545 45%, var(--border-color));
+}
+
+@media (hover: none) {
+  .ai-assistant-message-actions {
+    margin-top: 8px;
+  }
+
+  .ai-assistant-message-action {
+    min-height: 32px;
+    padding-inline: 9px;
+    border-color: var(--border-color);
+    background: var(--bg-surface-secondary);
+  }
+}
