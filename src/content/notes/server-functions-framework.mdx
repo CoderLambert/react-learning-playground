@@ -13,10 +13,10 @@
 ]} />
 
 <Experiment title="把调用当作真正的网络边界">
-在中间 Demo 中跟随 Server Function/Framework 场景，列出哪些信息来自客户端、哪些必须由服务器重新确认。假设恶意调用者绕过 UI 直接构造请求：服务端函数是否仍然安全？
+在中间 Demo 切换“服务端已授权”状态，再点击模拟请求，比较 accepted 与 rejected 结果。然后做威胁建模：假设恶意调用者绕过 UI、直接构造请求，哪些信息来自客户端，哪些必须由服务器重新确认？当前 Demo 只模拟授权决策，不会真的调用 Server Function endpoint。
 </Experiment>
 
-<DemoReference action="观察 Server Function 调用与 mutation 流程" observe="确认客户端校验只是 UX，真正的 auth/validation/authorization 必须发生在服务端。" />
+<DemoReference action="切换模拟服务端授权并发起一次模拟 updateOrder 请求" observe="确认 mutation 是否允许必须由请求时的服务端认证/授权/输入校验决定；不要把本地模拟结果当作真实 Framework 网络协议。" />
 
 <Observation>
 `"use server"` 声明 Server Functions，不是 Server Component 标记。Server Components 在支持 RSC 的框架里本来就在服务端模块环境执行；给组件文件随意添加 `"use server"` 会混淆两种完全不同的边界。
@@ -35,7 +35,7 @@ Framework 提供函数引用、序列化、mutation/revalidation 集成，适合
 </AntiPattern>
 
 <Boundary title="React 提供语义，Framework 提供传输与部署">
-React 文档定义 Server Functions 与 `use server` 约束；实际 endpoint、加密/引用标识、CSRF 防护、缓存失效、表单 action、部署 runtime 等由具体 Framework 实现。安全设计必须阅读所用 Framework 的当前文档。
+React 文档定义 Server Functions 与 `use server` 约束；实际 endpoint、加密/引用标识、CSRF 防护、缓存失效、表单 action、部署 runtime 等由具体 Framework 实现。安全设计必须阅读所用 Framework 的当前文档。当前 Demo 只是安全决策模拟器，不验证真实 endpoint、序列化、Transition、revalidation 或 CSRF 行为。
 </Boundary>
 
 <Summary>
@@ -43,6 +43,7 @@ React 文档定义 Server Functions 与 `use server` 约束；实际 endpoint、
 - `use server` 标记 Server Functions，不是 Server Components。
 - 每次 mutation 都要服务端鉴权、授权、输入校验。
 - 需要公共/跨客户端契约时，显式 HTTP API 仍可能更合适。
+- 本地模拟可以解释 trust boundary，但真实安全性必须在 Framework/server runtime 中验证。
 </Summary>
 
 <FurtherReading items={[
