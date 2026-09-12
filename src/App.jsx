@@ -18,7 +18,6 @@ import { toLearningUnit } from "./workbench/contracts";
 import { useDemoUrlState } from "./workbench/demoUrlState";
 import { usePersistedWorkbenchState } from "./workbench/usePersistedWorkbenchState";
 
-const CodeViewer = lazy(() => import("./components/CodeViewer"));
 const SourceViewer = lazy(() =>
   import("./components/source-viewer/SourceViewer").then((module) => ({ default: module.SourceViewer })),
 );
@@ -30,6 +29,20 @@ function NotesPane({ learningUnitId }) {
       <NoteToc items={toc} />
       <NoteViewer learningUnitId={learningUnitId} components={MDX_TEACHING_COMPONENTS} onTocChange={setToc} />
     </div>
+  );
+}
+
+function InlineSourcePane({ learningUnit, activeFileName, onActiveFileChange, onOpenInInspector }) {
+  return (
+    <Suspense fallback={<div className="code-accordion-wrapper workbench-code-loading">⚡ 载入实现源码...</div>}>
+      <SourceViewer
+        learningUnit={learningUnit}
+        mode="inline"
+        activeFileName={activeFileName}
+        onActiveFileChange={onActiveFileChange}
+        onOpenInInspector={onOpenInInspector}
+      />
+    </Suspense>
   );
 }
 
@@ -75,6 +88,20 @@ export default function App() {
       startLine: citation.startLine,
       endLine: citation.endLine ?? citation.startLine,
     });
+  };
+
+  const handleInlineSourceOpen = (fileName) => {
+    const exists = currentLearningUnit?.sources?.some((source) => source.name === fileName);
+    if (!exists) return;
+    setSourceFocus(null);
+    setSourceFile(fileName);
+    setInspectorOpen(true);
+    setInspectorTab("source");
+  };
+
+  const handleInlineSourceFileChange = (fileName) => {
+    setSourceFile(fileName);
+    if (sourceFocus?.fileName !== fileName) setSourceFocus(null);
   };
 
   const navigateToDemo = (id) => {
@@ -310,6 +337,12 @@ export default function App() {
           currentDemo ? (
             <div key={currentDemo.id} className="demo-page">
               <currentDemo.Component />
+              <InlineSourcePane
+                learningUnit={currentLearningUnit}
+                activeFileName={workbenchState.sourceFile}
+                onActiveFileChange={handleInlineSourceFileChange}
+                onOpenInInspector={handleInlineSourceOpen}
+              />
               {currentCheckpointChapter && <ChapterCheckpoint chapter={currentCheckpointChapter} />}
             </div>
           ) : null
@@ -317,6 +350,7 @@ export default function App() {
           <div className="demo-all-container">
             {demos.map((demo, index) => {
               const checkpointChapter = getCheckpointChapter(demo.id);
+              const learningUnit = toLearningUnit(demo);
               return (
                 <div key={demo.id} id={`demo-${demo.id}`}>
                   {index > 0 && <hr className="demo-divider" />}
@@ -326,9 +360,7 @@ export default function App() {
                     <span>#{demo.id}</span>
                   </div>
                   <demo.Component />
-                  <Suspense fallback={<div className="code-accordion-wrapper workbench-code-loading">⚡ 载入代码视图...</div>}>
-                    <CodeViewer files={demo.files} fileName={`${demo.id}.jsx`} />
-                  </Suspense>
+                  <InlineSourcePane learningUnit={learningUnit} />
                   {checkpointChapter && <ChapterCheckpoint chapter={checkpointChapter} />}
                 </div>
               );
