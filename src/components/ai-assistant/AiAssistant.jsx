@@ -1,10 +1,11 @@
-import { useId } from "react";
+import { useEffect, useId } from "react";
 import MarkdownRender from "markstream-react";
 import "markstream-react/index.css";
 import {
   buildSourceCitationPreview,
   extractSourceCitations,
 } from "../../ai/citations/sourceCitation.js";
+import { LEARNING_ACTION_EVENT } from "../../learning-actions/learningActions.js";
 import { AiSourcePreviewProvider } from "./citations/AiSourceLink.jsx";
 import { SourceCitation } from "./citations/SourceCitation.js";
 import { AI_MARKDOWN_CUSTOM_ID } from "./code/registerAiCodeBlock.js";
@@ -258,6 +259,24 @@ export function AiAssistant({
     : status === "error"
       ? "AI 回答失败"
       : "";
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    const handleLearningAction = (event) => {
+      const prompt = event?.detail?.prompt;
+      if (typeof prompt !== "string" || !prompt.trim()) return;
+      onInputChange?.(prompt);
+      requestAnimationFrame(() => {
+        const input = document.getElementById(inputId);
+        input?.focus();
+        if (input instanceof HTMLTextAreaElement) {
+          input.setSelectionRange(input.value.length, input.value.length);
+        }
+      });
+    };
+    window.addEventListener(LEARNING_ACTION_EVENT, handleLearningAction);
+    return () => window.removeEventListener(LEARNING_ACTION_EVENT, handleLearningAction);
+  }, [inputId, onInputChange]);
 
   const submit = () => {
     const question = inputValue.trim();
