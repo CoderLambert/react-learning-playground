@@ -1,0 +1,46 @@
+# accessibility-basics 审核建议
+
+## 当前结论
+
+- Gate A Correctness：PASS
+- Gate B Demo Contract：PASS
+- Gate C Mental Model：PASS
+- 综合：课程把“原生语义优先、ARIA 补充语义、键盘与真实辅助技术验证”作为主线，事实准确且 Demo 可实际完成键盘、label、状态反馈实验。
+
+## 事实与版本边界
+
+这部分主要是 Web 平台 / WAI-ARIA / WCAG 语义，不属于 React 19.2 特有能力。React 只负责声明 DOM 与属性；`role`、accessible name、键盘默认行为、focus 与 live region 的含义由 HTML/ARIA/浏览器/辅助技术共同定义。
+
+“ARIA 不增加行为”表述准确：给 `div` 添加 `role="button"` 不会自动获得原生 button 的键盘、focus、disabled 与表单语义。优先原生元素是更稳健的默认策略。
+
+## Mental Model
+
+学习者可以回答三件关键问题：为什么原生语义比后补 ARIA 更可靠；什么时候确实需要 ARIA；为什么 axe 等自动化检查不能证明完整可访问性。课程没有把 a11y 简化成“加几个 aria-* 属性”。
+
+## Demo ↔ Note
+
+当前 Demo 与 Note 对齐：
+
+- `label htmlFor` 与 input id 建立真实名称关系；
+- 原生 submit button 可用键盘触发；
+- loading 时使用原生 `disabled`；
+- success/loading 使用 status/polite live region，error 使用 alert/assertive 反馈；
+- Demo 明确展示原生 button 与 `div role="button"` 的行为差异边界，而不是要求学习者相信静态描述。
+
+Note 要求的 Tab / Shift+Tab / Enter 键盘路径都可执行，因此 Gate B 通过。
+
+## 缺失边界 / 反例
+
+建议补充两个常见误区：第一，accessible name 并不等于视觉占位符，placeholder 不应替代稳定 label；第二，动态 live region 应避免重复、过度 assertive 的播报，否则会打断屏幕阅读器用户。
+
+还可以明确 focus visible 不应只靠浏览器默认“碰运气”：设计系统若覆盖 outline，必须提供等价或更清晰的 focus indicator。
+
+## 清晰度与工程决策
+
+生产决策规则已经明确：先选正确原生元素，再补名称/状态；只有平台语义不足时才加 ARIA；自动化扫描之后仍需键盘和关键流程的真实辅助技术验证。
+
+## 建议修改
+
+1. 增加 placeholder 不能替代 label 的反例。
+2. 增加 live region 不应滥用 `assertive` 的边界。
+3. 保留“自动化 + 键盘 + 屏幕阅读器”的验证链，不要把 axe 通过写成最终验收。
