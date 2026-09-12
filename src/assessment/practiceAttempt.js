@@ -11,6 +11,21 @@ function nowIso(now = Date.now()) {
   return new Date(now).toISOString();
 }
 
+function createSessionId() {
+  return globalThis.crypto?.randomUUID?.() ?? `assessment-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+function createBlankAnswer(question, now = Date.now()) {
+  return {
+    questionId: question.id,
+    revision: createQuestionRevision(question),
+    draft: "",
+    confidence: null,
+    status: ANSWER_STATUS.DRAFT,
+    updatedAt: nowIso(now),
+  };
+}
+
 export function createQuestionRevision(question) {
   const source = `${question.id ?? ""}|${question.prompt ?? ""}|${question.kind ?? "free-text"}`;
   let hash = 2166136261;
@@ -21,7 +36,7 @@ export function createQuestionRevision(question) {
   return `qrev-${(hash >>> 0).toString(16)}`;
 }
 
-export function createAttempt({ chapter, questions, sessionId = crypto.randomUUID(), now = Date.now() }) {
+export function createAttempt({ chapter, questions, sessionId = createSessionId(), now = Date.now() }) {
   return {
     version: ATTEMPT_VERSION,
     id: sessionId,
@@ -31,30 +46,28 @@ export function createAttempt({ chapter, questions, sessionId = crypto.randomUUI
     createdAt: nowIso(now),
     updatedAt: nowIso(now),
     completedAt: null,
-    answers: Object.fromEntries(
-      questions.map((question) => [
-        question.id,
-        {
-          questionId: question.id,
-          revision: createQuestionRevision(question),
-          draft: "",
-          confidence: null,
-          status: ANSWER_STATUS.DRAFT,
-          updatedAt: nowIso(now),
-        },
-      ]),
-    ),
+    answers: Object.fromEntries(questions.map((question) => [question.id, createBlankAnswer(question, now)])),
+  };
+}
+
+export function reconcileAttemptQuestions(attempt, questions, now = Date.now()) {
+  const answers = Object.fromEntries(questions.map((question) => {
+    const current = attempt.answers?.[question.id];
+    return [question.id, isAnswerCompatible(current, question) ? current : createBlankAnswer(question, now)];
+  }));
+  const currentStillExists = questions.some((question) => question.id === attempt.currentQuestionId);
+  return {
+    ...attempt,
+    currentQuestionId: currentStillExists ? attempt.currentQuestionId : questions[0]?.id ?? null,
+    answers,
+    updatedAt: nowIso(now),
   };
 }
 
 export function updateAnswer(attempt, question, patch, now = Date.now()) {
-  const current = attempt.answers[question.id] ?? {
-    questionId: question.id,
-    revision: createQuestionRevision(question),
-    draft: "",
-    confidence: null,
-    status: ANSWER_STATUS.DRAFT,
-  };
+  const current = isAnswerCompatible(attempt.answers[question.id], question)
+    ? attempt.answers[question.id]
+    : createBlankAnswer(question, now);
   const nextDraft = patch.draft ?? current.draft;
   const nextConfidence = patch.confidence === undefined ? current.confidence : patch.confidence;
   const requestedStatus = patch.status ?? current.status;
