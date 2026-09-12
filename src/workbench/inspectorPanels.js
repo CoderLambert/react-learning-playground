@@ -14,6 +14,11 @@ const DEFAULT_PANEL_DEFINITIONS = [
     label: "AI",
     placeholder: ["AI 区域", "等待 AI 学习助手注入当前笔记与源码上下文。"],
   },
+  {
+    id: "assessment",
+    label: "评测",
+    placeholder: ["评测区域", "当前知识点暂无可用评测。"],
+  },
 ];
 
 export const INSPECTOR_PANEL_DEFINITIONS = Object.freeze(
