@@ -1,102 +1,74 @@
 # Assessment + AI Agent Integration Status
 
-## Branch
+## Finalization
 
-`auto/assessment-integration`
+- Final branch: `codex/assessment-finalization`
+- Base: `origin/auto/assessment-integration` at `e5301fc`
+- Current validation tip before this status commit: `6066b90`
+- Target PR: `codex/assessment-finalization` → `auto/assessment-integration`
+- Proposed title: `feat: finalize Assessment AI agent integration`
+- `MERGE_READY=YES` is conditional on the mocked E2E command below and the listed warnings/limitations.
 
-## Current integrated upstream work
+Remote state was refreshed with `git fetch --all --prune`; no public branch was rebased, force-pushed, or rewritten.
 
-### Assessment UI / Inspector
+## DAG execution
 
-Integrated from `auto/assessment-ui`:
-
-- `LearningInspector` renders panel descriptors instead of hardcoded note/source/AI sections.
-- `src/workbench/inspectorPanels.js` is the inspector panel registry and single source of truth for panel ids/labels.
-- `INSPECTOR_TABS` remains as a backward-compatible alias derived from the registry.
-- Contract regression test exists in `tests/inspector-panel-registry.test.mjs`.
-
-### AI provider boundary
-
-Integrated from `auto/ai-agent-tooling`:
-
-- provider-neutral model turn contract in `src/ai/providers/modelClient.js`;
-- DeepSeek Chat Completions adapter with tool definitions, assistant tool calls, tool continuation messages, streamed tool-call argument assembly, and `tool_calls` finish reason support;
-- provider contract tests in `tests/ai-model-provider.test.mjs`.
-
-### Integration architecture guard
-
-Integration branch adds `tests/assessment-architecture-boundaries.test.mjs` to enforce the hard dependency rules while the remaining modules arrive:
-
-- Assessment UI must not access IndexedDB or Assessment infrastructure directly;
-- Assessment AI adapters must not access persistence infrastructure directly;
-- model providers and the gateway worker must remain Assessment-agnostic;
-- generic Agent core must not depend on Assessment implementations.
-
-This test is deliberately independent of the missing Assessment contracts/core and can remain as a regression gate after full integration.
-
-## Upstream availability
-
-- `auto/assessment-ui`: available; no new work beyond the content already integrated.
-- `auto/ai-agent-tooling`: available; no new work beyond the content already integrated.
-- `auto/assessment-contracts-platform`: not present yet.
-- `auto/assessment-core`: not present yet.
-
-## Blocked integration work
-
-The following work MUST NOT be implemented until stable Assessment contracts/core are available:
-
-1. `src/assessment/ai/**` tool adapters.
-2. `assessment_list_questions` / `assessment_create_questions` / `assessment_update_question` / `assessment_retire_question` handlers.
-3. AssessmentService dependency injection into the composition root.
-4. Trusted-scope injection (`learningUnitId`, provenance, mutationId) through Assessment tools.
-5. Assessment panel registration backed by the real query/application API.
-6. Full create-question → reactive UI → reload → session snapshot → update/revision E2E.
-7. Duplicate tool-call/idempotency and revision-conflict E2E.
-8. IndexedDB fallback integration E2E.
-
-Implementing these before the contract/core branches exist would require inventing private interfaces and violate the architecture boundary.
-
-## Quality gates
-
-| Gate | Status | Notes |
+| Agent | Result | Integrated work |
 | --- | --- | --- |
-| Inspector registry integration | PASS | Integrated without Assessment-specific behavior. |
-| Existing inspector compatibility contract | PASS upstream | Registry test integrated; full repo regression still pending executable CI/local workspace. |
-| Provider-neutral model contract | PASS upstream | Provider tests integrated. |
-| DeepSeek streamed tool-call parsing | PASS upstream | Provider tests integrated. |
-| Architecture dependency boundaries | ADDED / EXECUTION PENDING | Static regression test added on integration branch; execution awaits CI/local workspace. |
-| Assessment domain contracts | BLOCKED | Upstream branch missing. |
-| Assessment repositories/service | BLOCKED | Upstream branch missing. |
-| Assessment tool adapters | BLOCKED | Requires contracts/core. |
-| App composition root | BLOCKED | Requires contracts/core and later Agent runner interfaces. |
-| Full unit/integration/e2e suite | BLOCKED | End-to-end system not assembled yet. |
-| lint/build | PENDING | No commit status/CI result is currently attached to the integration branch tip. |
-| merge-ready | NO | Required core branches and end-to-end gates are missing. |
+| A0 Contract | PASS | V1 repository command/query contract, revision and atomic mutation-receipt semantics. |
+| A1 Repository | PASS | Memory and IndexedDB repositories using `react-learning-assessment`; questions, sessions, attempts, receipts, replay and conflict handling. |
+| A2 Service | PASS | `AssessmentService` domain validation, trusted scope, snapshots, grading, attempts and query-store notifications. |
+| A3 UI | PASS | Assessment pane, question renderers and registry-based Inspector merge preserving Notes/Source/AI behavior. |
+| A4 Agent/Transport | PASS | Direct and Gateway `ModelClient` parity, tool continuations, streamed argument assembly and worker proxy controls. |
+| A5 Tools | PASS | Four Assessment tool adapters calling only `AssessmentService`; model arguments cannot control trusted runtime fields. |
+| A6 Composition/DI | PASS | IndexedDB → Memory fallback → Service → QueryStore/Tools → AgentRunner wiring and reactive App integration. |
+| A7 Product E2E | PASS | Assessment lifecycle integration and Chromium coverage. |
+| A8 Quality Gate | PASS | Architecture/trusted-scope/regression audit completed; no production-code commit required. |
 
-## Architecture gate
+A5 and A6 were completed by the orchestrator after their delegated workers stalled; their changes remain within the assigned ownership paths. All other delegated implementation work was merged with normal `--no-ff` merges.
 
-Current integrated changes preserve the intended boundaries:
+## Architecture acceptance
 
-- no Assessment UI → IndexedDB dependency;
-- no Tool → IndexedDB dependency;
-- no Provider → Assessment dependency;
-- no Worker-side tool execution added;
-- no model-controlled trusted Assessment scope added.
+The final code and tests enforce:
 
-The new architecture-boundary regression test turns the first four dependency rules into executable checks instead of documentation-only conventions.
+- UI does not import Assessment infrastructure or use IndexedDB directly.
+- Assessment tools call `AssessmentService`, never a repository or IndexedDB adapter.
+- Agent core, providers and the worker remain Assessment-agnostic.
+- Domain code remains independent of React, IndexedDB and AI transport.
+- `learningUnitId`, `conversationId`, `agentRunId`, `toolCallId`, `contextSnapshotId`, `mutationId` and `model` are runtime-controlled fields.
+- Ordinary chat keeps the established `client.stream` wire contract; AgentRunner is selected for Assessment requests only.
+- Compaction has no tools, no `toolChoice`, and no tool execution path.
+- IndexedDB failure is explicit and falls back to a user-visible session-only Memory repository.
 
-## Current integration delta
+## Validation evidence
 
-The integration branch is based on current `main` and contains the already-integrated UI/provider baseline plus the integration status document and architecture-boundary test. No upstream Assessment contract/core code has been synthesized locally.
+| Command / suite | Result |
+| --- | --- |
+| `npm ci` | PASS; 260 packages installed, 0 vulnerabilities. |
+| `npm run lint` | PASS, exit 0; existing lint warnings only. |
+| `npm run build` | PASS, exit 0; existing large-chunk warning only. |
+| `node --test tests/*.mjs worker/deepseek-assistant/test/*.test.js` | PASS: 195/195. |
+| `npm --prefix worker/deepseek-assistant run check` | Environment failure: local Worker `node_modules` has no `wrangler`. |
+| `npm exec --yes --package=wrangler@4.36.0 -- wrangler deploy --dry-run --config worker/deepseek-assistant/wrangler.jsonc` | PASS; upload plan generated, with Wrangler warning about existing `secrets` config field. |
+| `CI=true npm run test:e2e` | 27/45 PASS; 18 AI tests could not configure the assistant because `VITE_AI_ASSISTANT_URL` was absent. No Assessment test failed. |
+| `VITE_AI_ASSISTANT_URL=http://127.0.0.1:4173/__ai-test__ CI=true npm run test:e2e` | PASS: 45/45 Chromium tests. |
+| Assessment lifecycle integration focused suite | PASS: 61/61. |
+| Assessment/architecture/tool/composition focused tests | PASS; included in the 195/195 Node total. |
 
-## Next integration action
+The mock Gateway E2E endpoint is the repository's existing Playwright test route and does not use a paid or live DeepSeek credential. Live provider credential smoke testing remains `PENDING` because no external secret was supplied.
 
-On the next run:
+## Integrated commits
 
-1. re-check all four upstream branches;
-2. compare new commits against the integration branch;
-3. integrate only validated, contract-compatible changes;
-4. once Assessment contracts/core exist, implement Assessment tool adapters as thin calls into `AssessmentService`;
-5. wire trusted execution scope in composition rather than exposing scope fields in model schemas;
-6. then add cross-module integration tests before browser E2E;
-7. keep `merge-ready = NO` until every mandatory gate passes.
+- `71f673b` Assessment UI merge
+- `92469df` repository contract freeze
+- `8758a09` repository implementations
+- `6d66df2` AssessmentService and QueryStore
+- `0b95260` direct/Gateway Agent transport completion
+- `cb28c57` Assessment AI tool adapters
+- `841f02b` composition root and reactive Inspector wiring
+- `6afdc7d` Assessment lifecycle E2E coverage
+- `6066b90` ordinary-chat transport regression fix
+
+## Release action
+
+After this document is committed, push `codex/assessment-finalization` and open the PR into `auto/assessment-integration`. Do not auto-merge into `main`.
