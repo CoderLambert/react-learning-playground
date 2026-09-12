@@ -29,18 +29,16 @@ Demo 的矩阵与 Note 对齐：
 
 它没有执行真正的 RSC protocol 或 bundler transform，但 Note 的实验只要求检查能力矩阵并判断边界，因此 Gate B 通过。
 
-## 缺失边界 / 反例
+## 已关闭边界
 
-建议补充“server/client 文件后缀不是 React 标准”。Demo 中 `.server` / `.client` 是教学命名，实际框架更常通过 `"use client"`、route/module convention 或 bundler graph 判定边界，不能把文件名后缀当成 React API。
+正式 Note 已明确 Demo 中 `.server` / `.client` 只是教学命名，不是 React 标准文件约定；真实边界可能来自 `"use client"`、module graph、route/module convention 或 bundler integration。
 
-还应强调 serializable props 边界与安全：Server → Client 传值必须满足框架/React 支持的序列化约束；secret 不能因为经过 Server Component prop 就安全地发送到 Client Component。
+正式 Note 已加入 Server → Client 的安全/序列化模型：跨 Client boundary 的数据必须既允许暴露给浏览器，又满足 React / Framework 支持的序列化约束。Server Component 可访问 secret，但 secret 作为 prop 发送给 Client Component 后即进入浏览器边界；“来自服务器”不等于“可以安全暴露”。
 
 ## 清晰度与工程决策
 
 生产规则合理：默认让非交互工作留在 Server graph；只有真正需要事件、state、Effect、browser API 的叶子进入 Client graph；但不要为了最小 bundle 把边界切得过碎，API 可理解性和维护成本仍是约束。
 
-## 建议修改
+## Remaining debt
 
-1. 明确 `.server` / `.client` 仅为 Demo 命名，不是 React 19.2 文件约定。
-2. 增加 Server → Client serializable props 与 secret 泄漏边界。
-3. 若未来接入真实 RSC framework，再用真实 module graph / payload 验证替代当前概念时间线。
+- 若未来接入真实 RSC framework，再用真实 module graph / payload 验证替代当前概念时间线；当前 Demo Contract 仍明确它是教学模拟，不冒充真实 runtime。
