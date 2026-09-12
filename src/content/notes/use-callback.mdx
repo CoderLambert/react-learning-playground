@@ -1,7 +1,7 @@
 # useCallback 函数引用稳定
 
 <MentalModel title="useCallback 缓存函数 identity，不缓存函数执行结果">
-`useCallback(fn, deps)` 返回在依赖不变时保持 identity 的函数。它最常见的价值是配合 `memo` 子组件或其他明确依赖函数 identity 的 API，而不是让函数“更快”。
+每次 render 仍会创建传给 `useCallback` 的函数表达式；`useCallback(fn, deps)` 只是在依赖不变时返回之前缓存的 function value，依赖变化时返回当前 render 的函数。它缓存的是 identity，不是函数执行结果；最常见的价值是配合 `memo` 子组件或其他明确依赖函数 identity 的 API，而不是让普通函数创建或调用“更快”。
 </MentalModel>
 
 <Experiment title="观察函数 prop 如何击穿 memo">
@@ -28,12 +28,17 @@ functional updater 能在“只为计算下一 state 而读取旧 state”时移
 若函数没有进入 memoized child、Effect dependency 或第三方 identity-sensitive API，稳定它通常没有收益。额外 Hook 反而增加维护成本。
 </AntiPattern>
 
+<Boundary title="callback cache 不是持久 identity storage">
+`useCallback` 只是性能优化，React 在特定情况下可以丢弃 callback cache。因此不能把它当作业务语义所需的持久 identity storage；需要持久句柄或可变值时，应由合适的 state、ref 或外部 owner 管理。
+</Boundary>
+
 <Boundary title="Compiler 与手工 callback">
 React Compiler 可自动 memoize 函数，降低常规 `useCallback` 需求；外部库要求稳定 callback、未编译区域或已测量热点仍可能需要显式控制。
 </Boundary>
 
 <Summary>
 - `useCallback` 稳定函数引用，不缓存调用结果。
+- 它不是为了避免函数创建，也不是持久 identity storage。
 - 它需要一个消费 identity 的边界才有价值。
 - updater function 可安全缩小部分依赖。
 - 不要通过遗漏依赖制造“稳定”。

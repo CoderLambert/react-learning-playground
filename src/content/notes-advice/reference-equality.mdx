@@ -31,8 +31,9 @@ Demo 真正保存上一轮对象/数组/函数引用，并在下一次用户触�
 
 工程决策规则清楚：先找 identity consumer，再决定是否稳定引用。建议继续保持这一顺序，而不是把“对象 prop → useMemo”写成默认公式。
 
-## 建议修改
+## 处理结果
 
-1. 把“多种缓存机制”收窄为明确示例，避免过度泛化。
-2. 保持当前 Demo；无需为展示 identity 再增加复杂 memoization。
-3. 可在结尾增加一句：不可变更新利用引用变化表达新值，稳定引用优化则是在确认 identity consumer 后减少不必要变化，两者目标不同。
+- 已将“多种缓存机制”收窄为本章涉及的 dependency、`memo`、`useMemo` 与 `useCallback` 边界。
+- 已保留当前 Demo，没有增加用于展示 identity 的额外 instrumentation。
+- 已补充不可变更新与稳定 identity 的职责区分。
+- 状态：RESOLVED / CLOSED。

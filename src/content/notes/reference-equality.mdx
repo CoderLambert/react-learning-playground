@@ -1,7 +1,7 @@
 # Reference Equality 引用身份
 
 <MentalModel title="React 经常比较 identity，而不是深比较内容">
-JavaScript 对对象、数组和函数使用引用身份；两个结构相同的新对象仍不满足 `Object.is(a, b)`。React 的 dependency 比较、`memo` 默认 props 比较和多种缓存机制都建立在这个事实之上。
+JavaScript 对对象、数组和函数使用引用身份；两个结构相同的新对象仍不满足 `Object.is(a, b)`。React 的 dependency 比较、`memo` 默认 props 比较以及本章涉及的 `useMemo` / `useCallback` 缓存机制都建立在这个事实之上。
 </MentalModel>
 
 <Experiment title="跨 Render 比较 identity">
@@ -12,7 +12,7 @@ JavaScript 对对象、数组和函数使用引用身份；两个结构相同的
 <Flow items={["render 创建对象/函数 → 获得新引用","React 用 Object.is 比较依赖或 props","identity 改变 → 缓存可能失效/Effect 可能重同步","只有存在真实优化需求时再稳定引用"]} />
 
 <Observation>
-引用变化不是错误，它是 JavaScript 正常语义。只有当 identity 被某个边界消费——例如 memoized child、Hook dependency 或外部订阅 snapshot——它才成为架构信号。
+引用变化不是错误，它是 JavaScript 正常语义。只有当 identity 被某个边界消费——例如 memoized child、Hook dependency 或外部订阅 snapshot——它才成为架构信号。本课提供 Chapter 07 的 identity 基础，但引用变化本身不是应该优化的证据。
 </Observation>
 
 <AntiPattern title="为了稳定而稳定">
@@ -27,6 +27,7 @@ JavaScript 对对象、数组和函数使用引用身份；两个结构相同的
 - 对象/数组/函数的结构相同不代表引用相同。
 - identity 只有在被比较或订阅时才影响行为/性能。
 - 不可变数据与稳定 identity 是互补工具。
+- 不可变更新用引用变化表达新值；稳定引用则应在确认 identity consumer 后作为优化手段使用。
 - 先理解消费者，再决定是否缓存引用。
 </Summary>
 

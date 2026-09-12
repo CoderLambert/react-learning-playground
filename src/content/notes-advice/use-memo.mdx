@@ -28,16 +28,17 @@ Demo 可以真实执行 Note 描述的两类更新：
 
 因此 Gate B 通过。开发 StrictMode 下计算函数可能额外执行，Demo 已明确提醒不要把单次 Console 次数当作生产性能结论。
 
-## 缺失边界 / 反例
+## 已补充边界 / 反例
 
-建议补充一个容易被忽略的边界：`useMemo` 的缓存是组件实例局部的最近一次结果，不是跨组件共享的数据缓存，也不适合承担数据请求缓存职责。对于 Effect 中仅为了稳定对象依赖而添加 `useMemo` 的情况，优先考虑把对象创建移入 Effect，通常比增加 memoization 更简单。
+Note 已明确 `useMemo` 是组件实例局部的最近一次计算缓存，不是 application cache、server-state cache 或 request cache。对于 Effect 中仅为了稳定对象依赖的情况，Note 现在优先要求把对象创建移入 Effect 或简化依赖，而不是默认添加 `useMemo`。
 
 ## 清晰度与工程决策
 
 当前工程规则已经较明确：只有“昂贵纯计算”或“明确 identity contract”两类理由成立时才优先考虑 `useMemo`，并用 Profiler/Performance 工具验证收益。建议避免把 synthetic workload 的毫秒数描述成通用阈值。
 
-## 建议修改
+## 处理结果
 
-1. 补充“组件实例局部缓存，不是业务/请求缓存”的边界。
-2. 对 Effect dependency 场景优先展示“移入 Effect / 简化依赖”，再把 `useMemo` 作为次选。
-3. 保留“性能优化而非语义保证”和 Compiler 环境下减少机械 memoization 的现有表述。
+- Note 已补充组件实例缓存与 application/server-state/request cache 的边界。
+- Note 已补充 Effect dependency object 的优先处理顺序。
+- 已保留“性能优化而非语义保证”以及 Compiler 环境下减少机械 memoization 的表述；Demo 未修改。
+- 状态：RESOLVED / CLOSED。

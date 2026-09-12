@@ -9,7 +9,7 @@ React `<Profiler>` 测量某棵 React 子树 commit 时的 render 成本。`actu
 </Experiment>
 <DemoReference action="执行相同交互序列并比较 Profiler 记录" observe="关注重复样本、最慢 commit 与优化前后的趋势。" />
 
-<Flow items={["复现用户可感知的慢操作","Profiler 定位昂贵 React 子树/commit","浏览器 Performance 继续检查脚本、布局、绘制","做最小优化","用同一场景重新测量并防止回归"]} />
+<Flow items={["确认真实性能问题","用 React Profiler / 浏览器 Performance 定位瓶颈","确认瓶颈是否来自 React render，并找出 identity consumer 或昂贵计算边界","决定是否需要 memo / useMemo / useCallback 等具体工具","确认 React Compiler 的编译覆盖与 diagnostics","在同一场景复测，只保留已测量有效的热点优化"]} />
 
 <Observation>
 Profiler 只覆盖 React render/commit 相关信息。网络、长任务、布局、图片解码、第三方脚本等仍需浏览器 Performance/Network 工具。
@@ -28,6 +28,7 @@ Profiler 只覆盖 React render/commit 相关信息。网络、长任务、布�
 - `actualDuration` 与 `baseDuration` 应结合场景解释。
 - 普通 production build 默认关闭 profiling；生产级复测需要 profiling-enabled build/工具链。
 - React Profiler 与浏览器性能工具互补。
+- 在 Chapter 07 中，reference equality 是 identity 基础，Profiler 是测量入口，`memo` / `useMemo` / `useCallback` 是具体工具，Compiler 改变手工优化的责任分配，但不改变 React 语义。
 </Summary>
 
 <FurtherReading items={[{label:"React: Profiler",href:"https://react.dev/reference/react/Profiler"},{label:"React: Performance tracks",href:"https://react.dev/reference/dev-tools/react-performance-tracks"}]} />
