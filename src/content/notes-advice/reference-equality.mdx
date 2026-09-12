@@ -23,13 +23,13 @@ Demo 真正保存上一轮对象/数组/函数引用，并在下一次用户触�
 
 需要注意：`renderRound` 是教学轮次编号，不是 React 实际 render instrumentation；当前 Note 没有把它误称为真实 render count，因此没有契约问题。
 
-## 缺失边界 / 反例
+## 有意未展开的边界
 
-可增加一个重要边界：primitive 的 `Object.is` 也存在 `NaN` 与 `-0/+0` 等 JavaScript 语义细节，但对本课 React 性能主线不是必要内容，不应喧宾夺主。
+primitive 的 `Object.is` 也存在 `NaN` 与 `-0/+0` 等 JavaScript 语义细节；它们对本课 React 性能主线不是必要内容，因此有意不在本轮展开。
 
 ## 清晰度与工程决策
 
-工程决策规则清楚：先找 identity consumer，再决定是否稳定引用。建议继续保持这一顺序，而不是把“对象 prop → useMemo”写成默认公式。
+工程决策规则清楚：先找 identity consumer，再决定是否稳定引用；应保持这一顺序，而不是把“对象 prop → useMemo”写成默认公式。
 
 ## 处理结果
 

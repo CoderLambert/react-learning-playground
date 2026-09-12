@@ -28,7 +28,7 @@ Route loader 与 server-state cache 也不是同义概念。Loader 解决“进�
 
 修复后的 Note 不再声称 Demo 会修改真实 URL、执行真实 redirect 或提供真实 Router instrumentation，因此 Gate B 通过。
 
-## 缺失边界 / 反例
+## 已关闭边界 / 反例
 
 本轮已补充 loader cancellation / race 边界：真实 Router 在连续导航时可能取消或忽略过时工作，不能把这个简单 `setTimeout` 模拟器的完成顺序当成 Router 的并发保证。
 

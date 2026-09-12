@@ -29,7 +29,7 @@ URL / History 不是 React Core 状态模型。React Router 等 Router/Framework
 
 因此 Gate B 通过。Demo 仍明确说明生产应用应使用 Router navigation/search API，而不是在业务组件中自行广播 history 变化。
 
-## 缺失边界 / 反例
+## 已关闭边界 / 反例
 
 本轮已补充 URL schema 边界：search params 是不可信字符串输入，需要解析、默认值、枚举校验和 canonicalization。复杂筛选也应考虑 URL 长度、隐私与可读性，不是所有可持久化状态都适合进入 URL。
 

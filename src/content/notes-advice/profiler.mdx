@@ -23,7 +23,7 @@ Demo 的 `Profiler` 真正包裹 `ExpensiveList`，并记录真实 `actualDurati
 
 `onRender` 中写入 samples 会引发教学 UI 自身更新；代码使用防护避免采样展示继续污染下一条记录。这属于 harness 实现细节，不改变实验事实，但不应被学习者照搬成通用遥测架构。
 
-## 缺失边界 / 反例
+## 已关闭边界 / 反例
 
 当前关键边界已覆盖：
 

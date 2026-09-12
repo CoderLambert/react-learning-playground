@@ -267,3 +267,64 @@ test("audit-sensitive lesson claims stay aligned with their demos", () => {
   assert.match(stateReducerNote, /不代表完整 action trace/);
   assert.match(stateReducerDemo, /这里仅记录 INCREMENT、DECREMENT、RESET 产生的 count 转换/);
 });
+
+test("second-round notes preserve production boundary semantics", () => {
+  const rscNote = readRepoFile("src/content/notes/rsc-boundary.mdx");
+  assert.match(rscNote, /\.server|\.client/);
+  assert.match(rscNote, /(不是|并非).*(React.*标准|standard)/i);
+  assert.match(rscNote, /(序列化|serializ)/i);
+  assert.match(rscNote, /(secret|敏感|机密)/i);
+  assert.match(rscNote, /(浏览器边界|client boundary|客户端边界)/i);
+
+  const urlNote = readRepoFile("src/content/notes/url-state.mdx");
+  for (const concept of [/parse|解析/i, /default|默认/i, /enum|枚举/i, /range|范围/i, /canonical|规范化|归一/i]) {
+    assert.match(urlNote, concept);
+  }
+  assert.match(urlNote, /(不可信|untrusted)/i);
+
+  const routeDataNote = readRepoFile("src/content/notes/route-data-boundary.mdx");
+  assert.match(routeDataNote, /(setTimeout|simulat|模拟)/i);
+  assert.match(routeDataNote, /(cancellation|cancel|取消)/i);
+  assert.match(routeDataNote, /(race|stale|过时|陈旧)/i);
+
+  const memoNote = readRepoFile("src/content/notes/react-memo.mdx");
+  assert.match(memoNote, /(性能优化|performance optimization)/i);
+  assert.match(memoNote, /(function prop|函数.*prop|函数.*属性)/i);
+  assert.doesNotMatch(memoNote, /(props.*相同|相同.*props).*(保证|一定|绝不).*(执行|render|渲染)/i);
+
+  const useMemoNote = readRepoFile("src/content/notes/use-memo.mdx");
+  assert.match(useMemoNote, /(组件实例|component instance).*(缓存|cache)/i);
+  assert.match(useMemoNote, /(application cache|server-state cache|request cache|应用缓存|server-state|请求缓存)/i);
+  assert.match(useMemoNote, /(不是|并非|不等于|≠|not)/i);
+
+  const useCallbackNote = readRepoFile("src/content/notes/use-callback.mdx");
+  assert.match(useCallbackNote, /(函数.*表达式|function expression)/i);
+  assert.match(useCallbackNote, /(不是|并非|不.*避免|not).*(创建|函数.*creation|function creation)/i);
+
+  const accessibilityNote = readRepoFile("src/content/notes/accessibility-basics.mdx");
+  assert.match(accessibilityNote, /placeholder.*(不能|不应|不能替代|not).*(label|标签)/i);
+  assert.match(accessibilityNote, /(axe|automated|自动).*(不.*完整|不能.*完整|not.*complete)/i);
+
+  const updatedAdviceFiles = [
+    "rsc-boundary",
+    "react-compiler",
+    "url-state",
+    "nested-routes",
+    "route-data-boundary",
+    "reference-equality",
+    "react-memo",
+    "use-memo",
+    "use-callback",
+    "profiler",
+    "testing-strategy",
+    "accessibility-basics",
+    "lazy-suspense",
+    "controlled-form",
+    "form-action",
+    "custom-hooks",
+  ];
+  for (const id of updatedAdviceFiles) {
+    const advice = readRepoFile(`src/content/notes-advice/${id}.mdx`);
+    assert.doesNotMatch(advice, /## 建议修改|建议补充/);
+  }
+});
