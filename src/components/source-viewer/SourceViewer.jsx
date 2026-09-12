@@ -1,5 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import CodeViewer from "../CodeViewer";
+import {
+  LEARNING_CONTEXT_KINDS,
+  LearningActionBar,
+  createLearningActionContext,
+  emitLearningAction,
+} from "../../learning-actions";
 import "./SourceViewer.css";
 
 const KIND_LABELS = Object.freeze({
@@ -38,6 +44,12 @@ function regionFocus(fileName, region) {
     startLine: Math.max(1, Number(region.startLine) || 1),
     endLine: Math.max(Number(region.endLine) || Number(region.startLine) || 1, Number(region.startLine) || 1),
   };
+}
+
+function focusedSourceText(code, range) {
+  if (typeof code !== "string" || !range) return "";
+  const lines = code.split("\n");
+  return lines.slice(range.startLine - 1, range.endLine).join("\n");
 }
 
 function SourceSemanticNavigator({
@@ -149,6 +161,14 @@ export function SourceViewer({
 
   const semanticFocusRange = regionFocus(resolvedActiveFileName, selectedRegion);
   const effectiveFocusRange = semanticFocusRange ?? focusRange;
+  const learningActionContext = useMemo(() => createLearningActionContext({
+    kind: LEARNING_CONTEXT_KINDS.SOURCE,
+    learningUnit,
+    fileName: resolvedActiveFileName,
+    range: effectiveFocusRange,
+    semanticRegion: selectedRegion ? regionLabel(selectedRegion) : focusRange ? "citation" : "full-file",
+    selectedText: focusedSourceText(currentFile?.code, effectiveFocusRange),
+  }), [currentFile?.code, effectiveFocusRange, focusRange, learningUnit, resolvedActiveFileName, selectedRegion]);
 
   if (fileList.length === 0) {
     return (
@@ -202,6 +222,11 @@ export function SourceViewer({
       data-source-mode={mode}
       data-source-semantic={selectedRegion?.id ?? (focusRange ? "citation" : "full")}
     >
+      <LearningActionBar
+        context={learningActionContext}
+        onAction={emitLearningAction}
+        label="针对当前源码上下文的 AI 学习动作"
+      />
       <CodeViewer
         files={fileList}
         variant={inline ? "accordion" : "panel"}
