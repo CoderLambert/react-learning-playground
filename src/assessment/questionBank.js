@@ -232,6 +232,15 @@ export function migrateBuiltinIdentity({ chapter, checkpoint, state }) {
   const semanticByFingerprint = new Map(
     structured.filter((item) => item.semanticId).map((item) => [item.fingerprint, item.id]),
   );
+  const byKind = new Map(
+    ["question", "exercise"].map((kind) => [kind, structured.filter((item) => item.kind === kind)]),
+  );
+
+  const positionalOverrides = migratePositionalOverrides({ chapter, checkpoint, legacy: next.overrides });
+  for (const id of Object.keys(next.overrides)) {
+    if (/^(question|exercise):\d+$/.test(id)) delete next.overrides[id];
+  }
+  Object.assign(next.overrides, positionalOverrides);
 
   for (const [id, patch] of Object.entries(next.overrides)) {
     const match = /^builtin:ch\d+:(question|exercise):([a-z0-9]+)$/.exec(id);
@@ -244,9 +253,13 @@ export function migrateBuiltinIdentity({ chapter, checkpoint, state }) {
 
   for (const [orderKey, ids] of Object.entries(next.order)) {
     next.order[orderKey] = ids.map((id) => {
-      const match = /^builtin:ch\d+:(question|exercise):([a-z0-9]+)$/.exec(id);
-      if (!match) return id;
-      return semanticByFingerprint.get(`${match[1]}:${match[2]}`) || id;
+      const positional = /^(question|exercise):(\d+)$/.exec(id);
+      if (positional) {
+        return byKind.get(positional[1])?.[Number(positional[2])]?.id || id;
+      }
+      const legacy = /^builtin:ch\d+:(question|exercise):([a-z0-9]+)$/.exec(id);
+      if (!legacy) return id;
+      return semanticByFingerprint.get(`${legacy[1]}:${legacy[2]}`) || id;
     });
   }
 
