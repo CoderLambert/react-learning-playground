@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
+import { dispatchLearningAction } from "../../learning-actions/learningActions.js";
 import CodeViewer from "../CodeViewer";
+import { LearningActionBar } from "../learning-actions/LearningActionBar.jsx";
 import "./SourceViewer.css";
 
 const KIND_LABELS = Object.freeze({
@@ -170,6 +172,29 @@ export function SourceViewer({
     setSemanticSelection(selection);
   };
 
+  const askAboutSource = (action) => dispatchLearningAction({
+    kind: "source",
+    action,
+    learningUnitId: learningUnit?.id,
+    learningUnitTitle: learningUnit?.title,
+    fileName: resolvedActiveFileName,
+    startLine: effectiveFocusRange?.startLine,
+    endLine: effectiveFocusRange?.endLine,
+    symbol: selectedRegion ? regionLabel(selectedRegion) : null,
+  });
+
+  const sourceLearningActions = (
+    <LearningActionBar
+      compact
+      label="针对当前源码"
+      actions={[
+        { id: "explain", label: effectiveFocusRange ? "解释这段" : "解释当前源码", onSelect: () => askAboutSource("explain") },
+        { id: "rationale", label: "为什么这样写", onSelect: () => askAboutSource("rationale") },
+        { id: "quiz", label: "基于源码出题", onSelect: () => askAboutSource("quiz") },
+      ]}
+    />
+  );
+
   const openInInspectorAction = inline && onOpenInInspector ? (
     <button
       type="button"
@@ -183,6 +208,13 @@ export function SourceViewer({
       在源码面板打开 <span aria-hidden="true">↗</span>
     </button>
   ) : null;
+
+  const headerActions = (
+    <div className="source-viewer-header-actions">
+      {openInInspectorAction}
+      {sourceLearningActions}
+    </div>
+  );
 
   const semanticNavigator = (
     <SourceSemanticNavigator
@@ -210,7 +242,7 @@ export function SourceViewer({
         onActiveFileChange={handleActiveFileChange}
         focusRange={effectiveFocusRange}
         title={inline ? "实现源码" : "源码实现"}
-        headerActions={openInInspectorAction}
+        headerActions={headerActions}
         bodyToolbar={semanticNavigator}
         copyFocusedRange={Boolean(selectedRegion)}
       />
