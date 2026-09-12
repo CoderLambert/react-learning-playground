@@ -134,6 +134,10 @@ function demoIds() {
   return [...registry.slice(demosStart).matchAll(/\bid:\s*"([a-z0-9-]+)"/g)].map((match) => match[1]);
 }
 
+function readRepoFile(relativePath) {
+  return readFileSync(new URL(`../${relativePath}`, import.meta.url), "utf8");
+}
+
 test("every registered learning unit has one convention-based note", () => {
   const ids = demoIds();
   const uniqueIds = new Set(ids);
@@ -232,4 +236,34 @@ test("teaching primitives use supported props and do not silently render empty b
   }
 
   assert.deepEqual(problems, []);
+});
+
+test("audit-sensitive lesson claims stay aligned with their demos", () => {
+  const childrenNote = readRepoFile("src/content/notes/children.mdx");
+  const childrenDemo = readRepoFile("src/demos/ChildrenSlotDemo.jsx");
+  assert.doesNotMatch(childrenDemo, /React 19 全新架构|默认支持编译器指令|任意 HTML/);
+  assert.match(childrenNote, /结构由调用者变化 → composition/);
+  assert.match(childrenNote, /稳定语义参数 → props/);
+
+  const pureRenderNote = readRepoFile("src/content/notes/component-jsx-pure-render.mdx");
+  assert.doesNotMatch(pureRenderNote, /区分组件函数执行、返回 JSX 与最终 DOM 更新/);
+  assert.match(pureRenderNote, /本 Demo 不测量真实 render\/commit 次数/);
+  assert.match(pureRenderNote, /本次 render 内新创建、尚未逃逸的局部对象/);
+
+  const stateReducerNote = readRepoFile("src/content/notes/state-reducer.mdx");
+  const stateReducerDemo = readRepoFile("src/demos/StateReducerDemo.jsx");
+  const reducerActions = [...stateReducerDemo.matchAll(/case "([A-Z_]+)"/g)].map((match) => match[1]);
+  const demoReferenceActions = stateReducerNote.match(/<DemoReference\s+action="([^"]+)"/)?.[1] ?? "";
+
+  assert.deepEqual(
+    reducerActions.sort(),
+    ["INCREMENT", "DECREMENT", "SET_STEP", "RESET", "UNDO"].sort(),
+    "StateReducerDemo reducer action set changed; update the lesson contract intentionally",
+  );
+  for (const actionType of reducerActions) {
+    assert.match(demoReferenceActions, new RegExp(`\\b${actionType}\\b`));
+  }
+  assert.doesNotMatch(stateReducerNote, /add\/update\/remove/);
+  assert.match(stateReducerNote, /不代表完整 action trace/);
+  assert.match(stateReducerDemo, /这里仅记录 INCREMENT、DECREMENT、RESET 产生的 count 转换/);
 });
