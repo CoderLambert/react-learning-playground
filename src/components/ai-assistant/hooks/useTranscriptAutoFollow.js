@@ -6,7 +6,7 @@ function isNearBottom(element) {
   return element.scrollHeight - element.scrollTop - element.clientHeight <= BOTTOM_THRESHOLD;
 }
 
-export function useTranscriptAutoFollow({ messageCount, isStreaming }) {
+export function useTranscriptAutoFollow({ messageCount, contentVersion, isStreaming }) {
   const transcriptRef = useRef(null);
   const [isFollowing, setIsFollowing] = useState(true);
   const [showBackToLatest, setShowBackToLatest] = useState(false);
@@ -32,7 +32,7 @@ export function useTranscriptAutoFollow({ messageCount, isStreaming }) {
     if (!element || !isFollowing) return;
     element.scrollTo({ top: element.scrollHeight, behavior: isStreaming ? "auto" : "smooth" });
     setShowBackToLatest(false);
-  }, [messageCount, isStreaming, isFollowing]);
+  }, [messageCount, contentVersion, isStreaming, isFollowing]);
 
   return {
     transcriptRef,
