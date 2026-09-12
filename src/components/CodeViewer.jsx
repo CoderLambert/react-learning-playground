@@ -39,6 +39,8 @@ export function CodeViewer({
   focusRange = null,
   title = "源码实现",
   headerActions = null,
+  bodyToolbar = null,
+  copyFocusedRange = false,
 }) {
   const [internalExpanded, setInternalExpanded] = useState(defaultExpanded);
   const [activeFileIndex, setActiveFileIndex] = useState(0);
@@ -93,11 +95,18 @@ export function CodeViewer({
 
   const handleCopy = async (event) => {
     event.stopPropagation();
+    const codeToCopy = copyFocusedRange && isFocusedFile
+      ? currentCode
+          .split("\n")
+          .slice(Math.max(0, Number(focusRange.startLine) - 1), Math.max(Number(focusRange.startLine), Number(focusRange.endLine) || Number(focusRange.startLine)))
+          .join("\n")
+      : currentCode;
+
     try {
-      await navigator.clipboard.writeText(currentCode);
+      await navigator.clipboard.writeText(codeToCopy);
     } catch {
       const textarea = document.createElement("textarea");
-      textarea.value = currentCode;
+      textarea.value = codeToCopy;
       document.body.appendChild(textarea);
       textarea.select();
       document.execCommand("copy");
@@ -112,9 +121,10 @@ export function CodeViewer({
   const highlightedHtml = isHighlighted
     ? decorateHighlightedLines(highlightedEntry.html, isFocusedFile ? focusRange : null)
     : "";
+  const copyLabel = copyFocusedRange && isFocusedFile ? "复制当前实现" : "复制代码";
   const copyButton = (
-    <button type="button" className="btn btn-outline btn-sm code-copy-btn" onClick={handleCopy} title="复制代码到剪贴板">
-      {copied ? "✅ 已复制" : "📋 复制代码"}
+    <button type="button" className="btn btn-outline btn-sm code-copy-btn" onClick={handleCopy} title={copyFocusedRange && isFocusedFile ? "复制当前语义实现到剪贴板" : "复制代码到剪贴板"}>
+      {copied ? "✅ 已复制" : `📋 ${copyLabel}`}
     </button>
   );
   const actions = (headerActions || isExpanded) ? (
@@ -142,6 +152,7 @@ export function CodeViewer({
           ))}
         </div>
       )}
+      {bodyToolbar}
       <div className="code-highlight-viewport" ref={viewportRef}>
         {isLoading && <div className="code-loading-indicator">⚡ 正在使用 Shiki 渲染高亮语法树...</div>}
         {isHighlighted ? (
