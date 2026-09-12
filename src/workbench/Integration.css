@@ -119,6 +119,75 @@
   background: var(--color-danger-light);
 }
 
+/* Inspector tab rows stay on one line and scroll horizontally without showing a scrollbar. */
+.learning-inspector .learning-inspector-tabs,
+.learning-inspector .ai-assistant-context-list,
+.learning-inspector .source-semantic-nav__controls {
+  overflow-x: auto;
+  overflow-y: hidden;
+  flex-wrap: nowrap;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.learning-inspector .learning-inspector-tabs::-webkit-scrollbar,
+.learning-inspector .ai-assistant-context-list::-webkit-scrollbar,
+.learning-inspector .source-semantic-nav__controls::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.learning-inspector .learning-inspector-tab {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.learning-inspector .ai-assistant-context-chip {
+  flex: 0 0 auto;
+  max-width: min(320px, 78%);
+  white-space: nowrap;
+}
+
+/* Keep long chapter/content scrollers visually quiet without removing scroll affordance. */
+.workbench-shell .workbench-navigation-list,
+.workbench-shell .workbench-content-slot,
+.learning-inspector .learning-inspector-pane {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--text-subtle) 34%, transparent) transparent;
+}
+
+.workbench-shell .workbench-navigation-list::-webkit-scrollbar,
+.workbench-shell .workbench-content-slot::-webkit-scrollbar,
+.learning-inspector .learning-inspector-pane::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.workbench-shell .workbench-navigation-list::-webkit-scrollbar-track,
+.workbench-shell .workbench-content-slot::-webkit-scrollbar-track,
+.learning-inspector .learning-inspector-pane::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.workbench-shell .workbench-navigation-list::-webkit-scrollbar-thumb,
+.workbench-shell .workbench-content-slot::-webkit-scrollbar-thumb,
+.learning-inspector .learning-inspector-pane::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text-subtle) 34%, transparent);
+  background-clip: padding-box;
+}
+
+.workbench-shell .workbench-navigation-list:hover::-webkit-scrollbar-thumb,
+.workbench-shell .workbench-content-slot:hover::-webkit-scrollbar-thumb,
+.learning-inspector .learning-inspector-pane:hover::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--text-muted) 56%, transparent);
+  background-clip: padding-box;
+}
+
 .workbench-all-demo-heading {
   margin-bottom: 16px;
   display: flex;
