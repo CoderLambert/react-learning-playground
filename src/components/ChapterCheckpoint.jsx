@@ -1,3 +1,4 @@
+import { QuestionBankManager } from "../assessment/QuestionBankManager.jsx";
 import { getChapterNextStep, getIntegrationLab } from "./chapterCheckpointMap";
 
 const CHECKPOINTS = {
@@ -203,21 +204,7 @@ export function ChapterCheckpoint({ chapter }) {
         <p className="demo-section-desc">先独立回答，再回到对应 Demo 验证。这里刻意不提供答案。</p>
       </div>
 
-      <div className="demo-grid-2">
-        <div className="demo-alert demo-alert-tip" style={{ margin: 0 }}>
-          <div className="demo-alert-title">你现在应该能回答什么？</div>
-          <ol style={{ margin: 0, paddingLeft: 20 }}>
-            {checkpoint.questions.map((question) => <li key={question} style={{ marginBottom: 8 }}>{question}</li>)}
-          </ol>
-        </div>
-
-        <div className="demo-alert demo-alert-warning" style={{ margin: 0 }}>
-          <div className="demo-alert-title">练习</div>
-          <ol style={{ margin: 0, paddingLeft: 20 }}>
-            {checkpoint.exercises.map((exercise) => <li key={exercise} style={{ marginBottom: 8 }}>{exercise}</li>)}
-          </ol>
-        </div>
-      </div>
+      <QuestionBankManager chapter={chapter} checkpoint={checkpoint} />
 
       {integrationLab && (
         <div
