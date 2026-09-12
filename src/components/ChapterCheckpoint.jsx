@@ -1,3 +1,4 @@
+import { AssessmentRunner } from "../assessment/AssessmentRunner.jsx";
 import { getChapterNextStep, getIntegrationLab } from "./chapterCheckpointMap";
 
 const CHECKPOINTS = {
@@ -193,6 +194,7 @@ export function ChapterCheckpoint({ chapter }) {
   if (!checkpoint) return null;
   const nextStep = getChapterNextStep(chapter);
   const integrationLab = getIntegrationLab(chapter);
+  const practicePrompts = [...checkpoint.questions, ...checkpoint.exercises];
 
   return (
     <section className="demo-section" data-chapter-checkpoint={chapter} aria-labelledby={`chapter-${chapter}-checkpoint-title`}>
@@ -217,6 +219,10 @@ export function ChapterCheckpoint({ chapter }) {
             {checkpoint.exercises.map((exercise) => <li key={exercise} style={{ marginBottom: 8 }}>{exercise}</li>)}
           </ol>
         </div>
+      </div>
+
+      <div style={{ marginTop: 16 }}>
+        <AssessmentRunner chapter={chapter} prompts={practicePrompts} />
       </div>
 
       {integrationLab && (
