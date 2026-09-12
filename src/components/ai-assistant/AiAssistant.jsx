@@ -17,6 +17,10 @@ import {
   copyText,
   shouldOfferContinue,
 } from "./message-actions/aiTutorMessageActions.js";
+import {
+  isTranscriptScrollKey,
+  resolveAutoFollowState,
+} from "./streaming/aiTutorScrollBehavior.js";
 import "./citations/SourceCitation.css";
 import "./AiAssistant.css";
 
@@ -32,8 +36,6 @@ const FINISH_REASON_COPY = Object.freeze({
   user_abort: "回答已由你停止。",
   error: "回答因错误中断。",
 });
-
-const SCROLL_BOTTOM_THRESHOLD = 56;
 
 function normalizeContextItems(contextSummary) {
   if (!contextSummary) return [];
@@ -309,6 +311,7 @@ export function AiAssistant({
   const statusId = useId();
   const transcriptRef = useRef(null);
   const inputRef = useRef(null);
+  const userScrollIntentRef = useRef(false);
   const [isFollowingLatest, setIsFollowingLatest] = useState(true);
   const [actionNotice, setActionNotice] = useState("");
   const noticeTimerRef = useRef(null);
@@ -356,8 +359,9 @@ export function AiAssistant({
   const scrollToLatest = useCallback((behavior = "smooth") => {
     const element = transcriptRef.current;
     if (!element) return;
-    element.scrollTo?.({ top: element.scrollHeight, behavior });
+    userScrollIntentRef.current = false;
     setIsFollowingLatest(true);
+    element.scrollTo?.({ top: element.scrollHeight, behavior });
   }, []);
 
   useEffect(() => {
@@ -365,11 +369,24 @@ export function AiAssistant({
     scrollToLatest(isStreaming ? "auto" : "smooth");
   }, [messages, isStreaming, isFollowingLatest, scrollToLatest]);
 
+  const markTranscriptUserScrollIntent = () => {
+    userScrollIntentRef.current = true;
+  };
+
+  const handleTranscriptKeyDown = (event) => {
+    if (isTranscriptScrollKey(event.key)) markTranscriptUserScrollIntent();
+  };
+
   const handleTranscriptScroll = () => {
     const element = transcriptRef.current;
     if (!element) return;
-    const distanceToBottom = element.scrollHeight - element.scrollTop - element.clientHeight;
-    setIsFollowingLatest(distanceToBottom <= SCROLL_BOTTOM_THRESHOLD);
+    const nextFollowing = resolveAutoFollowState({
+      current: isFollowingLatest,
+      userInitiated: userScrollIntentRef.current,
+      metrics: element,
+    });
+    setIsFollowingLatest(nextFollowing);
+    if (nextFollowing) userScrollIntentRef.current = false;
   };
 
   const submit = () => {
@@ -424,6 +441,13 @@ export function AiAssistant({
     }
   };
 
+  const handleStop = () => {
+    if (disabled || !isStreaming || !onStop) return;
+    onStop();
+    showActionNotice("已请求停止生成");
+    inputRef.current?.focus();
+  };
+
   const sourcePreviewEntries = Array.isArray(contextSummary?.sources) ? contextSummary.sources : [];
   const visibleNotice = actionNotice || notice;
 
@@ -449,7 +473,12 @@ export function AiAssistant({
           role="log"
           aria-label="AI 对话记录"
           aria-live="off"
+          tabIndex={0}
           onScroll={handleTranscriptScroll}
+          onWheel={markTranscriptUserScrollIntent}
+          onTouchStart={markTranscriptUserScrollIntent}
+          onPointerDown={markTranscriptUserScrollIntent}
+          onKeyDown={handleTranscriptKeyDown}
         >
           {messages.length === 0 ? (
             <EmptyState suggestions={suggestions} onSuggestionSelect={handleSuggestion} disabled={disabled || isStreaming} />
@@ -509,7 +538,7 @@ export function AiAssistant({
               <button type="button" className="ai-assistant-secondary-button" onClick={onReset} disabled={disabled || isStreaming || messages.length === 0}>新对话</button>
             ) : null}
             {isStreaming && onStop ? (
-              <button type="button" className="ai-assistant-stop-button" onClick={onStop}>停止</button>
+              <button type="button" className="ai-assistant-stop-button" onClick={handleStop} disabled={disabled} aria-label="停止生成回答">停止</button>
             ) : (
               <button type="submit" className="ai-assistant-send-button" disabled={isSubmitDisabled}>发送</button>
             )}
