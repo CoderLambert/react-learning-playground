@@ -112,6 +112,39 @@ test("repository supports persistence, overrides, custom CRUD and corruption fal
   assert.deepEqual(state, { version: 1, overrides: {}, custom: {}, order: {} });
 });
 
+test("fresh repository instance restores overrides, custom questions and ordering", () => {
+  const storage = memoryStorage();
+  const firstRepository = createQuestionBankRepository({ storage, key: "reload" });
+  const builtin = structureCheckpoint(1, semanticCheckpoint)[0];
+  const custom = createCustomQuestion({ id: "custom:reload", chapter: 1, text: "刷新后仍存在" });
+
+  firstRepository.setOverride(builtin.id, { text: "覆盖后的题目", hidden: true });
+  firstRepository.upsertCustom(custom);
+  firstRepository.setOrder(1, "question", [custom.id, builtin.id]);
+
+  const restoredRepository = createQuestionBankRepository({ storage, key: "reload" });
+  const restored = restoredRepository.load();
+  assert.deepEqual(restored.overrides[builtin.id], { text: "覆盖后的题目", hidden: true });
+  assert.equal(restored.custom[custom.id].text, "刷新后仍存在");
+  assert.deepEqual(restored.order["1:question"], [custom.id, builtin.id]);
+});
+
+test("repository reports storage write failure without pretending persistence succeeded", () => {
+  const repository = createQuestionBankRepository({
+    key: "denied",
+    storage: {
+      getItem: () => null,
+      setItem: () => { throw new Error("storage denied"); },
+      removeItem: () => { throw new Error("storage denied"); },
+    },
+  });
+  const custom = createCustomQuestion({ id: "custom:denied", chapter: 1, text: "不会持久化" });
+
+  assert.equal(repository.upsertCustom(custom).ok, false);
+  assert.equal(repository.clear().ok, false);
+  assert.deepEqual(repository.load(), { version: 1, overrides: {}, custom: {}, order: {} });
+});
+
 test("ordering persists independently for questions and exercises", () => {
   const storage = memoryStorage();
   const repository = createQuestionBankRepository({ storage, key: "order" });
@@ -143,6 +176,37 @@ test("legacy positional overrides migrate to current builtin ids", () => {
   assert.deepEqual(migrated[secondQuestion.id], { hidden: true });
   assert.deepEqual(migrated[firstExercise.id], { text: "迁移后的练习" });
   assert.equal(Object.keys(migrated).length, 2);
+});
+
+test("unified identity migration consumes positional overrides and ordering", () => {
+  const structured = structureCheckpoint(1, semanticCheckpoint);
+  const secondQuestion = structured.filter((item) => item.kind === "question")[1];
+  const firstExercise = structured.filter((item) => item.kind === "exercise")[0];
+  const migrated = migrateBuiltinIdentity({
+    chapter: 1,
+    checkpoint: semanticCheckpoint,
+    state: {
+      version: 1,
+      overrides: {
+        "question:1": { hidden: true },
+        "exercise:0": { text: "旧版练习覆盖" },
+      },
+      custom: {},
+      order: {
+        "1:question": ["question:1", "question:0"],
+        "1:exercise": ["exercise:0"],
+      },
+    },
+  });
+
+  assert.deepEqual(migrated.overrides[secondQuestion.id], { hidden: true });
+  assert.deepEqual(migrated.overrides[firstExercise.id], { text: "旧版练习覆盖" });
+  assert.equal(migrated.overrides["question:1"], undefined);
+  assert.deepEqual(
+    migrated.order["1:question"],
+    structured.filter((item) => item.kind === "question").map((item) => item.id).reverse(),
+  );
+  assert.deepEqual(migrated.order["1:exercise"], [firstExercise.id]);
 });
 
 test("legacy fingerprint identities migrate to semantic builtin ids and order", () => {
