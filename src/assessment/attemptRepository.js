@@ -6,11 +6,11 @@ function keyFor(chapter, sessionId = "current") {
   return `${STORAGE_PREFIX}:v${ATTEMPT_VERSION}:chapter-${chapter}:${sessionId}`;
 }
 
-function safeParse(raw) {
+function safeParse(raw, expectedChapter) {
   if (!raw) return null;
   try {
     const parsed = JSON.parse(raw);
-    if (!parsed || parsed.version !== ATTEMPT_VERSION || typeof parsed.chapter !== "number") return null;
+    if (!parsed || parsed.version !== ATTEMPT_VERSION || parsed.chapter !== expectedChapter) return null;
     if (!parsed.answers || typeof parsed.answers !== "object") return null;
     return parsed;
   } catch {
@@ -23,7 +23,7 @@ export function createAttemptRepository(storage = globalThis.localStorage) {
     load(chapter, sessionId = "current") {
       if (!storage) return null;
       try {
-        return safeParse(storage.getItem(keyFor(chapter, sessionId)));
+        return safeParse(storage.getItem(keyFor(chapter, sessionId)), chapter);
       } catch {
         return null;
       }
