@@ -13,6 +13,11 @@
   scrollbar-gutter: stable;
 }
 
+.ai-assistant-transcript-shell .ai-assistant-transcript:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
+}
+
 .ai-assistant-message-actions {
   margin: 7px 2px 0;
   display: flex;
