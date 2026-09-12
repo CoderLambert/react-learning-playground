@@ -41,9 +41,11 @@ Normal Demo interaction is unchanged while locator mode is inactive.
 
 ## Build-time instrumentation
 
-`build/jsxSourceLocatorBabelPlugin.js` is registered through `@vitejs/plugin-react`.
+`build/sourceLocatorPlugin.js` is a Vite `enforce: "pre"` transform. It reuses the same Rolldown/Oxc parser boundary as the semantic manifest through the Vite plugin-context `this.parse` API.
 
-Only files already registered as `?raw` learning sources in `src/demos/index.js` are instrumented. For intrinsic DOM JSX elements the Babel transform injects an opaque navigation attribute whose value is derived from the original source location:
+Only physical files already registered as `?raw` learning sources in `src/demos/index.js` are candidates for instrumentation. Requests whose module id contains `?` are deliberately skipped, so the learner-facing raw source text remains untouched.
+
+For executable JS/JSX/TS/TSX modules, the transform finds intrinsic DOM JSX elements and injects a build-generated navigation attribute:
 
 ```jsx
 <button data-source-loc="src/demos/ImmutableStateDemo.jsx|75|75">
@@ -51,9 +53,11 @@ Only files already registered as `?raw` learning sources in `src/demos/index.js`
 </button>
 ```
 
-The source location comes from Babel AST `loc` before generated attributes are inserted. No authored line numbers are maintained.
+The range comes from the original Oxc AST location before the attribute is inserted. No authored line numbers are maintained. The transform applies edits from the end of the file toward the beginning so earlier AST offsets remain valid.
 
-The raw source imported through `?raw` remains the original teaching source. The runtime attribute is a build product, not a second source-of-truth snippet.
+Oxc offsets may be byte-oriented while JavaScript string indices are UTF-16-oriented. The transform therefore resolves non-direct offsets through a one-pass UTF-8 byte-to-string-index map before editing. This is required for lesson files that contain Chinese teaching text before the target JSX.
+
+The raw source imported through `?raw` remains the original teaching source. Runtime locator metadata is a build product, not a second source-of-truth snippet.
 
 ## Runtime resolution
 
@@ -68,7 +72,7 @@ For a hovered/clicked DOM node it:
 5. falls back to basename matching for ordinary non-aliased sources;
 6. emits `{ learningUnitId, fileName, startLine, endLine }` to the workbench.
 
-The existing semantic manifest remains useful here because it already carries the physical registered source path for each learner-facing file name, including aliases such as a display name that differs from its physical filename.
+The existing semantic manifest remains useful here because it already carries the physical registered source path for each learner-facing file name, including aliases where the display name differs from the physical filename.
 
 ## Focused and continuous reading
 
@@ -116,8 +120,9 @@ The main lesson column no longer renders a second `SourceViewer` instance below 
 
 - If an element has no locator metadata, it behaves normally when locator mode is off and is ignored by the locator when on.
 - If a physical source path cannot be resolved to the current learning unit, the candidate is ignored and ancestor candidates are considered.
-- If a source file has semantic-analysis failure, basename matching still covers normal file names; the complete source workspace remains available manually.
-- Source locator metadata never changes executable state or source evidence used by AI.
+- If instrumentation for one module cannot be parsed, the build plugin warns and leaves that module executable without locator metadata rather than corrupting it.
+- If a source file has semantic-analysis failure, basename matching still covers ordinary non-aliased file names; the complete source workspace remains available manually.
+- Source locator metadata never changes the raw source evidence used by AI.
 
 ## Verification gates
 
@@ -131,5 +136,6 @@ The feature is considered valid when:
 - aliased supporting source files resolve through physical semantic paths;
 - continuous-reading cross-lesson location switches Inspector context correctly;
 - page-level Inline Source is absent;
+- raw `?raw` source text contains no generated locator attributes;
 - Inspector file switching, Shiki highlighting, copy, semantic navigation and `source://` citations continue to work;
 - registered JS/JSX/TS/TSX source compilation, lint and browser verification remain green.
