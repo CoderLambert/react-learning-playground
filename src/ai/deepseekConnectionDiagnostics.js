@@ -7,6 +7,7 @@ import {
 export const DEEPSEEK_CONNECTION_ERROR_TYPES = Object.freeze({
   CONFIGURATION: "configuration",
   AUTHENTICATION: "authentication",
+  TIMEOUT: "timeout",
   NETWORK: "network",
   CORS: "cors",
   GATEWAY: "gateway",
@@ -27,6 +28,7 @@ export function redactSecret(value) {
 export function classifyDeepSeekConnectionError(error, { connectionMode = "browser" } = {}) {
   const status = Number(error?.status ?? error?.response?.status) || null;
   const message = String(error?.message ?? error ?? "").toLowerCase();
+  const errorName = String(error?.name ?? "").toLowerCase();
 
   if (status === 401 || status === 403 || message.includes("unauthorized") || message.includes("invalid api key")) {
     return {
@@ -52,6 +54,20 @@ export function classifyDeepSeekConnectionError(error, { connectionMode = "brows
     };
   }
 
+  if (
+    status === 408 ||
+    errorName === "aborterror" ||
+    message.includes("timeout") ||
+    message.includes("timed out") ||
+    message.includes("aborted due to timeout")
+  ) {
+    return {
+      type: DEEPSEEK_CONNECTION_ERROR_TYPES.TIMEOUT,
+      title: "连接 DeepSeek 超时",
+      guidance: "检查网络与代理是否稳定后重试；若持续超时，可稍后再试或切换连接方式。",
+    };
+  }
+
   if (message.includes("cors") || message.includes("failed to fetch") || message.includes("load failed")) {
     return {
       type: DEEPSEEK_CONNECTION_ERROR_TYPES.CORS,
@@ -60,10 +76,10 @@ export function classifyDeepSeekConnectionError(error, { connectionMode = "brows
     };
   }
 
-  if (message.includes("timeout") || message.includes("timed out") || message.includes("network") || message.includes("abort")) {
+  if (message.includes("network") || message.includes("connection reset") || message.includes("connection refused")) {
     return {
       type: DEEPSEEK_CONNECTION_ERROR_TYPES.NETWORK,
-      title: "网络连接超时或中断",
+      title: "网络连接中断",
       guidance: "检查当前网络与代理状态后重试。",
     };
   }
