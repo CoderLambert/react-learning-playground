@@ -11,6 +11,7 @@ import { LearningInspector } from "./components/learning-inspector";
 import { NoteToc } from "./components/notes/NoteToc";
 import { NoteViewer } from "./components/notes/NoteViewer";
 import { MDX_TEACHING_COMPONENTS } from "./components/mdx";
+import { DemoSourceLocator } from "./components/source-locator/DemoSourceLocator";
 import { useAiLearningAssistant } from "./ai/useAiLearningAssistant.js";
 import { enrichLearningUnitSourceSemantics } from "./source/semanticSources";
 import { WorkbenchNavigation } from "./workbench/WorkbenchNavigation";
@@ -33,26 +34,14 @@ function NotesPane({ learningUnitId }) {
   );
 }
 
-function InlineSourcePane({ learningUnit, activeFileName, onActiveFileChange, onOpenInInspector }) {
-  return (
-    <Suspense fallback={<div className="code-accordion-wrapper workbench-code-loading">⚡ 载入实现源码...</div>}>
-      <SourceViewer
-        learningUnit={learningUnit}
-        mode="inline"
-        activeFileName={activeFileName}
-        onActiveFileChange={onActiveFileChange}
-        onOpenInInspector={onOpenInInspector}
-      />
-    </Suspense>
-  );
-}
-
 export default function App() {
   const [viewMode, setViewMode] = useState("focused");
   const [searchQuery, setSearchQuery] = useState("");
   const [mobileNavigationOpen, setMobileNavigationOpen] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
   const [sourceFocus, setSourceFocus] = useState(null);
+  const [sourceLocatorActive, setSourceLocatorActive] = useState(false);
+  const [pendingSourceTarget, setPendingSourceTarget] = useState(null);
   const [pendingConversationTarget, setPendingConversationTarget] = useState(null);
   const {
     state: workbenchState,
@@ -80,6 +69,43 @@ export default function App() {
     setSourceFocus(null);
   }, [currentDemo?.id, setSourceFile]);
 
+  useEffect(() => {
+    if (!sourceLocatorActive) return undefined;
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") setSourceLocatorActive(false);
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [sourceLocatorActive]);
+
+  useEffect(() => {
+    if (!pendingSourceTarget) return;
+    if (currentLearningUnit?.id !== pendingSourceTarget.learningUnitId) return;
+
+    const exists = currentLearningUnit?.sources?.some((source) => source.name === pendingSourceTarget.fileName);
+    if (!exists) {
+      setPendingSourceTarget(null);
+      return;
+    }
+
+    setInspectorOpen(true);
+    setInspectorTab("source");
+    setSourceFile(pendingSourceTarget.fileName);
+    setSourceFocus({
+      fileName: pendingSourceTarget.fileName,
+      startLine: pendingSourceTarget.startLine,
+      endLine: pendingSourceTarget.endLine,
+    });
+    setPendingSourceTarget(null);
+  }, [
+    currentLearningUnit?.id,
+    currentLearningUnit?.sources,
+    pendingSourceTarget,
+    setInspectorOpen,
+    setInspectorTab,
+    setSourceFile,
+  ]);
+
   const handleCitationOpen = (citation) => {
     const fileName = citation?.fileName;
     const exists = currentLearningUnit?.sources?.some((source) => source.name === fileName);
@@ -94,18 +120,28 @@ export default function App() {
     });
   };
 
-  const handleInlineSourceOpen = (fileName, focusRange = null) => {
-    const exists = currentLearningUnit?.sources?.some((source) => source.name === fileName);
-    if (!exists) return;
-    setSourceFocus(focusRange);
-    setSourceFile(fileName);
+  const handleVisualSourceLocate = (target) => {
+    if (!target?.learningUnitId || !target?.fileName) return;
+    const learningUnitExists = demos.some((demo) => demo.id === target.learningUnitId);
+    if (!learningUnitExists) return;
+
+    setSourceLocatorActive(false);
+    if (target.learningUnitId !== currentLearningUnit?.id) {
+      setPendingSourceTarget(target);
+      selectDemo(target.learningUnitId);
+      return;
+    }
+
+    const sourceExists = currentLearningUnit?.sources?.some((source) => source.name === target.fileName);
+    if (!sourceExists) return;
     setInspectorOpen(true);
     setInspectorTab("source");
-  };
-
-  const handleInlineSourceFileChange = (fileName) => {
-    setSourceFile(fileName);
-    if (sourceFocus?.fileName !== fileName) setSourceFocus(null);
+    setSourceFile(target.fileName);
+    setSourceFocus({
+      fileName: target.fileName,
+      startLine: target.startLine,
+      endLine: target.endLine,
+    });
   };
 
   const navigateToDemo = (id) => {
@@ -116,12 +152,16 @@ export default function App() {
   };
 
   const handleSelectDemo = (id) => {
+    setPendingSourceTarget(null);
     setPendingConversationTarget(null);
+    setSourceLocatorActive(false);
     navigateToDemo(id);
   };
 
   const handleSelectAll = () => {
+    setPendingSourceTarget(null);
     setPendingConversationTarget(null);
+    setSourceLocatorActive(false);
     setViewMode("all");
     setMobileNavigationOpen(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -140,6 +180,8 @@ export default function App() {
     const targetExists = demos.some((demo) => demo.id === conversation.learningUnitId);
     if (!targetExists) return;
 
+    setPendingSourceTarget(null);
+    setSourceLocatorActive(false);
     setPendingConversationTarget({
       conversationId,
       learningUnitId: conversation.learningUnitId,
@@ -315,6 +357,15 @@ export default function App() {
         <div className="top-bar-right">
           <button
             type="button"
+            className="btn btn-outline btn-sm workbench-source-locator-toggle"
+            onClick={() => setSourceLocatorActive((active) => !active)}
+            aria-pressed={sourceLocatorActive}
+            title="开启后悬停并点击 Demo 元素定位源码；Alt / Option + 点击可快速定位"
+          >
+            {sourceLocatorActive ? "退出源码定位" : "⌖ 定位源码"}
+          </button>
+          <button
+            type="button"
             className="btn btn-outline btn-sm workbench-inspector-toggle"
             onClick={() => setInspectorOpen((open) => !open)}
             aria-pressed={workbenchState.inspectorOpen}
@@ -341,13 +392,13 @@ export default function App() {
         {viewMode === "focused" ? (
           currentDemo ? (
             <div key={currentDemo.id} className="demo-page">
-              <currentDemo.Component />
-              <InlineSourcePane
+              <DemoSourceLocator
                 learningUnit={currentLearningUnit}
-                activeFileName={workbenchState.sourceFile}
-                onActiveFileChange={handleInlineSourceFileChange}
-                onOpenInInspector={handleInlineSourceOpen}
-              />
+                enabled={sourceLocatorActive}
+                onLocate={handleVisualSourceLocate}
+              >
+                <currentDemo.Component />
+              </DemoSourceLocator>
               {currentCheckpointChapter && <ChapterCheckpoint chapter={currentCheckpointChapter} />}
             </div>
           ) : null
@@ -364,8 +415,13 @@ export default function App() {
                     <h3>{demo.label}</h3>
                     <span>#{demo.id}</span>
                   </div>
-                  <demo.Component />
-                  <InlineSourcePane learningUnit={learningUnit} />
+                  <DemoSourceLocator
+                    learningUnit={learningUnit}
+                    enabled={sourceLocatorActive}
+                    onLocate={handleVisualSourceLocate}
+                  >
+                    <demo.Component />
+                  </DemoSourceLocator>
                   {checkpointChapter && <ChapterCheckpoint chapter={checkpointChapter} />}
                 </div>
               );

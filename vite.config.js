@@ -6,6 +6,7 @@ import react from "@vitejs/plugin-react";
 import rehypeSlug from "rehype-slug";
 import remarkGfm from "remark-gfm";
 import { defineConfig } from "vite";
+import { sourceLocatorPlugin } from "./build/sourceLocatorPlugin.js";
 import { sourceSemanticManifestPlugin } from "./build/sourceSemanticManifestPlugin.js";
 
 const RAW_NOTE_REGISTRY_ID = "virtual:raw-mdx-note-registry";
@@ -73,6 +74,7 @@ function rawMdxNotesPlugin() {
 export default defineConfig({
   base: "/react-learning-playground/",
   plugins: [
+    sourceLocatorPlugin(),
     sourceSemanticManifestPlugin(),
     rawMdxNotesPlugin(),
     {
