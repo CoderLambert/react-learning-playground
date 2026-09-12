@@ -7,7 +7,7 @@
 - Current validation tip before this status commit: `6066b90`
 - Target PR: `codex/assessment-finalization` → `auto/assessment-integration`
 - Proposed title: `feat: finalize Assessment AI agent integration`
-- `MERGE_READY=YES` is conditional on the mocked E2E command below and the listed warnings/limitations.
+- `MERGE_READY=YES`
 
 Remote state was refreshed with `git fetch --all --prune`; no public branch was rebased, force-pushed, or rewritten.
 
