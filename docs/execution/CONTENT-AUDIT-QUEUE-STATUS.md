@@ -9,27 +9,31 @@
 
 Specialist ownership rechecked before this batch:
 
-- PR #79 `automation/content-contract-infra`: MDX teaching-component compatibility/canonicalization, semantic content tests, authoring guidance, shared TypeScript sample gate. Its open PR still owns shared infrastructure and mechanical Note normalization.
-- PR #78 `automation/state-design-lessons`: controlled/uncontrolled, state structure, lifting state, preserving/resetting state. Scope is complete/validated; files remain reserved by its open PR.
-- PR #81 `automation/typescript-learning`: TypeScript-for-React Note/Demo/TSX samples. It remains pending combined validation with PR #79's compiler gate.
-- PR #82 `automation/runtime-lessons`: event propagation, Event-vs-Effect, state snapshot/update queue. Scope is complete/validated and is not duplicated here.
+- PR #79 `automation/content-contract-infra`: shared MDX/content-contract infrastructure and TypeScript sample gate; do not duplicate.
+- PR #78 `automation/state-design-lessons`: state ownership/modeling lessons; scope complete/validated but files remain reserved by the open PR.
+- PR #81 `automation/typescript-learning`: TypeScript-for-React Note/Demo/TSX samples; still awaiting combined validation with PR #79.
+- PR #82 `automation/runtime-lessons`: event propagation, Event-vs-Effect, state snapshot/update queue; scope complete/validated and not duplicated here.
 
-This branch does not edit those owned lesson files. `main` remained at the baseline SHA when ownership was inspected.
+`main` remained at the same baseline SHA when this run began.
 
 ## Concrete residual fixes made by this queue
 
-1. `ComponentJsxPureRenderDemo.jsx`: side-effect placement now follows causality rather than treating all network/external work as Event Handler work.
-2. `PropsBasicsDemo.jsx`: props mutation wording now uses the immutable render-snapshot model rather than calling it an unpredictable side effect.
-3. `StateReducerDemo.jsx`: removed `new Date()` from reducer execution; timestamps are created at the event boundary and carried by the action.
-4. `UseReduceWithContextDemo.jsx`: removed `Date.now()` from reducer execution; IDs are generated before dispatch; removed absolute “dispatch-only never rerenders” claims; updated React 19 provider syntax.
-5. `LifecycleOfReactiveEffectsDemo.jsx`: removed fake `[Cleanup]` / `[Setup]` entries written by the room-change handler. The UI now records a switch request rather than pretending to instrument lifecycle execution.
-6. `EffectEventDemo.jsx`: connection/setup count is now incremented inside the Effect setup rather than manually in the room-change handler. The Demo explicitly notes the development Strict Mode setup → cleanup → setup stress test.
-7. `CustomHooksDemo.jsx`: `useOnlineSignal` now initializes from the actual browser `navigator.onLine` value (with a non-browser fallback) instead of assuming `true` until the first online/offline event.
-8. `PortalThirdPartyDemo.jsx`: replaced render-time predicted `cleanup/setup` text with logs emitted by the actual Effect setup/cleanup, added explicit mount/unmount controls, and kept lifecycle logs outside the third-party child so cleanup remains observable after unmount.
+1. `ComponentJsxPureRenderDemo.jsx`: side-effect placement follows causality rather than treating all external work as Event Handler work.
+2. `PropsBasicsDemo.jsx`: props mutation wording uses the immutable render-snapshot model.
+3. `StateReducerDemo.jsx`: time generation moved out of reducer execution and into the event boundary.
+4. `UseReduceWithContextDemo.jsx`: ID generation moved before dispatch; absolute rerender claim removed; React 19 provider syntax updated.
+5. `LifecycleOfReactiveEffectsDemo.jsx`: fake cleanup/setup lifecycle logs removed.
+6. `EffectEventDemo.jsx`: setup count now comes from real Effect setup execution with Strict Mode caveat.
+7. `CustomHooksDemo.jsx`: online state initializes from `navigator.onLine` instead of assuming `true`.
+8. `PortalThirdPartyDemo.jsx`: lifecycle logs now come from real Effect setup/cleanup and real unmount/remount controls.
+9. `UrlStateDemo.jsx`: replaced component-local fake URL state with real browser History API state. The Demo now reads `window.location.search` via `useSyncExternalStore`, updates the actual address bar, responds to real `popstate`, preserves unknown query params, and can truthfully demonstrate refresh plus Back/Forward restoration.
+10. `nested-routes.mdx`: removed claims that the local route-match simulator demonstrates browser history or real component lifecycle; experiment now targets matched route chains and Outlet boundaries that the Demo can actually show.
+11. `navigation-boundary.mdx`: replaced a nonexistent slow-navigation/pending experiment with the Demo's actual push/replace/Back/Forward/404 history experiment, while keeping pending navigation as an explicit real-Router boundary.
+12. `route-data-boundary.mdx`: narrowed the experiment to the Demo's real params → simulated loader → pending → data/error trace; real URL mutation, redirect, revalidation and Router instrumentation are explicitly out of scope.
 
 ## Audited lessons
 
-Each item below has exactly one matching file under `src/content/notes-advice/`.
+Each item has exactly one matching file under `src/content/notes-advice/`.
 
 1. `component-jsx-pure-render.mdx` — A PASS / B PARTIAL / C PASS
 2. `props.mdx` — A PASS / B PASS / C PASS
@@ -67,52 +71,57 @@ Each item below has exactly one matching file under `src/content/notes-advice/`.
 34. `profiler.mdx` — A PARTIAL / B PASS / C PASS
 35. `react-compiler.mdx` — A PASS / B PASS / C PASS
 36. `external-store.mdx` — A PASS / B FAIL / C PASS
-37. `portal-third-party.mdx` — A PASS / B PASS / C PASS (after this branch's lifecycle fix)
+37. `portal-third-party.mdx` — A PASS / B PASS / C PASS
 38. `server-state-cache.mdx` — A PASS / B PASS / C PASS
 39. `server-state-mutation.mdx` — A PASS / B PASS / C PASS
+40. `url-state.mdx` — A PASS / B PASS / C PASS (after real History API Demo fix)
+41. `nested-routes.mdx` — A PASS / B PASS / C PASS (after Note/Demo contract fix)
+42. `navigation-boundary.mdx` — A PASS / B PASS / C PASS (after Note/Demo contract fix)
+43. `route-data-boundary.mdx` — A PASS / B PASS / C PASS (after Note/Demo contract fix)
 
 ## Material open findings
 
 - `multi-slots`: Note uses `undefined/null/ReactNode`, while Source/Demo uses `undefined/false/ReactNode`.
-- `conditional-rendering`: Demo contradicts itself about Empty as independently stored state vs a derivation from `items.length`.
+- `conditional-rendering`: Demo contradicts itself about Empty as stored state vs derivation from `items.length`.
 - `immutable-state`: Note promises executable mutation-vs-copy comparison, but Demo has no runnable mutation counterexample.
 - `render-commit`: Note promises render logs/component execution observation that the Demo does not expose; `requestAnimationFrame` is a browser-frame API, not React commit instrumentation.
 - `state-reducer`: Note names actions not present in the Demo and asks UI observation to prove reducer purity.
-- `context-propagation`: Note describes real render logs while Demo counters are manually advanced teaching predictions.
+- `context-propagation`: Note describes real render logs while Demo counters are manually advanced predictions.
 - `use-reduce-with-context`: only the split-Context implementation is interactive; the single-Context side is static code.
 - `use-effect-correct-usage`: Note describes timer/dependency-change experiments not present in the Demo.
-- `not-need-effect`: Note promises executable Effect-derived-state vs render-derived-state comparison; the bad path is static code only.
-- `lifecycle-of-reactive-effects`: after removing fake lifecycle logs, the Demo demonstrates dependency behavior but still does not instrument real cleanup/setup order or the functional-updater dependency-removal case.
-- `effect-event`: setup counting is real, but the Note promises an executable bad (`roomId + theme` dependencies) vs good Effect Event comparison while the Demo only runs the good version.
+- `not-need-effect`: Note promises executable Effect-derived-state vs render-derived-state comparison; bad path is static code only.
+- `lifecycle-of-reactive-effects`: Demo still does not instrument real cleanup/setup order or the functional-updater dependency-removal case.
+- `effect-event`: Note promises executable bad dependency list vs Effect Event comparison while Demo only runs the good version.
 - `advanced-ref`: Note promises `useEffect` vs `useLayoutEffect` timing comparison, but Demo only implements `useLayoutEffect` measurement.
-- `form-data-modeling`: Note asks for controlled-vs-uncontrolled comparison, while current Demo only executes the FormData/uncontrolled side.
-- `optimistic-update`: rollback is observable, but the “simulate failure” branch is a business rejection that returns normally; it does not exercise an Action throw/Error Boundary path.
-- `transition-deferred`: Note asks to compare direct update, Transition and deferred value, but the Demo has no direct-update control; it also claims observable background render interruption without render-attempt instrumentation.
-- `render-vs-dom-update`: MutationObserver gives real target-DOM evidence, but `renderRequest` is a manually incremented experiment counter, not actual component render instrumentation.
-- `profiler`: Note's generic “production build” wording is incomplete because ordinary React production builds disable Profiler instrumentation by default; profiling data needs a profiling-enabled production build or appropriate profiling tooling.
-- `external-store`: Note explicitly asks to mount/unmount a subscriber and observe cleanup, but Demo keeps both Readers mounted and exposes no unsubscribe experiment. The Demo also mixes subscription-count instrumentation into its business snapshot/version.
+- `form-data-modeling`: Note asks for controlled-vs-uncontrolled comparison, while Demo only executes the FormData/uncontrolled side.
+- `optimistic-update`: “simulate failure” is a normal business rejection, not an Action throw/Error Boundary path.
+- `transition-deferred`: no direct-update control and no instrumentation proving interrupted background renders.
+- `render-vs-dom-update`: MutationObserver is real DOM evidence, but `renderRequest` is not actual render instrumentation.
+- `profiler`: ordinary React production builds disable Profiler instrumentation by default; production measurement needs profiling-enabled tooling/builds.
+- `external-store`: Note asks to mount/unmount a subscriber but Demo keeps both Readers mounted; instrumentation is mixed into the business snapshot.
 
 ## Latest batch review notes
 
-- `use-memo`: hard gates pass. The lesson correctly treats memoization as an optimization and identifies expensive computation/identity consumers; advice adds that the cache is component-local, not a request/business cache, and can be discarded by React.
-- `use-callback`: hard gates pass. The stable-vs-unstable callback experiment is real; advice adds that the function expression is still created during render and `useCallback` is not persistent identity storage.
-- `profiler`: Demo contract and mental model pass, but correctness/version boundary is PARTIAL until production profiling wording distinguishes ordinary production builds from profiling-enabled builds. `baseDuration` should remain described as an estimate, not an observed no-memo baseline.
-- `react-compiler`: hard gates pass. The Demo explicitly says this repository does not enable Compiler and only demonstrates manual memoization effects. Advice recommends verifying actual compilation rather than predicting exact compiler cache points from source shape.
-- `external-store`: core `subscribe`/`getSnapshot` semantics are sound, but Gate B fails because the advertised mount/unmount cleanup experiment is missing. Advice also records the Transition/external-store consistency boundary and SSR `getServerSnapshot` requirement.
-- `portal-third-party`: original lifecycle text was fake instrumentation. This branch now logs from actual Effect setup/cleanup and supports explicit unmount/remount, so Gate B passes after the fix. Portal event bubbling/React-tree ownership and accessibility caveats remain aligned.
-- `server-state-cache`: hard gates pass. The Demo truthfully labels itself a concept simulator, and its v5 mapping for default stale data and invalidation of active queries is consistent with current TanStack Query docs. Force-refetch/in-flight behavior remains explicitly Demo-specific.
-- `server-state-mutation`: hard gates pass. Abort + stale guard and optimistic confirm/rollback are executable. Advice adds concurrent-mutation identity and temporary-id reconciliation as production boundaries.
+- `url-state`: original Demo violated the core lesson by storing a fake `search` string in component state while the Note told learners to observe the actual address bar, refresh and browser history. It now uses the browser URL as the authoritative external store. High-frequency typing still deserves a future push-vs-replace/debounce production boundary.
+- `nested-routes`: the route tree simulation is useful, but it cannot prove actual Router lifecycle preservation. The Note now asks only for matched-chain and Outlet observations the Demo can support.
+- `navigation-boundary`: the prior Note was effectively a pending-navigation lesson attached to a history-stack simulator. It now teaches push/replace/history delta/404 accurately; real pending navigation remains a Data/Framework Router concern.
+- `route-data-boundary`: loader mental model is sound, but the Demo is explicitly a phase simulator. The Note no longer claims it mutates real URL, executes redirect or instruments a real Data Router runtime.
 
 ## Factual sources
 
-Primary factual baseline is current official React documentation, including Components/Hooks purity, reducer/context/ref/effect semantics, React 19 Actions, Suspense/transitions, memoization, Profiler, React Compiler, `useSyncExternalStore`, Portal and Effect lifecycle. Current TanStack Query v5 official documentation is used only for the lessons that explicitly map their conceptual server-state simulators to TanStack Query behavior; MDN is used only for browser APIs such as `FormData`, `MutationObserver` and `AbortController`.
+Primary React semantics continue to use current official React documentation. Router lessons use current official React Router documentation for modes, Link/NavLink/useNavigate/redirect and pending navigation. Browser history details use MDN History API / `pushState` / `popstate` references. TanStack Query v5 official docs remain the source only where lessons explicitly map to Query behavior.
 
 ## Validation
 
-Previous executable-fix head `b2200ffd95d54a60cf3a1873a9d6d62951086615` passed both `React Learning Verify` and `Workbench Integration Verify`. Previous audit head `ff92a95a2a4c74bb5b9a9b4c4d30cb950fac309c` has `React Learning Verify` success.
+Earlier executable-fix head `b2200ffd95d54a60cf3a1873a9d6d62951086615` passed both `React Learning Verify` and `Workbench Integration Verify`.
 
-This batch contains one production Demo fix (`PortalThirdPartyDemo.jsx`) plus eight advice files and this status update. Exact-head GitHub Actions are the acceptance source for regression evidence; no local lint/build PASS is claimed from the connector-only execution environment.
+For the latest executable/router batch, pre-status head `34bce2b9857c0c669d2a6c66164a881a02fe9787` started exact-head workflows:
+
+- React Learning Verify #244 — in progress when inspected.
+- Workbench Integration Verify #183 — in progress when inspected.
+
+No exact-head PASS is claimed until GitHub reports completion. This environment does not expose a local executable checkout, so GitHub Actions remains the acceptance source.
 
 ## Next
 
-Continue in navigation order from the next unaudited, unowned lesson after `server-state-mutation` (`url-state`). Reserved Runtime/State/TypeScript files remain skipped until their specialist branches are reconciled or closed. Prefer concrete correctness/Demo-contract fixes outside those scopes before adding further advice-only records.
+Skip `typescript-react` while PR #81 owns it. Continue with the next unowned lesson in navigation/chapter order after the Router track, preferring concrete correctness or Demo-contract fixes before advice-only churn. Recheck specialist PR ownership before editing any shared or lesson-owned file.
