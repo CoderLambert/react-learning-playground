@@ -26,7 +26,11 @@ function normalizeState(value) {
 
 function getDefaultStorage() {
   if (typeof window === "undefined") return null;
-  return window.localStorage;
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
 }
 
 export function getQuestionFingerprint(item) {
@@ -58,7 +62,7 @@ export function createQuestionBankRepository(storage = getDefaultStorage()) {
   };
 
   const write = (state) => {
-    if (!storage) return state;
+    if (!storage) return normalizeState(state);
     const normalized = normalizeState(state);
     storage.setItem(QUESTION_BANK_STORAGE_KEY, JSON.stringify(normalized));
     return normalized;
