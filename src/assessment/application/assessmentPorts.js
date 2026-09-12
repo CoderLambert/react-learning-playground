@@ -14,7 +14,9 @@ export const ASSESSMENT_REPOSITORY_METHODS = Object.freeze([
   "retireQuestion",
   "createSession",
   "getSession",
+  "listSessions",
   "saveAttempt",
+  "saveAttemptAndProgressSession",
   "listAttempts",
   "getMutationReceipt",
 ]);
@@ -75,6 +77,8 @@ const MUTATION_OPERATIONS = new Set(ASSESSMENT_MUTATION_OPERATIONS);
  * @property {string} questionId Question to retire.
  * @property {number} expectedRevision Revision read by the caller.
  * @property {string} mutationId Stable idempotency key for this mutation.
+ * @property {{updatedAt: string, provenance: Record<string, unknown>}} metadata
+ * Trusted application metadata persisted with the retirement mutation.
  */
 
 /**
@@ -109,15 +113,23 @@ const MUTATION_OPERATIONS = new Set(ASSESSMENT_MUTATION_OPERATIONS);
  *   The repository performs the revision check atomically and writes
  *   revision + 1. A mismatch is reported with `REVISION_CONFLICT`.
  * - `retireQuestion({ learningUnitId, questionId, expectedRevision,
- *   mutationId })` returns a Promise of `{ result: retiredQuestion, replayed }`.
+ *   mutationId, metadata })` returns a Promise of `{ result: retiredQuestion, replayed }`.
  *   Retirement is a status update to `retired`, never physical deletion, and
- *   also advances the revision atomically.
+ *   also advances the revision atomically. `metadata.updatedAt` and
+ *   `metadata.provenance` are written in that same transaction as the status,
+ *   revision, and mutation receipt.
  * - `createSession({ session })` stores and returns an assessment session in
  *   the sessions store. It does not create or alter questions.
  * - `getSession({ learningUnitId, sessionId })` returns a session or null and
  *   applies the same learning-unit scope rule.
+ * - `listSessions({ learningUnitId, status? })` returns sessions in newest
+ *   started-at order, scoped to a learning unit.
  * - `saveAttempt({ attempt })` stores and returns an attempt in the attempts
  *   store. It does not mutate a question or session snapshot.
+ * - `saveAttemptAndProgressSession({ learningUnitId, sessionId, attempt,
+ *   completedAt })` atomically stores an attempt and marks its in-progress
+ *   session completed when every session item has at least one attempt. It
+ *   returns `{ attempt, session }`; completed sessions reject further writes.
  * - `listAttempts({ sessionId, questionId? })` returns attempts from the
  *   attempts store, optionally filtered by question.
  * - `getMutationReceipt({ mutationId })` returns the committed receipt or
@@ -248,11 +260,16 @@ export function normalizeUpdateQuestionCommand(value) {
  */
 export function normalizeRetireQuestionCommand(value) {
   const input = normalizeMutationIdentity(value, "retireQuestion");
+  const metadata = requiredRecord(input.metadata, "retireQuestion.metadata");
   return {
     learningUnitId: input.learningUnitId,
     questionId: requiredText(input.questionId, "retireQuestion.questionId"),
     expectedRevision: requiredPositiveInteger(input.expectedRevision, "retireQuestion.expectedRevision"),
     mutationId: input.mutationId,
+    metadata: {
+      updatedAt: requiredText(metadata.updatedAt, "retireQuestion.metadata.updatedAt"),
+      provenance: requiredRecord(metadata.provenance, "retireQuestion.metadata.provenance"),
+    },
   };
 }
 

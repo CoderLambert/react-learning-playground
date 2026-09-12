@@ -97,7 +97,7 @@ test("A7.3 PASS: session start snapshots v1 and a later session snapshots v2", a
   assert.equal(newSession.items[0].snapshot.content.prompt, "v2 prompt");
 });
 
-test("A7.4 PASS: single-choice and true-false attempts grade, explain, and survive repository reload", async () => {
+test("A7.4 PASS: single-choice and true-false attempts complete and survive repository reload", async () => {
   const indexedDb = new FakeIndexedDB();
   const firstRepository = await createIndexedDbAssessmentRepository({ indexedDb, clock: () => new Date(TIMESTAMP) });
   const service = createService(firstRepository);
@@ -111,27 +111,21 @@ test("A7.4 PASS: single-choice and true-false attempts grade, explain, and survi
   const choiceIncorrect = await service.submitAnswer({
     trusted: { learningUnitId: UNIT }, sessionId: session.id, questionId: choice.id, answer: "b",
   });
-  const choiceCorrect = await service.submitAnswer({
-    trusted: { learningUnitId: UNIT }, sessionId: session.id, questionId: choice.id, answer: "a",
-  });
   const truthIncorrect = await service.submitAnswer({
     trusted: { learningUnitId: UNIT }, sessionId: session.id, questionId: truth.id, answer: false,
   });
-  const truthCorrect = await service.submitAnswer({
-    trusted: { learningUnitId: UNIT }, sessionId: session.id, questionId: truth.id, answer: true,
-  });
-
   assert.equal(choiceIncorrect.correct, false);
-  assert.equal(choiceCorrect.correct, true);
   assert.equal(truthIncorrect.correct, false);
-  assert.equal(truthCorrect.correct, true);
   assert.equal(session.items[0].snapshot.content.explanation, "Props are read-only inputs.");
   assert.equal(session.items[1].snapshot.content.explanation, "A component does not mutate its props.");
 
   const reloadedRepository = await createIndexedDbAssessmentRepository({ indexedDb, clock: () => new Date(TIMESTAMP) });
   const persistedAttempts = await reloadedRepository.listAttempts({ sessionId: session.id });
-  assert.equal(persistedAttempts.length, 4);
-  assert.deepEqual(persistedAttempts.map((attempt) => attempt.correct), [false, true, false, true]);
+  assert.equal(persistedAttempts.length, 2);
+  assert.deepEqual(persistedAttempts.map((attempt) => attempt.correct), [false, false]);
+  const persistedSession = await reloadedRepository.getSession({ learningUnitId: UNIT, sessionId: session.id });
+  assert.equal(persistedSession.status, "completed");
+  assert.equal(persistedSession.completedAt, TIMESTAMP);
 });
 
 test("A7.5 PASS: duplicate mutationId replays one committed mutation", async () => {
@@ -151,6 +145,64 @@ test("A7.5 PASS: duplicate mutationId replays one committed mutation", async () 
   assert.deepEqual(second.result, first.result);
   assert.equal((await repository.listQuestions({ learningUnitId: UNIT })).length, 1);
   assert.ok(await repository.getMutationReceipt({ mutationId: "same-mutation" }));
+});
+
+test("A7.9 PASS: in-progress sessions recover from persisted snapshots and complete after reload", async () => {
+  const indexedDb = new FakeIndexedDB();
+  const firstRepository = await createIndexedDbAssessmentRepository({ indexedDb, clock: () => new Date(TIMESTAMP) });
+  const firstService = createService(firstRepository);
+  const [choice, truth] = (await firstService.createQuestions({
+    trusted: { learningUnitId: UNIT, mutationId: "create-recovery-set" },
+    questions: [choiceDraft("snapshot prompt"), trueFalseDraft()],
+  })).result;
+  const started = await firstService.startSession({ trusted: { learningUnitId: UNIT } });
+  await firstService.submitAnswer({
+    trusted: { learningUnitId: UNIT }, sessionId: started.id, questionId: choice.id, answer: "a",
+  });
+
+  const reloadedRepository = await createIndexedDbAssessmentRepository({ indexedDb, clock: () => new Date(TIMESTAMP) });
+  const [recovered] = await reloadedRepository.listSessions({ learningUnitId: UNIT, status: "in_progress" });
+  assert.equal(recovered.id, started.id);
+  assert.equal(recovered.items[0].snapshot.content.prompt, "snapshot prompt");
+  assert.deepEqual(
+    (await reloadedRepository.listAttempts({ sessionId: started.id })).map((attempt) => attempt.questionId),
+    [choice.id],
+  );
+
+  const resumed = createService(reloadedRepository);
+  await resumed.submitAnswer({
+    trusted: { learningUnitId: UNIT }, sessionId: recovered.id, questionId: truth.id, answer: true,
+  });
+  const completed = await reloadedRepository.getSession({ learningUnitId: UNIT, sessionId: started.id });
+  assert.equal(completed.status, "completed");
+  assert.equal(completed.completedAt, TIMESTAMP);
+});
+
+test("A7.10 PASS: question-bank update and retirement do not alter a persisted session snapshot", async () => {
+  const repository = new MemoryAssessmentRepository({ clock: () => new Date(TIMESTAMP) });
+  const service = createService(repository);
+  const [choice, truth] = (await service.createQuestions({
+    trusted: { learningUnitId: UNIT, mutationId: "create-isolation-set" },
+    questions: [choiceDraft("frozen choice"), trueFalseDraft()],
+  })).result;
+  const session = await service.startSession({ trusted: { learningUnitId: UNIT } });
+  await service.updateQuestion({
+    trusted: { learningUnitId: UNIT, mutationId: "update-after-start" },
+    questionId: choice.id,
+    expectedRevision: 1,
+    patch: { content: { prompt: "mutated bank question" } },
+  });
+  await service.retireQuestion({
+    trusted: { learningUnitId: UNIT, mutationId: "retire-after-start" },
+    questionId: truth.id,
+    expectedRevision: 1,
+  });
+
+  const persisted = await repository.getSession({ learningUnitId: UNIT, sessionId: session.id });
+  assert.equal(persisted.items[0].snapshot.content.prompt, "frozen choice");
+  assert.equal(persisted.items[0].snapshot.revision, 1);
+  assert.equal(persisted.items[1].snapshot.status, "active");
+  assert.equal(persisted.items[1].snapshot.revision, 1);
 });
 
 test("A7.6 PASS: concurrent updates with one expectedRevision yield one success and one REVISION_CONFLICT", async () => {

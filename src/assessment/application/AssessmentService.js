@@ -19,6 +19,13 @@ const QUESTION_SYSTEM_FIELDS = Object.freeze([
   "createdAt",
   "updatedAt",
   "provenance",
+  "conversationId",
+  "agentRunId",
+  "toolCallId",
+  "contextSnapshotId",
+  "mutationId",
+  "model",
+  "userId",
 ]);
 
 const UPDATE_SYSTEM_FIELDS = new Set(QUESTION_SYSTEM_FIELDS);
@@ -73,23 +80,30 @@ function normalizeMutationIdentity(input, operation) {
 }
 
 function normalizeProvenance(trusted) {
-  if (trusted.provenance !== undefined) {
-    return clone(requiredRecord(trusted.provenance, "provenance"));
-  }
+  const supplied = trusted.provenance === undefined
+    ? {}
+    : clone(requiredRecord(trusted.provenance, "provenance"));
+  const actor = trusted.actor && typeof trusted.actor === "object" && !Array.isArray(trusted.actor)
+    ? trusted.actor
+    : null;
+  const aiActor = actor?.type === "ai_agent" || actor?.type === "ai" || trusted.agentRunId !== undefined;
+  const provenance = {
+    ...supplied,
+    source: aiActor ? "ai" : (supplied.source ?? actor?.type ?? "application"),
+  };
 
-  if (trusted.actor && typeof trusted.actor === "object" && !Array.isArray(trusted.actor)) {
-    const provenance = { source: trusted.actor.type ?? "runtime" };
-    if (typeof trusted.actor.model === "string" && trusted.actor.model.trim()) {
-      provenance.model = trusted.actor.model.trim();
+  for (const field of ["conversationId", "agentRunId", "toolCallId", "contextSnapshotId"]) {
+    if (typeof trusted[field] === "string" && trusted[field].trim()) {
+      provenance[field] = trusted[field].trim();
     }
-    return provenance;
   }
-
-  if (typeof trusted.model === "string" && trusted.model.trim()) {
-    return { source: "ai", model: trusted.model.trim() };
-  }
-
-  return { source: "application" };
+  const model = typeof trusted.model === "string" && trusted.model.trim()
+    ? trusted.model.trim()
+    : typeof actor?.model === "string" && actor.model.trim()
+      ? actor.model.trim()
+      : null;
+  if (model) provenance.model = model;
+  return provenance;
 }
 
 function nowIso(clock, operation) {
@@ -304,7 +318,7 @@ export class AssessmentService {
 
   async retireQuestion(input = {}) {
     const value = requiredRecord(input, "retireQuestion input");
-    const { learningUnitId, mutationId } = normalizeMutationIdentity(value, "retireQuestion");
+    const { trusted, learningUnitId, mutationId } = normalizeMutationIdentity(value, "retireQuestion");
     const questionId = requiredText(value.questionId, "retireQuestion.questionId");
     const expectedRevision = requiredPositiveInteger(value.expectedRevision, "retireQuestion.expectedRevision");
     const current = await this.#repository.getQuestion({ learningUnitId, questionId });
@@ -315,6 +329,10 @@ export class AssessmentService {
       questionId,
       expectedRevision,
       mutationId,
+      metadata: {
+        updatedAt: nowIso(this.#clock, "retireQuestion"),
+        provenance: normalizeProvenance(trusted),
+      },
     }));
     await this.#notifyQuestionMutation(learningUnitId);
     return result;
@@ -393,8 +411,16 @@ export class AssessmentService {
       submittedAt: nowIso(this.#clock, "submitAnswer"),
     };
     assertAttempt(attempt);
-    const saved = await this.#repository.saveAttempt({ attempt });
-    return saved ?? attempt;
+    const saved = await this.#repository.saveAttemptAndProgressSession({
+      learningUnitId,
+      sessionId,
+      attempt,
+      completedAt: nowIso(this.#clock, "submitAnswer.completedAt"),
+    });
+    if (!saved || typeof saved !== "object" || !saved.attempt || !saved.session) {
+      throw new TypeError("assessment repository.saveAttemptAndProgressSession must return attempt and session");
+    }
+    return clone(saved.attempt);
   }
 
   #selectSessionQuestions(activeQuestions, questionIds) {
@@ -419,6 +445,9 @@ export class AssessmentService {
     if (question.evidenceRefs === undefined) return;
     if (!Array.isArray(question.evidenceRefs)) {
       throw invalidEvidence("question.evidenceRefs must be an array");
+    }
+    if (question.evidenceRefs.length > 0 && !this.#evidenceResolver) {
+      throw invalidEvidence("evidence resolver is required to persist evidenceRefs");
     }
 
     for (const [index, ref] of question.evidenceRefs.entries()) {

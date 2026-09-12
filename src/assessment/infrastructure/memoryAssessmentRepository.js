@@ -13,7 +13,9 @@ import {
   normalizeRetireCommand,
   normalizeSessionGetQuery,
   normalizeSessionInput,
+  normalizeSessionListQuery,
   normalizeUpdateCommand,
+  normalizeAttemptProgressInput,
   nowIso,
   questionNotFound,
   requiredQuestionRecord,
@@ -21,6 +23,9 @@ import {
   revisionConflict,
   sortAttempts,
   sortById,
+  sortSessionsNewestFirst,
+  sessionCompleted,
+  sessionNotFound,
 } from "./repositorySupport.js";
 
 function createState() {
@@ -151,6 +156,8 @@ export class MemoryAssessmentRepository {
       ...cloneValue(current),
       status: "retired",
       revision: current.revision + 1,
+      updatedAt: command.metadata.updatedAt,
+      provenance: cloneValue(command.metadata.provenance),
     };
     questionStore.set(result.id, cloneValue(result));
     this.state[ASSESSMENT_STORES.MUTATION_RECEIPTS].set(
@@ -178,10 +185,42 @@ export class MemoryAssessmentRepository {
     return cloneValue(session);
   }
 
+  async listSessions(input) {
+    const query = normalizeSessionListQuery(input);
+    return [...this.state[ASSESSMENT_STORES.SESSIONS].values()]
+      .filter((session) => session.learningUnitId === query.learningUnitId)
+      .filter((session) => query.status === undefined || session.status === query.status)
+      .sort(sortSessionsNewestFirst)
+      .map(cloneValue);
+  }
+
   async saveAttempt(input) {
     const attempt = normalizeAttemptInput(input);
     this.state[ASSESSMENT_STORES.ATTEMPTS].set(attempt.id, cloneValue(attempt));
     return cloneValue(attempt);
+  }
+
+  async saveAttemptAndProgressSession(input) {
+    const command = normalizeAttemptProgressInput(input);
+    const sessionStore = this.state[ASSESSMENT_STORES.SESSIONS];
+    const attemptStore = this.state[ASSESSMENT_STORES.ATTEMPTS];
+    const current = sessionStore.get(command.sessionId);
+    if (!current || current.learningUnitId !== command.learningUnitId) throw sessionNotFound(command);
+    if (current.status === "completed") throw sessionCompleted(command);
+
+    const attempt = cloneValue(command.attempt);
+    attemptStore.set(attempt.id, cloneValue(attempt));
+    const answeredQuestionIds = new Set(
+      [...attemptStore.values()]
+        .filter((candidate) => candidate.sessionId === command.sessionId)
+        .map((candidate) => candidate.questionId),
+    );
+    const complete = current.items.every((item) => answeredQuestionIds.has(item.questionId));
+    const session = complete
+      ? { ...cloneValue(current), status: "completed", completedAt: command.completedAt }
+      : cloneValue(current);
+    sessionStore.set(session.id, cloneValue(session));
+    return { attempt, session: cloneValue(session) };
   }
 
   async listAttempts(input) {

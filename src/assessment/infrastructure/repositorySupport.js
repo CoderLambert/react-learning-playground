@@ -92,6 +92,18 @@ export function normalizeSessionGetQuery(input) {
   };
 }
 
+export function normalizeSessionListQuery(input) {
+  const query = requiredRecord(input, "listSessions input");
+  const result = { learningUnitId: requiredText(query.learningUnitId, "listSessions.learningUnitId") };
+  if (query.status !== undefined) {
+    if (!PERSISTED_SESSION_STATUSES.has(query.status)) {
+      throw new TypeError("listSessions.status must be in_progress or completed");
+    }
+    result.status = query.status;
+  }
+  return result;
+}
+
 export function normalizeAttemptInput(input) {
   const envelope = requiredRecord(input, "saveAttempt input");
   const attempt = requiredRecord(envelope.attempt, "saveAttempt.attempt");
@@ -99,6 +111,25 @@ export function normalizeAttemptInput(input) {
     requiredText(attempt[field], `saveAttempt.attempt.${field}`);
   }
   return attempt;
+}
+
+export function normalizeAttemptProgressInput(input) {
+  const envelope = requiredRecord(input, "saveAttemptAndProgressSession input");
+  const learningUnitId = requiredText(
+    envelope.learningUnitId,
+    "saveAttemptAndProgressSession.learningUnitId",
+  );
+  const sessionId = requiredText(envelope.sessionId, "saveAttemptAndProgressSession.sessionId");
+  const attempt = normalizeAttemptInput({ attempt: envelope.attempt });
+  if (attempt.sessionId !== sessionId) {
+    throw new TypeError("saveAttemptAndProgressSession.attempt.sessionId must match sessionId");
+  }
+  return {
+    learningUnitId,
+    sessionId,
+    attempt,
+    completedAt: requiredText(envelope.completedAt, "saveAttemptAndProgressSession.completedAt"),
+  };
 }
 
 export function normalizeAttemptListQuery(input) {
@@ -116,7 +147,10 @@ export function normalizeMutationReceiptQuery(input) {
 }
 
 export function assertMutablePatch(patch, operation) {
-  const forbiddenFields = ["id", "learningUnitId", "revision", "createdAt", "status"];
+  const forbiddenFields = [
+    "id", "learningUnitId", "revision", "createdAt", "status",
+    "conversationId", "agentRunId", "toolCallId", "contextSnapshotId", "mutationId", "model", "userId",
+  ];
   for (const field of forbiddenFields) {
     if (Object.hasOwn(patch, field)) {
       throw new TypeError(`${operation}.patch.${field} cannot be changed by the repository`);
@@ -180,4 +214,26 @@ export function sortById(left, right) {
 export function sortAttempts(left, right) {
   return String(left.submittedAt).localeCompare(String(right.submittedAt))
     || sortById(left, right);
+}
+
+const PERSISTED_SESSION_STATUSES = new Set(["in_progress", "completed"]);
+
+export function sortSessionsNewestFirst(left, right) {
+  return String(right.startedAt).localeCompare(String(left.startedAt)) || sortById(right, left);
+}
+
+export function sessionNotFound({ learningUnitId, sessionId }) {
+  return new AssessmentError(
+    ASSESSMENT_ERROR_CODES.SESSION_NOT_FOUND,
+    `Session ${sessionId} was not found in learning unit ${learningUnitId}`,
+    { details: { learningUnitId, sessionId } },
+  );
+}
+
+export function sessionCompleted({ sessionId }) {
+  return new AssessmentError(
+    ASSESSMENT_ERROR_CODES.SESSION_COMPLETED,
+    `Session ${sessionId} is completed`,
+    { details: { sessionId } },
+  );
 }
