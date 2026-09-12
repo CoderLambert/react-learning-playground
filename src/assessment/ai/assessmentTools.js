@@ -1,5 +1,10 @@
 import { TOOL_POLICIES } from "../../ai/agent/agentContracts.js";
 import {
+  ASSESSMENT_AUTHORING_INSTRUCTIONS,
+  assertAssessmentAuthoringQuality,
+  assertAssessmentQuestionPatchAuthoringQuality,
+} from "./assessmentAuthoringQuality.js";
+import {
   assessmentCreateQuestionsInputSchema,
   assessmentListQuestionsInputSchema,
   assessmentRetireQuestionInputSchema,
@@ -87,7 +92,7 @@ export function createAssessmentToolDefinitions({ assessmentService } = {}) {
   return [
     {
       name: ASSESSMENT_TOOL_NAMES.LIST_QUESTIONS,
-      description: "List assessment questions in the current learning unit.",
+      description: "List full assessment question records in the current learning unit. Use this before bulk edits and after mutations to read back and verify learner-facing content; revisions alone are not content verification.",
       policy: TOOL_POLICIES.QUERY,
       inputSchema: assessmentListQuestionsInputSchema,
       handler: async (argumentsValue, context, execution) => {
@@ -98,22 +103,26 @@ export function createAssessmentToolDefinitions({ assessmentService } = {}) {
     },
     {
       name: ASSESSMENT_TOOL_NAMES.CREATE_QUESTIONS,
-      description: "Create assessment questions in the current learning unit.",
+      description: `Create self-contained assessment questions in the current learning unit. The same policy applies to later updates.\n\n${ASSESSMENT_AUTHORING_INSTRUCTIONS}`,
       policy: TOOL_POLICIES.COMMAND,
       inputSchema: assessmentCreateQuestionsInputSchema,
       handler: async (argumentsValue, context, execution) => {
         const args = assertArguments(argumentsValue);
+        args.questions.forEach((question, index) => {
+          assertAssessmentAuthoringQuality(question, { field: `questions[${index}]` });
+        });
         const trusted = trustedServiceInput(assertTrustedContext(context), execution);
         return service.createQuestions({ trusted, questions: args.questions });
       },
     },
     {
       name: ASSESSMENT_TOOL_NAMES.UPDATE_QUESTION,
-      description: "Update mutable business fields on an assessment question.",
+      description: "Update mutable business fields on an assessment question. Follow the self-contained authoring policy documented by assessment_create_questions; re-read before editing and verify with assessment_list_questions after the mutation.",
       policy: TOOL_POLICIES.COMMAND,
       inputSchema: assessmentUpdateQuestionInputSchema,
       handler: async (argumentsValue, context, execution) => {
         const args = assertArguments(argumentsValue);
+        assertAssessmentQuestionPatchAuthoringQuality(args.patch, { field: "patch" });
         const trusted = trustedServiceInput(assertTrustedContext(context), execution);
         return service.updateQuestion({
           trusted,
