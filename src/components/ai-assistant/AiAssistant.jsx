@@ -1,10 +1,11 @@
-import { useId } from "react";
+import { useEffect, useId, useRef } from "react";
 import MarkdownRender from "markstream-react";
 import "markstream-react/index.css";
 import {
   buildSourceCitationPreview,
   extractSourceCitations,
 } from "../../ai/citations/sourceCitation.js";
+import { subscribeLearningActions } from "../../learning-actions";
 import { AiSourcePreviewProvider } from "./citations/AiSourceLink.jsx";
 import { SourceCitation } from "./citations/SourceCitation.js";
 import { AI_MARKDOWN_CUSTOM_ID } from "./code/registerAiCodeBlock.js";
@@ -251,6 +252,7 @@ export function AiAssistant({
   const errorId = useId();
   const noticeId = useId();
   const statusId = useId();
+  const inputRef = useRef(null);
   const isStreaming = status === "streaming" || status === "loading";
   const isSubmitDisabled = disabled || isStreaming || !inputValue.trim();
   const statusText = isStreaming
@@ -258,6 +260,12 @@ export function AiAssistant({
     : status === "error"
       ? "AI 回答失败"
       : "";
+
+  useEffect(() => subscribeLearningActions((detail) => {
+    if (!detail?.prompt) return;
+    onInputChange?.(detail.prompt);
+    requestAnimationFrame(() => inputRef.current?.focus());
+  }), [onInputChange]);
 
   const submit = () => {
     const question = inputValue.trim();
@@ -360,6 +368,7 @@ export function AiAssistant({
       <form className="ai-assistant-composer" onSubmit={handleSubmit}>
         <label htmlFor={inputId}>向 AI 助手提问</label>
         <textarea
+          ref={inputRef}
           id={inputId}
           value={inputValue}
           onChange={(event) => onInputChange?.(event.target.value)}
