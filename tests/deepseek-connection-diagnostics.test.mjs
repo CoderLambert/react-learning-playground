@@ -38,8 +38,16 @@ test("classifyDeepSeekConnectionError distinguishes CORS-like browser failures",
   assert.equal(result.type, "cors");
 });
 
-test("classifyDeepSeekConnectionError maps timeout/network and unknown failures", () => {
-  assert.equal(classifyDeepSeekConnectionError(new Error("connection timeout")).type, "network");
+test("classifyDeepSeekConnectionError distinguishes timeout from generic network failures", () => {
+  assert.equal(classifyDeepSeekConnectionError(new Error("connection timeout")).type, "timeout");
+  assert.equal(classifyDeepSeekConnectionError({ status: 408 }).type, "timeout");
+  const abortError = new Error("The operation was aborted");
+  abortError.name = "AbortError";
+  assert.equal(classifyDeepSeekConnectionError(abortError).type, "timeout");
+  assert.equal(classifyDeepSeekConnectionError(new Error("network connection reset")).type, "network");
+});
+
+test("classifyDeepSeekConnectionError maps unknown failures", () => {
   assert.equal(classifyDeepSeekConnectionError(new Error("something unexpected")).type, "unknown");
 });
 
