@@ -4,6 +4,7 @@ import {
   WORKBENCH_DIMENSIONS,
 } from "../../workbench/constants";
 import { resolveInspectorPanels } from "../../workbench/inspectorPanels.js";
+import { subscribeLearningActions } from "../../learning-actions";
 import { clampInspectorWidth } from "./inspectorDimensions";
 import { useInspectorScrollMemory } from "./useInspectorScrollMemory";
 import "./LearningInspector.css";
@@ -41,6 +42,12 @@ export function LearningInspector({
     },
     [onWidthChange],
   );
+
+  useEffect(() => subscribeLearningActions((detail) => {
+    if (!detail?.prompt) return;
+    onOpenChange?.(true);
+    onTabChange?.("ai");
+  }), [onOpenChange, onTabChange]);
 
   useEffect(() => {
     if (!focusMode) return undefined;
@@ -203,7 +210,7 @@ export function LearningInspector({
                 id={`learning-inspector-tab-${panel.id}`}
                 type="button"
                 role="tab"
-                className={`learning-inspector-tab ${selected ? "is-active" : ""}`}
+                className={`learning-inspector-tab ${selected ? "is-active" : ""}`.trim()}
                 aria-selected={selected}
                 aria-controls={`learning-inspector-panel-${panel.id}`}
                 tabIndex={selected ? 0 : -1}
