@@ -4,6 +4,8 @@ import test from "node:test";
 import {
   ASSISTANT_FOLLOW_UP_ACTIONS,
   buildAssistantFollowUpPrompt,
+  buildCitationExplainPrompt,
+  buildCodeExplainPrompt,
   copyText,
   shouldOfferContinue,
 } from "../src/components/ai-assistant/message-actions/aiTutorMessageActions.js";
@@ -24,6 +26,35 @@ test("builds explicit learning prompts without copying prior answer content", ()
   assert.match(quiz, /只出一道/);
   assert.match(source, /当前学习单元/);
   assert.equal(simplify.includes("previous answer"), false);
+});
+
+test("builds bounded code explanation prompts with source metadata", () => {
+  const prompt = buildCodeExplainPrompt({
+    code: "const next = count + 1;",
+    language: "js",
+    label: "Counter.jsx",
+  });
+
+  assert.match(prompt, /当前学习单元/);
+  assert.match(prompt, /Counter\.jsx/);
+  assert.match(prompt, /```js/);
+  assert.match(prompt, /const next = count \+ 1;/);
+  assert.throws(() => buildCodeExplainPrompt({ code: "   " }), /empty code block/);
+});
+
+test("builds citation explanation prompts from canonical line ranges", () => {
+  assert.match(
+    buildCitationExplainPrompt({ fileName: "Counter.jsx", startLine: 10, endLine: 14 }),
+    /\[Counter\.jsx:L10-L14\]/,
+  );
+  assert.match(
+    buildCitationExplainPrompt({ fileName: "Counter.jsx", startLine: 7, endLine: 7 }),
+    /\[Counter\.jsx:L7\]/,
+  );
+  assert.throws(
+    () => buildCitationExplainPrompt({ fileName: "Counter.jsx", startLine: 8, endLine: 3 }),
+    /Invalid source citation/,
+  );
 });
 
 test("rejects unsupported follow-up actions instead of silently sending a wrong prompt", () => {
