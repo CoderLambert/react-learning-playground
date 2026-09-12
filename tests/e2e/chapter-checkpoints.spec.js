@@ -32,10 +32,51 @@ test.describe("chapter review checkpoints", () => {
       await expect(checkpoint).toBeVisible();
       await expect(checkpoint.getByText("你现在应该能回答什么？", { exact: true })).toBeVisible();
       await expect(checkpoint.getByText("练习", { exact: true })).toBeVisible();
+      await expect(checkpoint.locator(`[data-assessment-runner="${chapter}"]`)).toBeVisible();
       await expect(checkpoint.locator(`[data-chapter-next-step="${chapter}"]`)).toBeVisible();
       expect(await checkpoint.locator("ol").nth(0).locator("li").count()).toBeGreaterThanOrEqual(4);
       expect(await checkpoint.locator("ol").nth(1).locator("li").count()).toBeGreaterThanOrEqual(2);
     }
+  });
+
+  test("persists and resumes a practice assessment without fabricating a score", async ({ page }) => {
+    await loadApp(page);
+    await openDemo(page, "Trigger → Render → Commit");
+
+    const checkpoint = page.locator('[data-chapter-checkpoint="2"]');
+    let runner = checkpoint.locator('[data-assessment-runner="2"]');
+    const answer = runner.getByLabel("你的回答");
+
+    await answer.fill("state 是一次 render 的快照，因此当前事件闭包不会看到未来 render 的值。".repeat(12));
+    await runner.locator('input[type="radio"]').nth(3).check();
+    await runner.getByLabel("需要复习").check();
+    await runner.getByRole("button", { name: "保存并继续" }).click();
+    await expect(runner.getByLabel("你的回答")).toBeFocused();
+    await runner.getByLabel("你的回答").fill("functional updater 使用更新队列里的前一个值。 ");
+    await runner.getByRole("button", { name: "跳过" }).click();
+
+    await page.reload();
+    runner = page.locator('[data-assessment-runner="2"]');
+    await expect(runner).toBeVisible();
+    await runner.getByLabel("筛选").selectOption("review");
+    await expect(runner.getByLabel("你的回答")).toContainText("state 是一次 render 的快照");
+    await expect(runner.getByLabel("需要复习")).toBeChecked();
+
+    await runner.getByRole("button", { name: "重新回答" }).click();
+    await expect(runner.getByLabel("你的回答")).toBeFocused();
+    await expect(runner.getByLabel("你的回答")).toHaveValue("");
+    await runner.getByLabel("筛选").selectOption("all");
+    await runner.getByRole("button", { name: "完成练习" }).click();
+
+    await expect(runner.getByText("Practice Assessment · 完成", { exact: true })).toBeVisible();
+    await expect(runner).toContainText("这里不提供自动评分");
+    await expect(runner).not.toContainText(/Score:/i);
+
+    await runner.getByRole("button", { name: "重新查看 / 回答" }).click();
+    await expect(runner.getByLabel("你的回答")).toBeFocused();
+    await runner.getByRole("button", { name: "完成练习" }).click();
+    await runner.getByRole("button", { name: "重新开始" }).click();
+    await expect(runner.getByLabel("你的回答")).toHaveValue("");
   });
 
   test("provides real integration lab handoffs after the relevant checkpoints", async ({ page }) => {
@@ -61,6 +102,7 @@ test.describe("chapter review checkpoints", () => {
     await loadApp(page);
     await page.getByRole("button", { name: /全部功能完整总览/ }).click();
     await expect(page.locator("[data-chapter-checkpoint]")).toHaveCount(12);
+    await expect(page.locator("[data-assessment-runner]")).toHaveCount(12);
     await expect(page.locator("[data-integration-lab]")).toHaveCount(3);
     await expect(page.locator("[data-chapter-next-step]")).toHaveCount(12);
   });
