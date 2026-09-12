@@ -1,102 +1,94 @@
 # Assessment + AI Agent Integration Status
 
-## Branch
+## Validation candidate
 
-`auto/assessment-integration`
+- PR branch: `codex/assessment-finalization`
+- PR base: `auto/assessment-integration`
+- Baseline audited before hardening: `d0130d35a35392fac3ea1059a611ba85c326a93f`
+- Assessment/Tailwind production-code verification commit: `2f3376f289aa4a3e5dce20343b929e888df6b3d8`
+- Verification workflow run: `34697800904`
 
-## Current integrated upstream work
+The validation work did not reset, force-push, merge, or otherwise modify `main`.
 
-### Assessment UI / Inspector
+## UI direction
 
-Integrated from `auto/assessment-ui`:
+Assessment UI is now the first incremental migration to Tailwind CSS and local, copy-owned shadcn-style UI primitives. Tailwind preflight is disabled so the existing application design system is not globally reset. New/refactored UI should prefer `src/components/ui/*` primitives plus Tailwind utilities instead of adding component-specific rules to `App.css`; legacy CSS can migrate incrementally.
 
-- `LearningInspector` renders panel descriptors instead of hardcoded note/source/AI sections.
-- `src/workbench/inspectorPanels.js` is the inspector panel registry and single source of truth for panel ids/labels.
-- `INSPECTOR_TABS` remains as a backward-compatible alias derived from the registry.
-- Contract regression test exists in `tests/inspector-panel-registry.test.mjs`.
+Current local primitives include `Button`, `Badge`, `Card`, and `Progress`. Assessment keeps native `fieldset`, `legend`, and radio semantics while presenting card-style options, selected/correct/incorrect states, progress, feedback, evidence actions, and completion UI.
 
-### AI provider boundary
+## Architecture and product gates
 
-Integrated from `auto/ai-agent-tooling`:
-
-- provider-neutral model turn contract in `src/ai/providers/modelClient.js`;
-- DeepSeek Chat Completions adapter with tool definitions, assistant tool calls, tool continuation messages, streamed tool-call argument assembly, and `tool_calls` finish reason support;
-- provider contract tests in `tests/ai-model-provider.test.mjs`.
-
-### Integration architecture guard
-
-Integration branch adds `tests/assessment-architecture-boundaries.test.mjs` to enforce the hard dependency rules while the remaining modules arrive:
-
-- Assessment UI must not access IndexedDB or Assessment infrastructure directly;
-- Assessment AI adapters must not access persistence infrastructure directly;
-- model providers and the gateway worker must remain Assessment-agnostic;
-- generic Agent core must not depend on Assessment implementations.
-
-This test is deliberately independent of the missing Assessment contracts/core and can remain as a regression gate after full integration.
-
-## Upstream availability
-
-- `auto/assessment-ui`: available; no new work beyond the content already integrated.
-- `auto/ai-agent-tooling`: available; no new work beyond the content already integrated.
-- `auto/assessment-contracts-platform`: not present yet.
-- `auto/assessment-core`: not present yet.
-
-## Blocked integration work
-
-The following work MUST NOT be implemented until stable Assessment contracts/core are available:
-
-1. `src/assessment/ai/**` tool adapters.
-2. `assessment_list_questions` / `assessment_create_questions` / `assessment_update_question` / `assessment_retire_question` handlers.
-3. AssessmentService dependency injection into the composition root.
-4. Trusted-scope injection (`learningUnitId`, provenance, mutationId) through Assessment tools.
-5. Assessment panel registration backed by the real query/application API.
-6. Full create-question → reactive UI → reload → session snapshot → update/revision E2E.
-7. Duplicate tool-call/idempotency and revision-conflict E2E.
-8. IndexedDB fallback integration E2E.
-
-Implementing these before the contract/core branches exist would require inventing private interfaces and violate the architecture boundary.
-
-## Quality gates
-
-| Gate | Status | Notes |
+| Gate | Result | Evidence |
 | --- | --- | --- |
-| Inspector registry integration | PASS | Integrated without Assessment-specific behavior. |
-| Existing inspector compatibility contract | PASS upstream | Registry test integrated; full repo regression still pending executable CI/local workspace. |
-| Provider-neutral model contract | PASS upstream | Provider tests integrated. |
-| DeepSeek streamed tool-call parsing | PASS upstream | Provider tests integrated. |
-| Architecture dependency boundaries | ADDED / EXECUTION PENDING | Static regression test added on integration branch; execution awaits CI/local workspace. |
-| Assessment domain contracts | BLOCKED | Upstream branch missing. |
-| Assessment repositories/service | BLOCKED | Upstream branch missing. |
-| Assessment tool adapters | BLOCKED | Requires contracts/core. |
-| App composition root | BLOCKED | Requires contracts/core and later Agent runner interfaces. |
-| Full unit/integration/e2e suite | BLOCKED | End-to-end system not assembled yet. |
-| lint/build | PENDING | No commit status/CI result is currently attached to the integration branch tip. |
-| merge-ready | NO | Required core branches and end-to-end gates are missing. |
+| Architecture Gate | PASS | UI stays behind application/query-store boundaries; tools call `AssessmentService`; provider/worker and generic agent core remain Assessment-agnostic; domain remains React/IndexedDB/AI-independent. |
+| Repository Gate | PASS | Memory and IndexedDB contract suites cover scoped queries, atomic mutation receipts/replay, revision conflicts, retire metadata, sessions, attempts, and completion mutation parity. |
+| Service Gate | PASS | Service tests cover trusted scope, domain validation, snapshot grading, query refresh, evidence validation, and repository-error propagation. |
+| Tool Schema Gate | PASS | Ajv-backed reusable schemas validate complete drafts, reject forged runtime fields and malformed nested data, and make question type immutable in V1 updates. |
+| Runtime Validation Gate | PASS | `ToolExecutor` compiles/caches the same registered `inputSchema` exposed to providers; invalid model arguments normalize to `TOOL_ARGUMENTS_INVALID`. |
+| Trusted Scope Gate | PASS | Model arguments cannot set learning-unit identity, mutation identity, provenance, conversation/run/tool identity, snapshot identity, model, or other system fields. |
+| Trusted Tool Provenance Gate | PASS | The adapter propagates the runtime `toolCallId` separately from `mutationId`, preserving conversation/run/tool/snapshot/model provenance through the service boundary. |
+| Question Canonical Shape Gate | PASS | Domain validation rejects mixed `single_choice`/`true_false` content; V1 updates cannot change the question discriminant. |
+| Evidence Gate | PASS | Non-empty evidence fails closed without a resolver; production composition validates LearningUnit source membership and real source line ranges before persistence. |
+| Question Mutation Idempotency Gate | PASS | Create/update/retire cover receipt replay, revision conflict, atomic receipt storage, trusted provenance replacement, and retire metadata. |
+| Session Snapshot/Recovery Gate | PASS | Sessions retain question/revision snapshots, recover the first unanswered item after reload, and atomically complete with the final attempt. |
+| Agent Audit Persistence Gate | PASS | `react-learning-ai` persists `agentRuns` and `toolExecutions`; runner tests cover completed, failed, aborted, multi-tool, and interrupted recovery states. |
+| Capability Gate | PASS | Ordinary chat exposes no Assessment command tools; explicit `assessment_authoring` mode supplies tools; compaction always has no tools. |
+| Assessment UX Gate | PASS | Assessment uses Tailwind/shadcn-style primitives with responsive card layout, native-radio accessibility, feedback/evidence states, and stable E2E accessibility names. |
+| Direct Provider Contract Gate | PASS | Node tests cover tool schema forwarding, assistant/tool continuations, split tool calls, errors, and abort normalization. |
+| Gateway Provider Contract Gate | PASS | Worker/client tests cover normalized tool continuations, stream assembly, cancellation, errors, and tool-disabled compaction. |
+| Product E2E Gate | PASS | Chromium mock-provider coverage includes AI create, session reload/completion, source evidence navigation, ordinary-chat capability denial, Memory fallback, accessibility, responsive layout, and the rest of the application shell. |
 
-## Architecture gate
+## Verified commands on `2f3376f`
 
-Current integrated changes preserve the intended boundaries:
+| Command | Result |
+| --- | --- |
+| `npm ci` | PASS — 314 packages added; 315 audited; 0 vulnerabilities. |
+| `node --test tests/*.mjs worker/deepseek-assistant/test/*.test.js` | PASS — 219 passed, 0 failed. |
+| `npm run lint` | PASS — 30 existing warnings, 0 errors. |
+| `npm run build` | PASS — Vite transformed 1,078 modules; existing large-chunk warning only. |
+| `npm run test:e2e:mock` | PASS — 46/46 Chromium tests. |
+| `npm exec --yes --package=wrangler@4.36.0 -- wrangler deploy --dry-run --config worker/deepseek-assistant/wrangler.jsonc` | PASS — dry-run upload plan generated; existing warning remains for the top-level `secrets` config field. |
 
-- no Assessment UI → IndexedDB dependency;
-- no Tool → IndexedDB dependency;
-- no Provider → Assessment dependency;
-- no Worker-side tool execution added;
-- no model-controlled trusted Assessment scope added.
+## Provider and CI status
 
-The new architecture-boundary regression test turns the first four dependency rules into executable checks instead of documentation-only conventions.
+- Mock tool lifecycle: `PASS` — mock Chromium exercises provider continuation through executor, service, repository, UI, and IndexedDB.
+- Provider wire contract: `PASS` — Direct and Gateway contract coverage is included in the 219-passing Node run.
+- Live DeepSeek function-call smoke: `PENDING_NO_CREDENTIAL` — no live-provider PASS is claimed and no secret is committed or printed.
+- Verification CI: `PASS` on production-code commit `2f3376f289aa4a3e5dce20343b929e888df6b3d8`, workflow run `34697800904`.
+- Final documentation/workflow-cleanup commit is metadata-only and does not change the verified production code.
 
-## Current integration delta
+## Final hardening additions
 
-The integration branch is based on current `main` and contains the already-integrated UI/provider baseline plus the integration status document and architecture-boundary test. No upstream Assessment contract/core code has been synthesized locally.
+- Tailwind CSS added with preflight disabled for incremental migration.
+- Local shadcn-style primitives added under `src/components/ui/`.
+- Assessment UI rebuilt around those primitives and Tailwind utilities rather than new component CSS.
+- Native radios remain the actual interaction targets for pointer, keyboard, accessibility, and Playwright behavior.
+- Trusted `toolCallId` now reaches Assessment provenance.
+- Question type is immutable in V1 update tools.
+- Domain rejects cross-type canonical question fields.
 
-## Next integration action
+## Release conclusion
 
-On the next run:
+All code-level gates currently required for this Assessment + Agent finalization are passing and there is no known P1 blocker.
 
-1. re-check all four upstream branches;
-2. compare new commits against the integration branch;
-3. integrate only validated, contract-compatible changes;
-4. once Assessment contracts/core exist, implement Assessment tool adapters as thin calls into `AssessmentService`;
-5. wire trusted execution scope in composition rather than exposing scope fields in model schemas;
-6. then add cross-module integration tests before browser E2E;
-7. keep `merge-ready = NO` until every mandatory gate passes.
+```text
+Tool Runtime Validation: PASS
+Assessment Tool Schema: PASS
+Trusted Scope: PASS
+Trusted Tool Provenance: PASS
+Question Canonical Shape: PASS
+Question Type Immutability: PASS
+Evidence Scope Validation: PASS
+Question Mutation Idempotency: PASS
+Session Snapshot/Recovery: PASS
+Agent Run Persistence: PASS
+Assessment UX: PASS
+Direct Provider Contract: PASS
+Gateway Provider Contract: PASS
+Mock Chromium E2E: PASS
+Live DeepSeek Smoke: PENDING_NO_CREDENTIAL
+Verification CI (production code): PASS
+MERGE_READY=YES
+```
+
+`PENDING_NO_CREDENTIAL` is not a live-provider PASS. Do not auto-merge this PR and do not merge directly into `main`.

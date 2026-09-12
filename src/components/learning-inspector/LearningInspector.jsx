@@ -18,6 +18,7 @@ export function LearningInspector({
   notes,
   source,
   ai,
+  assessment,
   panels,
   className = "",
 }) {
@@ -30,7 +31,7 @@ export function LearningInspector({
   const resizeStateRef = useRef(null);
   const animationFrameRef = useRef(null);
   const { getPaneProps } = useInspectorScrollMemory(learningUnit?.id ?? "unknown");
-  const resolvedPanels = panels ?? resolveInspectorPanels({ notes, source, ai });
+  const resolvedPanels = panels ?? resolveInspectorPanels({ notes, source, ai, assessment });
 
   const emitWidth = useCallback(
     (nextWidth) => {

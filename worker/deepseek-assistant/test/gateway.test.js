@@ -204,3 +204,161 @@ test("gateway normalizes upstream failure without leaking response body", async 
   assert.equal(response.status, 502);
   assert.doesNotMatch(await response.text(), /provider-secret-error-detail/);
 });
+
+test("model-turn gateway forwards tool schemas and assistant/tool continuation messages", async () => {
+  const request = {
+    type: "model_turn",
+    messages: [
+      { role: "user", content: "find the answer" },
+      {
+        role: "assistant",
+        content: "",
+        toolCalls: [{ id: "call-1", name: "lookup", arguments: { query: "first" } }],
+      },
+      { role: "tool", toolCallId: "call-1", content: '{"answer":"42"}' },
+    ],
+    tools: [{
+      name: "lookup",
+      description: "Look something up",
+      inputSchema: { type: "object", properties: { query: { type: "string" } } },
+    }],
+  };
+  const response = await handleRequest(new Request("https://worker.example/chat", {
+    method: "POST",
+    headers: { origin: "https://coderlambert.github.io", "content-type": "application/json" },
+    body: JSON.stringify(request),
+  }), {
+    ALLOWED_ORIGIN: "https://coderlambert.github.io",
+    DEEPSEEK_API_KEY: "test-key",
+  }, {
+    fetchImpl: async (_url, init) => {
+      const body = JSON.parse(init.body);
+      assert.deepEqual(body.messages[1].tool_calls[0], {
+        id: "call-1",
+        type: "function",
+        function: { name: "lookup", arguments: '{"query":"first"}' },
+      });
+      assert.deepEqual(body.messages[2], {
+        role: "tool",
+        tool_call_id: "call-1",
+        content: '{"answer":"42"}',
+      });
+      assert.equal(body.tools[0].function.name, "lookup");
+      const chunks = [
+        { choices: [{ delta: { content: "working" }, finish_reason: null }] },
+        { choices: [{ delta: { tool_calls: [{ index: 0, id: "call-2", type: "function", function: { name: "lookup", arguments: '{"query":"' } }] }, finish_reason: null }] },
+        { choices: [{ delta: { tool_calls: [{ index: 0, function: { arguments: 'second"}' } }] }, finish_reason: "tool_calls" }] },
+        { choices: [{ delta: {}, finish_reason: "tool_calls" }], usage: { total_tokens: 10 } },
+      ];
+      return new Response(sse([
+        ...chunks.map((chunk) => `data: ${JSON.stringify(chunk)}`),
+        "data: [DONE]",
+      ]), { status: 200, headers: { "content-type": "text/event-stream" } });
+    },
+  });
+
+  assert.equal(response.status, 200);
+  const events = await readLines(response.body);
+  assert.deepEqual(events.map((event) => event.type), [
+    "turn_start",
+    "text_delta",
+    "tool_call",
+    "turn_complete",
+  ]);
+  assert.deepEqual(events[2].toolCall, {
+    id: "call-2",
+    name: "lookup",
+    arguments: { query: "second" },
+  });
+  assert.equal(events.at(-1).finishReason, "tool_calls");
+});
+
+test("model-turn compaction has explicit disabled tools and no tool choice at DeepSeek boundary", async () => {
+  const request = {
+    type: "model_turn",
+    purpose: "compaction",
+    messages: [{ role: "user", content: "summarize" }],
+    tools: [],
+  };
+  const validated = validateRequest(request);
+  assert.deepEqual(validated.tools, []);
+  assert.equal(Object.hasOwn(validated, "toolChoice"), false);
+  assert.throws(() => validateRequest({ ...request, tools: [{ name: "lookup", inputSchema: { type: "object" } }] }), /disable tools/);
+
+  const response = await handleRequest(new Request("https://worker.example/chat", {
+    method: "POST",
+    headers: { origin: "https://coderlambert.github.io", "content-type": "application/json" },
+    body: JSON.stringify(request),
+  }), {
+    ALLOWED_ORIGIN: "https://coderlambert.github.io",
+    DEEPSEEK_API_KEY: "test-key",
+  }, {
+    fetchImpl: async (_url, init) => {
+      const body = JSON.parse(init.body);
+      assert.equal(Object.hasOwn(body, "tools"), false);
+      assert.equal(Object.hasOwn(body, "tool_choice"), false);
+      return new Response(sse([
+        'data: {"choices":[{"delta":{"content":"summary"},"finish_reason":"stop"}]}',
+        "data: [DONE]",
+      ]), { status: 200 });
+    },
+  });
+  const events = await readLines(response.body);
+  assert.deepEqual(events.map((event) => event.type), ["turn_start", "text_delta", "turn_complete"]);
+});
+
+test("model-turn cancellation propagates to the upstream provider reader", async () => {
+  let cancelled = false;
+  const upstream = new ReadableStream({
+    pull() {},
+    cancel() {
+      cancelled = true;
+    },
+  });
+  const response = await handleRequest(new Request("https://worker.example/chat", {
+    method: "POST",
+    headers: { origin: "https://coderlambert.github.io", "content-type": "application/json" },
+    body: JSON.stringify({
+      type: "model_turn",
+      messages: [{ role: "user", content: "hello" }],
+      tools: [],
+    }),
+  }), {
+    ALLOWED_ORIGIN: "https://coderlambert.github.io",
+    DEEPSEEK_API_KEY: "test-key",
+  }, {
+    fetchImpl: async () => new Response(upstream, { status: 200 }),
+  });
+
+  const reader = response.body.getReader();
+  const first = await reader.read();
+  assert.equal(JSON.parse(new TextDecoder().decode(first.value)).type, "turn_start");
+  await reader.cancel("stop");
+  assert.equal(cancelled, true);
+});
+
+test("model-turn upstream timeout is returned as a generic cancellation response", async () => {
+  const response = await handleRequest(new Request("https://worker.example/chat", {
+    method: "POST",
+    headers: { origin: "https://coderlambert.github.io", "content-type": "application/json" },
+    body: JSON.stringify({
+      type: "model_turn",
+      messages: [{ role: "user", content: "hello" }],
+      tools: [],
+    }),
+  }), {
+    ALLOWED_ORIGIN: "https://coderlambert.github.io",
+    DEEPSEEK_API_KEY: "test-key",
+  }, {
+    fetchImpl: async () => {
+      const error = new Error("deadline exceeded");
+      error.name = "TimeoutError";
+      throw error;
+    },
+  });
+
+  assert.equal(response.status, 504);
+  const body = await response.text();
+  assert.match(body, /timed out or was cancelled/);
+  assert.doesNotMatch(body, /deadline exceeded/);
+});

@@ -5,6 +5,7 @@ import { AgentRunner } from "../src/ai/agent/AgentRunner.js";
 import { ToolExecutor } from "../src/ai/agent/ToolExecutor.js";
 import { ToolPolicy } from "../src/ai/agent/ToolPolicy.js";
 import { ToolRegistry } from "../src/ai/agent/ToolRegistry.js";
+import { MemoryAgentRunStore } from "../src/ai/agent/agentRunStore.js";
 import {
   AGENT_ERROR_CODES,
   TOOL_POLICIES,
@@ -127,4 +128,146 @@ test("agent runner enforces max tool steps", async () => {
     () => runner.run({ messages: [{ role: "user", content: "loop" }], context: context() }),
     (error) => error.code === AGENT_ERROR_CODES.STEP_LIMIT_EXCEEDED,
   );
+});
+
+test("agent runner disables tools during compaction and never executes a returned tool call", async () => {
+  const requests = [];
+  const modelClient = {
+    async *streamTurn(request) {
+      requests.push(request);
+      yield { type: MODEL_TURN_EVENT_TYPES.TURN_COMPLETE, finishReason: MODEL_FINISH_REASONS.STOP };
+    },
+  };
+  const registry = registryWithEcho();
+  let executions = 0;
+  const executor = {
+    async execute() {
+      executions += 1;
+      return { ok: true };
+    },
+  };
+  const runner = new AgentRunner({
+    modelClient,
+    toolRegistry: registry,
+    toolExecutor: executor,
+  });
+
+  await runner.run({
+    purpose: "compaction",
+    messages: [{ role: "user", content: "summarize" }],
+    context: context(),
+  });
+  assert.deepEqual(requests[0].tools, []);
+  assert.equal(Object.hasOwn(requests[0], "toolChoice"), false);
+  assert.equal(executions, 0);
+
+  const maliciousRunner = new AgentRunner({
+    modelClient: {
+      async *streamTurn() {
+        yield {
+          type: MODEL_TURN_EVENT_TYPES.TOOL_CALL,
+          toolCall: { id: "unexpected", name: "echo", arguments: { value: "nope" } },
+        };
+        yield { type: MODEL_TURN_EVENT_TYPES.TURN_COMPLETE, finishReason: MODEL_FINISH_REASONS.TOOL_CALLS };
+      },
+    },
+    toolRegistry: registry,
+    toolExecutor: executor,
+  });
+  await assert.rejects(
+    () => maliciousRunner.run({
+      purpose: "compaction",
+      messages: [{ role: "user", content: "summarize" }],
+      context: context(),
+    }),
+    (error) => error.code === AGENT_ERROR_CODES.TOOL_FORBIDDEN,
+  );
+  assert.equal(executions, 0);
+});
+
+test("agent runner persists successful runs and multiple tool execution records", async () => {
+  const auditStore = new MemoryAgentRunStore();
+  const registry = registryWithEcho();
+  const runner = new AgentRunner({
+    modelClient: {
+      async *streamTurn(request) {
+        if (!request.messages.some((message) => message.role === "tool")) {
+          yield { type: MODEL_TURN_EVENT_TYPES.TOOL_CALL, toolCall: { id: "one", name: "echo", arguments: { value: "1" } } };
+          yield { type: MODEL_TURN_EVENT_TYPES.TOOL_CALL, toolCall: { id: "two", name: "echo", arguments: { value: "2" } } };
+          yield { type: MODEL_TURN_EVENT_TYPES.TURN_COMPLETE, finishReason: MODEL_FINISH_REASONS.TOOL_CALLS };
+          return;
+        }
+        yield { type: MODEL_TURN_EVENT_TYPES.TEXT_DELTA, text: "done" };
+        yield { type: MODEL_TURN_EVENT_TYPES.TURN_COMPLETE, finishReason: MODEL_FINISH_REASONS.STOP };
+      },
+    },
+    toolRegistry: registry,
+    toolExecutor: new ToolExecutor({ registry, policy: new ToolPolicy() }),
+    auditStore,
+    clock: () => new Date("2026-09-12T01:00:00.000Z"),
+  });
+  await runner.run({ messages: [{ role: "user", content: "go" }], context: context() });
+  const audit = await auditStore.getRunWithExecutions("run-1");
+  assert.equal(audit.run.status, "completed");
+  assert.equal(audit.run.conversationId, "conversation-1");
+  assert.deepEqual(audit.toolExecutions.map((item) => item.status), ["succeeded", "succeeded"]);
+  assert.deepEqual(audit.toolExecutions.map((item) => item.toolCallId), ["one", "two"]);
+});
+
+test("agent runner records provider failure and abort as terminal audit states", async () => {
+  const registry = registryWithEcho();
+  const failedStore = new MemoryAgentRunStore();
+  const failedRunner = new AgentRunner({
+    modelClient: { async *streamTurn() { throw new Error("provider down"); } },
+    toolRegistry: registry,
+    toolExecutor: new ToolExecutor({ registry, policy: new ToolPolicy() }),
+    auditStore: failedStore,
+  });
+  await assert.rejects(
+    () => failedRunner.run({ messages: [{ role: "user", content: "go" }], context: context() }),
+    (error) => error.code === AGENT_ERROR_CODES.PROVIDER_FAILED,
+  );
+  assert.equal((await failedStore.getRun("run-1")).status, "failed");
+
+  const abortedStore = new MemoryAgentRunStore();
+  const abortedRunner = new AgentRunner({
+    modelClient: { async *streamTurn() { yield { type: MODEL_TURN_EVENT_TYPES.TURN_COMPLETE, finishReason: MODEL_FINISH_REASONS.STOP }; } },
+    toolRegistry: registry,
+    toolExecutor: new ToolExecutor({ registry, policy: new ToolPolicy() }),
+    auditStore: abortedStore,
+  });
+  await assert.rejects(
+    () => abortedRunner.run({
+      messages: [{ role: "user", content: "go" }],
+      context: { ...context(), agentRunId: "aborted-run" },
+      signal: AbortSignal.abort(),
+    }),
+    (error) => error.code === AGENT_ERROR_CODES.ABORTED,
+  );
+  assert.equal((await abortedStore.getRun("aborted-run")).status, "aborted");
+});
+
+test("agent runner records a failed tool result and continues the provider protocol", async () => {
+  const auditStore = new MemoryAgentRunStore();
+  const registry = registryWithEcho();
+  const runner = new AgentRunner({
+    modelClient: {
+      async *streamTurn(request) {
+        if (!request.messages.some((message) => message.role === "tool")) {
+          yield { type: MODEL_TURN_EVENT_TYPES.TOOL_CALL, toolCall: { id: "bad", name: "missing", arguments: {} } };
+          yield { type: MODEL_TURN_EVENT_TYPES.TURN_COMPLETE, finishReason: MODEL_FINISH_REASONS.TOOL_CALLS };
+          return;
+        }
+        yield { type: MODEL_TURN_EVENT_TYPES.TURN_COMPLETE, finishReason: MODEL_FINISH_REASONS.STOP };
+      },
+    },
+    toolRegistry: registry,
+    toolExecutor: new ToolExecutor({ registry, policy: new ToolPolicy() }),
+    auditStore,
+  });
+  await runner.run({ messages: [{ role: "user", content: "go" }], context: context() });
+  const audit = await auditStore.getRunWithExecutions("run-1");
+  assert.equal(audit.run.status, "completed");
+  assert.equal(audit.toolExecutions[0].status, "failed");
+  assert.equal(audit.toolExecutions[0].error.code, AGENT_ERROR_CODES.TOOL_NOT_FOUND);
 });

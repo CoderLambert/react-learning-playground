@@ -14,11 +14,13 @@
     "typecheck:samples": "npm exec --yes --package=typescript@7.0.2 -- tsc -p tsconfig.samples.json",
     "test:ai": "node --test tests/ai-code-block.test.mjs tests/ai-context-builder.test.mjs tests/ai-chat-client.test.mjs tests/ai-learning-assistant.test.mjs tests/ai-context-budgeting.test.mjs tests/ai-conversation-storage.test.mjs tests/ai-gateway-compaction-contract.test.mjs tests/ai-output-limit.test.mjs tests/deepseek-browser.test.mjs tests/source-citation.test.mjs worker/deepseek-assistant/test/*.test.js",
     "test:e2e": "playwright test",
+    "test:e2e:mock": "VITE_AI_ASSISTANT_URL=http://127.0.0.1:4173/__ai-test__ npm run build && CI=true npm run test:e2e",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d dist"
   },
   "dependencies": {
     "@mdx-js/react": "^3.1.1",
+    "ajv": "^8.20.0",
     "markstream-react": "^2.0.12",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
@@ -36,6 +38,7 @@
     "oxlint": "^1.79.0",
     "rehype-slug": "^6.0.0",
     "remark-gfm": "^4.0.1",
+    "tailwindcss": "3.4.17",
     "vite": "^8.2.2"
   }
 }

@@ -3,6 +3,7 @@ export const AGENT_RUN_STATUSES = Object.freeze({
   COMPLETED: "completed",
   FAILED: "failed",
   ABORTED: "aborted",
+  INTERRUPTED: "interrupted",
 });
 
 export const TOOL_EXECUTION_STATUSES = Object.freeze({
@@ -64,6 +65,7 @@ export function createToolExecutionContext(value = {}) {
     agentRunId: requiredText(value.agentRunId, "agentRunId"),
     contextSnapshotId: requiredText(value.contextSnapshotId, "contextSnapshotId"),
     mutationId: requiredText(value.mutationId, "mutationId"),
+    ...(typeof value.model === "string" && value.model.trim() ? { model: value.model.trim() } : {}),
     actor: Object.freeze({ ...actor }),
   });
 }

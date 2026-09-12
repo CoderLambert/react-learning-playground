@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import "./App.css";
 import "./workbench/Integration.css";
 import { demos, CATEGORIES } from "./demos";
@@ -8,6 +8,9 @@ import { AiAssistant, DeepSeekSettings } from "./components/ai-assistant";
 import { ContextMeter } from "./components/ai-assistant/context/ContextMeter.jsx";
 import { ConversationHistory } from "./components/ai-assistant/conversations/ConversationHistory.jsx";
 import { LearningInspector } from "./components/learning-inspector";
+import { AssessmentPane } from "./assessment/ui/AssessmentPane.jsx";
+import { createAssessmentRuntime } from "./assessment/composition/assessmentRuntime.js";
+import { createLearningUnitEvidenceResolver } from "./assessment/composition/learningUnitEvidenceResolver.js";
 import { NoteToc } from "./components/notes/NoteToc";
 import { NoteViewer } from "./components/notes/NoteViewer";
 import { MDX_TEACHING_COMPONENTS } from "./components/mdx";
@@ -23,6 +26,10 @@ import { usePersistedWorkbenchState } from "./workbench/usePersistedWorkbenchSta
 const SourceViewer = lazy(() =>
   import("./components/source-viewer/SourceViewer").then((module) => ({ default: module.SourceViewer })),
 );
+
+const EMPTY_ASSESSMENT_SNAPSHOT = null;
+const EMPTY_SUBSCRIBE = () => () => {};
+const EMPTY_GET_SNAPSHOT = () => EMPTY_ASSESSMENT_SNAPSHOT;
 
 function NotesPane({ learningUnitId }) {
   const [toc, setToc] = useState([]);
@@ -57,17 +64,81 @@ export default function App() {
     () => (currentDemo ? enrichLearningUnitSourceSemantics(toLearningUnit(currentDemo)) : null),
     [currentDemo],
   );
+  const learningUnitsById = useMemo(
+    () => new Map(demos.map((demo) => {
+      const unit = enrichLearningUnitSourceSemantics(toLearningUnit(demo));
+      return [unit.id, unit];
+    })),
+    [],
+  );
   const currentCategory = useMemo(() => CATEGORIES.find((category) => category.id === currentDemo?.category), [currentDemo]);
   const currentCheckpointChapter = currentDemo ? getCheckpointChapter(currentDemo.id) : null;
+  const [assessmentRuntime, setAssessmentRuntime] = useState(null);
+  const [assessmentSession, setAssessmentSession] = useState(null);
+  const [assessmentIndex, setAssessmentIndex] = useState(0);
+  const [assessmentAnswer, setAssessmentAnswer] = useState(null);
+  const [assessmentFeedback, setAssessmentFeedback] = useState(null);
+  const [assessmentSubmitting, setAssessmentSubmitting] = useState(false);
+  const assessmentSnapshot = useSyncExternalStore(
+    assessmentRuntime?.queryStore.subscribe ?? EMPTY_SUBSCRIBE,
+    assessmentRuntime?.queryStore.getSnapshot ?? EMPTY_GET_SNAPSHOT,
+    EMPTY_GET_SNAPSHOT,
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    const evidenceResolver = createLearningUnitEvidenceResolver({
+      getLearningUnit: (learningUnitId) => learningUnitsById.get(learningUnitId) ?? null,
+    });
+    void createAssessmentRuntime({ evidenceResolver }).then((runtime) => {
+      if (!cancelled) setAssessmentRuntime(runtime);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [learningUnitsById]);
+
   const aiAssistant = useAiLearningAssistant({
     learningUnit: currentLearningUnit,
     activeSourceFile: workbenchState.sourceFile,
+    assessmentRuntime,
   });
+
+  const assessmentQuestions = assessmentSnapshot?.learningUnitId === currentLearningUnit?.id
+    ? assessmentSnapshot.questions ?? []
+    : [];
 
   useEffect(() => {
     setSourceFile(null);
     setSourceFocus(null);
   }, [currentDemo?.id, setSourceFile]);
+
+  useEffect(() => {
+    if (!assessmentRuntime || !currentLearningUnit?.id) return undefined;
+
+    let cancelled = false;
+    const learningUnitId = currentLearningUnit.id;
+    setAssessmentSession(null);
+    setAssessmentIndex(0);
+    setAssessmentAnswer(null);
+    setAssessmentFeedback(null);
+    void Promise.all([
+      assessmentRuntime.service.listQuestions({ trusted: { learningUnitId } }),
+      assessmentRuntime.sessionLifecycle.recover({ learningUnitId }),
+    ]).then(([questions, recovered]) => {
+      if (cancelled) return;
+      assessmentRuntime.queryStore.replaceSnapshot({ learningUnitId, questions });
+      if (recovered) {
+        setAssessmentSession(recovered.session);
+        setAssessmentIndex(recovered.currentIndex);
+      }
+    }).catch((error) => {
+      if (!cancelled) setAssessmentFeedback({ correct: false, explanation: error?.message || "无法恢复评测" });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [assessmentRuntime, currentLearningUnit?.id]);
 
   useEffect(() => {
     if (!sourceLocatorActive) return undefined;
@@ -117,6 +188,65 @@ export default function App() {
       fileName,
       startLine: citation.startLine,
       endLine: citation.endLine ?? citation.startLine,
+    });
+  };
+
+  const handleAssessmentStart = async () => {
+    if (!assessmentRuntime || !currentLearningUnit?.id || !assessmentQuestions.length) return;
+    try {
+      const session = await assessmentRuntime.sessionLifecycle.start({ learningUnitId: currentLearningUnit.id });
+      setAssessmentSession(session);
+      setAssessmentIndex(0);
+      setAssessmentAnswer(null);
+      setAssessmentFeedback(null);
+    } catch (error) {
+      setAssessmentFeedback({ correct: false, explanation: error?.message || "无法开始评测" });
+    }
+  };
+
+  const handleAssessmentSubmit = async ({ questionId, answer }) => {
+    if (!assessmentRuntime || !assessmentSession || !currentLearningUnit?.id || assessmentSubmitting) return;
+    setAssessmentSubmitting(true);
+    try {
+      const { attempt, session } = await assessmentRuntime.sessionLifecycle.submit({
+        learningUnitId: currentLearningUnit.id,
+        sessionId: assessmentSession.id,
+        questionId,
+        answer,
+      });
+      setAssessmentSession(session);
+      const item = assessmentSession.items.find((candidate) => candidate.questionId === questionId);
+      setAssessmentFeedback({
+        correct: attempt.correct,
+        explanation: item?.snapshot?.content?.explanation ?? "已记录本次作答。",
+      });
+    } catch (error) {
+      setAssessmentFeedback({ correct: false, explanation: error?.message || "提交答案失败" });
+    } finally {
+      setAssessmentSubmitting(false);
+    }
+  };
+
+  const handleAssessmentNext = () => {
+    if (!assessmentSession || assessmentIndex >= assessmentSession.items.length - 1) return;
+    setAssessmentIndex((index) => index + 1);
+    setAssessmentAnswer(null);
+    setAssessmentFeedback(null);
+  };
+
+  const handleAssessmentRequestAi = () => {
+    setInspectorOpen(true);
+    setInspectorTab("ai");
+    aiAssistant.enterAssessmentAuthoring();
+    aiAssistant.setInputValue("请为当前知识点生成一组可直接作答的评测题，并使用 assessment_create_questions 工具。不要自动发送。");
+  };
+
+  const handleAssessmentEvidence = (evidence) => {
+    if (evidence?.kind !== "source") return;
+    handleCitationOpen({
+      fileName: evidence.fileName,
+      startLine: evidence.startLine,
+      endLine: evidence.endLine,
     });
   };
 
@@ -309,7 +439,16 @@ export default function App() {
         </Suspense>
       )}
       ai={(
-        <AiAssistant
+        <div>
+          {aiAssistant.mode === "assessment_authoring" && (
+            <div role="status" className="ai-assessment-mode-notice">
+              当前处于评测出题/管理模式；本次发送可使用评测工具。
+              <button type="button" onClick={aiAssistant.exitAssessmentAuthoring} disabled={aiAssistant.status === "streaming"}>
+                退出评测模式
+              </button>
+            </div>
+          )}
+          <AiAssistant
           contextSummary={aiAssistant.contextSummary}
           messages={aiAssistant.messages}
           status={aiAssistant.status}
@@ -332,7 +471,27 @@ export default function App() {
               disabled={!aiAssistant.configured || aiAssistant.messages.length === 0}
             />
           )}
-        />
+          />
+        </div>
+      )}
+      assessment={(
+        <div className="assessment-pane-shell">
+          {assessmentRuntime?.storageNotice && <p role="status">{assessmentRuntime.storageNotice}</p>}
+          {!assessmentRuntime && <p role="status">正在初始化评测存储…</p>}
+          <AssessmentPane
+            session={assessmentSession}
+            currentIndex={assessmentIndex}
+            answer={assessmentAnswer}
+            feedback={assessmentFeedback}
+            submitting={assessmentSubmitting}
+            onStart={assessmentRuntime && assessmentQuestions.length ? handleAssessmentStart : undefined}
+            onAnswerChange={setAssessmentAnswer}
+            onSubmit={handleAssessmentSubmit}
+            onNext={handleAssessmentNext}
+            onOpenEvidence={handleAssessmentEvidence}
+            onRequestAiQuestions={handleAssessmentRequestAi}
+          />
+        </div>
       )}
     />
   ) : null;

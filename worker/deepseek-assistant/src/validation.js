@@ -9,6 +9,12 @@ export const LIMITS = Object.freeze({
   summaryChars: 60_000,
   historyItems: 12,
   historyCharsEach: 8_000,
+  modelMessages: 64,
+  modelMessageChars: 120_000,
+  toolDefinitions: 32,
+  toolNameChars: 160,
+  toolDescriptionChars: 4_000,
+  toolArgumentsChars: 24_000,
 });
 
 function fail(message, status = 400) {
@@ -23,6 +29,13 @@ function text(value, name, max) {
   if (!normalized) fail(`${name} is required`);
   if (normalized.length > max) fail(`${name} exceeds ${max} characters`, 413);
   return normalized;
+}
+
+function content(value, name, max, { allowEmpty = false } = {}) {
+  if (typeof value !== "string") fail(`${name} must be a string`);
+  if (!allowEmpty && !value.trim()) fail(`${name} is required`);
+  if (value.length > max) fail(`${name} exceeds ${max} characters`, 413);
+  return value;
 }
 
 export function assertContentLength(request) {
@@ -83,12 +96,128 @@ function validateContext(context) {
   return { learningUnit, note, sources, activeSourceFile, conversationSummary };
 }
 
+function plainObject(value, name) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) fail(`${name} must be an object`);
+  return value;
+}
+
+function validateModelToolCall(value, index) {
+  const call = plainObject(value, `messages tool call[${index}]`);
+  const rawArguments = plainObject(call.arguments, `messages tool call[${index}].arguments`);
+  const serializedArguments = JSON.stringify(rawArguments);
+  if (serializedArguments.length > LIMITS.toolArgumentsChars) {
+    fail(`messages tool call[${index}].arguments exceeds ${LIMITS.toolArgumentsChars} characters`, 413);
+  }
+  return {
+    id: text(call.id, `messages tool call[${index}].id`, 240),
+    name: text(call.name, `messages tool call[${index}].name`, LIMITS.toolNameChars),
+    arguments: rawArguments,
+  };
+}
+
+function validateModelMessage(value, index) {
+  const message = plainObject(value, `messages[${index}]`);
+  const role = message.role;
+  if (!["system", "user", "assistant", "tool"].includes(role)) {
+    fail(`messages[${index}].role is unsupported`);
+  }
+
+  if (role === "tool") {
+    return {
+      role,
+      toolCallId: text(message.toolCallId ?? message.tool_call_id, `messages[${index}].toolCallId`, 240),
+      content: content(message.content, `messages[${index}].content`, LIMITS.modelMessageChars, { allowEmpty: true }),
+    };
+  }
+
+  const rawToolCalls = message.toolCalls ?? message.tool_calls;
+  if (rawToolCalls !== undefined && !Array.isArray(rawToolCalls)) {
+    fail(`messages[${index}].toolCalls must be an array`);
+  }
+  const toolCalls = (rawToolCalls ?? []).map(validateModelToolCall);
+  const messageContent = message.content == null && toolCalls.length
+    ? ""
+    : content(message.content, `messages[${index}].content`, LIMITS.modelMessageChars, {
+      allowEmpty: role === "assistant",
+    });
+  return {
+    role,
+    content: messageContent,
+    ...(toolCalls.length ? { toolCalls } : {}),
+  };
+}
+
+function validateToolChoice(value) {
+  if (typeof value === "string") {
+    if (!["auto", "none", "required"].includes(value)) fail("toolChoice is unsupported");
+    return value;
+  }
+  const choice = plainObject(value, "toolChoice");
+  return { ...choice };
+}
+
+function validateModelTool(value, index) {
+  const tool = plainObject(value, `tools[${index}]`);
+  const inputSchema = plainObject(tool.inputSchema ?? tool.parameters, `tools[${index}].inputSchema`);
+  return {
+    name: text(tool.name, `tools[${index}].name`, LIMITS.toolNameChars),
+    description: typeof tool.description === "string"
+      ? tool.description.slice(0, LIMITS.toolDescriptionChars)
+      : "",
+    inputSchema,
+  };
+}
+
+export function validateModelTurnRequest(payload) {
+  plainObject(payload, "JSON object");
+  if (payload.type !== undefined && payload.type !== "model_turn") fail("unsupported request type");
+  if (payload.purpose !== undefined && !["chat", "compaction"].includes(payload.purpose)) {
+    fail("unsupported model turn purpose");
+  }
+  const purpose = payload.purpose === "compaction" ? "compaction" : "chat";
+  const rawMessages = payload.messages;
+  if (!Array.isArray(rawMessages) || !rawMessages.length) fail("messages must be a non-empty array");
+  if (rawMessages.length > LIMITS.modelMessages) {
+    fail(`messages exceeds ${LIMITS.modelMessages} messages`, 413);
+  }
+  const messages = rawMessages.map(validateModelMessage);
+  const rawTools = payload.tools ?? [];
+  if (!Array.isArray(rawTools)) fail("tools must be an array");
+  if (rawTools.length > LIMITS.toolDefinitions) {
+    fail(`tools exceeds ${LIMITS.toolDefinitions} definitions`, 413);
+  }
+  const tools = rawTools.map(validateModelTool);
+
+  if (purpose === "compaction") {
+    if (tools.length || Object.hasOwn(payload, "toolChoice")) {
+      fail("compaction model turn must disable tools and omit toolChoice");
+    }
+    if (messages.some((message) => message.role === "tool" || message.toolCalls?.length)) {
+      fail("compaction model turn cannot execute or continue tools");
+    }
+  }
+
+  return {
+    type: "model_turn",
+    purpose,
+    messages,
+    tools,
+    ...(Object.hasOwn(payload, "toolChoice") ? { toolChoice: validateToolChoice(payload.toolChoice) } : {}),
+  };
+}
+
 export function validateRequest(payload) {
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) fail("JSON object required");
+  if (payload.type === "model_turn" || Array.isArray(payload.messages)) {
+    return validateModelTurnRequest(payload);
+  }
   const purpose = payload.purpose === "compaction" ? "compaction" : "chat";
   const context = validateContext(payload.context);
 
   if (purpose === "compaction") {
+    if (Object.hasOwn(payload, "tools") || Object.hasOwn(payload, "toolCalls") || Object.hasOwn(payload, "toolChoice")) {
+      fail("compaction payload cannot contain tool execution fields");
+    }
     if (!payload.compaction || typeof payload.compaction !== "object" || Array.isArray(payload.compaction)) {
       fail("compaction object required");
     }
