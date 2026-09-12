@@ -1,5 +1,10 @@
 export { LearningActionBar } from "./LearningActionBar.jsx";
 export {
+  LEARNING_ACTION_EVENT,
+  emitLearningAction,
+  subscribeLearningActions,
+} from "./learningActionEvent.js";
+export {
   LEARNING_ACTION_KINDS,
   LEARNING_CONTEXT_KINDS,
   buildLearningActionPrompt,
