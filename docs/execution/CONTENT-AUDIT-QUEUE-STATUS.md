@@ -22,22 +22,20 @@ This queue does not duplicate those files.
 
 ### Findings resolved in the latest run
 
-1. `use-effect-correct-usage.mdx` — Gate B **FAIL → PASS**.
-   - Removed claims about a timer experiment and a watcher dependency-change experiment that the Demo does not implement.
-   - The Note now asks learners to observe the two real external-system boundaries: resize listener mount/unmount and `pageTitleBadge → document.title` synchronization.
-   - It explicitly distinguishes button-handler explanatory messages from real Effect lifecycle instrumentation.
+1. `render-vs-dom-update.mdx` — Gate B **PARTIAL → PASS**.
+   - Removed the handler-maintained `renderRequest` proxy.
+   - `RenderedPreview` now increments instrumentation at the component-function execution point, so the displayed count reflects actual component executions rather than predicted requests.
+   - The Demo and Note explicitly state that development Strict Mode may add extra component calls and that MutationObserver proves mutations only inside the observed target DOM subtree.
 
-2. `advanced-ref.mdx` — Gate B **FAIL → PASS**.
-   - Removed the nonexistent `useEffect` vs `useLayoutEffect` side-by-side experiment.
-   - The executable contract now matches the Demo: switch box width and observe layout measurement, then invoke the narrow `focus()` / `select()` imperative handle.
-   - The decision rule remains: use layout effects only when work must happen before repaint; do not treat them as a generally stronger Effect.
+2. `profiler.mdx` — Gate A **PARTIAL → PASS**.
+   - Corrected the production-build boundary: ordinary production React builds disable profiling instrumentation by default.
+   - Production-like `<Profiler>` measurement now points to profiling-enabled production builds/tooling rather than a generic production bundle.
+   - `baseDuration` is explicitly described as an estimated worst-case render cost, not a measured “memoization disabled” timing.
 
-3. `form-data-modeling.mdx` — Gate B **PARTIAL → PASS**.
-   - Removed the nonexistent controlled/uncontrolled side-by-side experiment.
-   - The executable experiment now observes that uncontrolled edits do not update the React output on every keystroke and that submit creates the FormData snapshot/payload.
-   - Controlled-vs-uncontrolled selection remains in Boundary as a production decision rule based on whether React needs the value before submit.
-
-These changes intentionally prefer truthful experiment scope over expanding every Demo merely to satisfy old prose.
+3. `optimistic-update.mdx` — Gate B **PARTIAL → PASS**.
+   - Renamed the Demo path from generic “server failure” to “business rejection (normal return)”.
+   - Note/Demo/Source now agree that this path ends the Action without updating canonical state, causing the optimistic projection to disappear.
+   - True Action throw / Error Boundary handling is explicitly separated as another error path instead of being implied by the rejection simulation.
 
 ## Previously resolved concrete repository issues
 
@@ -49,11 +47,12 @@ These changes intentionally prefer truthful experiment scope over expanding ever
 - Conditional-rendering Empty semantics reconciled.
 - `useSyncExternalStore` now exposes real subscribe/unsubscribe evidence.
 - `PortalThirdPartyDemo` lifecycle evidence comes from real Effect setup/cleanup.
+- `use-effect-correct-usage`, `advanced-ref`, and `form-data-modeling` stale experiment claims were aligned to their real Demos.
 - Several reducer/effect/ref demos had fake or misleading instrumentation removed or narrowed.
 
 ## Current gate state for audited lessons
 
-Resolved to full PASS in this queue include: `multi-slots`, `conditional-rendering`, `external-store`, `use-effect-correct-usage`, `advanced-ref`, and `form-data-modeling`, in addition to the lessons already passing at first audit.
+Resolved to full PASS in this queue include: `multi-slots`, `conditional-rendering`, `external-store`, `use-effect-correct-usage`, `advanced-ref`, `form-data-modeling`, `render-vs-dom-update`, `profiler`, and `optimistic-update`, in addition to lessons already passing at first audit.
 
 Material findings still open and safe for this queue to address, subject to rechecking ownership before each change:
 
@@ -64,10 +63,7 @@ Material findings still open and safe for this queue to address, subject to rech
 - `not-need-effect`: Note promises executable Effect-derived-state vs render-derived-state comparison; bad path is static code only.
 - `lifecycle-of-reactive-effects`: Demo still does not instrument real cleanup/setup order or the functional-updater dependency-removal case.
 - `effect-event`: Note promises executable bad dependency list vs Effect Event comparison while Demo only runs the good version.
-- `optimistic-update`: “simulate failure” is a normal business rejection, not an Action throw/Error Boundary path.
 - `transition-deferred`: no direct-update control and no instrumentation proving interrupted background renders.
-- `render-vs-dom-update`: MutationObserver is real DOM evidence, but `renderRequest` is not actual render instrumentation.
-- `profiler`: ordinary React production builds disable Profiler instrumentation by default; production measurement needs profiling-enabled tooling/builds.
 
 State/reducer findings that overlap PR #78 remain reserved rather than duplicated here.
 
@@ -82,7 +78,7 @@ React semantics are checked against current official React 19.2 documentation. B
 
 ## Validation
 
-Earlier executable-fix heads have passed `React Learning Verify` and `Workbench Integration Verify`. The latest run changes are MDX/advice contract corrections only; exact-head GitHub Actions remain the acceptance source because this environment does not expose a local executable checkout.
+Earlier executable-fix heads have passed `React Learning Verify` and `Workbench Integration Verify`. Exact-head GitHub Actions remain the acceptance source for this run because this environment does not expose a local executable checkout. No new PASS is claimed until workflows report against the current head.
 
 ## Next
 
