@@ -227,6 +227,34 @@ test("legacy fingerprint identities migrate to semantic builtin ids and order", 
   assert.equal(migrated.order["1:question"][0], semanticId);
 });
 
+test("chapter migration leaves other chapter override and order identities untouched", () => {
+  const chapterOneLegacy = structureCheckpoint(1, checkpoint)[0].id;
+  const chapterTwoLegacy = structureCheckpoint(2, checkpoint)[0].id;
+  const migrated = migrateBuiltinIdentity({
+    chapter: 1,
+    checkpoint: semanticCheckpoint,
+    state: {
+      version: 1,
+      overrides: {
+        [chapterOneLegacy]: { hidden: true },
+        [chapterTwoLegacy]: { text: "第二章旧覆盖" },
+      },
+      custom: {},
+      order: {
+        "1:question": [chapterOneLegacy],
+        "2:question": [chapterTwoLegacy],
+      },
+    },
+  });
+  const chapterOneSemantic = structureCheckpoint(1, semanticCheckpoint)[0].id;
+
+  assert.deepEqual(migrated.overrides[chapterOneSemantic], { hidden: true });
+  assert.deepEqual(migrated.overrides[chapterTwoLegacy], { text: "第二章旧覆盖" });
+  assert.equal(migrated.overrides[chapterOneLegacy], undefined);
+  assert.deepEqual(migrated.order["1:question"], [chapterOneSemantic]);
+  assert.deepEqual(migrated.order["2:question"], [chapterTwoLegacy]);
+});
+
 test("version mismatch falls back instead of loading incompatible data", () => {
   const storage = memoryStorage({ test: JSON.stringify({ version: 99, overrides: { bad: true } }) });
   const repository = createQuestionBankRepository({ storage, key: "test" });
