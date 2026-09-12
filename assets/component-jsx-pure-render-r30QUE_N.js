@@ -1,0 +1,39 @@
+var e=`# Component、JSX 与纯渲染
+
+<MentalModel title="组件是从输入到 UI 描述的纯计算">
+函数组件不是“生成 DOM 的模板函数”，而是在一次 render 中读取 props、state、context，并返回 React 元素树。JSX 只是表达这棵 UI 树的语法；相同输入应得到相同描述，render 阶段不应修改外部世界。
+</MentalModel>
+
+<Experiment title="把 JSX 当作计算结果观察">
+在中间 Demo 中切换输入并观察组件树；再关注 Fragment、表达式插值和纯/非纯计算示例。先预测哪些变化需要重新计算 UI，哪些行为不应发生在 render 中。
+</Experiment>
+
+<DemoReference action="修改商品名称/数量，并运行“模拟相同输入重复 Render 两次”" observe="观察 JSX 输出随当前输入变化，并比较相同输入下纯计算结果稳定、非纯计算结果漂移；本 Demo 不测量真实 render/commit 次数。" />
+
+<Flow items={["React 触发 render", "调用组件函数读取当前输入", "JSX 形成 React 元素描述", "React 比较结果", "commit 必要的 DOM 变化"]} />
+
+<Observation>
+组件函数可以多次执行，执行次数不等于 DOM 更新次数。纯 render 让 React 能安全地重试、暂停或重复计算；副作用若藏在 render 中，就会把“可重复计算”变成不可预测的外部修改。这里描述的是 React 的 render 语义，不是本 Demo 的生命周期测量结果；真实 render 与 commit 的可观测实验留给 \`render-commit\` 章节。
+</Observation>
+
+<Boundary title="render 中的 mutation 边界">
+禁止修改 render 开始前已经存在的 props、state、context 或其他外部数据。但对本次 render 内新创建、尚未逃逸的局部对象做局部构造或 mutation 是允许的；关键边界不是“完全不能 mutation”，而是不要修改非局部、预先存在的值。
+</Boundary>
+
+<Boundary title="JSX 不是 HTML 字符串">
+JSX 会变成 JavaScript 表达式并创建 React 元素描述。\`className\`、事件属性、对象形式的 \`style\` 等遵循 React API，而不是字符串模板规则。Fragment 用于组织兄弟节点而不额外制造 DOM 容器。
+</Boundary>
+
+<AntiPattern title="在 render 中产生副作用">
+不要在组件函数主体里发送请求、写 localStorage、启动定时器或修改 render 之前已存在的外部对象。事件导致的动作放进 Event Handler；因渲染结果需要与外部系统同步的逻辑才考虑 Effect。
+</AntiPattern>
+
+<Summary>
+- Component 是 UI 的可组合计算单元。
+- JSX 是 UI 描述语法，不是 HTML 字符串。
+- render 必须保持纯净；局部新建对象的构造不等于修改外部世界。
+- DOM 修改属于 commit，本 Demo 不负责测量 render/commit 生命周期。
+- 拆组件应围绕职责与可组合 API，而不是机械追求文件数量。
+</Summary>
+
+<FurtherReading items={[{ label: "React: Your First Component", href: "https://react.dev/learn/your-first-component" }, { label: "React: Writing Markup with JSX", href: "https://react.dev/learn/writing-markup-with-jsx" }, { label: "React: Keeping Components Pure", href: "https://react.dev/learn/keeping-components-pure" }]} />`;export{e as default};

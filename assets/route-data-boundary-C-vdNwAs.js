@@ -1,0 +1,64 @@
+var e=`# Route Data Boundary：数据跟着页面匹配走
+
+<MentalModel title="Route loader 是页面进入条件的一部分">
+当数据决定一个 route 是否能被正确展示时，把请求放在 route data boundary 可以让 Router 在匹配、导航、redirect、错误处理之间建立统一协议。组件消费已匹配的数据，而不是每个叶子组件都在 Effect 中重新发起页面级请求。
+</MentalModel>
+
+<Flow items={[
+  "导航产生目标 route matches",
+  "Router/Framework 确定需要执行的 loader",
+  "loader 读取 params/request 并请求数据",
+  "成功数据交给匹配 route；redirect 改变导航；异常进入 route error boundary",
+  "组件根据 loader data 渲染，mutation 后按框架规则 revalidate/cache"
+]} />
+
+<Experiment title="观察 route match → loader → pending → data/error 顺序">
+在中间 Demo 中依次选择 \`/users/1\`、\`/users/2\` 与 \`/users/404\`，观察模拟的 route params、loader trace、pending、成功数据与 error boundary。再思考：如果每个页面都在 mount 后自行 Effect fetch，哪些 loading、错误、竞态和导航协作职责会被重新分散到组件中？当前 Demo 不修改真实 URL，也不执行真实 Router redirect。
+</Experiment>
+
+<DemoReference action="切换三个模拟 route data 场景" observe="记录 route params、loader pending、成功数据与 error boundary 的阶段对应关系；不要把模拟 trace 当成真实 Router instrumentation。" />
+
+<Observation>
+Route loader 解决的是“页面导航所需数据如何进入路由状态机”，并不自动等于完整 server-state cache。是否去重、缓存多久、后台刷新、mutation invalidation 取决于 Router/Framework 或 Query library 的具体能力。
+</Observation>
+
+<Compare>
+### Route data
+与 URL/match 强绑定，适合页面进入所需数据、redirect、404/权限边界。
+
+### Query cache
+擅长跨组件/跨页面缓存、stale/fresh、失效和后台同步。
+
+### Effect fetch
+适合真正由组件出现而触发的外部同步；不应成为所有页面数据加载的默认方案。
+</Compare>
+
+<AntiPattern title="把 loader 和 Query cache 当成两份独立真相">
+如果两层都缓存同一实体，却没有明确 ownership、key 和 invalidation 策略，就会出现旧数据和重复请求。集成 Router + Query 时应定义谁负责预取、谁负责缓存、mutation 后谁触发失效。
+</AntiPattern>
+
+<Boundary title="这是 Router/Framework 能力，不是 React Hook">
+React Core 不定义 loader、action、revalidation 或 route error response。不同 Router 模式（Declarative/Data/Framework）能力也不同；实现前应以当前 Router 的官方契约为准。本 Demo 只是阶段模拟器，不验证 React Router runtime 的 URL 更新、redirect、revalidation 或错误响应对象。
+</Boundary>
+
+<Boundary title="教学时序不等于 Router 并发契约">
+ 这个 Demo 的 \`loadUser\` 使用固定的 \`setTimeout\`，并由组件手动追加模拟 trace；它只帮助建立“match → loader → pending → data/error”的概念顺序。不能从这段 simulated trace 推导真实 Router 的 cancellation guarantee、race behavior、revalidation order，或 redirect / error object contract。
+
+ 连续导航时，前一次工作可能已经 stale，可能被 cancellation，中间结果也可能被 ignored as obsolete，或者触发 revalidation。究竟是否取消请求、如何处理竞态、何时重新验证，以及 redirect/error 的具体对象和边界，都以实际使用的 Router/Framework 当前官方契约为准；需要时用该 runtime 的文档和测试验证。
+</Boundary>
+
+<Summary>
+- 页面进入所需数据适合与 route match 建立边界。
+- loader 可统一 pending、redirect 与 route error 语义。
+- Route data 不天然替代成熟 Query cache。
+- Router 与 Query 集成时必须明确缓存和失效所有权。
+- 概念模拟器只能解释阶段关系，不能充当真实 Router runtime 证据。
+- \`setTimeout\` 模拟的时序不能证明真实 Router 的 cancellation、race、revalidation 或 redirect/error object contract。
+</Summary>
+
+<FurtherReading items={[
+  { label: "React Router: Data Loading", href: "https://reactrouter.com/start/framework/data-loading" },
+  { label: "React: You Might Not Need an Effect", href: "https://react.dev/learn/you-might-not-need-an-effect" },
+  { label: "TanStack Query: React Router integration", href: "https://tanstack.com/query/latest/docs/framework/react/examples/react-router" }
+]} />
+`;export{e as default};

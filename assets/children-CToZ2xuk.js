@@ -1,0 +1,38 @@
+var e=`# Children 默认插槽与组合
+
+<MentalModel title="children 让容器拥有结构，让调用者拥有内容">
+\`children\` 是普通 prop，但它承载调用位置嵌套的 React 节点。容器组件可以负责自己拥有的布局、视觉外壳和交互骨架，而不必读取内部内容的业务字段；调用者继续拥有内容本身的语义与行为，从而形成稳定的 composition seam。
+</MentalModel>
+
+<Experiment title="替换内容而不改容器">
+在中间 Demo 中比较 CardContainer 与 ModalLayout：保持容器实现不变，替换嵌套内容，观察结构职责与内容职责如何分离。
+</Experiment>
+
+<DemoReference action="切换不同 children 内容和容器示例" observe="观察同一容器如何承载不同 React 节点，而不需要读取这些内容的业务字段。" />
+
+<Flow items={["调用者声明嵌套节点", "React 将节点作为 children prop", "容器决定 children 放置位置", "调用者继续拥有内容语义"]} />
+
+<Compare>
+### Composition
+当变化轴是 UI 结构时，让调用者直接传 React 节点，API 更接近最终界面，也能避免容器理解大量业务字段。
+
+### 显式 props
+少量、稳定、语义明确的行为或样式参数继续使用显式 props 往往更清楚。Composition 不是为了消灭 props，而是把结构变化交回调用者。
+</Compare>
+
+<Boundary title="children 不等于共享 state">
+Composition 解决的是结构与依赖传递问题。多个子节点若需要共享可变数据，仍应明确 state ownership，再通过 props、Context 或其他合适机制传播。可用一条简单规则判断：结构由调用者变化 → composition；稳定语义参数 → props；共享可变数据 → 单独建模 ownership。
+</Boundary>
+
+<AntiPattern title="为了复用把所有差异都变成 boolean props">
+当组件出现 \`showHeader\`、\`compactFooter\`、\`customBodyType\` 等大量开关，而且这些开关主要控制内部结构时，优先检查是否应该让调用者直接组合节点，而不是继续扩张配置矩阵。
+</AntiPattern>
+
+<Summary>
+- \`children\` 是 React 的默认内容插槽，承载 React 可渲染节点。
+- Composition 将结构骨架与业务内容解耦。
+- 结构变化优先考虑组合；稳定、明确的行为或样式参数继续使用 props。
+- 数据所有权与 UI 组合是两个不同问题。
+</Summary>
+
+<FurtherReading items={[{ label: "React: Passing Props — children", href: "https://react.dev/learn/passing-props-to-a-component#passing-jsx-as-children" }, { label: "React: Thinking in React", href: "https://react.dev/learn/thinking-in-react" }]} />`;export{e as default};

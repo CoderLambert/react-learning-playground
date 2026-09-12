@@ -1,0 +1,54 @@
+var e=`# Nested Routes：让 URL 层级映射 UI 层级
+
+<MentalModel title="嵌套路由是布局树与页面树的组合协议">
+父路由负责稳定布局与父级上下文，子路由负责变化的局部内容。一次导航不必把整页理解为“换掉”；Router 根据新的匹配链决定哪些布局继续存在、哪个 outlet 区域替换。
+</MentalModel>
+
+<Flow items={[
+  "URL 进入 Router",
+  "Router 从父到子计算匹配链",
+  "父 route 渲染共享 layout",
+  "Outlet/children 位置承接子 route",
+  "导航到兄弟子路由时，稳定父层可以保留，子层按新匹配更新"
+]} />
+
+<Experiment title="从匹配链判断父布局与 Outlet 边界">
+在中间 Demo 中依次选择 Dashboard index、Settings、Project 和 Login，比较每个 URL 对应的 matched route chain。重点观察 \`/dashboard\` 与 \`/dashboard/settings\` 共享 \`DashboardLayout\`，变化发生在它的 Outlet 子内容；再比较 \`/login\` 为什么进入另一条 layout chain。当前 Demo 是 route-match 模拟器，不执行真实 Router 生命周期。
+</Experiment>
+
+<DemoReference action="切换多个模拟 nested route，并比较 matched route chain" observe="识别共同父 layout、最深层 Outlet 内容，以及 index route / pathless layout route 对 URL 和 UI 层级的不同影响。" />
+
+<Observation>
+嵌套路由的核心不是“URL 多了斜杠”，而是把信息架构显式编码成 route tree。这样布局、数据边界、错误边界和 pending UI 都可以沿匹配层级组织。
+</Observation>
+
+<AntiPattern title="用 pathname 字符串手写页面分支">
+在一个巨型组件里写 \`pathname.startsWith(...)\` 会把匹配、参数解析、布局与页面逻辑重新耦合。成熟 Router 已经提供 route tree、params、outlet 与导航语义，应使用它们表达页面结构。
+</AntiPattern>
+
+<Boundary title="组件组合与 Router 匹配是两层职责">
+React 能组合父子组件，但不会根据 URL 自动选择组件树。Nested routing、layout route、index route、loader 继承等都是具体 Router/Framework 的能力；不同 Router 的细节不能互换套用。
+
+ 不要把 \`route hierarchy\`、文件目录和 URL segment 画成同一棵树：\`route hierarchy ≠ file hierarchy ≠ URL segments 必须一一对应\`。Router/Framework 可能提供 pathless routes、layout routes 或 route groups，让 UI、数据和错误边界发生嵌套，却不增加对应的 URL segment；声明 route 的方式也不必等于文件夹的组织方式。
+
+ 共同匹配链只表示父级 route 可能成为共享边界，不保证组件实例永远不重建。是否复用 layout 还取决于 route identity、\`key\`、Router 实现和应用结构；不要从“路径看起来相同”推导出绝对的 mount/unmount 保证。
+</Boundary>
+
+<Boundary title="共享 Layout 不等于把所有 State 提升到 Root">
+ 共享 layout 解决的是页面组合与生命周期边界，不是“所有跨页面 state 都应该住在 root layout”。State 仍应放在能够表达其 ownership、lifetime、reset boundary 的最小层级：只服务一个子页面的 state 留在该页面，需要在同一布局下跨子路由保留的 state 才提升到合适的共享 layout；只有真正由整个应用拥有的 state 才进入更高层级。
+</Boundary>
+
+<Summary>
+- Nested route 把 URL 层级映射为可组合的页面/布局层级。
+- 父 route 管稳定结构，子 route 管局部变化。
+- route hierarchy、文件目录与 URL segments 不必一一对应；pathless/layout/group 机制可以增加组织边界而不改变 URL。
+- Outlet 是路由匹配结果进入父布局的插槽，而不是普通条件渲染的别名。
+- 共享 layout 不自动决定 state 所有权；按 ownership、lifetime 和 reset boundary 放在最小合适层级。
+- 用 route tree 表达信息架构，避免手写 pathname 分支。
+</Summary>
+
+<FurtherReading items={[
+  { label: "React Router: Routing", href: "https://reactrouter.com/start/declarative/routing" },
+  { label: "React Router: Outlet", href: "https://reactrouter.com/api/components/Outlet" }
+]} />
+`;export{e as default};

@@ -1,0 +1,35 @@
+var e=`# useReducer 状态转换模式
+
+<MentalModel title="Reducer 把事件翻译成下一份 state">
+当一个组件有多种相关状态转换时，\`useReducer\` 将“发生了什么”与“如何转换”分离：UI dispatch action，纯 reducer 根据 \`(state, action)\` 计算 next state。\`dispatch\` 表示请求下一次状态更新，不会同步改写当前 render 中已经读取到的 state snapshot。\`useReducer\` 不会自动让状态全局化，也不是性能优化 API。
+</MentalModel>
+
+<Experiment title="按 action 理解状态转换">
+在中间 Demo 中依次触发 \`INCREMENT\`、\`DECREMENT\`、\`SET_STEP\`、\`RESET\`、\`UNDO\`，观察 count、step 与计数变更历史。再到 Source 中对照 reducer，理解 action 描述发生了什么，reducer 如何根据当前 state 与 action 计算 next state。
+</Experiment>
+
+<DemoReference action="触发 INCREMENT、DECREMENT、SET_STEP、RESET、UNDO" observe="观察 count、step 与计数变更历史中的 from → to；历史只记录部分 count 转换，不代表完整 action trace，reducer 纯度应结合 Source 判断。" />
+
+<Flow items={["Event Handler 决定发生的事件", "dispatch(action) 请求更新", "React 调用 reducer(state, action)", "reducer 纯计算 next state", "下一次 render 使用新 state"]} />
+
+<Boundary title="Reducer 必须保持纯净">
+不要在 reducer 中请求 API、写存储、读取当前时间或产生其他不可控副作用。时间、随机数等非确定性输入应先在事件边界产生，再作为 action 数据传入。Reducer 可能在开发检查中被重复调用；其职责是确定性状态转换。
+</Boundary>
+
+<Boundary title="复杂对象不等于必须 useReducer">
+state 是对象、字段很多，单独看都不是使用 reducer 的充分理由。真正的信号是多条更新路径共享转换规则、事件语义值得集中表达，或更新逻辑值得脱离组件独立测试。简单对象 state 仍然可以继续使用 \`useState\`。
+</Boundary>
+
+<AntiPattern title="为了‘架构感’把简单 state 全部 reducer 化">
+单个独立 boolean 或输入值用 \`useState\` 往往更清楚。只有更新规则相互关联、action 语义需要集中表达，或转换逻辑需要独立测试时，reducer 的结构化收益才明显。
+</AntiPattern>
+
+<Summary>
+- action 描述发生了什么，reducer 根据当前 state 与 action 计算 next state。
+- reducer 必须保持纯净；非确定性输入应在事件边界产生后通过 action 传入。
+- 多条更新路径共享规则、转换逻辑需要集中审计或测试时，可以考虑 \`useReducer\`。
+- \`dispatch\` 请求下一次 render 的 state，不会同步修改当前 render 的 state snapshot。
+- \`useReducer\` 本身不会提供跨组件共享；需要时再与 Context 等机制组合。
+</Summary>
+
+<FurtherReading items={[{ label: "React: Extracting State Logic into a Reducer", href: "https://react.dev/learn/extracting-state-logic-into-a-reducer" }, { label: "React: useReducer", href: "https://react.dev/reference/react/useReducer" }]} />`;export{e as default};
