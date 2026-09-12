@@ -22,7 +22,11 @@ export function createAttemptRepository(storage = globalThis.localStorage) {
   return {
     load(chapter, sessionId = "current") {
       if (!storage) return null;
-      return safeParse(storage.getItem(keyFor(chapter, sessionId)));
+      try {
+        return safeParse(storage.getItem(keyFor(chapter, sessionId)));
+      } catch {
+        return null;
+      }
     },
     save(attempt, sessionId = "current") {
       if (!storage) return false;
