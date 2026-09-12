@@ -26,7 +26,8 @@ export function ChildrenSlotDemo() {
           <span className="badge badge-purple">组合优于继承</span>
         </div>
         <p className="demo-desc">
-          React 通过内置的 <code>props.children</code> 实现了强大的组合模式（Composition）。容器组件专注布局、边框阴影、可访问性及弹窗行为控制，内部的 JSX 内容则完全交由调用者灵活注入。
+          <code>props.children</code> 接收调用位置传入的 React 节点。容器组件可以负责自己拥有的布局、视觉外壳和关闭交互；
+          具体内容及其业务语义由调用者负责。
         </p>
         <div className="demo-meta-tags">
           <span className="badge badge-gray">默认插槽 (props.children)</span>
@@ -54,7 +55,7 @@ export function ChildrenSlotDemo() {
             extra={<span className="badge badge-blue">系统</span>}
           >
             <p style={{ margin: "0 0 14px 0", color: "var(--text-muted)", fontSize: "13.5px", lineHeight: "1.6" }}>
-              React 19 全新架构现已上线，默认支持编译器指令以及优化了并发渲染能力。子节点可包含任意 HTML 结构与操作回调。
+              同一个 CardContainer 可以承载说明文本、操作按钮或表单等不同 React 节点；容器不需要读取这些内容的业务字段。
             </p>
             <button
               className="btn btn-primary btn-sm"
@@ -103,7 +104,7 @@ export function ChildrenSlotDemo() {
             <span>🪟</span> 2. 模态弹窗外壳（ModalLayout）
           </h3>
           <p className="demo-section-desc">
-            弹窗外壳负责管理背景遮罩、居中定位、ESC 键快捷关闭，弹窗内部的具体内容使用 <code>children</code> 随心所欲定制：
+            弹窗外壳负责它实际实现的背景遮罩、居中定位与 ESC 快捷关闭；弹窗内部的具体 React 节点通过 <code>children</code> 由调用者提供：
           </p>
         </div>
 
@@ -125,7 +126,7 @@ export function ChildrenSlotDemo() {
           {modalContentType === "info" ? (
             <div>
               <p style={{ margin: "0 0 16px 0", color: "var(--text-muted)", fontSize: "14px", lineHeight: "1.6" }}>
-                这是一个借助 <code>children</code> 传递给 <code>ModalLayout</code> 的简单文本视图。外壳负责居中与 ESC 快捷关闭，内部逻辑完全隔离。
+                这是一个借助 <code>children</code> 传递给 <code>ModalLayout</code> 的简单文本视图。外壳负责居中与 ESC 快捷关闭，内容本身的业务语义仍由调用者拥有。
               </p>
               <div style={{ display: "flex", justifyContent: "flex-end" }}>
                 <button className="btn btn-primary btn-sm" onClick={() => setIsModalOpen(false)}>
@@ -201,7 +202,8 @@ export function ChildrenSlotDemo() {
           <span>💡</span> 组合模式设计原则
         </div>
         <div>
-          当一个组件需要支持多种内部结构时，<strong>优先使用组合（Passing Children）</strong>，而不是在组件内部通过定义 10 个布尔值 props（如 <code>showImage</code>, <code>showForm</code>, <code>hasButton</code>）来控制结构分支。组合模式可以让代码解耦，大幅降低维护成本。
+          当一个组件需要支持多种内部结构时，可以优先考虑组合（Passing Children），避免用大量布尔 props 控制结构分支；
+          如果差异只是少量、稳定、语义明确的行为或样式配置，继续使用显式 props 往往更清楚。
         </div>
       </div>
     </div>

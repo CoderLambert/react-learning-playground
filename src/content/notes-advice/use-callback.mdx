@@ -28,19 +28,17 @@ Demo 真实实现了 Note 的核心对照：
 
 “只有其他 props 也稳定时，stable callback 才有价值”的 Note 结论与 Demo 一致，因此 Gate B 通过。
 
-## 缺失边界 / 反例
+## 已补充边界 / 反例
 
-建议补充两个边界：
-
-1. `useCallback` 仍会在每次 render 创建传入的函数表达式；React 只是依赖不变时返回之前缓存的函数值，因此不应把它解释成“避免函数创建成本”。
-2. 与 `useMemo` 一样，React 在特定情况下可以丢弃 callback cache，所以需要稳定语义的订阅句柄/可变值应使用适合的数据所有权机制，而不是把 `useCallback` 当持久 identity 存储。
+Note 已明确 `useCallback` 仍会在每次 render 创建函数表达式，React 只是在依赖不变时返回之前缓存的函数值，因此它不是为了避免普通函数创建成本。Note 也明确 React 可以丢弃 callback cache，不能把 `useCallback` 当成持久 identity storage。
 
 ## 清晰度与工程决策
 
 当前生产决策规则足够实用：先确认 memoized child、Hook dependency 或第三方 identity-sensitive API，再考虑 `useCallback`；不存在这些消费者时使用普通函数更清晰。
 
-## 建议修改
+## 处理结果
 
-1. 增加“不会避免函数表达式被创建，只会返回缓存函数”的一句说明。
-2. 补充 cache 可被 React 丢弃，因此不要将 identity 当业务语义保证。
-3. 保留 updater function 只能消除“仅用于计算下一 state”的 dependency 这一限制，避免学习者通过漏依赖制造稳定引用。
+- Note 已补充函数表达式创建成本与 callback cache 返回值的区别。
+- Note 已补充 cache 可被丢弃、不能承担持久 identity 语义的边界。
+- 已保留 updater function 只能消除“仅用于计算下一 state”的 dependency 这一限制；Demo 未修改。
+- 状态：RESOLVED / CLOSED。

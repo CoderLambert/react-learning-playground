@@ -19,8 +19,8 @@ Note 的核心模型准确：Custom Hook 复用的是状态逻辑，不共享某
 - 抽取 Hook 不能修复错误 Effect。应先确认同步模型和依赖正确，再抽象 API。
 - 参数如果决定内部 Effect 的同步目标，仍然是 reactive input；自定义 Hook 不能隐藏这个事实。
 
-## 建议修改
+## 本轮已关闭
 
-1. Note 可直接引用 Demo 的 `useCounter` 名称，而不是只用 `useOnlineStatus()` 泛例，使 Note↔Demo 映射更紧。
-2. 对外暴露的 Hook API 尽量表达领域能力和不变量，而不是简单把底层 `setState`/Effect 细节换个名字。
-3. 保持当前实验：两个独立 counter + 一个封装外部订阅的 Hook，已经足以支撑本课核心结论。
+1. Note 已直接引用 Demo 的 `useCounter` 与 `useOnlineSignal`，并移除与 Demo 脱节的主要泛例。
+2. Note 已明确 Hook API 应表达领域能力和不变量；`count` / `increment` / `reset` 被作为当前 Demo 的具体边界，而不是暴露底层 setter。
+3. 当前实验：两个独立 counter + 一个封装外部订阅的 Hook，足以支撑本课核心结论；未扩展 Demo 功能。

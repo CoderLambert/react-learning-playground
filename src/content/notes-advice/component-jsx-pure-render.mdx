@@ -2,27 +2,24 @@
 
 ## 结论
 
-当前内容方向正确，但 **Gate B（Demo Contract）暂不完全通过**；Gate A 与 Gate C 基本通过。优先级：中。
+审核收口完成。当前 Note 不再把 Demo 描述成真实的 render/commit instrumentation；纯渲染边界也补充了 local mutation 例外。
 
 ## Gate A — Correctness：PASS
 
 - `props / state / context` 作为 render 输入、render 保持纯、StrictMode 开发期额外调用纯函数帮助发现非纯逻辑，均与 React 19.2 官方语义一致。
 - JSX 被描述为 JavaScript 中的 UI 描述语法而非 HTML 字符串，方向准确。
-- 已修正 Demo 中“网络请求等副作用应放 Event Handler”的过度归类：现在按因果区分 Event Handler、Effect，并明确数据获取还受 framework/data layer 边界影响。
+- purity 边界已明确：禁止修改 render 开始前存在的外部/非局部数据；本次 render 内新创建且未逃逸的局部对象可以进行局部构造或 mutation。
+- Event Handler / Effect 的副作用边界保持按因果关系描述，没有把所有副作用机械归类到同一位置。
 
-仍建议补一个重要边界：**render 中禁止修改 render 之前已存在的外部对象，但允许对本次 render 内新创建、尚未逃逸的局部对象做 local mutation**。否则初学者可能误解成“render 中任何 mutation 都非法”。
+## Gate B — Demo Contract：PASS
 
-## Gate B — Demo Contract：PARTIAL
+`<DemoReference>` 已收窄为当前 Demo 真正可观察的事实：
 
-Note 的 `<Experiment>` 与 Demo 两个实验基本一致：输入变化、Fragment/表达式、纯计算与非纯计算都能观察。
+- 修改输入后 JSX 输出随当前输入变化；
+- Fragment 与表达式插值参与当前 UI 描述；
+- “模拟相同输入重复 Render 两次”只比较纯计算结果稳定与非纯计算结果漂移。
 
-但 `<DemoReference>` 声称可以“区分组件函数执行、返回 JSX 与最终 DOM 更新”。当前 Demo 没有真实 instrumentation 来显示：
-
-- 组件函数实际执行次数；
-- render 次数与 commit/DOM mutation 次数的差异；
-- 哪一次 render 被丢弃或重试。
-
-实验 2 已明确写成“模拟重复 render”，这是正确的安全教学做法，因此建议把 Note 的 observe 收窄为 Demo 真正可观察的事实，不要暗示它测量了真实 React render/commit 生命周期。真实 render vs commit 留给 `render-commit` 章节。
+Note 已明确说明本 Demo **不测量真实 render/commit 次数**，也不声称观察被丢弃或重试的真实 render。真实 render vs commit instrumentation 留给 `render-commit` 章节。
 
 ## Gate C — Mental Model：PASS
 
@@ -32,16 +29,9 @@ Note 的 `<Experiment>` 与 Demo 两个实验基本一致：输入变化、Fragm
 - 什么时候用：组件函数负责根据当前输入计算 UI 描述。
 - 什么时候不用：用户动作和外部系统同步等副作用不应塞进 render。
 
-## 内容结构与易懂性
+## Final status
 
-整体不需要继续模板化。当前 `MentalModel → Experiment → Flow → Observation → Boundary → AntiPattern` 已略有卡片密度，但尚未影响理解。后续重写时可把 JSX/Fragment 的普通解释改为连续正文，只保留 MentalModel、Experiment、Boundary 作为强调块。
-
-## 建议改动
-
-1. 收窄 `DemoReference.observe`，只写当前 Demo 确实能观察的现象。
-2. 在 purity 边界补充 local mutation 例外，并说明“外部世界/预先存在对象”才是危险边界。
-3. 不要在本篇继续展开 render/commit instrumentation；链接到 `render-commit` 即可。
-4. 保持“模拟非纯计算而不真的在 React render 中制造副作用”的设计，这一点是正确的。
+无需给本 Demo 增加 render counter、commit counter 或其他生命周期 instrumentation。保持“安全模拟非纯计算、不在真实 render 中制造副作用”的设计即可。
 
 ## 官方依据
 

@@ -41,12 +41,19 @@ Route loader 解决的是“页面导航所需数据如何进入路由状态机�
 React Core 不定义 loader、action、revalidation 或 route error response。不同 Router 模式（Declarative/Data/Framework）能力也不同；实现前应以当前 Router 的官方契约为准。本 Demo 只是阶段模拟器，不验证 React Router runtime 的 URL 更新、redirect、revalidation 或错误响应对象。
 </Boundary>
 
+<Boundary title="教学时序不等于 Router 并发契约">
+ 这个 Demo 的 `loadUser` 使用固定的 `setTimeout`，并由组件手动追加模拟 trace；它只帮助建立“match → loader → pending → data/error”的概念顺序。不能从这段 simulated trace 推导真实 Router 的 cancellation guarantee、race behavior、revalidation order，或 redirect / error object contract。
+
+ 连续导航时，前一次工作可能已经 stale，可能被 cancellation，中间结果也可能被 ignored as obsolete，或者触发 revalidation。究竟是否取消请求、如何处理竞态、何时重新验证，以及 redirect/error 的具体对象和边界，都以实际使用的 Router/Framework 当前官方契约为准；需要时用该 runtime 的文档和测试验证。
+</Boundary>
+
 <Summary>
 - 页面进入所需数据适合与 route match 建立边界。
 - loader 可统一 pending、redirect 与 route error 语义。
 - Route data 不天然替代成熟 Query cache。
 - Router 与 Query 集成时必须明确缓存和失效所有权。
 - 概念模拟器只能解释阶段关系，不能充当真实 Router runtime 证据。
+- `setTimeout` 模拟的时序不能证明真实 Router 的 cancellation、race、revalidation 或 redirect/error object contract。
 </Summary>
 
 <FurtherReading items={[

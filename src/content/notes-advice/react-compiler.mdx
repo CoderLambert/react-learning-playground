@@ -28,19 +28,17 @@ Demo 明确显示“本仓库当前没有启用 React Compiler”，然后只执
 
 这与 Note 的 Experiment 定位一致：页面是 Compiler 心智模型和手工 memoization 对照，不声称展示编译后代码或实际 Compiler 性能。因此 Gate B 通过。
 
-## 缺失边界 / 反例
+## 已关闭边界
 
-建议补充两点：
+正式 Note 已关闭以下两项边界：
 
-1. Compiler 的“自动 memoization”不是一个应由开发者预测具体缓存点的稳定业务 contract；若要确认某个函数是否被编译，应查看编译输出或 React DevTools 的 Memo 标记，而不是根据源码形状猜测。
-2. `compilationMode` 还存在 `syntax` 与 `all`，但当前课程不必展开；只需避免让学习者误以为只有 `infer` / `annotation` 两种模式。
+1. Compiler 的自动 memoization 不是开发者应根据源码形状预测的具体缓存 contract；确认实际优化时应查看 Compiler diagnostics、compiler output，以及 React DevTools / Profiler evidence，而不是猜测某处“一定被 memoize”。
+2. `infer` / `annotation` 仅是课程中的常见配置示例，不暗示它们是 compilation modes 的完整全集；完整范围以当前 Compiler 文档和项目配置为准。
 
 ## 清晰度与工程决策
 
 当前生产决策规则清楚：先保证 Rules of React 与 lint diagnostics，渐进启用 Compiler，再用 Profiler 验证真实收益；既不默认继续添加手工 memo，也不机械删除已有 memoization。
 
-## 建议修改
+## 已保留的 Demo 边界
 
-1. 增加“不要预测具体编译缓存点；用编译输出/DevTools 验证”的一句工程规则。
-2. 若提到 compilation modes，可写成“本课聚焦常见的 infer / annotation”，避免形成模式全集错觉。
-3. 保留“本仓库没有启用 Compiler”的显眼提示，这是防止 Demo Contract 误导的关键内容。
+“本仓库没有启用 Compiler”的显眼提示已保留，这是防止 Demo Contract 误导的关键内容；当前页面仍是手工 memoization 对照与 Compiler 心智模拟器，不声称提供真实编译运行结果。

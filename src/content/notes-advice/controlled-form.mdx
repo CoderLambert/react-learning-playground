@@ -18,8 +18,8 @@ Note 与 Demo 对齐良好。`value` / `checked` 由 React State 提供，`onCha
 - 每次输入会触发 React 更新，但这本身不是性能问题；只有测量到大子树更新成本后，才需要拆分组件或引入成熟表单方案。
 - `useMemo` 并不是简单校验计算的必要条件；当前 Demo 使用它不影响语义，但课程不应让学习者误以为派生校验必须 memoize。
 
-## 建议修改
+## 本轮已关闭
 
-1. 可在 Note 中补一句“controlled 是字段级 ownership 决策，可与 FormData/非受控字段混用”。
-2. 若后续强调性能，使用 Profiler/真实测量，而不是从“每次键入进入 React 更新路径”直接推出需要优化。
-3. 当前实验和项目决策规则已经足以支撑课程，不需要额外扩展模板化章节。
+1. Note 已明确 controlled/uncontrolled 是字段级 ownership 决策，同一真实 form 可以混用 controlled field、uncontrolled field 与 FormData submission。
+2. Note 保留“每次输入进入 React 更新路径”的机制事实，没有把它直接推导成性能问题或优化处方；后续性能判断仍应依赖 Profiler/真实测量。
+3. 当前实验和项目决策规则足以支撑课程，没有新增 Demo，也没有扩展模板化章节。

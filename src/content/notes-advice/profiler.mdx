@@ -23,7 +23,7 @@ Demo 的 `Profiler` 真正包裹 `ExpensiveList`，并记录真实 `actualDurati
 
 `onRender` 中写入 samples 会引发教学 UI 自身更新；代码使用防护避免采样展示继续污染下一条记录。这属于 harness 实现细节，不改变实验事实，但不应被学习者照搬成通用遥测架构。
 
-## 缺失边界 / 反例
+## 已关闭边界 / 反例
 
 当前关键边界已覆盖：
 
@@ -35,6 +35,9 @@ Demo 的 `Profiler` 真正包裹 `ExpensiveList`，并记录真实 `actualDurati
 
 生产决策已明确：只有测量证明 React render 本身是主要瓶颈时，才优先做 memoization；否则继续定位脚本、布局、绘制、网络或第三方代码。
 
-## 建议修改
+## 处理结果
 
-当前硬 Gate 已全部通过。后续若继续扩展，可在 Source 注释中补充采样 UI 防污染逻辑的教学目的，但不是 correctness blocker。
+- Note 已将 Chapter 07 的决策链收敛为：确认真实性能问题 → Profiler / Performance 定位 → 找 identity consumer 或昂贵计算边界 → 选择具体工具 → 确认 Compiler 覆盖 → 只保留已测量热点。
+- 已保留 Demo 的真实 Profiler 采样与 synthetic workload 边界；Demo 未修改。
+- Source 采样 UI 防污染逻辑仍是已知教学实现细节，不是本轮 correctness blocker。
+- 状态：RESOLVED / CLOSED。

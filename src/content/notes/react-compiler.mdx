@@ -13,6 +13,8 @@ React Compiler 分析遵守 Rules of React 的组件与 Hooks，在不改变语�
 
 <Boundary title="Compiler 有明确边界">
 编译器不能替你设计正确的 state ownership，也不能让 render 中的副作用变安全。违反 Rules of React、动态/不受支持模式、部分第三方库边界可能导致代码无法被优化；渐进采用时同一应用可以同时存在已编译与未编译代码。
+
+自动 memoization 不是开发者可以根据源码形状预测的具体缓存 contract。若要确认某处是否实际被优化，应查看 Compiler diagnostics、compiler output，以及 React DevTools / Profiler evidence，而不是猜测“这里一定会被 memoize”。本仓库的 Core Demo 是 Compiler 心智模拟器，不是真实 Compiler runtime：它不提供编译输出或 diagnostics。若课程提到 `infer` / `annotation`，它们只是常见配置示例，不是 compilation modes 的完整全集。
 </Boundary>
 
 <AntiPattern title="启用 Compiler 后删除所有 memoization">

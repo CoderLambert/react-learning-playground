@@ -6,7 +6,7 @@ import { useReducer } from "react";
 const initialState = {
   count: 0,
   step: 1,
-  history: [], // 记录状态变更轨迹，支持 Undo 撤销
+  history: [], // 记录部分 count 变更轨迹，支持 Undo 撤销
 };
 
 // ==========================================
@@ -67,7 +67,7 @@ function counterReducer(state, action) {
 export function StateReducerDemo() {
   const [state, dispatch] = useReducer(counterReducer, initialState);
 
-  function dispatchAudited(type) {
+  function dispatchWithTimestamp(type) {
     dispatch({ type, at: new Date().toLocaleTimeString() });
   }
 
@@ -84,12 +84,13 @@ export function StateReducerDemo() {
           <span className="badge badge-purple">结构化状态更新</span>
         </div>
         <p className="demo-desc">
-          当一个组件的状态逻辑变得复杂（包含多个相互关联的子字段，或者多个事件共享更新规则）时，将状态更新提取为<strong>外部纯函数 Reducer</strong> 能让转换逻辑更集中、可审计，并通过统一的 <code>dispatch(action)</code> 驱动变更。
+          当同一份状态存在多条相关更新路径、多个事件共享转换规则，或更新逻辑值得独立测试时，将状态更新提取为
+          <strong>外部纯函数 Reducer</strong> 能让转换规则更集中、可审计，并通过统一的 <code>dispatch(action)</code> 驱动变更。
         </p>
         <div className="demo-meta-tags">
           <span className="badge badge-gray">纯函数 Reducer</span>
           <span className="badge badge-gray">统一 Action 调度 (Dispatch)</span>
-          <span className="badge badge-gray">状态变更轨迹 (State History)</span>
+          <span className="badge badge-gray">部分计数变更历史</span>
         </div>
       </div>
 
@@ -100,7 +101,7 @@ export function StateReducerDemo() {
             <span>🎮</span> 状态转换工作台
           </h3>
           <p className="demo-section-desc">
-            点击操作按钮调度 Action，观察当前计数与历史记录流转。日志时间在事件处理阶段生成并随 action 传入，Reducer 本身保持确定性：
+            点击操作按钮调度 Action，观察当前 count、step 与计数变更历史。日志时间在事件处理阶段生成并随 action 传入，Reducer 只消费输入并保持确定性：
           </p>
         </div>
 
@@ -138,14 +139,14 @@ export function StateReducerDemo() {
               <button
                 className="btn btn-secondary"
                 style={{ flex: 1 }}
-                onClick={() => dispatchAudited("DECREMENT")}
+                onClick={() => dispatchWithTimestamp("DECREMENT")}
               >
                 -{state.step}
               </button>
               <button
                 className="btn btn-primary"
                 style={{ flex: 1 }}
-                onClick={() => dispatchAudited("INCREMENT")}
+                onClick={() => dispatchWithTimestamp("INCREMENT")}
               >
                 +{state.step}
               </button>
@@ -162,23 +163,26 @@ export function StateReducerDemo() {
               </button>
               <button
                 className="btn btn-danger btn-sm"
-                onClick={() => dispatchAudited("RESET")}
+                onClick={() => dispatchWithTimestamp("RESET")}
               >
                 🔄 重置归零
               </button>
             </div>
           </div>
 
-          {/* 右侧：Action 审计流与历史记录 */}
+          {/* 右侧：部分 count 变更历史 */}
           <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
             <h4 style={{ margin: 0, fontSize: "14px", color: "var(--text-main)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <span>Action 流转审计日志</span>
+              <span>计数变更历史</span>
               <span className="badge badge-gray">{state.history.length} 条记录</span>
             </h4>
+            <div style={{ fontSize: "12px", color: "var(--text-subtle)", lineHeight: 1.6 }}>
+              这里仅记录 INCREMENT、DECREMENT、RESET 产生的 count 转换；SET_STEP 不写入历史，UNDO 会消费最近一条记录，因此这不是完整的 action trace。
+            </div>
 
             {state.history.length === 0 ? (
               <div style={{ padding: "32px 16px", textAlign: "center", color: "var(--text-subtle)", background: "var(--bg-surface)", border: "1px dashed var(--border-color)", borderRadius: "var(--radius-sm)", fontSize: "13px" }}>
-                暂无变更记录，点击左侧按钮开始操作
+                暂无计数变更记录，点击左侧加减或重置按钮开始操作
               </div>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: "6px", maxHeight: "240px", overflowY: "auto" }}>

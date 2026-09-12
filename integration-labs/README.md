@@ -19,3 +19,5 @@ cd integration-labs/next-app-router && npm install && npm run dev
 ```
 
 These apps intentionally are not registered in `src/demos/index.js`. The existing playground demos remain concept simulators; these labs are executable integration references.
+
+Chapter checkpoints provide the handoff points: Chapter 09 links to TanStack Query, Chapter 10 links to the React Router Data Router lab, and Chapter 12 links to the Next.js App Router lab. The checkpoint copy keeps the Core Demo model separate from each library/framework runtime.

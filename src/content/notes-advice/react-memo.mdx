@@ -27,16 +27,17 @@ Demo 真实使用三个 `memo` 子组件，并通过 Console `console.count` 比
 
 切换 `theme` 与更新无关父 State 都能直接验证 Note 的核心实验，因此 Gate B 通过。
 
-## 缺失边界 / 反例
+## 已补充边界 / 反例
 
-建议补充一句：`memo` 是优化而非保证，不能把“props 相同”描述成绝对不会执行组件。自定义 `arePropsEqual` 也应比较函数 props，因为函数可能闭包旧 props/state；错误 comparator 会引入 stale closure correctness bug。
+Note 已明确 `memo` 是优化而非保证；props 相同只表示 React 可以跳过一次父驱动的 render，不是组件绝不执行。Note 也补充了 `arePropsEqual` 必须比较 function props，以及忽略函数 prop 可能保留旧闭包并制造 stale closure correctness bug。
 
 ## 清晰度与工程决策
 
 当前工程决策已经足够明确：先 Profiler，再判断是否存在高频相同 props 的昂贵 render，最后再决定手动 memoization。在 Compiler 项目中应先确认编译覆盖与诊断，而不是默认保留手写 memo。
 
-## 建议修改
+## 处理结果
 
-1. 将“props 相同可跳过”保持为“通常/可以跳过”，避免写成语义保证。
-2. 增加 custom comparator 的 stale-closure 风险作为高级边界。
-3. 保留“本仓库未启用 Compiler”的明确说明，避免把官方 Compiler 能力误当成本项目当前运行行为。
+- Note 已将“可以跳过”与“绝不执行”明确区分，并保留性能优化而非 correctness 工具的定位。
+- Note 已补充 function props、旧闭包和 comparator correctness 风险，并明确不鼓励复杂比较器。
+- 已保留“本仓库未启用 Compiler”的 Demo 边界；Demo 未修改。
+- 状态：RESOLVED / CLOSED。

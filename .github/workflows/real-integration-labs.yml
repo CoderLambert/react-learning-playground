@@ -17,6 +17,8 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 24, cache: npm }
       - name: Root install and regression
+        env:
+          VITE_AI_ASSISTANT_URL: http://127.0.0.1:4173/__ai-test__
         run: |
           npm ci
           npm run lint
