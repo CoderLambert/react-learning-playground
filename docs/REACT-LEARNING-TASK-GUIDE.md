@@ -50,8 +50,9 @@
 - 自定义 Hook：`src/hooks/useXxx.js`
 - Demo 统一注册：`src/demos/index.js`
 - Demo 使用到的关键源码必须通过 `?raw` 注册到 `files`，让 `CodeViewer` 可以直接查看
-- 优先复用现有 `.demo-header-card`、`.demo-section`、`.demo-alert`、`.badge`、`.btn` 等样式
-- 没有必要时不要新增全局 CSS
+- 新 Demo 的样式优先使用 Tailwind utilities；可复用的通用交互或展示元素优先复用 `src/components/ui/**` 的 copy-owned primitives
+- `.demo-header-card`、`.demo-section`、`.demo-alert`、`.badge`、`.btn` 等既有 CSS class 仅用于未触及的 legacy surface 或兼容已有 Demo，不是新 UI 的默认方案
+- 没有必要时不要新增全局 CSS；第三方覆盖、Shiki/editor、print、复杂 pseudo-element 和 legacy shell 是允许的 CSS 例外
 - Demo 必须可以独立运行，不依赖用户按照特定顺序操作其他 Demo
 
 ### 1.4 单个任务 Definition of Done

@@ -21,11 +21,14 @@
   "dependencies": {
     "@mdx-js/react": "^3.1.1",
     "ajv": "^8.20.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
     "markstream-react": "^2.0.12",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "shiki": "^4.4.3",
-    "stream-diffs": "^0.0.2"
+    "stream-diffs": "^0.0.2",
+    "tailwind-merge": "^2.6.0"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",

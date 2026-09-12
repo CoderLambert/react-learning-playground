@@ -2,6 +2,8 @@ import { Badge } from "../../components/ui/badge.jsx";
 import { Button } from "../../components/ui/button.jsx";
 import { Card, CardContent, CardHeader } from "../../components/ui/card.jsx";
 import { Progress } from "../../components/ui/progress.jsx";
+import MarkdownRender from "markstream-react";
+import "markstream-react/index.css";
 import { QuestionRenderer } from "./QuestionRenderer.jsx";
 import { deriveAssessmentView, formatAssessmentProgress } from "./assessmentViewModel.js";
 
@@ -163,25 +165,29 @@ export function AssessmentPane({
               role="status"
               aria-live="polite"
               className={view.feedback.correct
-                ? "rounded-lg border border-[var(--color-success-border)] bg-[var(--color-success-light)] p-4"
-                : "rounded-lg border border-[var(--color-danger-border)] bg-[var(--color-danger-light)] p-4"}
+                ? "rounded-xl border border-[var(--color-success-border)] bg-[var(--color-success-light)] p-4"
+                : "rounded-xl border border-[var(--color-danger-border)] bg-[var(--color-danger-light)] p-4"}
             >
               <div className="flex items-start gap-3">
                 <span
                   className={view.feedback.correct
-                    ? "flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--color-success)] text-sm font-bold text-white"
-                    : "flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--color-danger)] text-sm font-bold text-white"}
+                    ? "mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--color-success)] text-sm font-bold text-white shadow-sm"
+                    : "mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--color-danger)] text-sm font-bold text-white shadow-sm"}
                   aria-hidden="true"
                 >
-                  {view.feedback.correct ? "✓" : "×"}
+                  {view.feedback.correct ? "✓" : "✕"}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <strong className={view.feedback.correct ? "text-sm text-[var(--color-success-text)]" : "text-sm text-[var(--color-danger-text)]"}>
+                  <strong className={view.feedback.correct ? "text-sm font-bold text-[var(--color-success-text)]" : "text-sm font-bold text-[var(--color-danger-text)]"}>
                     {view.feedback.correct ? "回答正确" : "再想一想"}
                   </strong>
-                  <p id={`${question.id}-explanation`} className="mt-1.5 mb-0 text-sm leading-6 text-[var(--text-main)]">
-                    {view.feedback.explanation ?? question.content.explanation}
-                  </p>
+                  <div id={`${question.id}-explanation`} className="mt-2 text-sm leading-6 text-[var(--text-main)]">
+                    <MarkdownRender
+                      content={view.feedback.explanation ?? question.content.explanation ?? ""}
+                      final
+                      htmlPolicy="escape"
+                    />
+                  </div>
                 </div>
               </div>
 
