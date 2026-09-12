@@ -43,7 +43,7 @@ function QuestionEditor({ item, onSave, onCancel }) {
   );
 }
 
-function ManagedItem({ item, onEdit, onHide, onRestore, onDelete, onDuplicate, onMove }) {
+function ManagedItem({ item, onEdit, onHide, onRestoreDefault, onDelete, onDuplicate, onMove }) {
   const [editing, setEditing] = useState(false);
   return (
     <li data-question-id={item.id} style={{ marginBottom: 12 }}>
@@ -65,7 +65,7 @@ function ManagedItem({ item, onEdit, onHide, onRestore, onDelete, onDuplicate, o
             {item.origin === "builtin" ? (
               <>
                 <button type="button" style={actionButtonStyle} onClick={() => onHide(item)}>从评测中移除</button>
-                {item.customized ? <button type="button" style={actionButtonStyle} onClick={() => onRestore(item)}>恢复默认</button> : null}
+                {item.customized ? <button type="button" style={actionButtonStyle} onClick={() => onRestoreDefault(item)}>恢复课程默认</button> : null}
               </>
             ) : (
               <>
@@ -81,7 +81,7 @@ function ManagedItem({ item, onEdit, onHide, onRestore, onDelete, onDuplicate, o
   );
 }
 
-function ManagedList({ items, hiddenItems, onEdit, onHide, onRestore, onDelete, onDuplicate, onMove }) {
+function ManagedList({ items, hiddenItems, onEdit, onHide, onUnhide, onRestoreDefault, onDelete, onDuplicate, onMove }) {
   const visible = items.filter((item) => !item.hidden);
   return (
     <>
@@ -93,7 +93,7 @@ function ManagedList({ items, hiddenItems, onEdit, onHide, onRestore, onDelete, 
               item={item}
               onEdit={onEdit}
               onHide={onHide}
-              onRestore={onRestore}
+              onRestoreDefault={onRestoreDefault}
               onDelete={onDelete}
               onDuplicate={onDuplicate}
               onMove={onMove}
@@ -109,7 +109,8 @@ function ManagedList({ items, hiddenItems, onEdit, onHide, onRestore, onDelete, 
             {hiddenItems.map((item) => (
               <li key={item.id} style={{ marginTop: 8 }}>
                 <span>{item.prompt}</span>{" "}
-                <button type="button" style={actionButtonStyle} onClick={() => onRestore(item)}>恢复</button>
+                <button type="button" style={actionButtonStyle} onClick={() => onUnhide(item)}>恢复显示</button>{" "}
+                {item.customized ? <button type="button" style={actionButtonStyle} onClick={() => onRestoreDefault(item)}>恢复课程默认</button> : null}
               </li>
             ))}
           </ul>
@@ -161,41 +162,59 @@ export function ChapterCheckpoint({ chapter }) {
   const repository = useMemo(() => createQuestionBankRepository(), []);
   const [revision, setRevision] = useState(0);
   const [feedback, setFeedback] = useState("");
-  const [lastHiddenId, setLastHiddenId] = useState(null);
+  const [undoState, setUndoState] = useState(null);
   const checkpoint = useMemo(() => repository.resolveChapter(chapter), [repository, chapter, revision]);
   if (!checkpoint) return null;
 
   const nextStep = getChapterNextStep(chapter);
   const integrationLab = getIntegrationLab(chapter);
-  const refresh = (message) => {
+  const refresh = (message, undo = null) => {
     setRevision((value) => value + 1);
     setFeedback(message);
+    setUndoState(undo);
   };
-  const commit = (operation, successMessage) => {
+  const commit = (operation, successMessage, undo = null) => {
     try {
       operation();
-      refresh(successMessage);
+      refresh(successMessage, undo);
+      return true;
     } catch {
       setFeedback("保存失败，请检查浏览器存储权限后重试。");
+      setUndoState(null);
+      return false;
     }
   };
   const edit = (item, prompt) => commit(
     () => item.origin === "builtin" ? repository.setBuiltinPrompt(item.id, prompt) : repository.updateCustom(item.id, { prompt }),
     "题目已保存。",
   );
-  const hide = (item) => commit(() => {
-    repository.setBuiltinHidden(item.id, true);
-    setLastHiddenId(item.id);
-  }, "题目已从本章评测中移除，可撤销。");
-  const restore = (item) => commit(() => repository.restoreBuiltin(item.id), "已恢复课程默认题目。");
-  const removeCustom = (item) => commit(() => repository.deleteCustom(item.id), "自定义题已删除。");
+  const hide = (item) => commit(
+    () => repository.setBuiltinHidden(item.id, true),
+    "题目已从本章评测中移除，可撤销。",
+    { type: "unhide", questionId: item.id },
+  );
+  const unhide = (item) => commit(() => repository.setBuiltinHidden(item.id, false), "题目已恢复显示。");
+  const restoreDefault = (item) => commit(() => repository.restoreBuiltin(item.id), "已恢复课程默认题目。");
+  const removeCustom = (item) => commit(
+    () => repository.deleteCustom(item.id),
+    "自定义题已删除，可撤销。",
+    { type: "restore-custom", item },
+  );
   const add = ({ kind, prompt }) => commit(() => repository.addCustom({ chapter, kind, prompt }), "自定义题已添加。");
   const duplicate = (item) => commit(() => repository.duplicate(item), "已创建题目副本，可继续编辑。");
-  const move = (item, direction) => commit(() => repository.moveCustom(item.id, direction), direction === "up" ? "题目已上移。" : "题目已下移。");
-  const undoHide = () => {
-    if (!lastHiddenId) return;
-    commit(() => repository.setBuiltinHidden(lastHiddenId, false), "已撤销移除。");
-    setLastHiddenId(null);
+  const move = (item, direction) => commit(
+    () => repository.moveCustom(item.id, direction),
+    direction === "up" ? "已尝试将题目上移。" : "已尝试将题目下移。",
+  );
+  const undo = () => {
+    if (!undoState) return;
+    if (undoState.type === "unhide") {
+      commit(() => repository.setBuiltinHidden(undoState.questionId, false), "已撤销移除。");
+      return;
+    }
+    if (undoState.type === "restore-custom") {
+      commit(() => repository.restoreCustom(undoState.item), "已恢复自定义题。");
+    }
   };
 
   const hiddenQuestions = checkpoint.questions.filter((item) => item.hidden);
@@ -203,7 +222,8 @@ export function ChapterCheckpoint({ chapter }) {
   const listProps = {
     onEdit: edit,
     onHide: hide,
-    onRestore: restore,
+    onUnhide: unhide,
+    onRestoreDefault: restoreDefault,
     onDelete: removeCustom,
     onDuplicate: duplicate,
     onMove: move,
@@ -219,7 +239,7 @@ export function ChapterCheckpoint({ chapter }) {
       {feedback ? (
         <div role="status" className="demo-alert demo-alert-info" style={{ margin: "0 0 12px" }}>
           <span>{feedback}</span>
-          {lastHiddenId ? <>{" "}<button type="button" style={actionButtonStyle} onClick={undoHide}>撤销</button></> : null}
+          {undoState ? <>{" "}<button type="button" style={actionButtonStyle} onClick={undo}>撤销</button></> : null}
         </div>
       ) : null}
 
