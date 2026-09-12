@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { LEARNING_ACTION_EVENT } from "../learning-actions/learningActions.js";
 import { INSPECTOR_TABS } from "./constants";
 import {
   clampInspectorWidth,
@@ -31,6 +32,19 @@ export function usePersistedWorkbenchState({
   useEffect(() => {
     persistWorkbenchState(resolvedState, { storage, viewportWidth });
   }, [resolvedState, storage, viewportWidth]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    const handleLearningAction = () => {
+      setState((current) => ({
+        ...current,
+        inspectorOpen: true,
+        inspectorTab: "ai",
+      }));
+    };
+    window.addEventListener(LEARNING_ACTION_EVENT, handleLearningAction);
+    return () => window.removeEventListener(LEARNING_ACTION_EVENT, handleLearningAction);
+  }, []);
 
   const setNavigationCollapsed = useCallback((value) => {
     setState((current) => ({
