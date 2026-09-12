@@ -37,6 +37,11 @@ This queue does not duplicate those files.
    - Note/Demo/Source now agree that this path ends the Action without updating canonical state, causing the optimistic projection to disappear.
    - True Action throw / Error Boundary handling is explicitly separated as another error path instead of being implied by the rejection simulation.
 
+4. `context-propagation.mdx` — Gate B **FAIL → PASS**.
+   - Removed button-handler-maintained render predictions.
+   - Consumer, memo Consumer, and memo Non-consumer now count executions at the component-function execution point.
+   - The experiment now cleanly separates parent local-state re-rendering from Context value changes, while documenting Strict Mode and whole-value identity/selector boundaries.
+
 ## Previously resolved concrete repository issues
 
 - Real URL/History state and `popstate` behavior in `UrlStateDemo`.
@@ -52,13 +57,12 @@ This queue does not duplicate those files.
 
 ## Current gate state for audited lessons
 
-Resolved to full PASS in this queue include: `multi-slots`, `conditional-rendering`, `external-store`, `use-effect-correct-usage`, `advanced-ref`, `form-data-modeling`, `render-vs-dom-update`, `profiler`, and `optimistic-update`, in addition to lessons already passing at first audit.
+Resolved to full PASS in this queue include: `multi-slots`, `conditional-rendering`, `external-store`, `use-effect-correct-usage`, `advanced-ref`, `form-data-modeling`, `render-vs-dom-update`, `profiler`, `optimistic-update`, and `context-propagation`, in addition to lessons already passing at first audit.
 
 Material findings still open and safe for this queue to address, subject to rechecking ownership before each change:
 
 - `immutable-state`: Note promises executable mutation-vs-copy comparison, but Demo has no runnable mutation counterexample.
 - `render-commit`: Note promises render logs/component execution observation that the Demo does not expose; `requestAnimationFrame` is a browser-frame API, not React commit instrumentation.
-- `context-propagation`: Note describes real render logs while Demo counters are manually advanced predictions.
 - `use-reduce-with-context`: only the split-Context implementation is interactive; the single-Context side is static code.
 - `not-need-effect`: Note promises executable Effect-derived-state vs render-derived-state comparison; bad path is static code only.
 - `lifecycle-of-reactive-effects`: Demo still does not instrument real cleanup/setup order or the functional-updater dependency-removal case.
