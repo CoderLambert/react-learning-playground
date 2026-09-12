@@ -47,6 +47,26 @@ export async function createAssessmentRuntime({
     registry.register(definition);
   }
   const toolExecutor = new ToolExecutor({ registry, policy: new ToolPolicy() });
+  const sessionLifecycle = Object.freeze({
+    async start({ learningUnitId }) {
+      return service.startSession({ trusted: { learningUnitId } });
+    },
+    async submit({ learningUnitId, sessionId, questionId, answer }) {
+      const attempt = await service.submitAnswer({
+        trusted: { learningUnitId }, sessionId, questionId, answer,
+      });
+      const session = await repository.getSession({ learningUnitId, sessionId });
+      return { attempt, session };
+    },
+    async recover({ learningUnitId }) {
+      const [session] = await repository.listSessions({ learningUnitId, status: "in_progress" });
+      if (!session) return null;
+      const attempts = await repository.listAttempts({ sessionId: session.id });
+      const answeredQuestionIds = new Set(attempts.map((attempt) => attempt.questionId));
+      const currentIndex = Math.max(0, session.items.findIndex((item) => !answeredQuestionIds.has(item.questionId)));
+      return { session, attempts, currentIndex };
+    },
+  });
 
   return Object.freeze({
     mode: repository.mode,
@@ -56,6 +76,7 @@ export async function createAssessmentRuntime({
     service,
     registry,
     toolExecutor,
+    sessionLifecycle,
     createAgentRunner(modelClient, options = {}) {
       return new AgentRunner({
         modelClient: assertModelClient(modelClient),

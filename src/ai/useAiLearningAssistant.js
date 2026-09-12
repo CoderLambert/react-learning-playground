@@ -21,6 +21,7 @@ import {
 } from "./learningAssistantContext.js";
 import { createUnicodeOutputLimiter } from "./outputLimit.js";
 import { createToolExecutionContext } from "./agent/agentContracts.js";
+import { createAgentRunStore } from "./agent/agentRunStore.js";
 import { MODEL_TURN_EVENT_TYPES } from "./providers/modelClient.js";
 
 const GATEWAY_TRANSPORT_INPUT_CAP_TOKENS = 24 * 1024;
@@ -67,12 +68,6 @@ function buildAgentMessages({ question, context, history = [] }) {
   ];
 }
 
-function shouldUseAssessmentAgent(question) {
-  const normalized = String(question ?? "");
-  return /assessment_(?:list|create|update|retire)_questions?/i.test(normalized)
-    || /(?:出题|评测题|测验题|练习题)/.test(normalized);
-}
-
 export function useAiLearningAssistant({ learningUnit, activeSourceFile, assessmentRuntime = null } = {}) {
   const [chatState, dispatch] = useReducer(chatReducer, INITIAL_CHAT_STATE);
   const [inputValue, setInputValue] = useState("");
@@ -92,6 +87,8 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile, assessm
   const [compacting, setCompacting] = useState(false);
   const [compactionNotice, setCompactionNotice] = useState(null);
   const [contextSelectionNotice, setContextSelectionNotice] = useState(null);
+  const [mode, setMode] = useState("chat");
+  const [agentAuditStore, setAgentAuditStore] = useState(null);
   const abortControllerRef = useRef(null);
   const activeRequestIdRef = useRef(null);
   const compactionPromiseRef = useRef(null);
@@ -103,9 +100,9 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile, assessm
   }), [deepSeekSettings.apiKey, deepSeekSettings.model]);
   const client = directClient.configured ? directClient : gatewayClient;
   const agentRunner = useMemo(() => {
-    if (!assessmentRuntime?.createAgentRunner || typeof client?.streamTurn !== "function") return null;
-    return assessmentRuntime.createAgentRunner(client);
-  }, [assessmentRuntime, client]);
+    if (!assessmentRuntime?.createAgentRunner || !agentAuditStore || typeof client?.streamTurn !== "function") return null;
+    return assessmentRuntime.createAgentRunner(client, { auditStore: agentAuditStore });
+  }, [agentAuditStore, assessmentRuntime, client]);
   const connectionMode = directClient.configured
     ? "browser"
     : gatewayClient.configured
@@ -132,6 +129,20 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile, assessm
       setRepository(repo);
       setConversationStorage({ mode: store.mode, reason: store.fallbackReason ?? null });
       setConversations(await repo.listConversations({ includeArchived: true }));
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    void createAgentRunStore().then(async (store) => {
+      await store.recoverInterruptedRuns();
+      if (!cancelled) setAgentAuditStore(store);
+    }).catch(() => {
+      // createAgentRunStore normally supplies a Memory fallback. If a custom
+      // browser blocks even that initialization, chat remains available and
+      // assessment authoring is simply unavailable until the next load.
+      if (!cancelled) setAgentAuditStore(null);
     });
     return () => { cancelled = true; };
   }, []);
@@ -639,10 +650,9 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile, assessm
         assertCurrentRequest();
       }
 
-      // Keep the established chat transport for ordinary conversation. The
-      // AgentRunner is opt-in for assessment requests so existing chat,
-      // citation, compaction, and abort flows retain their wire contract.
-      if (agentRunner && shouldUseAssessmentAgent(normalizedQuestion)) {
+      // Capability is explicit UI/runtime state, never inferred from natural
+      // language. Ordinary chat continues through the no-tools transport.
+      if (mode === "assessment_authoring" && agentRunner) {
         const agentContext = createToolExecutionContext({
           learningUnitId,
           conversationId: conversation?.id ?? `conversation-${requestId}`,
@@ -660,6 +670,10 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile, assessm
           }),
           context: agentContext,
           signal: controller.signal,
+          // Provider wire contracts deliberately only distinguish chat and
+          // compaction. Capability selection happened above; this remains a
+          // normal tool-enabled chat turn on both direct and gateway clients.
+          purpose: "chat",
           onEvent(event) {
             if (activeRequestIdRef.current !== requestId) return;
             if (event.type === MODEL_TURN_EVENT_TYPES.TURN_START) {
@@ -763,7 +777,7 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile, assessm
         abortControllerRef.current = null;
       }
     }
-  }, [activeSourceFile, agentRunner, aiContext, chatState.messages, client, compactContext, compactedMessageCount, completedHistory, connectionMode, contextModelId, ensureConversation, lastActualUsage, learningUnitId, messagesSinceCompaction, noteState.loading, refreshConversations, repository, requestContext, summaryText]);
+  }, [activeSourceFile, agentRunner, aiContext, chatState.messages, client, compactContext, compactedMessageCount, completedHistory, connectionMode, contextModelId, ensureConversation, lastActualUsage, learningUnitId, messagesSinceCompaction, mode, noteState.loading, refreshConversations, repository, requestContext, summaryText]);
 
   useEffect(() => () => abortControllerRef.current?.abort(), []);
 
@@ -791,6 +805,9 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile, assessm
   if (conversationStorage.mode === "memory") {
     noticeParts.push("浏览器本地持久化不可用，本次会话仅保存在内存中。");
   }
+  if (mode === "assessment_authoring" && !agentRunner) {
+    noticeParts.push("正在初始化评测工具审计存储…");
+  }
 
   return {
     configured: client.configured,
@@ -805,6 +822,9 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile, assessm
     conversations: visibleConversations,
     conversationHistory: conversations,
     conversationStorage,
+    mode,
+    enterAssessmentAuthoring: () => setMode("assessment_authoring"),
+    exitAssessmentAuthoring: () => setMode("chat"),
     learningUnitId,
     activeConversationId,
     selectConversation: hydrateConversation,
@@ -817,7 +837,8 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile, assessm
     status: chatState.status,
     error: noteState.error?.message || chatState.error,
     notice: noticeParts.filter(Boolean).join(" ") || null,
-    disabled: !client.configured || !contextReady || chatState.status === CHAT_STATUS.STREAMING,
+    disabled: !client.configured || !contextReady || chatState.status === CHAT_STATUS.STREAMING ||
+      (mode === "assessment_authoring" && !agentRunner),
     settingsDisabled: chatState.status === CHAT_STATUS.STREAMING,
     saveConnectionSettings,
     clearConnectionSettings,

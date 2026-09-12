@@ -69,12 +69,31 @@ async function installAssessmentModelMock(page) {
     const body = route.request().postDataJSON();
     requests.push(body);
     const usedTool = body.messages.some((message) => message.role === "tool");
+    const isQuestionMutation = body.messages.some((message) => (
+      message.role === "user" && typeof message.content === "string" && message.content.includes("修改当前评测题")
+    ));
+    let response;
+    if (!usedTool) {
+      response = isQuestionMutation
+        ? toolTurn("assessment_list_questions", {})
+        : toolTurn("assessment_create_questions", { questions: QUESTIONS });
+    } else if (isQuestionMutation) {
+      const latestToolResult = body.messages.filter((message) => message.role === "tool").at(-1);
+      const listed = JSON.parse(latestToolResult.content);
+      response = Array.isArray(listed)
+        ? toolTurn("assessment_update_question", {
+            questionId: listed[0].id,
+            expectedRevision: listed[0].revision,
+            patch: { content: { prompt: "Mutated question-bank prompt" } },
+          }, "assessment-update")
+        : textTurn("Mock model completed assessment_update_question.");
+    } else {
+      response = textTurn("Mock model completed assessment_create_questions.");
+    }
     await route.fulfill({
       status: 200,
       contentType: "text/event-stream",
-      body: usedTool
-        ? textTurn("Mock model completed assessment_create_questions.")
-        : toolTurn("assessment_create_questions", { questions: QUESTIONS }),
+      body: response,
     });
   });
   return requests;
@@ -103,7 +122,26 @@ async function readAssessmentDb(page) {
 }
 
 test.describe("Assessment Product Lifecycle E2E", () => {
-  test("AI create is reactive, persists across reload, grades answers, and opens evidence", async ({ page }, testInfo) => {
+  test("ordinary chat never receives assessment command tools", async ({ page }) => {
+    const requests = [];
+    await page.addInitScript(({ storageKey }) => {
+      sessionStorage.setItem(storageKey, "test-only-not-a-real-secret");
+    }, { storageKey: ASSESSMENT_STORAGE_KEY });
+    await page.route(DEEPSEEK_ENDPOINT, async (route) => {
+      requests.push(route.request().postDataJSON());
+      await route.fulfill({ status: 200, contentType: "text/event-stream", body: textTurn("Plain chat response.") });
+    });
+    await page.goto("./?demo=props");
+    await page.getByRole("tab", { name: "AI", exact: true }).click();
+    await page.getByRole("textbox", { name: "向 AI 助手提问" }).fill("解释当前 Props 示例");
+    await page.getByRole("button", { name: "发送" }).click();
+    await expect(page.getByText("Plain chat response.", { exact: true })).toBeVisible();
+
+    expect(requests).toHaveLength(1);
+    expect(requests[0].tools ?? []).toEqual([]);
+  });
+
+  test("AI create persists a recoverable snapshot session and completes after reload", async ({ page }, testInfo) => {
     const requests = await installAssessmentModelMock(page);
     await page.goto("./?demo=props");
     await page.getByRole("tab", { name: "评测", exact: true }).click();
@@ -136,20 +174,39 @@ test.describe("Assessment Product Lifecycle E2E", () => {
       await expect(page.locator('[data-source-file="PropsBasicsDemo.jsx"]')).toHaveAttribute("data-source-focus", "1-2");
       await expect(page.locator('[data-source-line="1"][data-highlighted="true"]')).toBeVisible();
       await expect(page.locator('[data-source-line="2"][data-highlighted="true"]')).toBeVisible();
-
-      await page.getByRole("tab", { name: "评测", exact: true }).click();
-      await assessment.getByRole("button", { name: "下一题" }).click();
-      await assessment.getByLabel("正确", { exact: true }).check();
-      await assessment.getByRole("button", { name: "提交答案" }).click();
-      await expect(assessment.getByText("回答正确", { exact: true })).toBeVisible();
-      await expect(assessment.getByText(QUESTIONS[1].content.explanation, { exact: true })).toBeVisible();
     } else {
       await assessment.getByLabel("错误", { exact: true }).check();
       await assessment.getByRole("button", { name: "提交答案" }).click();
       await expect(assessment.getByText("再想一想", { exact: true })).toBeVisible();
       await expect(assessment.getByText(QUESTIONS[1].content.explanation, { exact: true })).toBeVisible();
+    }
 
-      await assessment.getByRole("button", { name: "下一题" }).click();
+    const beforeReload = await readAssessmentDb(page);
+    expect(requests).toHaveLength(2);
+    expect(requests[0].tools.map((tool) => tool.function.name)).toContain("assessment_create_questions");
+    expect(beforeReload.questions).toHaveLength(2);
+    expect(beforeReload.sessions).toHaveLength(1);
+    expect(beforeReload.sessions[0].status).toBe("in_progress");
+    expect(beforeReload.attempts).toHaveLength(1);
+
+    await page.getByRole("tab", { name: "AI", exact: true }).click();
+    await page.getByRole("textbox", { name: "向 AI 助手提问" }).fill("请修改当前评测题");
+    await page.getByRole("button", { name: "发送" }).click();
+    await expect(page.getByText("Mock model completed assessment_update_question.", { exact: true })).toBeVisible();
+    const afterQuestionMutation = await readAssessmentDb(page);
+    expect(afterQuestionMutation.questions.some((question) => question.content.prompt === "Mutated question-bank prompt")).toBe(true);
+    expect(afterQuestionMutation.sessions[0].items).toEqual(beforeReload.sessions[0].items);
+
+    await page.reload();
+    await page.getByRole("tab", { name: "评测", exact: true }).click();
+    await expect(assessment.getByLabel("评测进度 2 / 2")).toBeVisible();
+
+    if (firstIsChoice) {
+      await assessment.getByLabel("正确", { exact: true }).check();
+      await assessment.getByRole("button", { name: "提交答案" }).click();
+      await expect(assessment.getByText("回答正确", { exact: true })).toBeVisible();
+      await expect(assessment.getByText(QUESTIONS[1].content.explanation, { exact: true })).toBeVisible();
+    } else {
       await assessment.getByLabel("Props", { exact: true }).check();
       await assessment.getByRole("button", { name: "提交答案" }).click();
       await expect(assessment.getByText("回答正确", { exact: true })).toBeVisible();
@@ -161,32 +218,31 @@ test.describe("Assessment Product Lifecycle E2E", () => {
       await expect(page.locator('[data-source-line="2"][data-highlighted="true"]')).toBeVisible();
     }
 
-    const beforeReload = await readAssessmentDb(page);
-    expect(requests).toHaveLength(2);
-    expect(requests[0].tools.map((tool) => tool.function.name)).toContain("assessment_create_questions");
-    expect(beforeReload.questions).toHaveLength(2);
-    expect(beforeReload.sessions).toHaveLength(1);
-    expect(beforeReload.attempts).toHaveLength(2);
-
-    await page.reload();
-    await page.getByRole("tab", { name: "评测", exact: true }).click();
-    await expect(page.locator("#learning-inspector-panel-assessment").getByRole("button", { name: "开始测试" })).toBeEnabled();
     const afterReload = await readAssessmentDb(page);
-    expect(afterReload.questions.map((question) => question.content.prompt)).toEqual(
-      expect.arrayContaining(QUESTIONS.map((question) => question.content.prompt)),
-    );
+    expect(afterReload.sessions[0].status).toBe("completed");
+    expect(afterReload.sessions[0].completedAt).toBeTruthy();
+    expect(afterReload.attempts).toHaveLength(2);
+    expect(afterReload.sessions[0].items).toEqual(beforeReload.sessions[0].items);
+    expect(afterReload.questions).toHaveLength(2);
+    expect(afterReload.questions.some((question) => question.content.prompt === "Mutated question-bank prompt")).toBe(true);
+    expect(requests).toHaveLength(5);
 
     await testInfo.attach("assessment-lifecycle-evidence.json", {
       body: JSON.stringify({
-        scenario: "create → tool → service → repository → query store/UI → reload → session attempts → evidence",
+        scenario: "create → tool → service → repository → first attempt → reload recovery from snapshot → completion → evidence",
         gatewayRequests: requests.length,
         tool: requests[0].tools.find((item) => item.function.name === "assessment_create_questions")?.function.name,
         persistedBeforeReload: {
           questions: beforeReload.questions.length,
           sessions: beforeReload.sessions.length,
           attempts: beforeReload.attempts.length,
+          sessionStatus: beforeReload.sessions[0].status,
         },
-        persistedAfterReload: { questions: afterReload.questions.length },
+        persistedAfterReload: {
+          questions: afterReload.questions.length,
+          attempts: afterReload.attempts.length,
+          sessionStatus: afterReload.sessions[0].status,
+        },
         evidence: "PropsBasicsDemo.jsx L1-L2 highlighted in Source inspector",
       }, null, 2),
       contentType: "application/json",

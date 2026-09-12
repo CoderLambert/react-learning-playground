@@ -10,6 +10,7 @@ import { ConversationHistory } from "./components/ai-assistant/conversations/Con
 import { LearningInspector } from "./components/learning-inspector";
 import { AssessmentPane } from "./assessment/ui/AssessmentPane.jsx";
 import { createAssessmentRuntime } from "./assessment/composition/assessmentRuntime.js";
+import { createLearningUnitEvidenceResolver } from "./assessment/composition/learningUnitEvidenceResolver.js";
 import { NoteToc } from "./components/notes/NoteToc";
 import { NoteViewer } from "./components/notes/NoteViewer";
 import { MDX_TEACHING_COMPONENTS } from "./components/mdx";
@@ -63,6 +64,13 @@ export default function App() {
     () => (currentDemo ? enrichLearningUnitSourceSemantics(toLearningUnit(currentDemo)) : null),
     [currentDemo],
   );
+  const learningUnitsById = useMemo(
+    () => new Map(demos.map((demo) => {
+      const unit = enrichLearningUnitSourceSemantics(toLearningUnit(demo));
+      return [unit.id, unit];
+    })),
+    [],
+  );
   const currentCategory = useMemo(() => CATEGORIES.find((category) => category.id === currentDemo?.category), [currentDemo]);
   const currentCheckpointChapter = currentDemo ? getCheckpointChapter(currentDemo.id) : null;
   const [assessmentRuntime, setAssessmentRuntime] = useState(null);
@@ -79,13 +87,16 @@ export default function App() {
 
   useEffect(() => {
     let cancelled = false;
-    void createAssessmentRuntime().then((runtime) => {
+    const evidenceResolver = createLearningUnitEvidenceResolver({
+      getLearningUnit: (learningUnitId) => learningUnitsById.get(learningUnitId) ?? null,
+    });
+    void createAssessmentRuntime({ evidenceResolver }).then((runtime) => {
       if (!cancelled) setAssessmentRuntime(runtime);
     });
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [learningUnitsById]);
 
   const aiAssistant = useAiLearningAssistant({
     learningUnit: currentLearningUnit,
@@ -103,16 +114,26 @@ export default function App() {
   }, [currentDemo?.id, setSourceFile]);
 
   useEffect(() => {
-    setAssessmentSession(null);
-    setAssessmentIndex(0);
-    setAssessmentAnswer(null);
-    setAssessmentFeedback(null);
     if (!assessmentRuntime || !currentLearningUnit?.id) return undefined;
 
     let cancelled = false;
     const learningUnitId = currentLearningUnit.id;
-    void assessmentRuntime.service.listQuestions({ trusted: { learningUnitId } }).then((questions) => {
-      if (!cancelled) assessmentRuntime.queryStore.replaceSnapshot({ learningUnitId, questions });
+    setAssessmentSession(null);
+    setAssessmentIndex(0);
+    setAssessmentAnswer(null);
+    setAssessmentFeedback(null);
+    void Promise.all([
+      assessmentRuntime.service.listQuestions({ trusted: { learningUnitId } }),
+      assessmentRuntime.sessionLifecycle.recover({ learningUnitId }),
+    ]).then(([questions, recovered]) => {
+      if (cancelled) return;
+      assessmentRuntime.queryStore.replaceSnapshot({ learningUnitId, questions });
+      if (recovered) {
+        setAssessmentSession(recovered.session);
+        setAssessmentIndex(recovered.currentIndex);
+      }
+    }).catch((error) => {
+      if (!cancelled) setAssessmentFeedback({ correct: false, explanation: error?.message || "无法恢复评测" });
     });
     return () => {
       cancelled = true;
@@ -173,9 +194,7 @@ export default function App() {
   const handleAssessmentStart = async () => {
     if (!assessmentRuntime || !currentLearningUnit?.id || !assessmentQuestions.length) return;
     try {
-      const session = await assessmentRuntime.service.startSession({
-        trusted: { learningUnitId: currentLearningUnit.id },
-      });
+      const session = await assessmentRuntime.sessionLifecycle.start({ learningUnitId: currentLearningUnit.id });
       setAssessmentSession(session);
       setAssessmentIndex(0);
       setAssessmentAnswer(null);
@@ -189,12 +208,13 @@ export default function App() {
     if (!assessmentRuntime || !assessmentSession || !currentLearningUnit?.id || assessmentSubmitting) return;
     setAssessmentSubmitting(true);
     try {
-      const attempt = await assessmentRuntime.service.submitAnswer({
-        trusted: { learningUnitId: currentLearningUnit.id },
+      const { attempt, session } = await assessmentRuntime.sessionLifecycle.submit({
+        learningUnitId: currentLearningUnit.id,
         sessionId: assessmentSession.id,
         questionId,
         answer,
       });
+      setAssessmentSession(session);
       const item = assessmentSession.items.find((candidate) => candidate.questionId === questionId);
       setAssessmentFeedback({
         correct: attempt.correct,
@@ -217,6 +237,7 @@ export default function App() {
   const handleAssessmentRequestAi = () => {
     setInspectorOpen(true);
     setInspectorTab("ai");
+    aiAssistant.enterAssessmentAuthoring();
     aiAssistant.setInputValue("请为当前知识点生成一组可直接作答的评测题，并使用 assessment_create_questions 工具。不要自动发送。");
   };
 
@@ -418,7 +439,16 @@ export default function App() {
         </Suspense>
       )}
       ai={(
-        <AiAssistant
+        <div>
+          {aiAssistant.mode === "assessment_authoring" && (
+            <div role="status" className="ai-assessment-mode-notice">
+              当前处于评测出题/管理模式；本次发送可使用评测工具。
+              <button type="button" onClick={aiAssistant.exitAssessmentAuthoring} disabled={aiAssistant.status === "streaming"}>
+                退出评测模式
+              </button>
+            </div>
+          )}
+          <AiAssistant
           contextSummary={aiAssistant.contextSummary}
           messages={aiAssistant.messages}
           status={aiAssistant.status}
@@ -441,7 +471,8 @@ export default function App() {
               disabled={!aiAssistant.configured || aiAssistant.messages.length === 0}
             />
           )}
-        />
+          />
+        </div>
       )}
       assessment={(
         <div className="assessment-pane-shell">
