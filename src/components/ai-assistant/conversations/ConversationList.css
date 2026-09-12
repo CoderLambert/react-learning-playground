@@ -19,7 +19,8 @@
 }
 
 .ai-conversation-list__header button,
-.ai-conversation-list__actions button {
+.ai-conversation-list__actions button,
+.ai-conversation-list__export > summary {
   border: 1px solid var(--border-color, #d9dee7);
   border-radius: 8px;
   background: var(--surface, #fff);
@@ -77,7 +78,7 @@
   cursor: default;
 }
 
-.ai-conversation-list__select span {
+.ai-conversation-list__select > span:not(.ai-conversation-list__snippet) {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -88,16 +89,66 @@
   font-size: 11px;
 }
 
+.ai-conversation-list__snippet {
+  display: -webkit-box;
+  overflow: hidden;
+  margin-top: 4px;
+  color: var(--text-secondary, #667085);
+  font-size: 11px;
+  line-height: 1.45;
+  white-space: normal;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
 .ai-conversation-list__actions {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 4px;
   padding-inline: 7px;
 }
 
-.ai-conversation-list__actions button {
+.ai-conversation-list__actions button,
+.ai-conversation-list__export > summary {
   padding: 3px 6px;
   font-size: 11px;
+}
+
+.ai-conversation-list__export {
+  position: relative;
+}
+
+.ai-conversation-list__export > summary {
+  list-style: none;
+}
+
+.ai-conversation-list__export > summary::-webkit-details-marker {
+  display: none;
+}
+
+.ai-conversation-list__export[open] > summary {
+  border-color: var(--accent-color, #6d5dfc);
+}
+
+.ai-conversation-list__export > div {
+  position: absolute;
+  z-index: 5;
+  top: calc(100% + 4px);
+  left: 0;
+  display: grid;
+  min-width: 108px;
+  gap: 4px;
+  padding: 5px;
+  border: 1px solid var(--border-color, #d9dee7);
+  border-radius: 8px;
+  background: var(--surface, #fff);
+  box-shadow: var(--shadow-md, 0 8px 24px rgb(0 0 0 / 12%));
+}
+
+.ai-conversation-list__export > div button {
+  width: 100%;
+  text-align: left;
 }
 
 .ai-conversation-list__rename input {
@@ -111,7 +162,8 @@
 }
 
 .ai-conversation-list button:focus-visible,
-.ai-conversation-list input:focus-visible {
+.ai-conversation-list input:focus-visible,
+.ai-conversation-list summary:focus-visible {
   outline: 2px solid var(--accent-color, #6d5dfc);
   outline-offset: 2px;
 }
@@ -120,4 +172,16 @@
 .ai-conversation-list input:disabled {
   cursor: not-allowed;
   opacity: 0.55;
+}
+
+@media (max-width: 640px) {
+  .ai-conversation-list__actions {
+    gap: 6px;
+  }
+
+  .ai-conversation-list__actions button,
+  .ai-conversation-list__export > summary {
+    min-height: 30px;
+    padding: 5px 8px;
+  }
 }
