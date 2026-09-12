@@ -38,6 +38,45 @@ test.describe("chapter review checkpoints", () => {
     }
   });
 
+  test("edits, hides, restores and persists custom checkpoint questions", async ({ page }) => {
+    await loadApp(page);
+    await openDemo(page, "Reducer + Context 双通道优化");
+
+    const checkpoint = page.locator('[data-chapter-checkpoint="3"]');
+    const firstQuestion = checkpoint.locator('[data-question-id="ch03-q01"]');
+    await firstQuestion.getByRole("button", { name: "编辑" }).click();
+    await firstQuestion.locator("textarea").fill("如何判断一个值是否真的需要成为 State？");
+    await firstQuestion.getByRole("button", { name: "保存" }).click();
+    await expect(firstQuestion).toContainText("如何判断一个值是否真的需要成为 State？");
+
+    await firstQuestion.getByRole("button", { name: "从评测中移除" }).click();
+    await expect(checkpoint.getByRole("button", { name: "撤销" })).toBeVisible();
+    await checkpoint.getByText("已隐藏题目 · 1", { exact: true }).click();
+    await expect(checkpoint.getByText("如何判断一个值是否真的需要成为 State？", { exact: true })).toBeVisible();
+    await checkpoint.getByRole("button", { name: "恢复显示" }).click();
+    await expect(checkpoint.locator('[data-question-id="ch03-q01"]')).toContainText("如何判断一个值是否真的需要成为 State？");
+
+    await checkpoint.getByText("＋ 添加自己的评测题", { exact: true }).click();
+    await checkpoint.getByPlaceholder("写下你想加入本章评测的问题或练习…").fill("我能解释 reducer 的状态转换边界吗？");
+    await checkpoint.getByRole("button", { name: "添加到本章" }).click();
+    const custom = checkpoint.locator("li").filter({ hasText: "我能解释 reducer 的状态转换边界吗？" });
+    await expect(custom).toBeVisible();
+    await custom.getByRole("button", { name: "删除自定义题" }).click();
+    await expect(checkpoint.getByText("我能解释 reducer 的状态转换边界吗？", { exact: true })).toHaveCount(0);
+    await checkpoint.getByRole("button", { name: "撤销" }).click();
+    await expect(checkpoint.getByText("我能解释 reducer 的状态转换边界吗？", { exact: true })).toBeVisible();
+
+    await page.reload();
+    await openDemo(page, "Reducer + Context 双通道优化");
+    const reloaded = page.locator('[data-chapter-checkpoint="3"]');
+    await expect(reloaded.getByText("如何判断一个值是否真的需要成为 State？", { exact: true })).toBeVisible();
+    await expect(reloaded.getByText("我能解释 reducer 的状态转换边界吗？", { exact: true })).toBeVisible();
+
+    const edited = reloaded.locator('[data-question-id="ch03-q01"]');
+    await edited.getByRole("button", { name: "恢复课程默认" }).click();
+    await expect(edited).toContainText("如何判断一个值应该成为 State，还是应该从现有 Props/State 派生计算？");
+  });
+
   test("provides real integration lab handoffs after the relevant checkpoints", async ({ page }) => {
     await loadApp(page);
 
