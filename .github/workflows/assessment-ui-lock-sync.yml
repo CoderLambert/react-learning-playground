@@ -1,4 +1,4 @@
-name: Assessment UI Tailwind lock sync
+name: Assessment UI Tailwind verification
 
 on:
   push:
@@ -6,13 +6,12 @@ on:
       - codex/assessment-finalization
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  sync-and-verify:
-    if: github.actor != 'github-actions[bot]'
+  verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -23,9 +22,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 24
-
-      - name: Sync lockfile
-        run: npm install --package-lock-only --ignore-scripts
+          cache: npm
 
       - name: Install dependencies
         run: npm ci
@@ -39,15 +36,11 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Commit synchronized lockfile
-        shell: bash
-        run: |
-          if git diff --quiet -- package-lock.json; then
-            echo "package-lock.json already synchronized"
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add package-lock.json
-          git commit -m "chore(ui): sync Tailwind lockfile"
-          git push origin HEAD:codex/assessment-finalization
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Mock Chromium E2E
+        run: npm run test:e2e:mock
+
+      - name: Wrangler dry-run
+        run: npm exec --yes --package=wrangler@4.36.0 -- wrangler deploy --dry-run --config worker/deepseek-assistant/wrangler.jsonc
