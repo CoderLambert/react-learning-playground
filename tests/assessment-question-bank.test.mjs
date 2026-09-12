@@ -53,18 +53,26 @@ test("repository resolves prompt override without mutating builtin", () => {
   assert.equal(CHECKPOINTS[3].questions[0].prompt, original);
 });
 
-test("repository hides and restores builtin questions", () => {
+test("unhiding preserves a builtin prompt override while restoreBuiltin clears it", () => {
   const repository = createQuestionBankRepository(createMemoryStorage());
+  repository.setBuiltinPrompt("ch02-q02", "我修改过的问题");
   repository.setBuiltinHidden("ch02-q02", true);
   assert.equal(repository.resolveChapter(2).questions[1].hidden, true);
 
+  repository.setBuiltinHidden("ch02-q02", false);
+  let resolved = repository.resolveChapter(2).questions[1];
+  assert.equal(resolved.hidden, false);
+  assert.equal(resolved.prompt, "我修改过的问题");
+  assert.equal(resolved.customized, true);
+
   repository.restoreBuiltin("ch02-q02");
-  const restored = repository.resolveChapter(2).questions[1];
-  assert.equal(restored.hidden, false);
-  assert.equal(restored.customized, false);
+  resolved = repository.resolveChapter(2).questions[1];
+  assert.equal(resolved.hidden, false);
+  assert.equal(resolved.customized, false);
+  assert.equal(resolved.prompt, CHECKPOINTS[2].questions[1].prompt);
 });
 
-test("custom questions survive repository reload and can be updated/deleted", () => {
+test("custom questions survive repository reload and can be updated, deleted and restored", () => {
   const storage = createMemoryStorage();
   const repository = createQuestionBankRepository(storage);
   const created = repository.addCustom({ chapter: 4, kind: "question", prompt: "为什么 cleanup 必须对称？" });
@@ -73,10 +81,17 @@ test("custom questions survive repository reload and can be updated/deleted", ()
   assert.ok(reloaded.resolveChapter(4).questions.some((item) => item.id === created.id));
 
   reloaded.updateCustom(created.id, { prompt: "cleanup 为什么必须与 setup 对称？" });
-  assert.equal(reloaded.resolveChapter(4).questions.find((item) => item.id === created.id).prompt, "cleanup 为什么必须与 setup 对称？");
+  const edited = reloaded.resolveChapter(4).questions.find((item) => item.id === created.id);
+  assert.equal(edited.prompt, "cleanup 为什么必须与 setup 对称？");
 
   reloaded.deleteCustom(created.id);
   assert.equal(reloaded.resolveChapter(4).questions.some((item) => item.id === created.id), false);
+
+  reloaded.restoreCustom(edited);
+  const restored = reloaded.resolveChapter(4).questions.find((item) => item.id === created.id);
+  assert.equal(restored.prompt, "cleanup 为什么必须与 setup 对称？");
+  assert.equal(restored.origin, "user");
+  assert.equal(reloaded.read().customQuestions.find((item) => item.id === created.id).revision, undefined);
 });
 
 test("duplicate creates a user-owned copy and custom items can be reordered", () => {
