@@ -103,7 +103,7 @@ export function createAssessmentToolDefinitions({ assessmentService } = {}) {
     },
     {
       name: ASSESSMENT_TOOL_NAMES.CREATE_QUESTIONS,
-      description: `Create self-contained assessment questions in the current learning unit.\n\n${ASSESSMENT_AUTHORING_INSTRUCTIONS}`,
+      description: `Create self-contained assessment questions in the current learning unit. The same policy applies to later updates.\n\n${ASSESSMENT_AUTHORING_INSTRUCTIONS}`,
       policy: TOOL_POLICIES.COMMAND,
       inputSchema: assessmentCreateQuestionsInputSchema,
       handler: async (argumentsValue, context, execution) => {
@@ -117,7 +117,7 @@ export function createAssessmentToolDefinitions({ assessmentService } = {}) {
     },
     {
       name: ASSESSMENT_TOOL_NAMES.UPDATE_QUESTION,
-      description: `Update mutable business fields on an assessment question. Re-read the stored question before editing and verify it with assessment_list_questions after the mutation.\n\n${ASSESSMENT_AUTHORING_INSTRUCTIONS}`,
+      description: "Update mutable business fields on an assessment question. Follow the self-contained authoring policy documented by assessment_create_questions; re-read before editing and verify with assessment_list_questions after the mutation.",
       policy: TOOL_POLICIES.COMMAND,
       inputSchema: assessmentUpdateQuestionInputSchema,
       handler: async (argumentsValue, context, execution) => {
