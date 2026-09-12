@@ -5,34 +5,32 @@
 - Gate A Correctness：PASS
 - Gate B Demo Contract：PASS
 - Gate C Mental Model：PASS
-- 综合：内容准确，Demo 能直接验证首次 lazy load 与后续复用；只需补少量边界说明。
+- 综合：内容准确，Demo 能直接验证首次 lazy load 的 fallback、再次打开时的复用路径与本地完成日志；本轮边界已关闭。
 
 ## 事实与版本边界
 
-React 19.2 下，`lazy(load)` 会把 `load` 的返回 Promise 与解析后的模块结果缓存起来；首次尝试渲染该 lazy component 时才调用 `load`。加载 pending 时组件 suspend，由最近的 Suspense boundary 显示 fallback。Note 与 Demo 对这一点表述一致。
+React 19.2 下，`lazy(load)` 会把 `load` 的返回 Promise 与解析后的模块结果缓存起来；首次尝试渲染该 lazy component 时才调用 `load`。加载 pending 时组件 suspend，由最近的 Suspense boundary 显示 fallback；如果 Promise rejection，React 会交给最近的 Error Boundary 处理。Note 与 Demo 对这一点表述一致。
 
-“再次打开通常不再经历首次加载”应继续明确归因于同一个 `lazy` 声明及其缓存结果，而不是泛化成浏览器对所有动态 import 都必然永久缓存。
+“再次打开通常不再经历首次加载”明确归因于同一个 `lazy` 声明及其缓存结果，而不是泛化成浏览器对所有动态 import 都必然永久缓存。
 
 ## Mental Model
 
-“lazy 决定代码加载边界，Suspense 决定等待 UI”是有效心智模型。建议再强调：Suspense 不等于请求层，也不会观察普通 Effect 中的 fetch。
+“lazy 决定代码加载边界，Suspense 决定等待 UI”是有效心智模型；Suspense 不等于请求层，也不会观察普通 Effect 中的 fetch。
 
 ## Demo ↔ Note
 
-Demo 在模块顶层定义 `LazyLessonPanel`，人为增加约 900ms loader 延迟，首次点击能够观察 fallback，隐藏后再次显示能观察已加载模块复用。Note 描述的实验可以完整执行。
+Demo 在模块顶层定义 `LazyLessonPanel`，人为增加约 900ms loader 延迟，首次点击能够观察 fallback，隐藏后再次显示能观察已加载模块复用。该时间值是教学模拟，不是 React/lazy 的固定时序；Note 只把 Demo 日志与 UI 现象作为可观察证据。
 
-该 900ms 是教学延迟，不是 React/lazy 本身的加载时序；建议在文案中明确这一点，避免学习者把时间值当成 React 行为。
+## 已关闭边界 / 反例
 
-## 缺失边界 / 反例
-
-可补充：lazy loader Promise rejection 会向最近的 Error Boundary 传播；这与后续 Error Boundary 课程形成自然衔接。
+- [x] 900ms 已标注为 Demo 人工教学延迟。
+- [x] loader Promise 与解析模块结果的 React 缓存已精确表述。
+- [x] loader Promise rejection → 最近 Error Boundary 的衔接已加入 Note。
 
 ## 清晰度与工程决策
 
-内容结构自然，没有明显模板堆叠。项目决策规则可进一步压缩为：只有当代码不是当前首屏/当前交互立即需要，且独立加载不会破坏用户流程时才建立 lazy 边界；Suspense 粒度按产品 reveal 单元设计。
+内容结构自然，没有明显模板堆叠。项目决策规则保持为：只有当代码不是当前首屏/当前交互立即需要，且独立加载不会破坏用户流程时才建立 lazy 边界；Suspense 粒度按产品 reveal 单元设计。
 
-## 建议修改
+## Advice 状态
 
-1. 标注 900ms 为 Demo 人工延迟。
-2. 把“首次加载后模块会缓存”精确为 React 对该 `lazy(load)` 的 loader Promise/解析结果缓存。
-3. 增加 loader rejection → Error Boundary 的衔接边界。
+本轮列出的三项内容建议均已落实并关闭；没有新增 Demo 功能，也没有把 rejection 误写成 Demo 已观察到的事实。

@@ -2,7 +2,7 @@
 
 Custom Hook 是以 `use` 开头、可以调用其他 Hooks 的函数。它抽取的是状态ful logic；每次调用仍拥有独立的 State 和 Effects。
 
-<MentalModel title="共享配方，不共享实例">两个组件调用同一个 `useOnlineStatus()`，就像各自按同一配方建立订阅；除非 Hook 连接同一个外部 store，否则它们不会自动共享 React State。</MentalModel>
+<MentalModel title="共享配方，不共享实例">Demo 中两个 `CounterCard` 各自调用 `useCounter()`，就像各自按同一配方建立计数器；它们复用的是状态逻辑，不是同一个 React State 实例。`useOnlineSignal()` 则把浏览器 online/offline 订阅封装成一个领域值；只有明确连接同一外部 store，多个调用才会共享那份外部事实。</MentalModel>
 
 <Flow items={["组件调用 custom Hook", "Hook 组合 useState/useEffect 等", "返回面向领域的值/操作", "调用方不必知道同步细节"]} />
 
@@ -12,16 +12,16 @@ Custom Hook 是以 `use` 开头、可以调用其他 Hooks 的函数。它抽取
 
 <DemoReference action="在 Demo 中同时操作多个 Custom Hook 消费者" observe="比较多个消费者的局部变化，确认复用的是状态逻辑而不是同一份 React State 实例。" />
 
-<Observation>好的 Custom Hook API 通常描述领域意图，例如 `useChatRoom`，而不是简单包装 `useEffectOnce` 之类试图绕开 React 数据流的工具。</Observation>
+<Observation>Demo 的 `useCounter()` 返回 `count`、`increment`、`reset`，调用方表达的是计数器操作而不是直接操纵 `setCount`；`useOnlineSignal()` 返回 `online`，并封装 online/offline 订阅及 cleanup。好的 Custom Hook API 应表达领域能力和不变量，而不是把底层 setter 或 Effect 换个名字暴露出来。</Observation>
 
-<AntiPattern title="把任意 helper 都改成 Hook">不使用 Hooks 的纯函数不需要 `use` 前缀。也不要用 Custom Hook 隐藏错误 Effect；抽象不会修复错误心智模型。</AntiPattern>
+<AntiPattern title="把任意 helper 或底层 setter 都改成 Hook">不使用 Hooks 的纯函数不需要 `use` 前缀。也不要只把 `setX` / `setY` / `setZ` 或底层 Effect 换个名字暴露出去；如果调用方仍需自己组合底层细节，抽象没有形成边界。也不要用 Custom Hook 隐藏错误 Effect；抽象不会修复错误心智模型。</AntiPattern>
 
 <Boundary>Custom Hook 可以封装外部系统同步，但其参数仍是 reactive inputs；调用方需要理解哪些参数变化会导致内部重新同步。</Boundary>
 
 <Summary>
 - Custom Hook 复用逻辑。
 - 每次调用 State 独立。
-- API 应表达领域意图。
+- API 应表达领域能力与不变量。
 - 先保证底层 Effect 正确再抽象。
 </Summary>
 

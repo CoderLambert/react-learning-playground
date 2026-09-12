@@ -18,8 +18,8 @@ Note 与 React 19.2 `<form action={fn}>` 语义一致：函数 Action 接收本�
 - 非受控字段的自动 reset 只发生在 Action 成功后；受控字段仍由 React State 决定是否清空。
 - 如果 Action 抛出异常，可由最近的 Error Boundary 处理；预期业务错误通常更适合作为显式结果返回并渲染。
 
-## 建议修改
+## 本轮已关闭
 
-1. Timeline 可把“成功提交”改成“Action 成功完成”，避免与服务器一定成功绑定。
-2. 可提醒学习者 `formAction` 不需要额外把“点击了哪个按钮”存入 State，这是 Demo 已经体现的工程优势。
-3. 当前 Note/Demo 已形成完整实验闭环，不需要额外模板化扩写。
+1. Timeline 已把“成功提交”收紧为“Action 成功完成”，并明确这不等价于服务器业务一定成功。
+2. Note 已明确 `formAction` 表达按钮级 Action 选择，通常不需要额外 State 保存点击按钮；Demo 的可观察证据限定为 `publish` / `draft` 日志和各自读取的字段。
+3. 当前 Note/Demo 已形成完整实验闭环，没有新增模板化扩写。
