@@ -3,6 +3,7 @@ export const AI_CONTEXT_LIMITS = Object.freeze({
   maxSourceFiles: 8,
   maxSourceCharsPerFile: 16000,
   maxTotalSourceChars: 48000,
+  maxSemanticRegionsPerFile: 12,
 });
 
 function toText(value) {
@@ -24,7 +25,50 @@ function truncateText(text, maxChars) {
 
 function normalizeSource(source, index) {
   const name = toText(source?.name).trim() || `source-${index + 1}.txt`;
-  return { name, code: toText(source?.code) };
+  return { name, code: toText(source?.code), semantics: source?.semantics ?? null };
+}
+
+function normalizeSemanticRegion(region, includedLineCount) {
+  if (!region || typeof region !== "object") return null;
+  const startLine = Math.max(1, Number(region.startLine) || 1);
+  const endLine = Math.max(startLine, Number(region.endLine) || startLine);
+  if (startLine > includedLineCount || endLine > includedLineCount) return null;
+  if (typeof region.id !== "string" || typeof region.symbol !== "string") return null;
+
+  return {
+    id: region.id,
+    kind: toText(region.kind) || "helper",
+    symbol: region.symbol,
+    startLine,
+    endLine,
+    ...(typeof region.hookName === "string" ? { hookName: region.hookName } : {}),
+    ...(typeof region.parentSymbol === "string" ? { parentSymbol: region.parentSymbol } : {}),
+  };
+}
+
+function normalizeSourceSemantics(semantics, includedCode, maxRegions) {
+  if (!semantics || typeof semantics !== "object") return null;
+  const includedLineCount = includedCode ? includedCode.split("\n").length : 0;
+  if (includedLineCount === 0) return null;
+  const regions = Array.isArray(semantics.regions)
+    ? semantics.regions
+        .map((region) => normalizeSemanticRegion(region, includedLineCount))
+        .filter(Boolean)
+        .slice(0, Math.max(0, maxRegions))
+    : [];
+  if (regions.length === 0) return null;
+
+  const requestedPrimaryId = toText(semantics.primaryRegionId);
+  const primaryRegionId = regions.some((region) => region.id === requestedPrimaryId)
+    ? requestedPrimaryId
+    : regions[0].id;
+
+  return {
+    ...(typeof semantics.path === "string" ? { path: semantics.path } : {}),
+    ...(typeof semantics.parser === "string" ? { parser: semantics.parser } : {}),
+    primaryRegionId,
+    regions,
+  };
 }
 
 function resolveActiveSourceFile(activeSourceFile, sourceNames) {
@@ -59,8 +103,8 @@ export function formatSourceCitation(fileName, startLine, endLine = startLine) {
 }
 
 /**
- * Provider-neutral V1 context envelope. It intentionally contains only the
- * current learning unit, raw MDX note and registered source files.
+ * Provider-neutral context envelope containing the current learning unit,
+ * raw MDX note, registered source files and build-resolved semantic regions.
  */
 export function buildAiContext({
   learningUnit,
@@ -97,11 +141,17 @@ export function buildAiContext({
     );
     const result = truncateText(source.code, perFileLimit);
     remainingSourceChars -= result.includedChars;
+    const semantics = normalizeSourceSemantics(
+      source.semantics,
+      result.text,
+      resolvedLimits.maxSemanticRegionsPerFile,
+    );
 
     return {
       name: source.name,
       code: result.text,
       numberedCode: addLineNumbers(result.text),
+      ...(semantics ? { semantics } : {}),
       truncation: {
         truncated: result.truncated,
         originalChars: result.originalChars,
@@ -123,7 +173,7 @@ export function buildAiContext({
   );
 
   return {
-    version: 1,
+    version: 2,
     learningUnit: {
       id: id || null,
       title: title || null,
