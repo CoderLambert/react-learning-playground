@@ -7,6 +7,7 @@ import {
   completeAttempt,
   createAttempt,
   createQuestionRevision,
+  reconcileAttemptQuestions,
   reopenAttempt,
   summarizeAttempt,
   updateAnswer,
@@ -53,6 +54,17 @@ test("question revision changes when prompt changes", () => {
   const before = createQuestionRevision(questions[0]);
   const after = createQuestionRevision({ ...questions[0], prompt: `${questions[0].prompt}（补充）` });
   assert.notEqual(before, after);
+});
+
+test("reconcile resets only answers whose question revision changed", () => {
+  let attempt = createAttempt({ chapter: 2, questions, sessionId: "session-revision", now: 0 });
+  attempt = updateAnswer(attempt, questions[0], { draft: "旧答案", confidence: 5 }, 1);
+  attempt = updateAnswer(attempt, questions[1], { draft: "保留答案", confidence: 3 }, 1);
+  const revised = [{ ...questions[0], prompt: `${questions[0].prompt}（新版）` }, questions[1]];
+  const reconciled = reconcileAttemptQuestions(attempt, revised, 2);
+  assert.equal(reconciled.answers[questions[0].id].draft, "");
+  assert.equal(reconciled.answers[questions[0].id].status, ANSWER_STATUS.DRAFT);
+  assert.equal(reconciled.answers[questions[1].id].draft, "保留答案");
 });
 
 test("completion and reopen keep answers without fabricating scores", () => {
