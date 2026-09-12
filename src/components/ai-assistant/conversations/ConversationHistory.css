@@ -63,8 +63,8 @@
   position: absolute;
   top: calc(100% + 7px);
   left: 0;
-  width: min(380px, calc(100vw - 32px));
-  max-height: min(520px, calc(100vh - 180px));
+  width: min(420px, calc(100vw - 32px));
+  max-height: min(600px, calc(100vh - 180px));
   padding: 12px;
   overflow: auto;
   border: 1px solid var(--border-color);
@@ -89,10 +89,83 @@
   font-size: 12px;
 }
 
-.ai-conversation-history__summary span {
+.ai-conversation-history__summary span,
+.ai-conversation-history__search small {
   color: var(--text-subtle);
   font-size: 10.5px;
   line-height: 1.45;
+}
+
+.ai-conversation-history__search {
+  display: grid;
+  gap: 6px;
+}
+
+.ai-conversation-history__search label {
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.ai-conversation-history__search-row {
+  display: flex;
+  gap: 6px;
+}
+
+.ai-conversation-history__search-row input {
+  min-width: 0;
+  flex: 1;
+  min-height: 34px;
+  padding: 7px 9px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface);
+  color: var(--text-main);
+  font: inherit;
+  font-size: 12px;
+}
+
+.ai-conversation-history__search-row input:focus-visible {
+  border-color: var(--color-primary);
+  outline: 2px solid color-mix(in srgb, var(--color-primary) 22%, transparent);
+  outline-offset: 1px;
+}
+
+.ai-conversation-history__search-row button,
+.ai-conversation-history__notice button,
+.ai-conversation-history__error button {
+  min-height: 32px;
+  padding: 6px 9px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface);
+  color: var(--text-main);
+  font: inherit;
+  font-size: 10.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.ai-conversation-history__notice,
+.ai-conversation-history__error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 9px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.ai-conversation-history__notice {
+  background: var(--color-primary-light);
+  color: var(--text-main);
+}
+
+.ai-conversation-history__error {
+  border: 1px solid var(--color-danger, #dc2626);
+  background: color-mix(in srgb, var(--color-danger, #dc2626) 8%, var(--bg-surface));
 }
 
 .ai-assistant-history-toolbar__model {
@@ -121,5 +194,10 @@
 
   .ai-assistant-history-toolbar__model {
     grid-column: 1 / -1;
+  }
+
+  .ai-conversation-popover__panel {
+    width: min(94vw, 420px);
+    max-height: 70vh;
   }
 }
