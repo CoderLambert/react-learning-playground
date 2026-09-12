@@ -74,17 +74,20 @@ export function createQuestionBankRepository(storage = getDefaultStorage()) {
   };
 
   const addCustom = ({ chapter, kind, prompt }) => {
-    const createdAt = Date.now();
-    const item = {
+    const base = {
       id: createCustomId(chapter),
       chapter,
       kind: kind === "exercise" ? "exercise" : "question",
       prompt: prompt.trim(),
       origin: "user",
-      order: createdAt,
     };
-    update((state) => ({ ...state, customQuestions: [...state.customQuestions, item] }));
-    return item;
+    let created;
+    update((state) => {
+      const maxOrder = state.customQuestions.reduce((max, item) => Math.max(max, Number(item.order) || 0), 0);
+      created = { ...base, order: Math.max(Date.now(), maxOrder + 1) };
+      return { ...state, customQuestions: [...state.customQuestions, created] };
+    });
+    return created;
   };
 
   return {
