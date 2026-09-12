@@ -73,9 +73,22 @@ test("authoring quality rejects learner-facing source line navigation", () => {
   }
 });
 
+test("authoring quality rejects implicit external-source dependency without inline evidence", () => {
+  const prompts = [
+    "根据当前源码判断 renderCount 的返回值。",
+    "查看上述代码，哪项说法正确？",
+    "ComponentJsxPureRenderDemo.jsx 中的 renderCount 返回什么？",
+  ];
+
+  for (const prompt of prompts) {
+    const issues = findAssessmentAuthoringQualityIssues(draft(prompt));
+    assert.equal(issues[0]?.code, "SOURCE_CONTEXT_NOT_INLINED", prompt);
+  }
+});
+
 test("authoring quality accepts self-contained inline code while keeping evidenceRefs", () => {
   const question = draft([
-    "观察下面的完整函数：",
+    "ComponentJsxPureRenderDemo.jsx 中有下面这个完整函数：",
     "```jsx",
     "function renderCount(count) {",
     "  return count;",
