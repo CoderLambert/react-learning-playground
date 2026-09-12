@@ -2,29 +2,26 @@
 
 ## Verdict
 
-课程主题和工程价值较好，但当前存在一个明确的 Demo↔Note 契约不一致：Note 用 `undefined / null / ReactNode` 描述三态，而真实组件与 Demo 实际使用的是 `undefined / false / ReactNode`。
+本轮已修复原先的 Demo↔Note 三态契约不一致，并收窄了 Demo 对“工业级统一协议”和“零额外 DOM”的泛化表述。当前课程把三态明确限定为本项目的 API 设计选择。
 
 ## Hard gates
 
-- **Gate A — Correctness: PARTIAL**。`header`/`footer` 这类 ReactNode props 形成具名扩展点的说法正确；但“成熟组件库广泛采用同一种三态协议”不应作为通用事实宣传，这只是本项目选择的一种 API 约定。
-- **Gate B — Demo Contract: FAIL**。Note 的 `DemoReference` 明确要求观察 `undefined/null/具体 ReactNode`，但 `ProductionModal`/`Pannel` 的实现与 Demo 用 `false` 表示显式隐藏。学习者照 Note 操作无法验证 Note 描述的 `null` 协议。
-- **Gate C — Mental Model: PASS**。核心思想——组件定义稳定结构扩展点，并明确默认/覆盖/隐藏语义——是成立的。
+- **Gate A — Correctness: PASS**。具名 slot 由 props 传递可渲染内容的模型准确；当前文案不再声称 `false` 三态是所有成熟组件库的统一规范，也不再声称 slot 机制天然零 wrapper。
+- **Gate B — Demo Contract: PASS**。Note、Demo 与 Source 现在统一使用 `undefined` = 默认、`false` = 显式隐藏、已提供内容 = 覆盖；Demo 的 default/custom/hidden 场景可以直接验证该协议。
+- **Gate C — Mental Model: PASS**。学习者能够解释为什么 sentinel 是组件 API contract，而不是 React 自动赋予的语义。
 
 ## Important gaps / boundaries
 
-1. 必须先统一隐藏 sentinel。当前 Source 明确是 `false`：`slotProp === false` 隐藏、`undefined` 回退默认、其余值覆盖。Note 不应再写 `null`，除非实现也一起迁移。
-2. `ReactNode` 本身包含 `null`、`undefined`、boolean 等不可见值，因此如果 API 把其中某个值赋予“显式隐藏”语义，需要在类型/文档中额外约束，而不能只说“ReactNode props”。
-3. `slotProp !== undefined` 会把 `null` 当成“自定义覆盖”，最终 React 渲染为空；这和 `false` 分支虽然视觉结果可能相同，但协议语义不同。需要明确是否允许这种第四种状态。
-4. “零额外 DOM 成本”只对被隐藏的 slot 区域成立；整个 slot 机制并不天然保证零 wrapper，当前自定义 title/footer 路径实际上会增加 wrapper `div`。
+1. React 本身允许 `null`、`undefined`、boolean 等值渲染为空，但这不代表组件 API 应同时公开多种“隐藏”写法。本项目选择 `false` 作为显式隐藏 sentinel，文档和实现必须持续一致。
+2. 当前 JavaScript 实现仍会把 `null` 视为“已提供覆盖”，最终 React 视觉上渲染为空；这与 `false` 的协议分支不同。若未来迁移 TypeScript，建议用更明确的 slot 类型或 runtime contract 限制 API 表面。
+3. 自定义 title/footer 路径会增加 wrapper `div`；只有 `false` 隐藏分支是不渲染对应区域，不能把“零额外 DOM”泛化为 slot 机制特征。
 
 ## Clarity / engineering usefulness
 
-这篇 Note 的价值主要在 API contract，而不是 React 内建机制。建议弱化“工业级标准协议”措辞，改成“本 Demo 采用的显式三态约定”，这样更准确，也更利于迁移到其他组件库。
+当前 Note 的价值集中在 API contract：先决定容器拥有的骨架、调用者可替换的区域，以及 default / override / hidden 如何编码。Demo 已把“三态协议”明确写成“本 Demo 的选择”，更适合作为工程设计范式，而不是虚构 React 标准。
 
 ## Recommended changes
 
-- 优先修复 Note：把实验和 Boundary 中的 `null` 改成当前实现真实使用的 `false`，或者统一重构 Source 到 `null`；二者只能选一个。
-- 增加一行明确类型契约，例如 `slot?: ReactNode | false`，并解释 `undefined` 与 `false` 的语义。
-- 删除“成熟组件库普遍采用该三态协议”的泛化宣传，改成项目级设计选择。
-- 删除或收窄“零额外 DOM 成本”，只描述“显式隐藏分支不渲染该区域”。
+- 若未来给组件加 TypeScript，优先把 `undefined` / `false` / override 的协议体现在类型和文档中，并决定是否接受 `null`。
+- 保持“隐藏分支不渲染对应区域”的窄表述，不恢复“零额外 DOM 成本”这类绝对宣传。
 - 最终 decision rule：**先定义 slot 的缺省、覆盖、隐藏语义，再写实现；不要让 truthy/falsy 判断偷偷成为 API。**
