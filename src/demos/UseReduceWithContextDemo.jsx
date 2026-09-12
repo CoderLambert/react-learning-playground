@@ -1,20 +1,12 @@
-import { createContext, useContext, useReducer, useRef, useEffect } from "react";
+import { createContext, useContext, useEffect, useReducer, useRef } from "react";
 
-// ==========================================
-// 1. 拆分为独立的两个 Context 通道
-// ==========================================
-// 通道 A：只负责传递变化频繁的状态 State
 const TaskStateContext = createContext(null);
-// 通道 B：只负责传递引用稳定的 dispatch 函数
 const TaskDispatchContext = createContext(null);
+const SingleTaskContext = createContext(null);
 
-// ==========================================
-// 2. Reducer 纯函数
-// ==========================================
 const initialTasks = [
   { id: 1, title: "学习 React 19 核心 API", done: true },
-  { id: 2, title: "拆分 Context 双通道，理解订阅边界", done: false },
-  { id: 3, title: "消除全部 Oxlint 语法规范告警", done: false },
+  { id: 2, title: "理解 Context 订阅边界", done: false },
 ];
 
 function taskReducer(tasks, action) {
@@ -22,181 +14,128 @@ function taskReducer(tasks, action) {
     case "ADD":
       return [{ id: action.id, title: action.title, done: false }, ...tasks];
     case "TOGGLE":
-      return tasks.map((t) => (t.id === action.id ? { ...t, done: !t.done } : t));
+      return tasks.map((task) => (task.id === action.id ? { ...task, done: !task.done } : task));
     case "DELETE":
-      return tasks.filter((t) => t.id !== action.id);
-    case "CLEAR_DONE":
-      return tasks.filter((t) => !t.done);
+      return tasks.filter((task) => task.id !== action.id);
     default:
       return tasks;
   }
 }
 
-// 内部安全 Hook（不导出以完全兼容 Fast Refresh）
-function useTaskState() {
-  const ctx = useContext(TaskStateContext);
-  if (!ctx) throw new Error("useTaskState 必须在 TaskProvider 内使用");
-  return ctx;
+function useEffectProbe(prefix) {
+  const badgeRef = useRef(null);
+
+  useEffect(() => {
+    if (!badgeRef.current) return;
+    const next = (Number(badgeRef.current.dataset.runs) || 0) + 1;
+    badgeRef.current.dataset.runs = String(next);
+    badgeRef.current.textContent = `${prefix} Effect 探针：${next}`;
+  });
+
+  return badgeRef;
 }
 
-function useTaskDispatch() {
-  const ctx = useContext(TaskDispatchContext);
-  if (!ctx) throw new Error("useTaskDispatch 必须在 TaskProvider 内使用");
-  return ctx;
-}
-
-// ==========================================
-// 3. Provider 包装容器
-// ==========================================
 function TaskProvider({ children }) {
   const [tasks, dispatch] = useReducer(taskReducer, initialTasks);
 
   return (
     <TaskStateContext value={tasks}>
-      <TaskDispatchContext value={dispatch}>
-        {children}
-      </TaskDispatchContext>
+      <TaskDispatchContext value={dispatch}>{children}</TaskDispatchContext>
     </TaskStateContext>
   );
 }
 
-// ==========================================
-// 4. 消费组件 A：仅订阅 Dispatch 通道（写操作）
-// State Context value 的变化不会因为 Context 订阅本身通知这个组件。
-// 这不是“组件永远不会重新渲染”的保证：其他 props/state/父级路径仍可能触发渲染。
-// ==========================================
-function AddTaskBar() {
-  const dispatch = useTaskDispatch();
-  const badgeElementRef = useRef(null);
-
-  // 在副作用中更新 DOM 计数，避免渲染阶段直接操作 DOM。
-  useEffect(() => {
-    if (badgeElementRef.current) {
-      const count = (Number(badgeElementRef.current.dataset.renders) || 0) + 1;
-      badgeElementRef.current.dataset.renders = String(count);
-      badgeElementRef.current.textContent = `⚡ 本组件实际渲染：${count} 次`;
-    }
-  });
-
-  const handleQuickAdd = (text) => {
-    dispatch({ type: "ADD", id: Date.now(), title: text });
-  };
+function SingleTaskProvider({ children }) {
+  const [tasks, dispatch] = useReducer(taskReducer, initialTasks);
 
   return (
-    <div
-      style={{
-        padding: "16px",
-        background: "var(--bg-surface)",
-        border: "1px solid var(--border-color)",
-        borderRadius: "var(--radius-md)",
-      }}
-    >
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
-        <h4 style={{ margin: 0, fontSize: "14px", color: "var(--text-main)" }}>
-          组件 A：任务添加栏（只订阅 Dispatch 通道）
-        </h4>
-        <span ref={badgeElementRef} className="badge badge-green">
-          ⚡ 本组件实际渲染：1 次
-        </span>
+    <SingleTaskContext value={{ tasks, dispatch }}>
+      {children}
+    </SingleTaskContext>
+  );
+}
+
+function AddButton({ mode }) {
+  const splitDispatch = useContext(TaskDispatchContext);
+  const singleValue = useContext(SingleTaskContext);
+  const dispatch = mode === "split" ? splitDispatch : singleValue?.dispatch;
+  const badgeRef = useEffectProbe(mode === "single" ? "单 Context 写组件" : "双 Context 写组件");
+
+  if (!dispatch) throw new Error("AddButton 缺少对应 Context Provider");
+
+  return (
+    <div style={{ padding: 12, border: "1px solid var(--border-color)", borderRadius: 8 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center" }}>
+        <strong>只负责 dispatch 的组件</strong>
+        <span ref={badgeRef} className="badge badge-green">Effect 探针</span>
       </div>
+      <button
+        className="btn btn-secondary btn-sm"
+        type="button"
+        style={{ marginTop: 10 }}
+        onClick={() => dispatch({ type: "ADD", id: Date.now(), title: "新任务" })}
+      >
+        ➕ dispatch ADD
+      </button>
+    </div>
+  );
+}
 
-      <p style={{ margin: "0 0 10px 0", fontSize: "12.5px", color: "var(--text-muted)" }}>
-        该组件不读取 <code>TaskStateContext</code>，因此任务 state 的 Context 更新不会因为订阅关系直接通知它；这不等于 React 对任何其他渲染来源做“永不重渲染”的保证。
-      </p>
+function TaskList({ mode }) {
+  const splitTasks = useContext(TaskStateContext);
+  const splitDispatch = useContext(TaskDispatchContext);
+  const singleValue = useContext(SingleTaskContext);
+  const tasks = mode === "split" ? splitTasks : singleValue?.tasks;
+  const dispatch = mode === "split" ? splitDispatch : singleValue?.dispatch;
+  const badgeRef = useEffectProbe(mode === "single" ? "单 Context 读组件" : "双 Context 读组件");
 
-      <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-        <button
-          className="btn btn-secondary btn-sm"
-          onClick={() => handleQuickAdd("阅读 React Profiler 性能文档")}
-        >
-          ➕ 添加：阅读 React Profiler 文档
-        </button>
-        <button
-          className="btn btn-secondary btn-sm"
-          onClick={() => handleQuickAdd("编写自定义 Hook 并做好安全断言")}
-        >
-          ➕ 添加：编写安全 Hook
-        </button>
-        <button
-          className="btn btn-outline btn-sm"
-          onClick={() => dispatch({ type: "CLEAR_DONE" })}
-        >
-          🧹 清理已完成
-        </button>
+  if (!tasks || !dispatch) throw new Error("TaskList 缺少对应 Context Provider");
+
+  return (
+    <div style={{ padding: 12, border: "1px solid var(--border-color)", borderRadius: 8 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center", marginBottom: 8 }}>
+        <strong>读取任务 state 的组件</strong>
+        <span ref={badgeRef} className="badge badge-amber">Effect 探针</span>
+      </div>
+      <div style={{ display: "grid", gap: 6 }}>
+        {tasks.map((task) => (
+          <div key={task.id} style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center" }}>
+            <label style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <input
+                type="checkbox"
+                checked={task.done}
+                onChange={() => dispatch({ type: "TOGGLE", id: task.id })}
+              />
+              <span style={{ textDecoration: task.done ? "line-through" : "none" }}>{task.title}</span>
+            </label>
+            <button className="btn btn-outline btn-sm" type="button" onClick={() => dispatch({ type: "DELETE", id: task.id })}>删除</button>
+          </div>
+        ))}
       </div>
     </div>
   );
 }
 
-// ==========================================
-// 5. 消费组件 B：订阅 State 通道（读操作）
-// ==========================================
-function TaskList() {
-  const tasks = useTaskState();
-  const dispatch = useTaskDispatch();
-  const badgeElementRef = useRef(null);
-
-  useEffect(() => {
-    if (badgeElementRef.current) {
-      const count = (Number(badgeElementRef.current.dataset.renders) || 0) + 1;
-      badgeElementRef.current.dataset.renders = String(count);
-      badgeElementRef.current.textContent = `🔄 本组件实际渲染：${count} 次`;
-    }
-  });
+function ExperimentPanel({ mode }) {
+  const isSingle = mode === "single";
+  const Provider = isSingle ? SingleTaskProvider : TaskProvider;
 
   return (
-    <div
-      style={{
-        padding: "16px",
-        background: "var(--bg-surface)",
-        border: "1px solid var(--border-color)",
-        borderRadius: "var(--radius-md)",
-      }}
-    >
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
-        <h4 style={{ margin: 0, fontSize: "14px", color: "var(--text-main)" }}>
-          组件 B：任务列表视图（订阅 State 通道）
-        </h4>
-        <span ref={badgeElementRef} className="badge badge-amber">
-          🔄 本组件实际渲染：1 次
-        </span>
+    <div className={`comparison-card ${isSingle ? "bad" : "good"}`}>
+      <div className={`comparison-header ${isSingle ? "bad" : "good"}`}>
+        <span>{isSingle ? "⚠️" : "✅"}</span> {isSingle ? "单 Context：{ tasks, dispatch }" : "双 Context：State / Dispatch 分离"}
       </div>
-
-      <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-        {tasks.map((task) => (
-          <div
-            key={task.id}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              padding: "8px 12px",
-              background: task.done ? "var(--bg-surface-secondary)" : "var(--bg-surface)",
-              border: "1px solid var(--border-subtle)",
-              borderRadius: "var(--radius-sm)",
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              <input
-                type="checkbox"
-                checked={task.done}
-                onChange={() => dispatch({ type: "TOGGLE", id: task.id })}
-                style={{ cursor: "pointer" }}
-              />
-              <span style={{ fontSize: "13.5px", textDecoration: task.done ? "line-through" : "none", color: task.done ? "var(--text-subtle)" : "var(--text-main)" }}>
-                {task.title}
-              </span>
-            </div>
-            <button
-              className="btn btn-outline btn-sm"
-              onClick={() => dispatch({ type: "DELETE", id: task.id })}
-              style={{ padding: "2px 8px", fontSize: "11px" }}
-            >
-              删除
-            </button>
-          </div>
-        ))}
-      </div>
+      <p style={{ fontSize: 13, color: "var(--text-muted)" }}>
+        {isSingle
+          ? "写组件为了拿 dispatch 也读取整个 Context；tasks 改变时 value 对象改变，它会收到 Context 更新。"
+          : "写组件只读取 Dispatch Context；tasks 改变不会通过 State Context 的订阅关系通知它。"}
+      </p>
+      <Provider>
+        <div style={{ display: "grid", gap: 10 }}>
+          <AddButton mode={mode} />
+          <TaskList mode={mode} />
+        </div>
+      </Provider>
     </div>
   );
 }
@@ -206,15 +145,11 @@ export function UseReduceWithContextDemo() {
     <div>
       <div className="demo-header-card">
         <div className="demo-header-top">
-          <div>
-            <h2 className="demo-title">
-              <span>⚡</span> Reducer + Context：拆分读写订阅边界
-            </h2>
-          </div>
+          <h2 className="demo-title"><span>⚡</span> Reducer + Context：拆分读写订阅边界</h2>
           <span className="badge badge-green">Context 边界</span>
         </div>
         <p className="demo-desc">
-          当 <code>&#123; state, dispatch &#125;</code> 作为一个 Context value 时，state 改变会产生新的 value identity，所有读取该 Context 的消费者都会收到更新。把 State 与稳定的 Dispatch 分成两个 Context，可以让只需要 dispatch 的节点不订阅 State Context。
+          当 <code>&#123; tasks, dispatch &#125;</code> 作为一个 Context value 时，tasks 改变会产生新的 value identity，所有读取该 Context 的消费者都会收到更新。把 State 与稳定的 Dispatch 分成两个 Context，可以让只需要 dispatch 的节点不订阅 State Context。
         </p>
         <div className="demo-meta-tags">
           <span className="badge badge-gray">State / Dispatch Context</span>
@@ -225,67 +160,26 @@ export function UseReduceWithContextDemo() {
 
       <div className="demo-section">
         <div className="demo-section-header">
-          <h3 className="demo-section-title">
-            <span>⚖️</span> 单 Context vs 双 Context
-          </h3>
-        </div>
-
-        <div className="demo-grid-2">
-          <div className="comparison-card bad">
-            <div className="comparison-header bad">
-              <span>⚠️</span> 单 Context
-            </div>
-            <pre style={{ margin: 0, padding: "8px", background: "#fef2f2", borderRadius: "4px", fontSize: "12px", overflowX: "auto" }}>
-{`// state 变化时，这个 value 对象 identity 也变化
-<AppContext value={{ state, dispatch }}>
-  <AddButton /> {/* 若读取 AppContext，也订阅整份 value */}
-  <ListView />
-</AppContext>`}
-            </pre>
-          </div>
-
-          <div className="comparison-card good">
-            <div className="comparison-header good">
-              <span>✅</span> 双 Context
-            </div>
-            <pre style={{ margin: 0, padding: "8px", background: "#f0fdf4", borderRadius: "4px", fontSize: "12px", overflowX: "auto" }}>
-{`// dispatch identity 稳定；写组件无需订阅 StateContext
-<StateContext value={state}>
-  <DispatchContext value={dispatch}>
-    <AddButton />
-    <ListView />
-  </DispatchContext>
-</StateContext>`}
-            </pre>
-          </div>
-        </div>
-      </div>
-
-      <div className="demo-section">
-        <div className="demo-section-header">
-          <h3 className="demo-section-title">
-            <span>🔬</span> 实时渲染观察
-          </h3>
+          <h3 className="demo-section-title"><span>🔬</span> 同一动作的可交互对照</h3>
           <p className="demo-section-desc">
-            点击组件 A 的按钮添加/清理任务，或在组件 B 中切换/删除任务。对比两个组件的实际渲染计数，并把观察解释为“订阅来源不同”，而不是“dispatch-only 组件永远不会渲染”。
+            分别在左右两边执行 ADD / TOGGLE / DELETE。观察“只负责 dispatch 的组件”的 Effect 探针：单 Context 中它订阅了整个 value；双 Context 中它没有读取 State Context。
           </p>
         </div>
-
-        <TaskProvider>
-          <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-            <AddTaskBar />
-            <TaskList />
-          </div>
-        </TaskProvider>
+        <div className="demo-grid-2">
+          <ExperimentPanel mode="single" />
+          <ExperimentPanel mode="split" />
+        </div>
       </div>
 
       <div className="demo-alert demo-alert-tip">
-        <div className="demo-alert-title">
-          <span>💡</span> 决策规则
-        </div>
+        <div className="demo-alert-title"><span>💡</span> 如何读这个实验</div>
         <div>
-          React 保证 <code>useReducer</code> 返回的 <code>dispatch</code> 具有稳定 identity。拆分 Context 的直接收益是缩小订阅面；是否值得这样做，应结合 API 清晰度和真实渲染成本判断，而不是把双 Context 当成默认性能模板。
+          探针运行在 Effect 中，只用于证明组件已经完成一次对应的 React 更新；开发 Strict Mode 可能让初始 Effect setup 额外执行，所以不要把初始数字当 production render 次数。真正要比较的是：任务 state 改变后，单 Context 的 dispatch-only consumer 会收到 Context value 更新，而双 Context 的 dispatch-only consumer 不会因为 State Context 变化而收到通知。
         </div>
+      </div>
+
+      <div className="demo-alert demo-alert-warning" style={{ marginTop: 10 }}>
+        <strong>边界：</strong>双 Context 不是“永不重渲染”保证。props、自身 state、其他 Context 或父级结构仍可能让组件更新；拆分优化的是 Context 订阅面，不是 reducer 的魔法，也不是外部 store selector 的替代品。
       </div>
     </div>
   );
