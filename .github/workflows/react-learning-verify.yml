@@ -41,6 +41,12 @@ jobs:
       - name: AI focused tests
         run: npm run test:ai
 
+      - name: Content contract tests
+        run: npm run test:content
+
+      - name: TypeScript sample contract
+        run: npm run typecheck:samples
+
       - name: Lint
         run: npm run lint
 

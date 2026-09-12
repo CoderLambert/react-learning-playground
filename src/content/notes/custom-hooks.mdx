@@ -16,6 +16,11 @@ Custom Hook 是以 `use` 开头、可以调用其他 Hooks 的函数。它抽取
 
 <Boundary>Custom Hook 可以封装外部系统同步，但其参数仍是 reactive inputs；调用方需要理解哪些参数变化会导致内部重新同步。</Boundary>
 
-<Summary items={["Custom Hook 复用逻辑", "每次调用 State 独立", "API 应表达领域意图", "先保证底层 Effect 正确再抽象"]} />
+<Summary>
+- Custom Hook 复用逻辑。
+- 每次调用 State 独立。
+- API 应表达领域意图。
+- 先保证底层 Effect 正确再抽象。
+</Summary>
 
-<FurtherReading links={[{label:"React: Reusing Logic with Custom Hooks",href:"https://react.dev/learn/reusing-logic-with-custom-hooks"},{label:"React: Rules of Hooks",href:"https://react.dev/reference/rules/rules-of-hooks"}]} />
+<FurtherReading items={[{label:"React: Reusing Logic with Custom Hooks",href:"https://react.dev/learn/reusing-logic-with-custom-hooks"},{label:"React: Rules of Hooks",href:"https://react.dev/reference/rules/rules-of-hooks"}]} />
