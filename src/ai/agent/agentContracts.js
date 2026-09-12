@@ -3,6 +3,7 @@ export const AGENT_RUN_STATUSES = Object.freeze({
   COMPLETED: "completed",
   FAILED: "failed",
   ABORTED: "aborted",
+  INTERRUPTED: "interrupted",
 });
 
 export const TOOL_EXECUTION_STATUSES = Object.freeze({
