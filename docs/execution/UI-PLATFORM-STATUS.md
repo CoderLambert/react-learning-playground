@@ -8,6 +8,30 @@ and touched UI. This change deliberately does **not** perform a repository-wide
 legacy-CSS bulk migration. No branch was merged, rebased, force-pushed, or
 otherwise rewritten during this QA pass.
 
+## P1 Tailwind-merge compatibility remediation
+
+**P1 remediation base HEAD:** `fd5fef5ecfa44a110837118b26a4525ff828ae05`
+
+Before this remediation, the platform declared Tailwind CSS `3.4.17` while
+declaring `tailwind-merge@^3.6.0`. Therefore **before the P1 fix**,
+`MERGE_READY=NO`: tailwind-merge v3 no longer supports the frozen Tailwind 3
+line.
+
+The dependency is now `tailwind-merge@^2.6.0` (lockfile resolution `2.6.1`),
+the compatible v2 line for Tailwind 3.0–3.4. Tailwind remains exactly
+`3.4.17`, `corePlugins.preflight` remains `false`, and `cn(...inputs)` remains
+`twMerge(clsx(inputs))`. The UI utility contracts now additionally cover the
+project's CSS-variable arbitrary-value utilities (for example
+`bg-[var(--bg-surface)]` and `text-[var(--text-muted)]`), while the primitive
+dependency contract uses a structural whitelist: only `src/components/ui/**`,
+`src/lib/**`, and external packages are allowed. Feature/domain imports,
+including Assessment, AI, Workbench, notes, and source-viewer, are rejected.
+
+**Exact-head GitHub CI: NOT_AVAILABLE_WITH_REASON** — no existing workflow
+listens to pull requests targeting `auto/assessment-integration`; their branch
+filters cover other integration branches and `main`. No workflow was added or
+changed merely to manufacture a CI result.
+
 ## Integrated agent commits
 
 | Agent | Commit | Result |
@@ -72,7 +96,7 @@ All commands were run sequentially from the integration HEAD above.
 | Check | Actual result |
 | --- | --- |
 | `npm ci` | PASS — 316 packages installed; 0 vulnerabilities. |
-| `node --test tests/*.mjs worker/deepseek-assistant/test/*.test.js` | PASS — **224/224**, 0 failed, 0 skipped, 0 todo. |
+| `node --test tests/*.mjs worker/deepseek-assistant/test/*.test.js` | PASS — **225/225**, 0 failed, 0 skipped, 0 todo. |
 | `npm run lint` | PASS — 0 errors; 30 existing warnings reported. |
 | `npm run build` | PASS — Vite built 1,081 modules. Existing chunk-size warnings only. |
 | `npm run test:e2e:mock` | PASS — **46/46** Playwright tests. |

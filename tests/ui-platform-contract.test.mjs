@@ -100,7 +100,13 @@ function importSpecifiers(source) {
   return [...specifiers];
 }
 
-function isForbiddenDependency(specifier, sourcePath) {
+function isAllowedPrimitiveDependency(specifier, sourcePath) {
+  // Bare specifiers are external packages (React, CVA, and similar). Project
+  // imports must resolve to the generic primitive layer or shared lib layer.
+  if (!specifier.startsWith(".") && !specifier.startsWith("/") && !specifier.startsWith("@/")) {
+    return true;
+  }
+
   let resolvedPath;
   if (specifier.startsWith(".")) {
     resolvedPath = projectPath(resolve(dirname(sourcePath), specifier));
@@ -110,7 +116,7 @@ function isForbiddenDependency(specifier, sourcePath) {
     resolvedPath = specifier.replace(/^@\//, "");
   }
 
-  return /(?:^|\/)(?:assessment|ai|domain)(?:\/|$)/.test(resolvedPath);
+  return /^(?:src\/components\/ui|src\/lib)(?:\/|$)/.test(resolvedPath);
 }
 
 test("Tailwind utilities do not enable the legacy-resetting preflight", () => {
@@ -136,14 +142,14 @@ test("a consumer className can override a primitive utility without class-order 
   }
 });
 
-test("generic UI primitives do not import Assessment, AI, or domain code", () => {
+test("generic UI primitives use only primitive, shared-lib, or external dependencies", () => {
   assert.equal(existsSync(UI_ROOT), true, "src/components/ui must exist");
   const violations = [];
 
   for (const path of sourceFiles(UI_ROOT)) {
     for (const specifier of importSpecifiers(readFileSync(path, "utf8"))) {
-      if (isForbiddenDependency(specifier, path)) {
-        violations.push(`${projectPath(path)} imports ${specifier}`);
+      if (!isAllowedPrimitiveDependency(specifier, path)) {
+        violations.push(`${projectPath(path)} imports non-platform module ${specifier}`);
       }
     }
   }
@@ -151,6 +157,6 @@ test("generic UI primitives do not import Assessment, AI, or domain code", () =>
   assert.deepEqual(
     violations,
     [],
-    "Generic primitives must remain independent of Assessment, AI, and domain layers.",
+    "Generic primitives must remain independent of Assessment, AI, Workbench, notes, source-viewer, and every other feature/domain layer.",
   );
 });

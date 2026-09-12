@@ -28,7 +28,7 @@
     "react-dom": "^19.2.8",
     "shiki": "^4.4.3",
     "stream-diffs": "^0.0.2",
-    "tailwind-merge": "^3.6.0"
+    "tailwind-merge": "^2.6.0"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
