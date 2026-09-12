@@ -17,7 +17,7 @@ export class AgentRunner {
     this.maxSteps = maxSteps;
   }
 
-  async run({ messages, context, signal, onEvent } = {}) {
+  async run({ messages, context, signal, onEvent, purpose = "chat" } = {}) {
     const conversation = messages.map((message) => structuredClone(message));
     for (let step = 0; step < this.maxSteps; step += 1) {
       if (signal?.aborted) throw new AgentError(AGENT_ERROR_CODES.ABORTED, "agent run aborted");
@@ -28,7 +28,11 @@ export class AgentRunner {
       try {
         for await (const event of this.modelClient.streamTurn({
           messages: conversation,
-          tools: this.toolRegistry.modelDefinitions(),
+          // Compaction is a model-only turn. The empty list is deliberate:
+          // no tool schema reaches the provider, so this runner cannot enter
+          // the tool executor while creating a summary.
+          tools: purpose === "compaction" ? [] : this.toolRegistry.modelDefinitions(),
+          purpose,
         }, { signal })) {
           onEvent?.(event);
           if (event.type === MODEL_TURN_EVENT_TYPES.TEXT_DELTA) assistantText += event.text;
@@ -36,13 +40,19 @@ export class AgentRunner {
           if (event.type === MODEL_TURN_EVENT_TYPES.TURN_COMPLETE) finishReason = event.finishReason;
         }
       } catch (error) {
-        if (signal?.aborted || error?.name === "AbortError") {
+        if (signal?.aborted || error?.name === "AbortError" || error?.code === "MODEL_CLIENT_ABORTED") {
           throw new AgentError(AGENT_ERROR_CODES.ABORTED, "agent run aborted", { cause: error });
         }
         if (error instanceof AgentError) throw error;
         throw new AgentError(AGENT_ERROR_CODES.PROVIDER_FAILED, error?.message || "provider failed", { cause: error });
       }
 
+      if (purpose === "compaction" && toolCalls.length) {
+        throw new AgentError(AGENT_ERROR_CODES.TOOL_FORBIDDEN, "compaction model turn returned tool calls");
+      }
+      if (toolCalls.length && finishReason !== MODEL_FINISH_REASONS.TOOL_CALLS) {
+        throw new AgentError(AGENT_ERROR_CODES.PROVIDER_FAILED, "model returned tool calls without tool_calls finish reason");
+      }
       if (!toolCalls.length || finishReason !== MODEL_FINISH_REASONS.TOOL_CALLS) {
         if (assistantText) conversation.push({ role: "assistant", content: assistantText });
         return { messages: conversation, text: assistantText, steps: step + 1 };

@@ -56,7 +56,9 @@ export async function handleRequest(request, env, deps = {}) {
       return json({ error: "upstream model request failed", upstreamStatus: upstream.status }, 502, corsState.headers);
     }
 
-    return new Response(normalizeDeepSeekStream(upstream.body), {
+    return new Response(normalizeDeepSeekStream(upstream.body, {
+      protocol: validated.type === "model_turn" ? "model_turn" : "chat",
+    }), {
       status: 200,
       headers: {
         ...corsState.headers,
