@@ -29,6 +29,22 @@ function getDefaultStorage() {
   return window.localStorage;
 }
 
+export function getQuestionFingerprint(item) {
+  const source = `${item.id}|${item.kind}|${item.prompt}`;
+  let hash = 2166136261;
+  for (let index = 0; index < source.length; index += 1) {
+    hash ^= source.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return `qv1-${(hash >>> 0).toString(36)}`;
+}
+
+function createCustomId(chapter) {
+  const time = Date.now().toString(36);
+  const entropy = Math.random().toString(36).slice(2, 7);
+  return `custom-ch${String(chapter).padStart(2, "0")}-${time}-${entropy}`;
+}
+
 export function createQuestionBankRepository(storage = getDefaultStorage()) {
   const read = () => {
     if (!storage) return cloneEmptyState();
@@ -53,6 +69,20 @@ export function createQuestionBankRepository(storage = getDefaultStorage()) {
     return write(next);
   };
 
+  const addCustom = ({ chapter, kind, prompt }) => {
+    const createdAt = Date.now();
+    const item = {
+      id: createCustomId(chapter),
+      chapter,
+      kind: kind === "exercise" ? "exercise" : "question",
+      prompt: prompt.trim(),
+      origin: "user",
+      order: createdAt,
+    };
+    update((state) => ({ ...state, customQuestions: [...state.customQuestions, item] }));
+    return item;
+  };
+
   return {
     read,
     write,
@@ -62,18 +92,18 @@ export function createQuestionBankRepository(storage = getDefaultStorage()) {
       const state = read();
       const applyOverride = (item) => {
         const override = state.overrides[item.id];
-        return {
+        const resolved = {
           ...item,
           prompt: override?.prompt?.trim() || item.prompt,
           hidden: Boolean(override?.hidden),
           customized: Boolean(override?.prompt),
-          revision: `${item.id}:${override?.prompt?.trim() || item.prompt}`,
         };
+        return { ...resolved, revision: getQuestionFingerprint(resolved) };
       };
       const custom = state.customQuestions
         .filter((item) => item.chapter === chapter)
         .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-        .map((item) => ({ ...item, hidden: false, customized: true, revision: `${item.id}:${item.prompt}` }));
+        .map((item) => ({ ...item, hidden: false, customized: true, revision: getQuestionFingerprint(item) }));
 
       return {
         ...builtin,
@@ -106,19 +136,9 @@ export function createQuestionBankRepository(storage = getDefaultStorage()) {
         return { ...state, overrides };
       });
     },
-    addCustom({ chapter, kind, prompt }) {
-      const createdAt = Date.now();
-      const id = `custom-ch${String(chapter).padStart(2, "0")}-${createdAt.toString(36)}`;
-      const item = {
-        id,
-        chapter,
-        kind: kind === "exercise" ? "exercise" : "question",
-        prompt: prompt.trim(),
-        origin: "user",
-        order: createdAt,
-      };
-      update((state) => ({ ...state, customQuestions: [...state.customQuestions, item] }));
-      return item;
+    addCustom,
+    duplicate(item) {
+      return addCustom({ chapter: item.chapter, kind: item.kind, prompt: item.prompt });
     },
     updateCustom(questionId, patch) {
       return update((state) => ({
@@ -130,6 +150,29 @@ export function createQuestionBankRepository(storage = getDefaultStorage()) {
           ...(typeof patch.order === "number" ? { order: patch.order } : {}),
         } : item),
       }));
+    },
+    moveCustom(questionId, direction) {
+      return update((state) => {
+        const target = state.customQuestions.find((item) => item.id === questionId);
+        if (!target) return state;
+        const siblings = state.customQuestions
+          .filter((item) => item.chapter === target.chapter && item.kind === target.kind)
+          .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+        const index = siblings.findIndex((item) => item.id === questionId);
+        const nextIndex = direction === "up" ? index - 1 : index + 1;
+        if (index < 0 || nextIndex < 0 || nextIndex >= siblings.length) return state;
+        const neighbor = siblings[nextIndex];
+        const targetOrder = target.order ?? index;
+        const neighborOrder = neighbor.order ?? nextIndex;
+        return {
+          ...state,
+          customQuestions: state.customQuestions.map((item) => {
+            if (item.id === target.id) return { ...item, order: neighborOrder };
+            if (item.id === neighbor.id) return { ...item, order: targetOrder };
+            return item;
+          }),
+        };
+      });
     },
     deleteCustom(questionId) {
       return update((state) => ({
