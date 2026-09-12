@@ -9,6 +9,10 @@ import {
   createLearningActionContext,
   getLearningActionsForContext,
 } from "../src/learning-actions/promptBuilder.js";
+import {
+  emitLearningAction,
+  subscribeLearningActions,
+} from "../src/learning-actions/learningActionEvent.js";
 
 test("clampLearningSelection trims and marks oversized selections", () => {
   assert.deepEqual(clampLearningSelection("  hello  ", 20), { text: "hello", truncated: false });
@@ -28,6 +32,15 @@ test("source context preserves stable file/range metadata", () => {
   assert.equal(context.learningUnitId, "state-snapshot");
   assert.deepEqual(context.range, { startLine: 10, endLine: 20 });
   assert.equal(Object.isFrozen(context), true);
+});
+
+test("invalid source ranges fail closed to a file-level context", () => {
+  const context = createLearningActionContext({
+    kind: LEARNING_CONTEXT_KINDS.SOURCE,
+    fileName: "Demo.jsx",
+    range: { startLine: 0, endLine: -10 },
+  });
+  assert.equal(context.range, null);
 });
 
 test("buildLearningActionPrompt includes bounded material and references", () => {
@@ -67,6 +80,24 @@ test("context kinds expose only relevant learning actions", () => {
     "verify",
     "quiz",
   ]);
+});
+
+test("learning action event bridge delivers prompt once and can unsubscribe", () => {
+  const target = new EventTarget();
+  const received = [];
+  const unsubscribe = subscribeLearningActions((detail) => received.push(detail), target);
+
+  assert.equal(emitLearningAction({ prompt: "解释当前笔记", action: "explain" }, target), true);
+  assert.deepEqual(received, [{ prompt: "解释当前笔记", action: "explain" }]);
+
+  unsubscribe();
+  emitLearningAction({ prompt: "不应收到" }, target);
+  assert.equal(received.length, 1);
+});
+
+test("learning action event bridge ignores empty prompts", () => {
+  const target = new EventTarget();
+  assert.equal(emitLearningAction({ prompt: "" }, target), false);
 });
 
 test("unsupported actions fail closed", () => {
