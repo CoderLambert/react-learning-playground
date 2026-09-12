@@ -25,6 +25,7 @@
 }
 
 .ai-assistant-message-actions button,
+.ai-assistant-citation-explain,
 .ai-assistant-jump-latest {
   min-height: 28px;
   padding: 4px 8px;
@@ -41,6 +42,8 @@
 
 .ai-assistant-message-actions button:hover:not(:disabled),
 .ai-assistant-message-actions button:focus-visible,
+.ai-assistant-citation-explain:hover:not(:disabled),
+.ai-assistant-citation-explain:focus-visible,
 .ai-assistant-jump-latest:hover,
 .ai-assistant-jump-latest:focus-visible {
   border-color: var(--color-primary);
@@ -49,14 +52,29 @@
 }
 
 .ai-assistant-message-actions button:focus-visible,
+.ai-assistant-citation-explain:focus-visible,
 .ai-assistant-jump-latest:focus-visible {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
 
-.ai-assistant-message-actions button:disabled {
+.ai-assistant-message-actions button:disabled,
+.ai-assistant-citation-explain:disabled {
   cursor: not-allowed;
   opacity: 0.5;
+}
+
+.ai-assistant-source-citation-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+}
+
+.ai-assistant-citation-explain {
+  min-height: 26px;
+  padding-inline: 7px;
+  white-space: nowrap;
 }
 
 .ai-assistant-jump-latest {
@@ -72,6 +90,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .ai-assistant-message-actions button,
+  .ai-assistant-citation-explain,
   .ai-assistant-jump-latest {
     transition: none;
   }
@@ -82,9 +101,15 @@
     gap: 6px;
   }
 
-  .ai-assistant-message-actions button {
+  .ai-assistant-message-actions button,
+  .ai-assistant-citation-explain {
     min-height: 36px;
     padding: 7px 9px;
+  }
+
+  .ai-assistant-source-citation-actions {
+    align-items: stretch;
+    flex-wrap: wrap;
   }
 
   .ai-assistant-jump-latest {
