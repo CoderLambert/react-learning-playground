@@ -3,47 +3,46 @@
 ## 当前结论
 
 - Gate A Correctness：PASS
-- Gate B Demo Contract：FAIL
+- Gate B Demo Contract：PASS（本分支修复后）
 - Gate C Mental Model：PASS
-- 综合：核心 `useSyncExternalStore` 协议解释准确，但 Note 声称的挂载/卸载订阅实验当前 Demo 无法执行。
+- 综合：`useSyncExternalStore` 的 snapshot/subscribe 协议准确，原先无法执行的 mount/unmount cleanup 实验已经补齐，并把生命周期 instrumentation 从业务 counter snapshot 中分离。
 
 ## 事实与版本边界
 
 React 19.2 中 `useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot?)` 用于订阅 React 外部数据源。Store 未变化时，重复调用 `getSnapshot` 必须返回 `Object.is` 相等的值；若底层 store 可变，应缓存不可变 snapshot，而不是每次创建新对象。
 
-SSR 场景下，`getServerSnapshot` 用于服务端渲染及 hydration 初始读取，其服务端结果必须与客户端初始数据协调。若组件在服务端渲染而没有提供 `getServerSnapshot`，React 会报错并要求改为客户端渲染。
+SSR 场景下，`getServerSnapshot` 用于服务端渲染及 hydration 初始读取，其服务端结果必须与客户端初始数据协调。若组件在服务端渲染而没有提供 `getServerSnapshot`，React 会要求改为客户端渲染。
 
-另一个值得补充的 React 19.2 边界是：若 external store 在非阻塞 Transition 中发生变化，React 会再次读取 snapshot；若值不同，该更新会退回 blocking，以确保所有组件看到一致的 snapshot。因此它解决的是一致订阅协议，不是把 external store 更新变成并发可中断状态。
+若 external store 在非阻塞 Transition 中发生变化，React 会在提交前再次读取 snapshot；值不一致时会退回 blocking 更新以保证屏幕上的 store 视图一致。因此 `useSyncExternalStore` 是一致订阅协议，不是把外部 store mutation 变成可中断 Transition。
 
 ## Mental Model
 
-“subscribe 只负责通知可能变化，React 再通过 getSnapshot 读取真值”是正确模型，也比把 listener payload 当作 React state 更准确。Note 对 React 内部 state/reducer/context 与外部真源的边界也较清晰。
+“subscribe 只负责通知可能变化，React 再通过 getSnapshot 读取真值”是正确模型。生命周期统计现在独立于业务 snapshot，更清楚地说明 instrumentation 不应反过来改变被观察的数据协议。
 
 ## Demo ↔ Note
 
-当前 Demo 能真实观察：
+修复后的 Demo 可真实观察：
 
-- 两个 Reader 订阅同一外部 store；
-- `increment/reset` 修改外部真源；
-- store 通知 listener 后 React 重读 snapshot；
-- snapshot identity 变化后两个 Reader 更新。
+- Reader A / B 读取同一个 immutable counter snapshot；
+- `increment/reset` 只在业务值变化时产生新 snapshot/version；
+- 可实际卸载/重新挂载 Reader B；
+- 独立 lifecycle store 记录 counterStore 的真实 subscribe/unsubscribe 与最终 listener count；
+- 开发 Strict Mode 下若出现额外 setup/cleanup pair，Demo 明确提示关注最终订阅数与成对释放，而不是假设 subscribe 只调用一次。
 
-但 Note 的 Experiment 明确要求“切换组件挂载状态观察 cleanup”，Demo 中两个 `StoreReader` 始终挂载，没有任何 mount/unmount 控件，也没有真实 unsubscribe 日志。因此学习者无法执行这一实验，Gate B FAIL。
-
-此外，Demo 为了显示 listener 数量，在 `subscribe`/unsubscribe 本身又修改 snapshot/version 并通知订阅者。这可以作为教学 instrumentation，但会把“订阅生命周期变化”混入业务 store snapshot，容易让学习者误认为真实 store 必须这样设计。
+Note 的 Experiment / DemoReference 已同步成这些真实可执行证据，不再声称 UI 直接统计 `getSnapshot` 调用次数，因此 Gate B 通过。
 
 ## 缺失边界 / 反例
 
-建议增加一个可执行 Reader B 挂载开关，并把 subscribe/unsubscribe 事件单独记录，而不是通过业务 snapshot 自身制造 version 更新。这样可以清晰验证 cleanup，而不污染 counter 数据模型。
+仍可补充官方指出的 Suspense 边界：不建议让 `useSyncExternalStore` 返回值直接驱动会 suspend 的资源，因为 external-store mutation 不能被标记为 non-blocking Transition，可能导致已展示内容突然回退到 fallback。
 
-还可补充：不要基于 `useSyncExternalStore` 返回值去触发 Suspense；官方文档指出 external-store mutation 不能标记为 non-blocking Transition，这种组合容易产生不符合预期的 fallback 行为。
+另一个生产边界是 selector：大型 store 往往通过状态库 binding/selector 控制 snapshot 粒度；不要在业务组件里重复手写一套订阅协议。
 
 ## 清晰度与工程决策
 
-当前项目决策规则合理：已有 React 外部真源、浏览器 API 或状态库 binding 时使用该协议；普通应用 UI 状态不要为了“全局”而先造 external store。对 Zustand/Redux Toolkit/Jotai 的文字应持续标明它们不是 React Core，也不是 Server State cache。
+项目决策规则保持合理：已有 React 外部真源、浏览器 API 或状态库 binding 时使用该协议；普通 UI state 优先 `useState` / `useReducer` / Context。Zustand/Redux Toolkit/Jotai 不是 React Core，也不是 server-state cache。
 
 ## 建议修改
 
-1. Demo 增加 Reader mount/unmount 控件，并记录真实 subscribe/unsubscribe。
-2. 将 listener-count instrumentation 与业务 snapshot 分离，避免订阅行为本身伪装成业务数据变化。
-3. Note 补充 Transition/external-store consistency 边界和 SSR `getServerSnapshot` 的明确失败条件。
+1. 保留业务 snapshot 与 lifecycle instrumentation 的分离。
+2. 可增加 external-store + Suspense 的反例，解释官方为何不推荐该组合。
+3. 若后续加入 SSR fixture，再用真实 `getServerSnapshot` / hydration 验证服务端一致性。
