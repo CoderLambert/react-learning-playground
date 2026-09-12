@@ -23,6 +23,8 @@ export function ConversationList({
   onRename,
   onDelete,
   onArchive,
+  onCopy,
+  onExport,
   disabled = false,
   className = "",
 }) {
@@ -75,6 +77,13 @@ export function ConversationList({
                       autoFocus
                       value={draftTitle}
                       onChange={(event) => setDraftTitle(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Escape") {
+                          event.preventDefault();
+                          setEditingId(null);
+                          setDraftTitle("");
+                        }
+                      }}
                       onBlur={() => commitRename(conversation)}
                       maxLength={120}
                       disabled={disabled}
@@ -93,6 +102,12 @@ export function ConversationList({
                       {conversation.learningUnitLabel ? `${conversation.learningUnitLabel} · ` : ""}
                       {formatConversationTime(conversation.lastMessageAt ?? conversation.updatedAt)}
                     </small>
+                    {conversation.searchSnippet ? (
+                      <span className="ai-conversation-list__snippet">
+                        {conversation.matchedRole ? `${conversation.matchedRole === "user" ? "你" : "AI"}：` : ""}
+                        {conversation.searchSnippet}
+                      </span>
+                    ) : null}
                   </button>
                 ) : (
                   <div className="ai-conversation-list__select is-static">
@@ -105,6 +120,18 @@ export function ConversationList({
                 )}
 
                 <div className="ai-conversation-list__actions" aria-label={`${conversation.title || "新对话"} 操作`}>
+                  {onCopy ? (
+                    <button type="button" onClick={() => onCopy(conversation)} disabled={disabled}>复制</button>
+                  ) : null}
+                  {onExport ? (
+                    <details className="ai-conversation-list__export">
+                      <summary aria-label={`导出 ${conversation.title || "新对话"}`}>导出</summary>
+                      <div>
+                        <button type="button" onClick={() => onExport(conversation, "markdown")} disabled={disabled}>Markdown</button>
+                        <button type="button" onClick={() => onExport(conversation, "json")} disabled={disabled}>JSON</button>
+                      </div>
+                    </details>
+                  ) : null}
                   <button type="button" onClick={() => startRename(conversation)} disabled={disabled || editing}>重命名</button>
                   {onArchive ? (
                     <button type="button" onClick={() => onArchive(conversation.id, !conversation.archived)} disabled={disabled}>
