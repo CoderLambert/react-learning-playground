@@ -28,87 +28,85 @@ test.describe("SourceViewer", () => {
     }
   });
 
-  test("keeps inline source local to the lesson and can hand off to the inspector", async ({ page }) => {
+  test("locates a clicked Demo element in the inspector without executing the Demo action", async ({ page }) => {
     await loadApp(page);
-    await openDemo(page, "Props 基础与解构");
+    await openDemo(page, "对象 / 数组 State 不可变更新");
 
-    const inlineViewer = page.locator(".demo-page .source-viewer--inline");
-    const toggle = inlineViewer.locator(".code-accordion-toggle");
-    await expect(toggle).toHaveAttribute("aria-expanded", "false");
+    await expect(page.locator(".demo-page .source-viewer--inline")).toHaveCount(0);
+    const locatorToggle = page.getByRole("button", { name: "⌖ 定位源码", exact: true });
+    await locatorToggle.click();
+    await expect(page.getByRole("button", { name: "退出源码定位", exact: true })).toHaveAttribute("aria-pressed", "true");
 
-    await toggle.click();
-    await expect(toggle).toHaveAttribute("aria-expanded", "true");
-    await expect(inlineViewer.locator(".code-highlight-viewport")).toContainText("PropsBasicsDemo");
+    const changeCity = page.getByRole("button", { name: "切换城市（copy）", exact: true });
+    await changeCity.hover();
+    await expect(page.getByTestId("source-locator-overlay")).toBeVisible();
+    await expect(page.locator(".source-locator-label")).toContainText("ImmutableStateDemo.jsx");
 
-    await inlineViewer.locator(".code-file-tab").filter({ hasText: "UserCard.jsx" }).click();
-    await expect(inlineViewer.locator(".code-highlight-viewport")).toContainText("export function UserCard");
-
-    await inlineViewer.getByRole("button", { name: /在源码面板打开/ }).click();
+    await changeCity.click();
+    await expect(page.getByText("Ada · London, UK", { exact: true })).toBeVisible();
     await expect(page.getByRole("tab", { name: "源码", exact: true })).toHaveAttribute("aria-selected", "true");
 
     const inspectorViewer = page.locator(".source-viewer--inspector");
-    await expect(inspectorViewer).toHaveAttribute("data-source-file", "UserCard.jsx");
-    await expect(inspectorViewer.locator(".code-highlight-viewport")).toContainText("export function UserCard");
+    await expect(inspectorViewer).toHaveAttribute("data-source-file", "ImmutableStateDemo.jsx");
+    await expect(inspectorViewer).toHaveAttribute("data-source-focus", /^\d+-\d+$/);
+    await expect(inspectorViewer.locator('[data-highlighted="true"]').filter({ hasText: "切换城市（copy）" }).first()).toBeVisible();
+    await expect(page.getByRole("button", { name: "⌖ 定位源码", exact: true })).toHaveAttribute("aria-pressed", "false");
   });
 
-  test("navigates AST semantic regions and preserves the selected implementation during inspector handoff", async ({ page }) => {
+  test("supports Alt-click quick source location without enabling locator mode", async ({ page }) => {
+    await loadApp(page);
+    await openDemo(page, "对象 / 数组 State 不可变更新");
+
+    const append = page.getByRole("button", { name: "append", exact: true });
+    await append.click({ modifiers: ["Alt"] });
+
+    await expect(page.getByText(/新任务 3/)).toHaveCount(0);
+    await expect(page.getByRole("tab", { name: "源码", exact: true })).toHaveAttribute("aria-selected", "true");
+    const inspectorViewer = page.locator(".source-viewer--inspector");
+    await expect(inspectorViewer).toHaveAttribute("data-source-file", "ImmutableStateDemo.jsx");
+    await expect(inspectorViewer.locator('[data-highlighted="true"]').filter({ hasText: "append" }).first()).toBeVisible();
+  });
+
+  test("navigates AST semantic regions inside the single inspector source workspace", async ({ page }) => {
     await loadApp(page);
     await openDemo(page, "useReducer 状态机模式");
+    await page.getByRole("tab", { name: "源码", exact: true }).click();
 
-    const inlineViewer = page.locator(".demo-page .source-viewer--inline");
-    await inlineViewer.locator(".code-accordion-toggle").click();
-
-    const semanticNav = inlineViewer.locator(".source-semantic-nav");
+    const inspectorViewer = page.locator(".source-viewer--inspector");
+    const semanticNav = inspectorViewer.locator(".source-semantic-nav");
     await expect(semanticNav).toBeVisible();
     await expect(semanticNav).toHaveAttribute("data-semantic-parser", "rolldown-oxc:jsx");
 
     const coreButton = semanticNav.locator(".source-semantic-chip--primary");
-    await expect(coreButton).toHaveAttribute("aria-pressed", "true");
     await expect(coreButton).toContainText("Reducer · counterReducer");
-    await expect(inlineViewer).toHaveAttribute("data-source-semantic", "reducer:counterReducer");
-    await expect(inlineViewer.locator('[data-highlighted="true"]').filter({ hasText: "counterReducer" }).first()).toBeVisible();
-
-    const coreFocus = await inlineViewer.getAttribute("data-source-focus");
-    expect(coreFocus).toMatch(/^\d+-\d+$/);
+    await coreButton.click();
+    await expect(coreButton).toHaveAttribute("aria-pressed", "true");
+    await expect(inspectorViewer).toHaveAttribute("data-source-semantic", "reducer:counterReducer");
+    await expect(inspectorViewer.locator('[data-highlighted="true"]').filter({ hasText: "counterReducer" }).first()).toBeVisible();
 
     await semanticNav.getByRole("button", { name: "完整文件" }).click();
-    await expect(inlineViewer).toHaveAttribute("data-source-semantic", "full");
-    await expect(inlineViewer).not.toHaveAttribute("data-source-focus", /.+/);
-
-    const componentButton = semanticNav.getByRole("button", { name: "Component · StateReducerDemo" });
-    await componentButton.click();
-    await expect(inlineViewer).toHaveAttribute("data-source-semantic", "component:StateReducerDemo");
-    await expect(inlineViewer.locator('[data-highlighted="true"]').filter({ hasText: "StateReducerDemo" }).first()).toBeVisible();
-
-    await coreButton.click();
-    await expect(inlineViewer).toHaveAttribute("data-source-focus", coreFocus);
-    await inlineViewer.getByRole("button", { name: /在源码面板打开/ }).click();
-
-    await expect(page.getByRole("tab", { name: "源码", exact: true })).toHaveAttribute("aria-selected", "true");
-    const inspectorViewer = page.locator(".source-viewer--inspector");
-    await expect(inspectorViewer).toHaveAttribute("data-source-file", "StateReducerDemo.jsx");
-    await expect(inspectorViewer).toHaveAttribute("data-source-focus", coreFocus);
-    await expect(inspectorViewer.locator('[data-highlighted="true"]').filter({ hasText: "counterReducer" }).first()).toBeVisible();
+    await expect(inspectorViewer).toHaveAttribute("data-source-semantic", "full");
+    await expect(inspectorViewer).not.toHaveAttribute("data-source-focus", /.+/);
   });
 
-  test("builds semantic navigation for registered TSX sources", async ({ page }) => {
+  test("builds semantic navigation for registered TSX sources in the inspector", async ({ page }) => {
     await loadApp(page);
     await openDemo(page, "TypeScript for React 类型边界");
+    await page.getByRole("tab", { name: "源码", exact: true }).click();
 
-    const inlineViewer = page.locator(".demo-page .source-viewer--inline");
-    await inlineViewer.locator(".code-accordion-toggle").click();
-    await inlineViewer.locator(".code-file-tab").filter({ hasText: "react-boundaries.tsx" }).click();
+    const inspectorViewer = page.locator(".source-viewer--inspector");
+    await inspectorViewer.locator(".code-file-tab").filter({ hasText: "react-boundaries.tsx" }).click();
 
-    const semanticNav = inlineViewer.locator(".source-semantic-nav");
+    const semanticNav = inspectorViewer.locator(".source-semantic-nav");
     await expect(semanticNav).toHaveAttribute("data-semantic-parser", "rolldown-oxc:tsx");
     const coreButton = semanticNav.locator(".source-semantic-chip--primary");
-    await expect(coreButton).toHaveAttribute("aria-pressed", "true");
     await expect(coreButton).toContainText("Component ·");
-    await expect(inlineViewer).toHaveAttribute("data-source-semantic", /^component:/);
+    await coreButton.click();
+    await expect(inspectorViewer).toHaveAttribute("data-source-semantic", /^component:/);
 
-    const semanticId = await inlineViewer.getAttribute("data-source-semantic");
+    const semanticId = await inspectorViewer.getAttribute("data-source-semantic");
     const selectedSymbol = semanticId?.slice("component:".length);
     expect(selectedSymbol).toBeTruthy();
-    await expect(inlineViewer.locator('[data-highlighted="true"]').filter({ hasText: selectedSymbol }).first()).toBeVisible();
+    await expect(inspectorViewer.locator('[data-highlighted="true"]').filter({ hasText: selectedSymbol }).first()).toBeVisible();
   });
 });
