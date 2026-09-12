@@ -1,74 +1,79 @@
 # Assessment + AI Agent Integration Status
 
-## Finalization
+## Validation candidate
 
-- Final branch: `codex/assessment-finalization`
-- Base: `origin/auto/assessment-integration` at `e5301fc`
-- Current validation tip before this status commit: `6066b90`
-- Target PR: `codex/assessment-finalization` → `auto/assessment-integration`
-- Proposed title: `feat: finalize Assessment AI agent integration`
-- `MERGE_READY=YES`
+- A5 validation branch: `codex/assessment-hardening-release`
+- Validation tip before this status commit: `ce6c4a5`
+- PR branch to update: `codex/assessment-finalization`
+- PR base: `auto/assessment-integration`
+- Baseline audited before hardening: `d0130d35a35392fac3ea1059a611ba85c326a93f`
 
-Remote state was refreshed with `git fetch --all --prune`; no public branch was rebased, force-pushed, or rewritten.
+The validation work did not reset, force-push, merge, or otherwise modify `main`.
 
-## DAG execution
+## Architecture and product gates
 
-| Agent | Result | Integrated work |
+| Gate | Result | Evidence |
 | --- | --- | --- |
-| A0 Contract | PASS | V1 repository command/query contract, revision and atomic mutation-receipt semantics. |
-| A1 Repository | PASS | Memory and IndexedDB repositories using `react-learning-assessment`; questions, sessions, attempts, receipts, replay and conflict handling. |
-| A2 Service | PASS | `AssessmentService` domain validation, trusted scope, snapshots, grading, attempts and query-store notifications. |
-| A3 UI | PASS | Assessment pane, question renderers and registry-based Inspector merge preserving Notes/Source/AI behavior. |
-| A4 Agent/Transport | PASS | Direct and Gateway `ModelClient` parity, tool continuations, streamed argument assembly and worker proxy controls. |
-| A5 Tools | PASS | Four Assessment tool adapters calling only `AssessmentService`; model arguments cannot control trusted runtime fields. |
-| A6 Composition/DI | PASS | IndexedDB → Memory fallback → Service → QueryStore/Tools → AgentRunner wiring and reactive App integration. |
-| A7 Product E2E | PASS | Assessment lifecycle integration and Chromium coverage. |
-| A8 Quality Gate | PASS | Architecture/trusted-scope/regression audit completed; no production-code commit required. |
+| Architecture Gate | PASS | Boundary tests confirm UI stays behind application/query-store boundaries; tools call `AssessmentService`; provider/worker and generic agent core remain Assessment-agnostic; domain remains React/IndexedDB/AI-independent. |
+| Repository Gate | PASS | Memory and IndexedDB contract suites cover scoped queries, atomic mutation receipts/replay, revision conflicts, retire metadata, sessions, attempts, and completion mutation parity. |
+| Service Gate | PASS | Service tests cover trusted scope injection, domain validation, attempt grading from snapshots, query refresh, and repository-error propagation. |
+| Tool Schema Gate | PASS | Ajv-backed reusable Assessment schemas accept complete single-choice/true-false drafts and reject forged runtime fields, invalid patches, nested unknown fields, malformed discriminated content, and fewer than two choice options. |
+| Runtime Validation Gate | PASS | `ToolExecutor` compiles/caches the registered `inputSchema`; invalid model arguments normalize to `TOOL_ARGUMENTS_INVALID`; provider definitions and local validation share the schema. |
+| Trusted Scope Gate | PASS | Model arguments cannot set learning-unit identity, mutation identity, provenance, conversation/run/tool identity, snapshot identity, model, or other system fields; adapters inject trusted runtime context and the service validates it again. |
+| Evidence Gate | PASS | Non-empty evidence fails closed without a resolver. Production composition resolves only the current LearningUnit's declared source file and rejects missing files and out-of-range source lines before persistence. |
+| Question Mutation Idempotency Gate | PASS | Create/update/retire tests cover receipt replay, revision conflict, atomic receipt storage, and trusted AI provenance replacement. Retire atomically changes status, revision, `updatedAt`, and provenance. |
+| Session Snapshot/Recovery Gate | PASS | Session items retain question/revision snapshots; attempts grade against snapshots; partial sessions recover the first unanswered item after reload; final attempt atomically completes the session; later question update/retire does not alter the active snapshot. |
+| Agent Audit Persistence Gate | PASS | AI IndexedDB migration preserves conversation data and persists `agentRuns` plus `toolExecutions` across reopen. Runner tests cover successful, failed, aborted, multi-tool, and recovered interrupted runs; Memory remains an explicit fallback. |
+| Capability Gate | PASS | Ordinary chat exposes no Assessment command tools. Explicit `assessment_authoring` mode supplies Assessment tools, exposes mode state in the UI, permits exit, and compaction always has no tools. |
+| Direct Provider Contract Gate | PASS | Node contract tests cover tool schema forwarding, assistant/tool continuations, split tool calls, errors, and abort normalization. |
+| Gateway Provider Contract Gate | PASS | Worker and client tests cover the same normalized tool continuations, stream assembly, cancellation, error handling, and tool-disabled compaction boundary. |
+| Product E2E Gate | PASS | Mock Chromium run covers AI create, source-evidence navigation/rejection, session reload/completion/snapshot isolation, ordinary-chat capability denial, and IndexedDB Memory fallback. |
 
-A5 and A6 were completed by the orchestrator after their delegated workers stalled; their changes remain within the assigned ownership paths. All other delegated implementation work was merged with normal `--no-ff` merges.
+## Commands actually run
 
-## Architecture acceptance
-
-The final code and tests enforce:
-
-- UI does not import Assessment infrastructure or use IndexedDB directly.
-- Assessment tools call `AssessmentService`, never a repository or IndexedDB adapter.
-- Agent core, providers and the worker remain Assessment-agnostic.
-- Domain code remains independent of React, IndexedDB and AI transport.
-- `learningUnitId`, `conversationId`, `agentRunId`, `toolCallId`, `contextSnapshotId`, `mutationId` and `model` are runtime-controlled fields.
-- Ordinary chat keeps the established `client.stream` wire contract; AgentRunner is selected for Assessment requests only.
-- Compaction has no tools, no `toolChoice`, and no tool execution path.
-- IndexedDB failure is explicit and falls back to a user-visible session-only Memory repository.
-
-## Validation evidence
-
-| Command / suite | Result |
+| Command | Result |
 | --- | --- |
-| `npm ci` | PASS; 260 packages installed, 0 vulnerabilities. |
-| `npm run lint` | PASS, exit 0; existing lint warnings only. |
-| `npm run build` | PASS, exit 0; existing large-chunk warning only. |
-| `node --test tests/*.mjs worker/deepseek-assistant/test/*.test.js` | PASS: 195/195. |
-| `npm --prefix worker/deepseek-assistant run check` | Environment failure: local Worker `node_modules` has no `wrangler`. |
-| `npm exec --yes --package=wrangler@4.36.0 -- wrangler deploy --dry-run --config worker/deepseek-assistant/wrangler.jsonc` | PASS; upload plan generated, with Wrangler warning about existing `secrets` config field. |
-| `CI=true npm run test:e2e` | 27/45 PASS; 18 AI tests could not configure the assistant because `VITE_AI_ASSISTANT_URL` was absent. No Assessment test failed. |
-| `VITE_AI_ASSISTANT_URL=http://127.0.0.1:4173/__ai-test__ CI=true npm run test:e2e` | PASS: 45/45 Chromium tests. |
-| Assessment lifecycle integration focused suite | PASS: 61/61. |
-| Assessment/architecture/tool/composition focused tests | PASS; included in the 195/195 Node total. |
+| `npm ci` | PASS — 265 packages added; audit reported 0 vulnerabilities. |
+| `node --test tests/*.mjs worker/deepseek-assistant/test/*.test.js` | PASS — 216 passed, 0 failed. |
+| `npm run lint` | PASS — exit 0; pre-existing warnings only. |
+| `npm run build` | PASS — exit 0; Vite built 1,073 modules. Existing large-chunk warning only. |
+| `npm exec --yes --package=wrangler@4.36.0 -- wrangler deploy --dry-run --config worker/deepseek-assistant/wrangler.jsonc` | PASS — dry-run upload plan generated. Wrangler warned that the existing top-level `secrets` config field is unexpected. |
+| `VITE_AI_ASSISTANT_URL=http://127.0.0.1:4173/__ai-test__ CI=true npm run test:e2e` after a bare build | Diagnostic failure — 28/46 passed and 18 existing AI tests found the composer disabled. Vite substitutes `VITE_*` values at build time while Playwright serves `vite preview`; setting the variable only for the preview/test process cannot modify an already bare-built `dist`. This is superseded by the self-contained command below. |
+| `npm run test:e2e:mock` | PASS — 46/46 Chromium tests in 28.4 s. The script builds with the mock endpoint first, then runs Playwright. It uses no production endpoint or credential. |
 
-The mock Gateway E2E endpoint is the repository's existing Playwright test route and does not use a paid or live DeepSeek credential. Live provider credential smoke testing remains `PENDING` because no external secret was supplied.
+## Provider and CI status
 
-## Integrated commits
+- Mock tool lifecycle: `PASS` — the Chromium mock-provider path invokes tool continuation through executor, service, repository, UI, and IndexedDB.
+- Provider wire contract: `PASS` — Direct and Gateway contract coverage is part of the 216-passing Node run.
+- Live DeepSeek function-call smoke: `PENDING_NO_CREDENTIAL` — `DEEPSEEK_API_KEY`, `DEEPSEEK_TEST_API_KEY`, and `VITE_DEEPSEEK_API_KEY` were absent. No secret was added, no live request was fabricated, and no live-provider PASS is claimed.
+- CI Gate (exact remote PR head): `NOT_AVAILABLE_WITH_REASON` — A5 performed local gates only and did not query or modify remote PR checks. The PR owner must refresh checks after integrating this status commit.
 
-- `71f673b` Assessment UI merge
-- `92469df` repository contract freeze
-- `8758a09` repository implementations
-- `6d66df2` AssessmentService and QueryStore
-- `0b95260` direct/Gateway Agent transport completion
-- `cb28c57` Assessment AI tool adapters
-- `841f02b` composition root and reactive Inspector wiring
-- `6afdc7d` Assessment lifecycle E2E coverage
-- `6066b90` ordinary-chat transport regression fix
+## Integrated hardening commits
 
-## Release action
+- `21cdbe7` — Ajv runtime validation and Assessment tool schemas.
+- `98b31c1` — Assessment provenance, evidence, retire metadata, and session lifecycle integrity.
+- `c5c91a2` — persistent AI agent-run/tool-execution audit records.
+- `5d50db6` — production composition, explicit capability mode, evidence resolver, and product session recovery.
+- `8a8c556` / merge `a77146f` — self-contained mock E2E build-and-test command.
 
-After this document is committed, push `codex/assessment-finalization` and open the PR into `auto/assessment-integration`. Do not auto-merge into `main`.
+## Release conclusion
+
+All local code-level gates required for this hardening are passing and there is no known P1 blocker.
+
+```text
+Tool Runtime Validation: PASS
+Assessment Tool Schema: PASS
+Trusted Scope: PASS
+Evidence Scope Validation: PASS
+Question Mutation Idempotency: PASS
+Session Snapshot/Recovery: PASS
+Agent Run Persistence: PASS
+Direct Provider Contract: PASS
+Gateway Provider Contract: PASS
+Mock Chromium E2E: PASS
+Live DeepSeek Smoke: PENDING_NO_CREDENTIAL
+Exact-head CI: NOT_AVAILABLE_WITH_REASON
+MERGE_READY=YES
+```
+
+`PENDING_NO_CREDENTIAL` is not a live-provider PASS. Do not auto-merge this PR and do not merge directly into `main`.
