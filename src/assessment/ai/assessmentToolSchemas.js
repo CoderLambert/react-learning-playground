@@ -100,11 +100,14 @@ const trueFalseContentPatchSchema = Object.freeze({
   additionalProperties: false,
 });
 
-/** A model may patch business fields only; system fields are intentionally absent. */
+/**
+ * A model may patch business fields only. Question type is immutable in V1;
+ * changing a discriminant requires retiring the old question and creating a
+ * new one so persisted canonical records never change shape in place.
+ */
 export const assessmentQuestionPatchSchema = Object.freeze({
   type: "object",
   properties: {
-    type: { type: "string", enum: ["single_choice", "true_false"] },
     content: { anyOf: [singleChoiceContentPatchSchema, trueFalseContentPatchSchema] },
     ...commonQuestionProperties,
   },

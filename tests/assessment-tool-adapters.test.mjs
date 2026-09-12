@@ -112,6 +112,7 @@ test("create and list tools inject trusted scope after valid model arguments", a
     agentRunId: "run-1",
     contextSnapshotId: "snapshot-1",
     mutationId: "run-1:call-1",
+    toolCallId: "call-1",
     actor: { type: "ai_agent" },
   });
   assert.deepEqual(calls[0][1].questions, [singleChoiceDraft(), trueFalseDraft()]);
@@ -124,6 +125,7 @@ test("create and list tools inject trusted scope after valid model arguments", a
   }, context());
   assert.equal(listed.ok, true);
   assert.equal(calls[1][1].trusted.learningUnitId, "unit-1");
+  assert.equal(calls[1][1].trusted.toolCallId, "call-2");
   assert.equal(calls[1][1].status, "active");
 });
 
@@ -141,6 +143,7 @@ test("update and retire tools pass only business args and trusted mutation ident
   }, context());
   assert.equal(updated.ok, true);
   assert.equal(calls[0][1].trusted.learningUnitId, "unit-1");
+  assert.equal(calls[0][1].trusted.toolCallId, "call-3");
   assert.equal(calls[0][1].trusted.mutationId, "run-1:call-3");
   assert.equal(calls[0][1].questionId, "q-1");
   assert.deepEqual(calls[0][1].patch, valid.patch);
@@ -152,6 +155,7 @@ test("update and retire tools pass only business args and trusted mutation ident
   }, context());
   assert.equal(retired.ok, true);
   assert.equal(calls[1][1].trusted.learningUnitId, "unit-1");
+  assert.equal(calls[1][1].trusted.toolCallId, "call-4");
   assert.equal(calls[1][1].trusted.mutationId, "run-1:call-4");
 });
 

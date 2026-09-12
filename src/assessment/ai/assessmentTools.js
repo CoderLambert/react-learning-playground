@@ -47,8 +47,12 @@ function assertTrustedContext(context) {
 function trustedServiceInput(context, execution = null) {
   const trusted = {};
   for (const field of TRUSTED_CONTEXT_FIELDS) trusted[field] = requiredText(context[field], `context.${field}`);
-  const toolCallId = execution?.toolCallId ?? context.toolCallId;
-  if (toolCallId) trusted.mutationId = `${trusted.agentRunId}:${requiredText(toolCallId, "toolCallId")}`;
+  const rawToolCallId = execution?.toolCallId ?? context.toolCallId;
+  if (rawToolCallId) {
+    const toolCallId = requiredText(rawToolCallId, "toolCallId");
+    trusted.toolCallId = toolCallId;
+    trusted.mutationId = `${trusted.agentRunId}:${toolCallId}`;
+  }
   trusted.actor = structuredClone(context.actor);
   if (typeof context.model === "string" && context.model.trim()) trusted.model = context.model.trim();
   if (context.provenance && typeof context.provenance === "object" && !Array.isArray(context.provenance)) {

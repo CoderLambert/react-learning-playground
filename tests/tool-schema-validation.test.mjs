@@ -91,7 +91,7 @@ test("Ajv validation enforces nested additionalProperties and question shapes", 
   }
 });
 
-test("Ajv validation enforces string, revision, and patch constraints", async () => {
+test("Ajv validation enforces string, revision, immutable type, and patch constraints", async () => {
   const { executor } = assessmentHarness();
   const blankPrompt = draft();
   blankPrompt.content.prompt = "   ";
@@ -104,11 +104,22 @@ test("Ajv validation enforces string, revision, and patch constraints", async ()
       patch: { content: { prompt: "updated", unknown: true } },
     },
   };
+  const typeMutation = {
+    id: "update-type",
+    name: ASSESSMENT_TOOL_NAMES.UPDATE_QUESTION,
+    arguments: {
+      questionId: "q-1",
+      expectedRevision: 1,
+      patch: { type: "true_false" },
+    },
+  };
 
   const invalidQuestion = await executeCreate(executor, [blankPrompt]);
   assert.equal(invalidQuestion.error.code, "TOOL_ARGUMENTS_INVALID");
   const invalidUpdate = await executor.execute(malformedUpdate, context());
   assert.equal(invalidUpdate.error.code, "TOOL_ARGUMENTS_INVALID");
+  const invalidTypeMutation = await executor.execute(typeMutation, context());
+  assert.equal(invalidTypeMutation.error.code, "TOOL_ARGUMENTS_INVALID");
 });
 
 test("compiled schemas are cached per registered schema", async () => {

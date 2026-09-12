@@ -52,11 +52,19 @@ export function assertQuestionDraft(question) {
   requiredText(question.content.explanation, "content.explanation");
 
   if (question.type === QUESTION_TYPES.SINGLE_CHOICE) {
+    if (Object.hasOwn(question.content, "correct")) {
+      invalidQuestion("single-choice question content must not contain correct");
+    }
     const optionIds = validateOptions(question.content.options);
     const correctOptionId = requiredText(question.content.correctOptionId, "content.correctOptionId");
     if (!optionIds.has(correctOptionId)) invalidQuestion("correctOptionId must reference an existing option");
-  } else if (typeof question.content.correct !== "boolean") {
-    invalidQuestion("true-false question content.correct must be boolean");
+  } else {
+    if (Object.hasOwn(question.content, "options") || Object.hasOwn(question.content, "correctOptionId")) {
+      invalidQuestion("true-false question content must not contain single-choice fields");
+    }
+    if (typeof question.content.correct !== "boolean") {
+      invalidQuestion("true-false question content.correct must be boolean");
+    }
   }
 
   if (question.difficulty != null && !DIFFICULTY_VALUES.has(question.difficulty)) invalidQuestion(`unsupported difficulty: ${String(question.difficulty)}`);
