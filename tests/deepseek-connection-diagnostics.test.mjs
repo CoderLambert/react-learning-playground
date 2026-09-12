@@ -21,9 +21,26 @@ test("classifyDeepSeekConnectionError maps authentication failures", () => {
   });
 });
 
+test("classifyDeepSeekConnectionError maps configuration failures", () => {
+  assert.equal(classifyDeepSeekConnectionError({ status: 404 }).type, "configuration");
+  assert.equal(classifyDeepSeekConnectionError(new Error("model unavailable")).type, "configuration");
+});
+
+test("classifyDeepSeekConnectionError distinguishes gateway failures", () => {
+  assert.equal(
+    classifyDeepSeekConnectionError({ status: 503 }, { connectionMode: "gateway" }).type,
+    "gateway",
+  );
+});
+
 test("classifyDeepSeekConnectionError distinguishes CORS-like browser failures", () => {
   const result = classifyDeepSeekConnectionError(new TypeError("Failed to fetch"));
   assert.equal(result.type, "cors");
+});
+
+test("classifyDeepSeekConnectionError maps timeout/network and unknown failures", () => {
+  assert.equal(classifyDeepSeekConnectionError(new Error("connection timeout")).type, "network");
+  assert.equal(classifyDeepSeekConnectionError(new Error("something unexpected")).type, "unknown");
 });
 
 test("testDeepSeekBrowserConnection sends a minimal request without exposing key in the result", async () => {
