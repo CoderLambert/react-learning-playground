@@ -21,23 +21,23 @@ export function MultiSlotsDemo() {
           <span className="badge badge-purple">组件库架构协议</span>
         </div>
         <p className="demo-desc">
-          成熟组件库（如 Ant Design、shadcn/ui、MUI）广泛采用“三态插槽协议”（默认模板 + 局部覆盖 + 显式隐藏）。通过 Props 接收自定义 JSX 节点或布尔值，实现比单一 <code>children</code> 更高维度的扩展能力。
+          React 可以通过 Props 接收自定义 JSX 节点形成具名扩展点。本 Demo 选择一个显式“三态插槽协议”（默认模板 + 局部覆盖 + <code>false</code> 显式隐藏）；这是项目级 API 设计选择，不是 React 或所有组件库的统一标准。
         </p>
         <div className="demo-meta-tags">
           <span className="badge badge-gray">具名插槽（Named Slots via Props）</span>
-          <span className="badge badge-gray">三态渲染协议（Tri-state Protocol）</span>
-          <span className="badge badge-gray">零额外 DOM 成本</span>
+          <span className="badge badge-gray">Demo 三态协议（Tri-state Contract）</span>
+          <span className="badge badge-gray">隐藏分支不渲染对应区域</span>
         </div>
       </div>
 
       {/* 核心协议规则卡片 */}
       <div className="demo-alert demo-alert-info">
         <div className="demo-alert-title">
-          <span>📋</span> 工业级三态插槽协议判定规范
+          <span>📋</span> 本 Demo 的三态插槽协议
         </div>
         <ul style={{ margin: "4px 0 0 0", paddingLeft: "20px", display: "flex", flexDirection: "column", gap: "4px" }}>
           <li>
-            <strong>1. 显式隐藏：</strong><code>slotProp === false</code> → 返回 <code>null</code>，完全不产生 DOM 占位
+            <strong>1. 显式隐藏：</strong><code>slotProp === false</code> → 返回 <code>null</code>，不渲染该区域
           </li>
           <li>
             <strong>2. 局部覆盖：</strong><code>slotProp !== undefined</code> → 渲染调用方传入的内容（支持 string、JSX 或组件）
@@ -130,7 +130,7 @@ export function MultiSlotsDemo() {
           onClose={closeModal}
         >
           <p style={{ margin: 0, color: "var(--text-muted)", fontSize: "14px", lineHeight: "1.6" }}>
-            通过传入 <code>footer=&#123;false&#125;</code>，组件直接跳过底部操作条的 DOM 生成，适合展示纯文本说明。
+            通过传入 <code>footer=&#123;false&#125;</code>，组件直接跳过底部操作条的渲染，适合展示纯文本说明。
           </p>
         </ProductionModal>
       </div>
