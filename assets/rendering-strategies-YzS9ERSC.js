@@ -1,0 +1,70 @@
+var e=`# CSR、SSG、SSR 与 RSC：先分清层次
+
+<MentalModel title="渲染策略回答的是不同问题">
+CSR、SSG、SSR 主要描述“HTML 在何时、何处生成”；RSC 描述的是“哪些组件模块在服务端执行、以什么形式把结果交给客户端”。SSR 与 RSC 不是互斥选项：支持 RSC 的框架通常可以把两者组合在同一条请求与导航链路里。
+</MentalModel>
+
+## 四个概念不要混成一张表
+
+<Compare>
+### CSR / SPA
+浏览器下载 JavaScript 后创建主要 UI。首屏高度依赖客户端执行与数据请求，但交互模型直接、部署边界简单。
+
+### SSG / 预渲染
+构建阶段提前生成稳定 HTML。适合变化频率低、可以在发布时确定内容的页面；更新时需要重新生成或使用框架提供的增量机制。
+
+### SSR
+请求到达服务器后生成 HTML，再由客户端 hydration 接管已有标记并绑定交互。它改善“先看到内容”的路径，但并不自动消除客户端 JavaScript。
+
+### RSC
+Server Components 在服务端环境执行，其结果通过框架的 RSC 协议/载荷与 Client Components 组合。它不是“另一种 HTML 模板引擎”，也不等于传统 SSR。
+</Compare>
+
+<Experiment title="先只比较 HTML 生成策略，再判断 RSC 为什么是另一条轴">
+在中间 Demo 依次切换 CSR、SSG、SSR，记录 HTML 主要在浏览器、构建阶段还是请求阶段生成，以及交互页面何时需要客户端 JavaScript。然后回到 Note 的 RSC 定义：它描述组件执行/传输边界，可以与预渲染或 SSR 组合，因此当前 Demo 刻意不把 RSC 做成第四个互斥按钮。
+</Experiment>
+
+<DemoReference action="逐项切换 CSR / SSG / SSR 三条时间线" observe="分别记录 HTML 何时产生、数据可能在哪里读取、浏览器何时需要 JavaScript；再解释为什么 RSC 不应被塞进同一组互斥策略。" />
+
+<Timeline steps={[
+  "构建阶段：SSG 可以提前生成静态产物；RSC 框架也可能预渲染部分 Server/Client Component 输出",
+  "请求阶段：SSR 可按请求生成 HTML；RSC 可在服务端执行 Server Components 并产生协议载荷",
+  "浏览器收到 HTML：用户可以先看到已经服务端生成的内容",
+  "hydration / 客户端运行：Client Components 获得事件处理和本地状态能力",
+  "后续导航：框架可能继续请求 RSC payload、HTML、JSON 或它们的组合"
+]} />
+
+<Observation>
+“Client Component”并不必然意味着“只在浏览器首次生成 HTML”。在 Next.js App Router 等支持 RSC 的框架里，Client Components 仍可能参与服务端预渲染；\`"use client"\` 更准确地表示客户端模块边界和可交互能力，而不是传统意义的 \`ssr: false\`。
+</Observation>
+
+<AntiPattern title="把 use server 理解成 Server Component 标记">
+\`"use server"\` 用于声明 Server Functions 的执行边界；Server Components 默认由支持 RSC 的框架按服务端模块图处理，并不依赖给组件文件加 \`"use server"\`。
+</AntiPattern>
+
+<Boundary title="React Core 与 Framework 的责任边界">
+React 提供 hydration、streaming SSR、Server Components / Server Functions 等底层能力与语义；路由、打包、RSC 传输协议落地、缓存、部署拓扑、Server/Client 文件约定通常由框架负责。学习这些概念时，应明确你正在讨论 React 能力还是 Next.js / React Router Framework 等产品约定。
+</Boundary>
+
+<Flow items={[
+  "静态内容、发布时可确定 → 优先考虑预渲染/SSG",
+  "请求相关内容、需要服务端先输出 HTML → SSR",
+  "大量服务端数据/依赖不应进入客户端 bundle → 在支持的框架中考虑 RSC 边界",
+  "需要事件、浏览器 API、本地交互 state → Client Component / 客户端代码边界"
+]} />
+
+<Summary>
+- CSR / SSG / SSR 主要描述生成 HTML 的时机与位置。
+- hydration 是在已有服务端 HTML 上建立客户端 React 交互，而不是重新定义 SSR。
+- RSC 是组件执行与传输模型，可以和 SSR/预渲染组合。
+- \`"use client"\` 是客户端模块边界；\`"use server"\` 标记 Server Functions。
+- 路由、缓存、部署与具体 RSC 管线通常属于框架职责。
+</Summary>
+
+<FurtherReading items={[
+  { label: "React: renderToPipeableStream", href: "https://react.dev/reference/react-dom/server/renderToPipeableStream" },
+  { label: "React: hydrateRoot", href: "https://react.dev/reference/react-dom/client/hydrateRoot" },
+  { label: "React: Server Components", href: "https://react.dev/reference/rsc/server-components" },
+  { label: "React: use server", href: "https://react.dev/reference/rsc/use-server" },
+  { label: "Next.js: Server and Client Components", href: "https://nextjs.org/docs/app/getting-started/server-and-client-components" }
+]} />`;export{e as default};

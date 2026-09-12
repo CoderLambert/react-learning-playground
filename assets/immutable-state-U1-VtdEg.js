@@ -1,0 +1,34 @@
+var e=`# 对象 / 数组 State 不可变更新
+
+<MentalModel title="State 是一次 render 的只读快照，更新要创建下一份值">
+对象和数组在 JavaScript 中可变，但放入 React state 后应把它们视为只读。更新时创建新的对象/数组，并只替换真正变化的路径；这样旧 snapshot 保持可信，新旧引用也能准确表达“哪里发生了变化”。
+</MentalModel>
+
+<Experiment title="真正执行 mutation 与 copy 对照">
+先在中间 Demo 的“反例实验”里点“错误：mutate + set 同引用”。对象已经被改写，但 setter 收到的还是同一个引用，这次更新可能被 React 跳过，因此 DOM 不会可靠地反映变化。接着点“触发一次无关 render”，观察被偷偷修改的旧 state 如何在之后的 render 中暴露出来。最后点“正确：copy + set 新引用”，比较正常更新路径。再执行 nested copy、append/remove、copy + reverse，观察引用 identity 与 UI 更新。
+</Experiment>
+
+<DemoReference action="依次执行 mutate + set 同引用、无关 render、copy + set 新引用，以及对象/数组的正常更新" observe="错误 mutation 不会可靠触发自身更新，却会污染后续 render 读取到的旧 snapshot；正确 copy 会提交新的 state 值。" />
+
+<Flow items={["读取当前 snapshot", "计算需要变化的路径", "复制受影响容器", "写入新值", "setState 提交新的顶层引用"]} />
+
+<Boundary title="spread 是浅复制">
+\`{...obj}\` 和 \`[...arr]\` 只复制一层。修改嵌套对象时必须从变化节点一路复制到顶层；复制数组后也不能直接改共享元素，例如 \`const next = [...items]; next[0].done = true\` 仍然修改了旧 state 指向的那个对象。
+</Boundary>
+
+<AntiPattern title="先 mutate 再 set 回同一个引用">
+\`state.user.name = x; setState(state)\` 会改写已有 snapshot；而 setter 收到与当前 state \`Object.is\` 相同的值时，React 可以跳过重新渲染。数组的 \`push\`、\`splice\`、原地 \`sort\` / \`reverse\` 同理。问题不只是“React 看引用”，而是 mutation 让过去的 state 不再可信；正确做法是构造下一份值再交给 setter。
+</AntiPattern>
+
+<Boundary title="生产决策：先处理状态结构，再决定更新工具">
+如果一次业务更新需要复制很多层，优先检查 state 是否嵌套过深、是否保存了重复信息。Immer 可以让更新代码更简洁，但它提供的是 draft 写法，最终仍产生新的不可变结果；它不能替代合理的 state modeling。
+</Boundary>
+
+<Summary>
+- React state 中的对象/数组按只读值处理，不改写任何已有 snapshot。
+- 更新只复制变化路径，但必须向 setter 提交下一份 state。
+- spread 是浅复制；复制容器后仍要避免修改共享的嵌套对象。
+- 同引用 mutation 既可能不触发预期 render，也会污染未来 render 看到的历史 state。
+</Summary>
+
+<FurtherReading items={[{ label: "React: Updating Objects in State", href: "https://react.dev/learn/updating-objects-in-state" }, { label: "React: Updating Arrays in State", href: "https://react.dev/learn/updating-arrays-in-state" }]} />`;export{e as default};

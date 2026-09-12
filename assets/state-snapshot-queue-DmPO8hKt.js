@@ -1,0 +1,88 @@
+var e=`# State Snapshot、Batching 与 Update Queue
+
+<MentalModel title="当前 render 是固定快照，setter 请求下一次 render">
+组件每次 render 都拿到一份固定的 state。调用 setter 不会改写当前 handler 已经闭包捕获的值；它会把更新请求加入队列，React 随后处理这些请求并为下一次 render 计算 state。
+</MentalModel>
+
+与其背“setState 是异步的”，更可靠的是区分三个东西：**current snapshot、pending update queue、next render state**。
+
+## 用 Queue Debugger 观察四种情况
+
+<Experiment title="先预测队列结果">
+把 count Reset 到 0，然后依次运行 \`Replace × 3\`、\`Updater × 3\`、\`Replace + Updater\`、\`Replace + Updater + Replace 42\`。每次点击前先预测 next render state，再对照 Demo 展开的队列步骤。
+</Experiment>
+
+<DemoReference action="依次运行四个 queue scenario" observe="比较同一 snapshot 上的 replace update、连续 updater、以及 replace/updater 混合时的处理顺序和最终 state。" />
+
+### 1. Replace × 3
+
+\`\`\`jsx
+setCount(count + 1)
+setCount(count + 1)
+setCount(count + 1)
+\`\`\`
+
+如果当前 snapshot 是 \`0\`，三行计算出的都是 \`1\`。队列里等价于连续三次“replace with 1”，最终仍是 \`1\`。
+
+### 2. Updater × 3
+
+\`\`\`jsx
+setCount(n => n + 1)
+setCount(n => n + 1)
+setCount(n => n + 1)
+\`\`\`
+
+React 处理队列时，会把前一个 updater 的结果交给后一个。以 \`0\` 开始就是 \`0 → 1 → 2 → 3\`。
+
+### 3. Replace + Updater
+
+\`\`\`jsx
+setCount(count + 5)
+setCount(n => n + 1)
+\`\`\`
+
+若 snapshot 是 \`0\`，先 replace 为 \`5\`，再把 \`5\` 交给 updater，结果是 \`6\`。这说明 updater 读取的是队列中的 pending state，而不是永远读取事件开始时的 snapshot。
+
+### 4. Replace + Updater + Replace
+
+\`\`\`jsx
+setCount(count + 5)
+setCount(n => n + 1)
+setCount(42)
+\`\`\`
+
+队列先得到 \`5\`，再得到 \`6\`，最后的 replace 把结果替换为 \`42\`。这也是 React 官方用来解释“值更新”和“updater function”语义差异的典型案例。
+
+## Batching 到底意味着什么
+
+React 会等待当前事件处理代码完成后再处理这些 state 更新，这就是这里要理解的 batching。它减少不必要的中间 render，也避免界面只更新了一半的状态。
+
+但 batching **不是**把普通 JavaScript 语句变成异步，也不是说所有时间、所有事件都会被合成一次。React 官方明确说明，不同的 intentional event（例如两次独立点击）会分别处理；因此应理解更新边界，而不是背“所有 setState 都一起执行”。
+
+<AntiPattern title="调用 setter 后立即读取当前变量并期待它已经变化">
+当前 handler 中的 \`count\` 属于创建这个 handler 的那次 render。setter 不会原地改写它。需要基于前一个 pending state 连续计算时使用 functional updater；需要在新 state 生效后与外部系统同步时，让后续 render / Effect 承担职责。
+</AntiPattern>
+
+## 项目决策规则
+
+- next state 完全由当前事件参数或常量决定 → 直接 \`setState(nextValue)\` 很清楚。
+- next state 依赖同一个 state 的前一个 pending value → 用 functional updater。
+- 连续混用 replace 与 updater → 按队列顺序逐项推演，不要靠直觉。
+- 多个 state 总是一起变化且规则复杂 → 考虑 reducer 或重新设计 state model。
+
+<Boundary>
+Updater function 必须保持纯函数。开发环境 Strict Mode 可能额外调用 updater 来帮助发现不纯逻辑，因此不要在 updater 中执行日志上报、网络请求等副作用。
+</Boundary>
+
+<Summary>
+- 当前 render 的 state 是固定 snapshot。
+- setter 请求新的 render，不会修改当前 snapshot。
+- 普通值更新表示 replace；updater function 表示基于 pending state 的变换。
+- React 按队列顺序计算 next state，混合 update 也遵守同一规则。
+</Summary>
+
+<FurtherReading items={[
+  { label: "React: State as a Snapshot", href: "https://react.dev/learn/state-as-a-snapshot" },
+  { label: "React: Queueing a Series of State Updates", href: "https://react.dev/learn/queueing-a-series-of-state-updates" },
+  { label: "React: Render and Commit", href: "https://react.dev/learn/render-and-commit" }
+]} />`;export{e as default};

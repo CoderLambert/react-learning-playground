@@ -1,0 +1,134 @@
+var e=`# State 保留、重置与 key：你是在继续编辑同一个对象吗？
+
+State 是否保留，不取决于 JSX 看起来像不像“同一个组件”，而取决于 React 如何识别这棵 render tree 中的组件身份。
+
+<MentalModel title="State 绑定到 render tree 中的组件身份">
+React 会结合组件在树中的位置、组件 type，以及同级节点上的 key 来识别身份。身份延续时，局部 State 会延续；身份被替换时，旧子树会卸载，新子树从自己的初始 State 开始。
+
+因此“保留还是 reset”本质上是一个产品身份问题：切换到另一个业务实体时，旧的局部 State 应不应该继续属于它？
+</MentalModel>
+
+## Demo 为什么用聊天草稿？
+
+聊天和编辑表单最容易暴露身份错误：
+
+\`\`\`text
+Taylor 的 draft = "明天开会"
+切换到 Alice
+\`\`\`
+
+如果新的 Alice 界面继续显示 Taylor 的草稿，React 本身并没有“记错联系人”。父组件只是在同一个树位置继续渲染同一个 \`Chat\` type，所以 React 有理由保留这份局部 \`draft\`。
+
+这时真正的问题是：**业务上 Alice 是否应该被视为另一个 Chat 身份？**
+
+## 上半区：相同位置 + 相同 type，State 被保留
+
+Demo 上半区始终渲染：
+
+\`\`\`jsx
+<Chat contact={preservedContact} />
+\`\`\`
+
+切换联系人只改变 \`contact\` prop。\`Chat\` 仍处在相同父级位置，也仍是同一个组件 type，因此内部 \`draft\` 继续存在。
+
+<Experiment title="实验 1：观察意外保留">
+在上半区：
+
+1. 保持 Taylor，输入一段草稿。
+2. 点击 Alice。
+3. 观察收件人已经变成 Alice，但 textarea 中的草稿仍然保留。
+
+这不是 React bug，而是当前树结构表达了“还是同一个 Chat，只是 props 变了”。
+</Experiment>
+
+## 下半区：key 把业务实体加入组件身份
+
+Demo 下半区渲染：
+
+\`\`\`jsx
+<Chat key={resetContact.id} contact={resetContact} />
+\`\`\`
+
+联系人变化时，\`key\` 也变化。React 因此把新旧节点视为不同身份：旧 Chat 被移除，新 Chat 挂载，内部 \`draft\` 回到初始值。
+
+<Experiment title="实验 2：用业务 key 显式 reset">
+在下半区：
+
+1. 给 Taylor 输入草稿。
+2. 切换到 Alice。
+3. 观察 Alice 的 textarea 从空草稿开始。
+4. 再切换其他联系人，确认每次身份变化都会创建新的局部 State。
+</Experiment>
+
+<DemoReference action="分别在上、下两个 Chat 输入草稿后切换联系人" observe="上半区同位置同 type 会保留 draft；下半区 contact.id 作为 key 后会把不同联系人视为不同组件身份并 reset。" />
+
+## key 不是“刷新按钮”
+
+\`key\` 最常见于列表，但它更根本的作用是帮助 React 区分同级节点身份。
+
+因此下面这种用法是有业务语义的：
+
+\`\`\`jsx
+<Chat key={contact.id} contact={contact} />
+\`\`\`
+
+它表达的是：
+
+\`\`\`text
+不同 contact.id
+= 不同 Chat 身份
+= 不共享局部 draft
+\`\`\`
+
+而下面这种写法通常没有稳定业务身份：
+
+\`\`\`jsx
+<Chat key={Math.random()} contact={contact} />
+\`\`\`
+
+随机 key 会让节点几乎每次 render 都变成新身份，导致局部 State、DOM、Effect 生命周期等被反复重建。
+
+## reset 不总是正确答案
+
+有些产品反而希望切换实体后保留各自草稿。例如多标签编辑器、多个会话的草稿缓存，就不能简单依赖“切换时全部 reset”。
+
+那时应该重新设计 owner：
+
+\`\`\`text
+draftsByContactId
+  taylor -> "..."
+  alice  -> "..."
+\`\`\`
+
+也就是说：
+
+- 如果旧 State 不应该跨实体继承，可以用稳定业务 key reset。
+- 如果每个实体都应该保留自己的 State，应该把草稿提升/归一化到能按实体 ID 保存的位置，而不是靠随机 key 或单个局部 draft 碰运气。
+
+<Boundary title="key 解决的是身份，不是所有重置需求">
+如果你只是想清空一个字段，显式更新对应 State 往往更直接。只有当“整个子树都应该被视为另一个业务实例”时，用 key 切换身份才特别自然。
+</Boundary>
+
+<AntiPattern title="在组件函数内部定义另一个组件类型">
+如果每次父组件 render 都重新创建一个新的子组件函数，React 会看到不同的 component type，子树可能反复 reset。组件类型通常应定义在模块顶层；不要用不稳定 type 意外制造身份变化。
+</AntiPattern>
+
+## 项目判断规则
+
+遇到“为什么 State 没清掉 / 为什么 State 被清掉了”时，按这个顺序检查：
+
+1. 这个组件还在同一个父级位置吗？
+2. 组件 type 是否相同？
+3. 同级 key 是否相同？
+4. 业务上当前对象应该被视为同一实例，还是新的实例？
+5. 如果需要每个实体分别保留数据，这份 State 是否应该提升到以实体 ID 为 key 的 owner？
+
+<Summary>
+- State 跟随 render tree 中的组件身份，而不是 JSX 变量名。
+- 相同位置、相同 type、稳定 key 通常会延续局部 State。
+- 稳定业务 key 可以明确表达“这是另一个实例”，从而 reset 子树。
+- 随机 key 不是刷新方案；是否 reset 应由产品身份语义决定。
+- 需要“每个实体各自保留”时，通常应重新设计 State owner，而不是只讨论 key。
+</Summary>
+
+<FurtherReading items={[{ label: "React: Preserving and Resetting State", href: "https://react.dev/learn/preserving-and-resetting-state" }, { label: "React: Rendering Lists", href: "https://react.dev/learn/rendering-lists" }]} />`;export{e as default};
