@@ -12,6 +12,10 @@ function normalizePath(value) {
   return String(value ?? "").replace(/\\/g, "/");
 }
 
+function cleanFilename(value) {
+  return String(value ?? "").split("?", 1)[0].split("#", 1)[0];
+}
+
 function collectRegisteredSourcePaths() {
   const registrySource = readFileSync(REGISTRY_PATH, "utf8");
   const paths = new Set();
@@ -27,8 +31,7 @@ const REGISTERED_SOURCE_PATHS = collectRegisteredSourcePaths();
 
 function isIntrinsicJsxName(types, nameNode) {
   if (!types.isJSXIdentifier(nameNode)) return false;
-  const name = nameNode.name ?? "";
-  return Boolean(name && (name[0] === name[0]?.toLowerCase() || name.includes("-")));
+  return /^[a-z]/.test(nameNode.name ?? "") || (nameNode.name ?? "").includes("-");
 }
 
 function hasLocatorAttribute(types, attributes) {
@@ -50,8 +53,10 @@ export function jsxSourceLocatorBabelPlugin({ types }) {
     name: "react-learning-jsx-source-locator",
     visitor: {
       JSXOpeningElement(path, state) {
-        const filename = state.file?.opts?.filename;
-        if (!filename || !REGISTERED_SOURCE_PATHS.has(resolve(filename))) return;
+        const filename = cleanFilename(state.file?.opts?.filename);
+        if (!filename) return;
+        const resolvedFilename = resolve(filename);
+        if (!REGISTERED_SOURCE_PATHS.has(resolvedFilename)) return;
         if (!isIntrinsicJsxName(types, path.node.name)) return;
         if (hasLocatorAttribute(types, path.node.attributes ?? [])) return;
 
@@ -62,7 +67,7 @@ export function jsxSourceLocatorBabelPlugin({ types }) {
         path.node.attributes.push(
           types.jsxAttribute(
             types.jsxIdentifier(SOURCE_ATTRIBUTE),
-            types.stringLiteral(makeLocatorValue(resolve(filename), location)),
+            types.stringLiteral(makeLocatorValue(resolvedFilename, location)),
           ),
         );
       },
