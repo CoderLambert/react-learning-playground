@@ -53,18 +53,40 @@ test.describe("SourceViewer", () => {
     await expect(page.getByRole("button", { name: "⌖ 定位源码", exact: true })).toHaveAttribute("aria-pressed", "false");
   });
 
-  test("supports Alt-click quick source location without enabling locator mode", async ({ page }) => {
+  test("makes Alt / Option source location visually explicit before quick location", async ({ page }) => {
     await loadApp(page);
     await openDemo(page, "对象 / 数组 State 不可变更新");
 
     const append = page.getByRole("button", { name: "append", exact: true });
-    await append.click({ modifiers: ["Alt"] });
+    await page.keyboard.down("Alt");
+    await expect(page.locator("html")).toHaveAttribute("data-source-locator-alt", "true");
 
+    await expect.poll(() => page.evaluate(() => {
+      const style = getComputedStyle(document.body, "::before");
+      return { content: style.content, position: style.position };
+    })).toEqual(expect.objectContaining({
+      content: expect.stringContaining("源码定位模式"),
+      position: "fixed",
+    }));
+
+    await expect.poll(() => page.locator(".source-locator-scope").first().evaluate((element) => {
+      const style = getComputedStyle(element);
+      return { cursor: style.cursor, outlineStyle: style.outlineStyle };
+    })).toEqual({ cursor: "crosshair", outlineStyle: "dashed" });
+
+    await append.hover();
+    await expect(page.getByTestId("source-locator-overlay")).toBeVisible();
+    await expect(page.locator(".source-locator-label")).toContainText("ImmutableStateDemo.jsx");
+
+    await append.click();
     await expect(page.getByText(/新任务 3/)).toHaveCount(0);
     await expect(page.getByRole("tab", { name: "源码", exact: true })).toHaveAttribute("aria-selected", "true");
     const inspectorViewer = page.locator(".source-viewer--inspector");
     await expect(inspectorViewer).toHaveAttribute("data-source-file", "ImmutableStateDemo.jsx");
     await expect(inspectorViewer.locator('[data-highlighted="true"]').filter({ hasText: "append" }).first()).toBeVisible();
+
+    await page.keyboard.up("Alt");
+    await expect(page.locator("html")).not.toHaveAttribute("data-source-locator-alt", "true");
   });
 
   test("navigates AST semantic regions inside the single inspector source workspace", async ({ page }) => {
