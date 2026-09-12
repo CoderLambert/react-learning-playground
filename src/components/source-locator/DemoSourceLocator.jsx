@@ -1,9 +1,13 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import "./DemoSourceLocator.css";
 
 const SOURCE_ATTRIBUTE = "data-source-loc";
+const ALT_MODE_ATTRIBUTE = "data-source-locator-alt";
 const INTERACTIVE_TAGS = new Set(["A", "BUTTON", "INPUT", "SELECT", "TEXTAREA", "SUMMARY", "OPTION"]);
+
+let sourceLocatorMountCount = 0;
+let releaseGlobalAltListeners = null;
 
 function normalizePath(value) {
   return String(value ?? "").replace(/\\/g, "/").replace(/^\.\//, "");
@@ -12,6 +16,53 @@ function normalizePath(value) {
 function basename(value) {
   const normalized = normalizePath(value);
   return normalized.slice(normalized.lastIndexOf("/") + 1);
+}
+
+function setGlobalAltMode(active) {
+  if (typeof document === "undefined") return;
+  if (active) document.documentElement.setAttribute(ALT_MODE_ATTRIBUTE, "true");
+  else document.documentElement.removeAttribute(ALT_MODE_ATTRIBUTE);
+}
+
+function acquireGlobalAltModeListeners() {
+  if (typeof window === "undefined" || typeof document === "undefined") return () => {};
+  sourceLocatorMountCount += 1;
+
+  if (!releaseGlobalAltListeners) {
+    const handleKeyDown = (event) => {
+      if (event.key === "Alt") setGlobalAltMode(true);
+    };
+    const handleKeyUp = (event) => {
+      if (event.key === "Alt") setGlobalAltMode(false);
+    };
+    const clearAltMode = () => setGlobalAltMode(false);
+    const handleVisibilityChange = () => {
+      if (document.hidden) clearAltMode();
+    };
+
+    window.addEventListener("keydown", handleKeyDown, true);
+    window.addEventListener("keyup", handleKeyUp, true);
+    window.addEventListener("blur", clearAltMode);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    releaseGlobalAltListeners = () => {
+      window.removeEventListener("keydown", handleKeyDown, true);
+      window.removeEventListener("keyup", handleKeyUp, true);
+      window.removeEventListener("blur", clearAltMode);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      setGlobalAltMode(false);
+      releaseGlobalAltListeners = null;
+    };
+  }
+
+  return () => {
+    sourceLocatorMountCount = Math.max(0, sourceLocatorMountCount - 1);
+    if (sourceLocatorMountCount === 0) releaseGlobalAltListeners?.();
+  };
+}
+
+function isGlobalAltModeActive() {
+  return typeof document !== "undefined" && document.documentElement.getAttribute(ALT_MODE_ATTRIBUTE) === "true";
 }
 
 function parseLocator(value) {
@@ -72,16 +123,18 @@ function getOverlay(candidate) {
   };
 }
 
-function Overlay({ value }) {
+function Overlay({ value, modifierOnly = false }) {
   if (!value || typeof document === "undefined") return null;
   const lineLabel = value.endLine !== value.startLine
     ? `L${value.startLine}–L${value.endLine}`
     : `L${value.startLine}`;
+  const modifierClass = modifierOnly ? " source-locator-overlay--modifier" : "";
+  const modifierLabelClass = modifierOnly ? " source-locator-label--modifier" : "";
 
   return createPortal(
     <>
       <div
-        className="source-locator-overlay"
+        className={`source-locator-overlay${modifierClass}`}
         data-testid="source-locator-overlay"
         aria-hidden="true"
         style={{
@@ -92,7 +145,7 @@ function Overlay({ value }) {
         }}
       />
       <div
-        className="source-locator-label"
+        className={`source-locator-label${modifierLabelClass}`}
         aria-hidden="true"
         style={{ top: value.labelTop, left: value.labelLeft }}
       >
@@ -109,8 +162,15 @@ export function DemoSourceLocator({ learningUnit, enabled = false, onLocate, chi
   const [hovered, setHovered] = useState(null);
   const overlay = useMemo(() => getOverlay(hovered), [hovered]);
 
+  useEffect(() => acquireGlobalAltModeListeners(), []);
+
   const updateHover = (event) => {
-    if (!enabled) return;
+    const modifierActive = event.altKey || isGlobalAltModeActive();
+    if (!enabled && !modifierActive) {
+      if (hovered) setHovered(null);
+      return;
+    }
+
     const candidate = resolveCandidate(event.target, event.currentTarget, learningUnit);
     setHovered((current) => (
       current?.element === candidate?.element && current?.locator?.sourcePath === candidate?.locator?.sourcePath
@@ -120,7 +180,7 @@ export function DemoSourceLocator({ learningUnit, enabled = false, onLocate, chi
   };
 
   const handleClickCapture = (event) => {
-    const shouldLocate = enabled || event.altKey;
+    const shouldLocate = enabled || event.altKey || isGlobalAltModeActive();
     if (!shouldLocate) return;
 
     const candidate = resolveCandidate(event.target, event.currentTarget, learningUnit);
@@ -144,11 +204,12 @@ export function DemoSourceLocator({ learningUnit, enabled = false, onLocate, chi
       data-learning-unit-id={learningUnit?.id ?? undefined}
       data-source-locator-active={enabled ? "true" : "false"}
       onPointerOverCapture={updateHover}
+      onPointerMoveCapture={updateHover}
       onPointerLeave={() => setHovered(null)}
       onClickCapture={handleClickCapture}
     >
       {children}
-      {enabled && <Overlay value={overlay} />}
+      {hovered && <Overlay value={overlay} modifierOnly={!enabled} />}
     </div>
   );
 }
