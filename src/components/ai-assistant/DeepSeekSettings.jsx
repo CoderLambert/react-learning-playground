@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   DEEPSEEK_MODELS,
   DEEPSEEK_OPENAI_BASE_URL,
@@ -24,12 +24,19 @@ export function DeepSeekSettings({
   const [showApiKey, setShowApiKey] = useState(false);
   const [feedback, setFeedback] = useState(null);
   const [testing, setTesting] = useState(false);
+  const apiKeyRef = useRef(null);
 
   useEffect(() => {
     setApiKey(settings?.apiKey ?? "");
     setModel(settings?.model ?? DEEPSEEK_MODELS[0].id);
     setRememberApiKey(Boolean(settings?.rememberApiKey));
   }, [settings?.apiKey, settings?.model, settings?.rememberApiKey]);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const frame = requestAnimationFrame(() => apiKeyRef.current?.focus());
+    return () => cancelAnimationFrame(frame);
+  }, [open]);
 
   const hasBrowserKey = Boolean(settings?.apiKey);
   const statusLabel = hasBrowserKey
@@ -43,7 +50,7 @@ export function DeepSeekSettings({
     const normalizedKey = apiKey.trim();
     if (!normalizedKey) return;
     onSave?.({ apiKey: normalizedKey, model, rememberApiKey });
-    setFeedback({ type: "success", text: "配置已保存。" });
+    setFeedback({ type: "success", text: "配置已保存，可继续刚才的学习问题。" });
   };
 
   const handleClear = () => {
@@ -52,6 +59,7 @@ export function DeepSeekSettings({
     setShowApiKey(false);
     setFeedback({ type: "success", text: "API Key 已从当前浏览器清除。" });
     onClear?.();
+    requestAnimationFrame(() => apiKeyRef.current?.focus());
   };
 
   const handleTest = async () => {
@@ -82,6 +90,7 @@ export function DeepSeekSettings({
         className="deepseek-settings-toggle"
         onClick={() => setOpen((value) => !value)}
         aria-expanded={open}
+        aria-controls="deepseek-settings-panel"
         disabled={disabled}
       >
         <span>{hasBrowserKey ? "DeepSeek 已配置" : "配置 DeepSeek"}</span>
@@ -89,7 +98,12 @@ export function DeepSeekSettings({
       </button>
 
       {open ? (
-        <form className="deepseek-settings-panel" onSubmit={handleSubmit}>
+        <form
+          id="deepseek-settings-panel"
+          className="deepseek-settings-panel"
+          onSubmit={handleSubmit}
+          aria-busy={testing}
+        >
           <div className="deepseek-settings-heading">
             <strong>{hasBrowserKey ? "DeepSeek 连接设置" : "连接 DeepSeek"}</strong>
             <p>
@@ -103,6 +117,7 @@ export function DeepSeekSettings({
             <span>API Key</span>
             <div className="deepseek-settings-secret-row">
               <input
+                ref={apiKeyRef}
                 type={showApiKey ? "text" : "password"}
                 value={apiKey}
                 onChange={(event) => {
