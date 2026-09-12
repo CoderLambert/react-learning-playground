@@ -31,7 +31,13 @@ function EvidenceButton({ evidence, index, onOpen }) {
     : `查看依据 ${index + 1}`;
 
   return (
-    <Button variant="outline" size="sm" onClick={() => onOpen?.(evidence)} className="max-w-full justify-start">
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={() => onOpen?.(evidence)}
+      aria-label={`查看依据 ${index + 1}`}
+      className="max-w-full justify-start"
+    >
       <span aria-hidden="true">↗</span>
       <span className="truncate">{label}</span>
     </Button>
@@ -58,7 +64,7 @@ export function AssessmentPane({
     return (
       <section className="min-w-0 p-4 sm:p-5" aria-labelledby="assessment-empty-title">
         <Card className="overflow-hidden">
-          <CardHeader className="border-b border-[var(--border-subtle)] bg-[var(--bg-surface-secondary)]/50">
+          <CardHeader className="border-b border-[var(--border-subtle)] bg-[var(--bg-surface-secondary)]">
             <div className="flex items-start gap-3">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[var(--color-primary-light)] text-base font-bold text-[var(--color-primary)]">
                 {canStart ? "✓" : "?"}
@@ -66,7 +72,7 @@ export function AssessmentPane({
               <div className="min-w-0">
                 <p className="m-0 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-subtle)]">知识点评测</p>
                 <h3 id="assessment-empty-title" className="mt-1 mb-0 text-base font-bold text-[var(--text-main)]">
-                  {canStart ? "准备好检查理解了吗？" : "当前知识点还没有评测题"}
+                  {canStart ? "准备好检查理解了吗？" : "当前知识点暂无评测"}
                 </h3>
               </div>
             </div>

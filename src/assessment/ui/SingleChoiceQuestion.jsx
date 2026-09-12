@@ -28,6 +28,7 @@ export function SingleChoiceQuestion({ question, value = "", feedback = null, on
                 className="peer sr-only"
                 name={`assessment-${question.id}`}
                 value={option.id}
+                aria-label={option.text}
                 checked={selected}
                 onChange={() => onChange?.(option.id)}
               />

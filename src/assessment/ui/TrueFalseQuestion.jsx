@@ -29,6 +29,7 @@ export function TrueFalseQuestion({ question, value = null, feedback = null, onC
                 className="peer sr-only"
                 name={`assessment-${question.id}`}
                 value={String(option.value)}
+                aria-label={option.label}
                 checked={selected}
                 onChange={() => onChange?.(option.value)}
               />
