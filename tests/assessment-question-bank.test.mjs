@@ -5,6 +5,7 @@ import {
   createBuiltinQuestion,
   createCustomQuestion,
   createQuestionBankRepository,
+  migrateBuiltinIdentity,
   migratePositionalOverrides,
   resolveQuestionBank,
   structureCheckpoint,
@@ -24,7 +25,17 @@ const checkpoint = {
   exercises: ["实现一个稳定 key 的列表。"],
 };
 
-test("builtin semantic ids are independent from array position", () => {
+const semanticCheckpoint = {
+  questions: [
+    { id: "render-purity", text: "Render 为什么要纯净？" },
+    { id: "stable-key", text: "key 为什么要稳定？" },
+  ],
+  exercises: [
+    { id: "stable-key-list", text: "实现一个稳定 key 的列表。" },
+  ],
+};
+
+test("legacy builtin ids remain independent from array position", () => {
   const first = structureCheckpoint(1, checkpoint);
   const reordered = structureCheckpoint(1, {
     ...checkpoint,
@@ -36,6 +47,26 @@ test("builtin semantic ids are independent from array position", () => {
   }
 });
 
+test("explicit semantic ids survive wording changes and reordering", () => {
+  const first = structureCheckpoint(1, semanticCheckpoint);
+  const changed = structureCheckpoint(1, {
+    questions: [
+      { id: "stable-key", text: "为什么列表 key 必须长期稳定？" },
+      { id: "render-purity", text: "为什么 Render 必须保持纯净？" },
+    ],
+    exercises: semanticCheckpoint.exercises,
+  });
+
+  assert.equal(
+    first.find((item) => item.semanticId === "render-purity").id,
+    changed.find((item) => item.semanticId === "render-purity").id,
+  );
+  assert.equal(
+    first.find((item) => item.semanticId === "stable-key").id,
+    changed.find((item) => item.semanticId === "stable-key").id,
+  );
+});
+
 test("builtin questions are immutable and revision follows original fingerprint", () => {
   const item = createBuiltinQuestion({ chapter: 2, kind: "question", text: "  State snapshot  " });
   assert.equal(Object.isFrozen(item), true);
@@ -43,20 +74,22 @@ test("builtin questions are immutable and revision follows original fingerprint"
   assert.equal(item.revision, item.fingerprint);
 });
 
-test("resolver applies builtin overrides without mutating builtin source", () => {
-  const builtin = structureCheckpoint(1, checkpoint)[0];
+test("resolver applies builtin overrides without mutating builtin identity", () => {
+  const builtin = structureCheckpoint(1, semanticCheckpoint)[0];
   const state = {
     version: 1,
     overrides: { [builtin.id]: { text: "新的教学问题", hidden: true } },
     custom: {},
     order: {},
   };
-  const [resolved] = resolveQuestionBank({ chapter: 1, checkpoint, state });
+  const [resolved] = resolveQuestionBank({ chapter: 1, checkpoint: semanticCheckpoint, state });
 
+  assert.equal(resolved.id, builtin.id);
   assert.equal(resolved.text, "新的教学问题");
   assert.equal(resolved.originalText, "Render 为什么要纯净？");
   assert.equal(resolved.hidden, true);
-  assert.equal(structureCheckpoint(1, checkpoint)[0].text, "Render 为什么要纯净？");
+  assert.notEqual(resolved.revision, builtin.revision);
+  assert.equal(structureCheckpoint(1, semanticCheckpoint)[0].text, "Render 为什么要纯净？");
 });
 
 test("repository supports persistence, overrides, custom CRUD and corruption fallback", () => {
@@ -93,23 +126,41 @@ test("ordering persists independently for questions and exercises", () => {
   assert.equal(resolved.filter((item) => item.kind === "question")[0].id, custom.id);
 });
 
-test("legacy positional overrides migrate to stable builtin ids", () => {
+test("legacy positional overrides migrate to current builtin ids", () => {
   const migrated = migratePositionalOverrides({
     chapter: 1,
-    checkpoint,
+    checkpoint: semanticCheckpoint,
     legacy: {
       "question:1": { hidden: true },
       "exercise:0": { text: "迁移后的练习" },
       nonsense: { hidden: true },
     },
   });
-  const structured = structureCheckpoint(1, checkpoint);
+  const structured = structureCheckpoint(1, semanticCheckpoint);
   const secondQuestion = structured.filter((item) => item.kind === "question")[1];
   const firstExercise = structured.filter((item) => item.kind === "exercise")[0];
 
   assert.deepEqual(migrated[secondQuestion.id], { hidden: true });
   assert.deepEqual(migrated[firstExercise.id], { text: "迁移后的练习" });
   assert.equal(Object.keys(migrated).length, 2);
+});
+
+test("legacy fingerprint identities migrate to semantic builtin ids and order", () => {
+  const legacyId = structureCheckpoint(1, checkpoint)[0].id;
+  const migrated = migrateBuiltinIdentity({
+    chapter: 1,
+    checkpoint: semanticCheckpoint,
+    state: {
+      version: 1,
+      overrides: { [legacyId]: { hidden: true } },
+      custom: {},
+      order: { "1:question": [legacyId] },
+    },
+  });
+  const semanticId = structureCheckpoint(1, semanticCheckpoint)[0].id;
+
+  assert.deepEqual(migrated.overrides[semanticId], { hidden: true });
+  assert.equal(migrated.order["1:question"][0], semanticId);
 });
 
 test("version mismatch falls back instead of loading incompatible data", () => {
