@@ -7,10 +7,13 @@ import {
 } from "../../ai/citations/sourceCitation.js";
 import { AiSourcePreviewProvider } from "./citations/AiSourceLink.jsx";
 import { SourceCitation } from "./citations/SourceCitation.js";
+import { AI_CODE_EXPLAIN_EVENT } from "./code/aiCodeExplainEvent.js";
 import { AI_MARKDOWN_CUSTOM_ID } from "./code/registerAiCodeBlock.js";
 import {
   ASSISTANT_FOLLOW_UP_ACTIONS,
   buildAssistantFollowUpPrompt,
+  buildCitationExplainPrompt,
+  buildCodeExplainPrompt,
   copyText,
   shouldOfferContinue,
 } from "./message-actions/aiTutorMessageActions.js";
@@ -164,7 +167,16 @@ function MessageActions({ role, finishReason, disabled, onCopy, onFollowUp }) {
   );
 }
 
-function Message({ message, isStreaming, onCitationOpen, sources, onCopy, onFollowUp, disabled }) {
+function Message({
+  message,
+  isStreaming,
+  onCitationOpen,
+  onCitationExplain,
+  sources,
+  onCopy,
+  onFollowUp,
+  disabled,
+}) {
   const role = message?.role === "user" ? "user" : "assistant";
   const content = typeof message?.content === "string" ? message.content : "";
   const isAssistant = role === "assistant";
@@ -205,15 +217,30 @@ function Message({ message, isStreaming, onCitationOpen, sources, onCopy, onFoll
           {citations.length > 0 ? (
             <div className="ai-assistant-source-citations" aria-label="回答引用的源码">
               {citations.map((citation) => (
-                <SourceCitation
+                <span
+                  className="ai-assistant-source-citation-actions"
                   key={`${citation.fileName}:${citation.startLine}-${citation.endLine}`}
-                  fileName={citation.fileName}
-                  startLine={citation.startLine}
-                  endLine={citation.endLine}
-                  label={citation.label}
-                  preview={buildSourceCitationPreview(citation, sources)}
-                  onOpen={onCitationOpen}
-                />
+                >
+                  <SourceCitation
+                    fileName={citation.fileName}
+                    startLine={citation.startLine}
+                    endLine={citation.endLine}
+                    label={citation.label}
+                    preview={buildSourceCitationPreview(citation, sources)}
+                    onOpen={onCitationOpen}
+                  />
+                  {!isStreaming ? (
+                    <button
+                      type="button"
+                      className="ai-assistant-citation-explain"
+                      onClick={() => onCitationExplain?.(citation)}
+                      disabled={disabled}
+                      aria-label={`解释引用 ${citation.fileName} 第 ${citation.startLine} 到 ${citation.endLine} 行`}
+                    >
+                      解释引用
+                    </button>
+                  ) : null}
+                </span>
               ))}
             </div>
           ) : null}
@@ -284,14 +311,47 @@ export function AiAssistant({
   const inputRef = useRef(null);
   const [isFollowingLatest, setIsFollowingLatest] = useState(true);
   const [actionNotice, setActionNotice] = useState("");
+  const noticeTimerRef = useRef(null);
   const isStreaming = status === "streaming" || status === "loading";
   const isSubmitDisabled = disabled || isStreaming || !inputValue.trim();
   const statusText = isStreaming ? "AI 正在生成回答" : status === "error" ? "AI 回答失败" : "";
 
   const showActionNotice = useCallback((message) => {
     setActionNotice(message);
-    globalThis.setTimeout?.(() => setActionNotice(""), 1800);
+    if (noticeTimerRef.current) globalThis.clearTimeout?.(noticeTimerRef.current);
+    noticeTimerRef.current = globalThis.setTimeout?.(() => {
+      setActionNotice("");
+      noticeTimerRef.current = null;
+    }, 1800);
   }, []);
+
+  useEffect(() => () => {
+    if (noticeTimerRef.current) globalThis.clearTimeout?.(noticeTimerRef.current);
+  }, []);
+
+  const fillTutorPrompt = useCallback((prompt, noticeMessage) => {
+    if (!prompt || disabled || isStreaming) return false;
+    onInputChange?.(prompt);
+    inputRef.current?.focus();
+    showActionNotice(noticeMessage);
+    return true;
+  }, [disabled, isStreaming, onInputChange, showActionNotice]);
+
+  useEffect(() => {
+    if (typeof globalThis.addEventListener !== "function") return undefined;
+
+    const handleCodeExplain = (event) => {
+      try {
+        const prompt = buildCodeExplainPrompt(event?.detail);
+        fillTutorPrompt(prompt, "已填入代码解释问题");
+      } catch (actionError) {
+        showActionNotice(actionError?.message || "无法生成代码解释问题");
+      }
+    };
+
+    globalThis.addEventListener(AI_CODE_EXPLAIN_EVENT, handleCodeExplain);
+    return () => globalThis.removeEventListener?.(AI_CODE_EXPLAIN_EVENT, handleCodeExplain);
+  }, [fillTutorPrompt, showActionNotice]);
 
   const scrollToLatest = useCallback((behavior = "smooth") => {
     const element = transcriptRef.current;
@@ -349,11 +409,18 @@ export function AiAssistant({
   const handleFollowUp = (actionId) => {
     try {
       const prompt = buildAssistantFollowUpPrompt(actionId);
-      onInputChange?.(prompt);
-      inputRef.current?.focus();
-      showActionNotice("已填入后续问题");
+      fillTutorPrompt(prompt, "已填入后续问题");
     } catch (actionError) {
       showActionNotice(actionError?.message || "无法生成后续问题");
+    }
+  };
+
+  const handleCitationExplain = (citation) => {
+    try {
+      const prompt = buildCitationExplainPrompt(citation);
+      fillTutorPrompt(prompt, "已填入引用解释问题");
+    } catch (actionError) {
+      showActionNotice(actionError?.message || "无法生成引用解释问题");
     }
   };
 
@@ -393,6 +460,7 @@ export function AiAssistant({
                 message={message}
                 isStreaming={Boolean(message.streaming) || (isStreaming && index === messages.length - 1 && message.role !== "user")}
                 onCitationOpen={onCitationOpen}
+                onCitationExplain={handleCitationExplain}
                 sources={sourcePreviewEntries}
                 onCopy={handleMessageCopy}
                 onFollowUp={handleFollowUp}
