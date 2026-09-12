@@ -37,6 +37,8 @@ export function CodeViewer({
   activeFileName,
   onActiveFileChange,
   focusRange = null,
+  title = "源码实现",
+  headerActions = null,
 }) {
   const [internalExpanded, setInternalExpanded] = useState(defaultExpanded);
   const [activeFileIndex, setActiveFileIndex] = useState(0);
@@ -51,26 +53,32 @@ export function CodeViewer({
   const currentFile = fileList[resolvedIndex] || fileList[0];
   const currentCode = currentFile?.code || "";
   const isExpanded = variant === "panel" || internalExpanded;
-  const isHighlighted = Boolean(highlightedMap[currentFile.name]);
+  const highlightedEntry = highlightedMap[currentFile.name];
+  const isHighlighted = Boolean(highlightedEntry?.code === currentCode && highlightedEntry?.html);
   const isFocusedFile = Boolean(
     focusRange && currentFile?.name === focusRange.fileName && Number(focusRange.startLine) > 0,
   );
   const isLoading = isExpanded && Boolean(currentCode) && !isHighlighted;
 
   useEffect(() => {
-    if (!isExpanded || !currentCode || highlightedMap[currentFile.name]) return;
+    if (!isExpanded || !currentCode || isHighlighted) return;
     let isMounted = true;
 
     highlightCode(currentCode, { language: lang, fileName: currentFile.name })
       .then((html) => {
-        if (isMounted) setHighlightedMap((prev) => ({ ...prev, [currentFile.name]: html }));
+        if (isMounted) {
+          setHighlightedMap((prev) => ({
+            ...prev,
+            [currentFile.name]: { code: currentCode, html },
+          }));
+        }
       })
       .catch((err) => {
         console.error("Shiki 高亮失败:", err);
       });
 
     return () => { isMounted = false; };
-  }, [isExpanded, currentCode, currentFile.name, highlightedMap, lang]);
+  }, [currentCode, currentFile.name, isExpanded, isHighlighted, lang]);
 
   useEffect(() => {
     if (!isFocusedFile || !viewportRef.current || !isHighlighted) return;
@@ -102,8 +110,19 @@ export function CodeViewer({
   const lineCount = currentCode ? currentCode.trim().split("\n").length : 0;
   const focusedLines = currentCode.split("\n");
   const highlightedHtml = isHighlighted
-    ? decorateHighlightedLines(highlightedMap[currentFile.name], isFocusedFile ? focusRange : null)
+    ? decorateHighlightedLines(highlightedEntry.html, isFocusedFile ? focusRange : null)
     : "";
+  const copyButton = (
+    <button type="button" className="btn btn-outline btn-sm code-copy-btn" onClick={handleCopy} title="复制代码到剪贴板">
+      {copied ? "✅ 已复制" : "📋 复制代码"}
+    </button>
+  );
+  const actions = (headerActions || isExpanded) ? (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "8px", flexShrink: 0 }}>
+      {headerActions}
+      {isExpanded && copyButton}
+    </div>
+  ) : null;
   const body = (
     <div className="code-accordion-body" id={bodyId}>
       {fileList.length > 1 && (
@@ -172,13 +191,11 @@ export function CodeViewer({
       <div className="code-accordion-wrapper code-viewer-panel">
         <div className="code-accordion-header expanded">
           <div className="code-accordion-header-left">
-            <span className="code-accordion-title"><span aria-hidden="true">💻</span><span>源码实现</span></span>
+            <span className="code-accordion-title"><span aria-hidden="true">💻</span><span>{title}</span></span>
             <span className="badge badge-gray" style={{ fontSize: "11px" }}>{fileList.length > 1 ? `${fileList.length} 个文件` : currentFile.name}</span>
             <span style={{ fontSize: "12px", color: "var(--text-subtle)" }}>({lineCount} 行代码)</span>
           </div>
-          <button type="button" className="btn btn-outline btn-sm code-copy-btn" onClick={handleCopy} title="复制代码到剪贴板">
-            {copied ? "✅ 已复制" : "📋 复制代码"}
-          </button>
+          {actions}
         </div>
         {body}
       </div>
@@ -197,17 +214,13 @@ export function CodeViewer({
         >
           <span className="code-accordion-header-left">
             <span className="code-accordion-arrow" aria-hidden="true">{isExpanded ? "▼" : "▶"}</span>
-            <span className="code-accordion-title"><span aria-hidden="true">💻</span><span>源码实现</span></span>
+            <span className="code-accordion-title"><span aria-hidden="true">💻</span><span>{title}</span></span>
             <span className="badge badge-gray" style={{ fontSize: "11px" }}>{fileList.length > 1 ? `${fileList.length} 个文件` : currentFile.name}</span>
             <span style={{ fontSize: "12px", color: "var(--text-subtle)" }}>({lineCount} 行代码)</span>
           </span>
           <span style={{ fontSize: "12px", color: "var(--text-subtle)" }}>{isExpanded ? "点击折叠" : "点击展开源码"}</span>
         </button>
-        {isExpanded && (
-          <button type="button" className="btn btn-outline btn-sm code-copy-btn" onClick={handleCopy} title="复制代码到剪贴板">
-            {copied ? "✅ 已复制" : "📋 复制代码"}
-          </button>
-        )}
+        {actions}
       </div>
       {isExpanded && body}
     </div>
