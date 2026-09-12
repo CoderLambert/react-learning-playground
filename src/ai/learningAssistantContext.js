@@ -19,6 +19,7 @@ export function adaptLearningContextForGateway(context) {
     ? context.sources.map((source) => ({
         name: source.name,
         code: source.numberedCode ?? source.code ?? "",
+        ...(source.semantics ? { semantics: source.semantics } : {}),
       }))
     : [];
 
