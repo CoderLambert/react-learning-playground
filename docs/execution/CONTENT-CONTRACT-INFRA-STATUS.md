@@ -38,9 +38,8 @@ Source      = implementation
 - Mechanically migrated production `Compare leftItems/rightItems` usages to canonical `left/right`.
 - Mechanically normalized unowned notes from legacy `Timeline items` to `steps`, `Summary items` to children, and `FurtherReading links` to `items` where present.
 - `test:content` now rejects legacy `Compare` and `Timeline` props globally.
-- `Summary items` and `FurtherReading links` are rejected globally except for the explicit temporary `event-vs-effect.mdx` compatibility entry.
-- Runtime PR #82's owned `event-vs-effect.mdx` has now been re-inspected and confirmed to already use canonical `<Summary>...</Summary>` and `<FurtherReading items={...} />`; the exception remains only because that branch has not been reconciled into PR #79/main yet.
-- Runtime aliases remain temporarily available in `TeachingComponents.jsx` so parallel lesson branches are not broken before reconciliation.
+- `Summary items` and `FurtherReading links` are rejected globally; the temporary `event-vs-effect.mdx` compatibility exception was removed after runtime PR #82 was reconciled.
+- All production notes in the integration tree use the canonical teaching props, so the temporary runtime aliases were removed from `TeachingComponents.jsx`.
 
 ### TypeScript sample compiler gate
 
@@ -62,9 +61,7 @@ This confirms the filename/parity checks, empty-prop checks, content-contract su
 
 ## Remaining work / blockers
 
-1. **Runtime reconciliation blocker:** PR #82 owns `event-vs-effect.mdx`. Its branch is already canonical, so no lesson change is needed here. Once that branch is reconciled into the shared baseline, remove the one-file compatibility exception from `test:content`.
-2. **TypeScript reconciliation blocker:** PR #81 owns the modified TSX samples. Exact compiler proof requires a combined head containing PR #81's sample snapshot plus PR #79's `typecheck:samples` wiring. Any resulting sample diagnostic belongs on the TypeScript branch; this task must not duplicate those sample files merely to create a synthetic green run.
-3. After both branch-owned usages are reconciled and no production note depends on legacy props, remove temporary runtime aliases in `TeachingComponents.jsx` and tighten the alias assertion.
-4. Keep PR #79 draft and unmerged until those reconciliation dependencies are resolved and the resulting exact-head CI is green.
+1. **TypeScript reconciliation blocker:** PR #81 owns the modified TSX samples. Exact compiler proof requires a combined head containing PR #81's sample snapshot plus PR #79's `typecheck:samples` wiring. Any resulting sample diagnostic belongs on the TypeScript branch; this task must not duplicate those sample files merely to create a synthetic green run.
+2. Keep PR #79 draft and unmerged until the combined integration tree has passed the shared content, TypeScript, lint, build, and Workbench verification gates.
 
 No additional safe in-scope implementation remains on this branch without crossing another task's ownership boundary.

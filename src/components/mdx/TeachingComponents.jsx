@@ -45,46 +45,28 @@ export function AntiPattern({ title = "Anti-pattern", children }) {
   return <TeachingBlock tone="danger" eyebrow="不推荐" title={title}>{children}</TeachingBlock>;
 }
 
-export function Summary({ title = "核心结论", items = [], children }) {
-  const body = children ?? (
-    items.length > 0 ? <ul>{items.map((item, index) => <li key={`${index}-${String(item)}`}>{item}</li>)}</ul> : null
-  );
-  return <TeachingBlock tone="summary" eyebrow="Summary" title={title}>{body}</TeachingBlock>;
-}
-
-function ItemList({ items }) {
-  if (items.length === 0) return null;
-  return <ul>{items.map((item, index) => <li key={`${index}-${String(item)}`}>{item}</li>)}</ul>;
-}
-
-function CompareContent({ value, legacyItems }) {
-  if (Array.isArray(value)) return <ItemList items={value} />;
-  return value ?? <ItemList items={legacyItems} />;
+export function Summary({ title = "核心结论", children }) {
+  return <TeachingBlock tone="summary" eyebrow="Summary" title={title}>{children}</TeachingBlock>;
 }
 
 export function Compare({
   left,
   right,
-  leftItems = [],
-  rightItems = [],
   leftTitle = "错误模型",
   rightTitle = "推荐模型",
   children,
 }) {
-  const hasLegacyItems = leftItems.length > 0 || rightItems.length > 0;
-  if (children && left == null && right == null && !hasLegacyItems) {
-    return <TeachingBlock eyebrow="对比">{children}</TeachingBlock>;
-  }
+  if (children && left == null && right == null) return <TeachingBlock eyebrow="对比">{children}</TeachingBlock>;
 
   return (
     <section className="mdx-compare" aria-label="方案对比">
       <article className="mdx-compare-pane mdx-compare-bad">
         <h3>{leftTitle}</h3>
-        <div><CompareContent value={left} legacyItems={leftItems} /></div>
+        <div>{left}</div>
       </article>
       <article className="mdx-compare-pane mdx-compare-good">
         <h3>{rightTitle}</h3>
-        <div><CompareContent value={right} legacyItems={rightItems} /></div>
+        <div>{right}</div>
       </article>
     </section>
   );
@@ -101,9 +83,8 @@ function Sequence({ label, items = [], children, ordered = false }) {
   );
 }
 
-export function Timeline({ steps = [], items = [], children }) {
-  const resolvedSteps = steps.length > 0 ? steps : items;
-  return <Sequence label="Timeline" items={resolvedSteps} ordered>{children}</Sequence>;
+export function Timeline({ steps = [], children }) {
+  return <Sequence label="Timeline" items={steps} ordered>{children}</Sequence>;
 }
 
 export function Flow({ items = [], children }) {
@@ -120,12 +101,11 @@ export function DemoReference({ action, observe, children }) {
   );
 }
 
-export function FurtherReading({ items = [], links = [], children }) {
-  const resolvedItems = items.length > 0 ? items : links;
+export function FurtherReading({ items = [], children }) {
   return (
     <TeachingBlock eyebrow="Further Reading" title="延伸阅读">
-      {resolvedItems.length > 0 && (
-        <ul>{resolvedItems.map((item) => <li key={item.href}><a href={item.href} target="_blank" rel="noreferrer">{item.label ?? item.href}</a></li>)}</ul>
+      {items.length > 0 && (
+        <ul>{items.map((item) => <li key={item.href}><a href={item.href} target="_blank" rel="noreferrer">{item.label ?? item.href}</a></li>)}</ul>
       )}
       {children}
     </TeachingBlock>

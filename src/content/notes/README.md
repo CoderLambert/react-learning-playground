@@ -102,7 +102,7 @@ Available primitives:
 - `Summary`
 - `FurtherReading`
 
-`Timeline items`, `Compare leftItems/rightItems`, `Summary items` and `FurtherReading links` are temporary runtime compatibility aliases for older notes. New or edited notes must use the canonical forms above; existing notes should be normalized mechanically without rewriting their lesson meaning.
+Production notes must use the canonical forms above: `Timeline steps`, `Compare left/right`, children inside `Summary`, and `FurtherReading items`. Legacy teaching props are rejected by the content contract.
 
 ## Content quality gate
 

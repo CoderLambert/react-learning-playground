@@ -7,7 +7,6 @@ import test from "node:test";
 const NOTES_DIR_URL = new URL("../src/content/notes/", import.meta.url);
 const NOTES_DIR = fileURLToPath(NOTES_DIR_URL);
 const REGISTRY_FILE = new URL("../src/demos/index.js", import.meta.url);
-const TEACHING_COMPONENTS_FILE = new URL("../src/components/mdx/TeachingComponents.jsx", import.meta.url);
 const NOTE_ID_PATTERN = /^[a-z0-9][a-z0-9-]*$/;
 
 const TEACHING_PROPS = {
@@ -27,12 +26,6 @@ const TEACHING_PROPS = {
   Summary: new Set(["title"]),
   FurtherReading: new Set(["items"]),
 };
-
-// Runtime PR #82 owns this lesson and already rewrites it substantially. Keep the
-// old aliases accepted only for that unreconciled file so new notes cannot add debt.
-const TEMPORARY_ALIAS_PROPS = new Map([
-  ["event-vs-effect.mdx", new Set(["Summary:items", "FurtherReading:links"])],
-]);
 
 const COMPONENT_PATTERN = new RegExp(
   `<(${Object.keys(TEACHING_PROPS).join("|")})\\b([\\s\\S]*?)(/?)>`,
@@ -126,10 +119,6 @@ function openingTags(source) {
   }));
 }
 
-function isTemporaryAlias(fileName, component, prop) {
-  return TEMPORARY_ALIAS_PROPS.get(fileName)?.has(`${component}:${prop}`) ?? false;
-}
-
 function hasLiteralEmptyProp(attributeSource, prop) {
   const escapedProp = prop.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const pattern = new RegExp(
@@ -181,9 +170,7 @@ test("teaching primitives use supported props and do not silently render empty b
 
     for (const tag of openingTags(source)) {
       const allowed = TEACHING_PROPS[tag.component];
-      const unsupported = tag.attributes.filter(
-        (name) => !allowed.has(name) && !isTemporaryAlias(fileName, tag.component, name),
-      );
+      const unsupported = tag.attributes.filter((name) => !allowed.has(name));
       if (unsupported.length > 0) {
         problems.push(`${fileName}: <${tag.component}> unsupported props: ${unsupported.join(", ")}`);
       }
@@ -231,15 +218,13 @@ test("teaching primitives use supported props and do not silently render empty b
       }
       if (
         tag.component === "Summary" &&
-        !props.has("items") &&
-        !isTemporaryAlias(fileName, "Summary", "items")
+        !props.has("items")
       ) {
         problems.push(`${fileName}: self-closing <Summary> has no content`);
       }
       if (
         tag.component === "FurtherReading" &&
-        !props.has("items") &&
-        !isTemporaryAlias(fileName, "FurtherReading", "links")
+        !props.has("items")
       ) {
         problems.push(`${fileName}: self-closing <FurtherReading> has no links`);
       }
@@ -247,13 +232,4 @@ test("teaching primitives use supported props and do not silently render empty b
   }
 
   assert.deepEqual(problems, []);
-});
-
-test("runtime keeps temporary aliases until all existing notes are normalized", () => {
-  const source = readFileSync(TEACHING_COMPONENTS_FILE, "utf8");
-  assert.ok(source.includes("export function Timeline({ steps = [], items = [], children })"));
-  assert.ok(source.includes('export function Summary({ title = "核心结论", items = [], children })'));
-  assert.ok(source.includes("leftItems = []"));
-  assert.ok(source.includes("rightItems = []"));
-  assert.ok(source.includes("export function FurtherReading({ items = [], links = [], children })"));
 });
