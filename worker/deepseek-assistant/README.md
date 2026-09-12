@@ -31,6 +31,34 @@ Response is newline-delimited JSON owned by this app, not DeepSeek's SSE format:
 
 Failures before streaming are normal JSON HTTP errors. A failure after streaming starts is emitted as `{ "type": "error", "message": "upstream stream failed" }`.
 
+## Agent model-turn transport
+
+The same endpoint also accepts the provider-neutral AgentRunner envelope:
+
+```json
+{
+  "type": "model_turn",
+  "purpose": "chat",
+  "messages": [
+    { "role": "user", "content": "find the answer" },
+    {
+      "role": "assistant",
+      "content": "",
+      "toolCalls": [{ "id": "call-1", "name": "lookup", "arguments": { "query": "x" } }]
+    },
+    { "role": "tool", "toolCallId": "call-1", "content": "{\"answer\":\"42\"}" }
+  ],
+  "tools": [{ "name": "lookup", "description": "...", "inputSchema": { "type": "object" } }]
+}
+```
+
+The response uses the same model-turn event names as the direct browser adapter:
+`turn_start`, `text_delta`, `tool_call`, and `turn_complete`. Tool calls are
+forwarded to the browser; this Worker never executes tools or accesses
+Assessment, IndexedDB, or Agent state. A `purpose: "compaction"` turn must
+send `tools: []` and omit `toolChoice`; the Worker strips tool execution from
+the provider request and rejects tool continuation messages.
+
 ## DeepSeek configuration
 
 Verified against the official DeepSeek API documentation on 2026-09-11:

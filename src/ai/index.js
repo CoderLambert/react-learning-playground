@@ -18,6 +18,7 @@ export { ChatStreamParser, parseChatEventStream } from "./streamProtocol.js";
 export {
   AiChatAbortError,
   AiChatClientError,
+  buildGatewayModelTurnRequest,
   createAiChatClient,
   getConfiguredAiAssistantUrl,
 } from "./chatClient.js";
@@ -38,6 +39,22 @@ export {
 } from "./deepseekDirectClient.js";
 export { AI_LEARNING_ASSISTANT_SYSTEM_PROMPT } from "./assistantSystemPrompt.js";
 export { AI_FINISH_REASONS, normalizeFinishReason } from "./finishReason.js";
+export {
+  MODEL_FINISH_REASONS,
+  MODEL_TURN_EVENT_TYPES,
+  MODEL_TURN_PURPOSES,
+  ModelClientAbortError,
+  ModelClientError,
+  ModelTurnStreamParser,
+  assertModelClient,
+  normalizeModelFinishReason,
+  normalizeModelMessage,
+  normalizeModelMessages,
+  normalizeToolCall,
+  normalizeModelTurnEvent,
+  normalizeModelTurnRequest,
+  parseModelTurnEventStream,
+} from "./providers/modelClient.js";
 export {
   DEFAULT_MODEL_CONTEXT,
   MODEL_CONTEXTS,

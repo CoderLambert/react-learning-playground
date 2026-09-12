@@ -1,8 +1,16 @@
 import {
+  MODEL_FINISH_REASONS,
   MODEL_TURN_EVENT_TYPES,
+  ModelClientAbortError,
+  ModelClientError,
   normalizeModelFinishReason,
+  normalizeToolCall,
   normalizeModelTurnRequest,
 } from "../modelClient.js";
+
+function isAbortError(error, signal) {
+  return Boolean(signal?.aborted) || error?.name === "AbortError" || error?.code === "ABORT_ERR";
+}
 
 function toProviderMessage(message) {
   if (message.role === "tool") {
@@ -42,6 +50,17 @@ function toProviderTool(tool) {
   };
 }
 
+function toProviderToolChoice(toolChoice) {
+  if (typeof toolChoice !== "object" || toolChoice === null) return toolChoice;
+  if (typeof toolChoice.name === "string" && !toolChoice.type) {
+    return {
+      type: "function",
+      function: { name: toolChoice.name },
+    };
+  }
+  return toolChoice;
+}
+
 function createToolAccumulator() {
   const calls = new Map();
   return {
@@ -74,8 +93,11 @@ function createToolAccumulator() {
             invalid.cause = error;
             throw invalid;
           }
-          return { id: call.id, name: call.name, arguments: args };
+          return normalizeToolCall({ id: call.id, name: call.name, arguments: args }, "DeepSeek tool call");
         });
+    },
+    get hasCalls() {
+      return calls.size > 0;
     },
   };
 }
@@ -116,17 +138,27 @@ export async function* parseDeepSeekModelStream(stream) {
             completed = true;
             yield {
               type: MODEL_TURN_EVENT_TYPES.TURN_COMPLETE,
-              finishReason: normalizeModelFinishReason(finishReason),
+              finishReason: toolAccumulator.hasCalls
+                ? MODEL_FINISH_REASONS.TOOL_CALLS
+                : normalizeModelFinishReason(finishReason),
               usage,
             };
             return;
           }
 
-          const chunk = JSON.parse(data);
+          let chunk;
+          try {
+            chunk = JSON.parse(data);
+          } catch (error) {
+            throw new ModelClientError("DeepSeek returned an invalid stream chunk", {
+              code: "DEEPSEEK_STREAM_INVALID",
+              cause: error,
+            });
+          }
           if (chunk?.error) {
-            const error = new Error(chunk.error.message || "DeepSeek stream failed");
-            error.code = chunk.error.code || "DEEPSEEK_STREAM_ERROR";
-            throw error;
+            throw new ModelClientError(chunk.error.message || "DeepSeek stream failed", {
+              code: chunk.error.code || "DEEPSEEK_STREAM_ERROR",
+            });
           }
           if (chunk?.usage) usage = chunk.usage;
           const choice = Array.isArray(chunk?.choices) ? chunk.choices[0] : null;
@@ -158,7 +190,9 @@ export async function* parseDeepSeekModelStream(stream) {
   }
   yield {
     type: MODEL_TURN_EVENT_TYPES.TURN_COMPLETE,
-    finishReason: normalizeModelFinishReason(finishReason),
+    finishReason: toolAccumulator.hasCalls
+      ? MODEL_FINISH_REASONS.TOOL_CALLS
+      : normalizeModelFinishReason(finishReason),
     usage,
   };
 }
@@ -184,33 +218,60 @@ export function createDeepSeekChatCompletionsAdapter({
         stream: true,
         stream_options: { include_usage: true },
         max_tokens: maxTokens,
+        thinking: { type: "disabled" },
         ...(normalized.tools.length ? { tools: normalized.tools.map(toProviderTool) } : {}),
+        ...(normalized.toolChoice !== undefined ? { tool_choice: toProviderToolChoice(normalized.toolChoice) } : {}),
       };
 
-      const response = await fetchImpl(endpoint, {
-        method: "POST",
-        headers: {
-          authorization: `Bearer ${String(apiKey ?? "").trim()}`,
-          "content-type": "application/json",
-          accept: "text/event-stream",
-        },
-        body: JSON.stringify(body),
-        signal,
-      });
+      let response;
+      try {
+        if (!String(apiKey ?? "").trim()) {
+          throw new ModelClientError("DeepSeek API key is not configured", {
+            code: "DEEPSEEK_API_KEY_NOT_CONFIGURED",
+          });
+        }
+        response = await fetchImpl(endpoint, {
+          method: "POST",
+          headers: {
+            authorization: `Bearer ${String(apiKey ?? "").trim()}`,
+            "content-type": "application/json",
+            accept: "text/event-stream",
+          },
+          body: JSON.stringify(body),
+          signal,
+        });
+      } catch (error) {
+        if (isAbortError(error, signal)) throw new ModelClientAbortError();
+        if (error instanceof ModelClientError) throw error;
+        throw new ModelClientError(error?.message || "Unable to reach DeepSeek", {
+          code: "DEEPSEEK_NETWORK_ERROR",
+          cause: error,
+        });
+      }
 
       if (!response.ok) {
-        const error = new Error(`DeepSeek API returned ${response.status}`);
-        error.code = "DEEPSEEK_HTTP_ERROR";
-        error.status = response.status;
-        throw error;
+        throw new ModelClientError(`DeepSeek API returned ${response.status}`, {
+          code: "DEEPSEEK_HTTP_ERROR",
+          status: response.status,
+        });
       }
       if (!response.body) {
-        const error = new Error("DeepSeek API did not return a stream");
-        error.code = "DEEPSEEK_EMPTY_STREAM";
-        throw error;
+        throw new ModelClientError("DeepSeek API did not return a stream", {
+          code: "DEEPSEEK_EMPTY_STREAM",
+          status: response.status,
+        });
       }
 
-      yield* parseDeepSeekModelStream(response.body);
+      try {
+        yield* parseDeepSeekModelStream(response.body);
+      } catch (error) {
+        if (isAbortError(error, signal)) throw new ModelClientAbortError();
+        if (error instanceof ModelClientError) throw error;
+        throw new ModelClientError(error?.message || "DeepSeek stream failed", {
+          code: "DEEPSEEK_STREAM_INVALID",
+          cause: error,
+        });
+      }
     },
   };
 }

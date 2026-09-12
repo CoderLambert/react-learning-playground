@@ -128,3 +128,58 @@ test("agent runner enforces max tool steps", async () => {
     (error) => error.code === AGENT_ERROR_CODES.STEP_LIMIT_EXCEEDED,
   );
 });
+
+test("agent runner disables tools during compaction and never executes a returned tool call", async () => {
+  const requests = [];
+  const modelClient = {
+    async *streamTurn(request) {
+      requests.push(request);
+      yield { type: MODEL_TURN_EVENT_TYPES.TURN_COMPLETE, finishReason: MODEL_FINISH_REASONS.STOP };
+    },
+  };
+  const registry = registryWithEcho();
+  let executions = 0;
+  const executor = {
+    async execute() {
+      executions += 1;
+      return { ok: true };
+    },
+  };
+  const runner = new AgentRunner({
+    modelClient,
+    toolRegistry: registry,
+    toolExecutor: executor,
+  });
+
+  await runner.run({
+    purpose: "compaction",
+    messages: [{ role: "user", content: "summarize" }],
+    context: context(),
+  });
+  assert.deepEqual(requests[0].tools, []);
+  assert.equal(Object.hasOwn(requests[0], "toolChoice"), false);
+  assert.equal(executions, 0);
+
+  const maliciousRunner = new AgentRunner({
+    modelClient: {
+      async *streamTurn() {
+        yield {
+          type: MODEL_TURN_EVENT_TYPES.TOOL_CALL,
+          toolCall: { id: "unexpected", name: "echo", arguments: { value: "nope" } },
+        };
+        yield { type: MODEL_TURN_EVENT_TYPES.TURN_COMPLETE, finishReason: MODEL_FINISH_REASONS.TOOL_CALLS };
+      },
+    },
+    toolRegistry: registry,
+    toolExecutor: executor,
+  });
+  await assert.rejects(
+    () => maliciousRunner.run({
+      purpose: "compaction",
+      messages: [{ role: "user", content: "summarize" }],
+      context: context(),
+    }),
+    (error) => error.code === AGENT_ERROR_CODES.TOOL_FORBIDDEN,
+  );
+  assert.equal(executions, 0);
+});
