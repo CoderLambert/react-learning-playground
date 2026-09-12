@@ -38,9 +38,11 @@ function assertTrustedContext(context) {
   return context;
 }
 
-function trustedServiceInput(context) {
+function trustedServiceInput(context, execution = null) {
   const trusted = {};
   for (const field of TRUSTED_CONTEXT_FIELDS) trusted[field] = requiredText(context[field], `context.${field}`);
+  const toolCallId = execution?.toolCallId ?? context.toolCallId;
+  if (toolCallId) trusted.mutationId = `${trusted.agentRunId}:${requiredText(toolCallId, "toolCallId")}`;
   trusted.actor = structuredClone(context.actor);
   if (typeof context.model === "string" && context.model.trim()) trusted.model = context.model.trim();
   if (context.provenance && typeof context.provenance === "object" && !Array.isArray(context.provenance)) {
@@ -116,9 +118,9 @@ export function createAssessmentToolDefinitions({ assessmentService } = {}) {
       description: "List assessment questions in the current learning unit.",
       policy: TOOL_POLICIES.QUERY,
       inputSchema: listSchema,
-      handler: async (argumentsValue, context) => {
+      handler: async (argumentsValue, context, execution) => {
         const args = assertArguments(argumentsValue);
-        const trusted = trustedServiceInput(assertTrustedContext(context));
+        const trusted = trustedServiceInput(assertTrustedContext(context), execution);
         return service.listQuestions({ trusted, ...(args.status === undefined ? {} : { status: args.status }) });
       },
     },
@@ -127,9 +129,9 @@ export function createAssessmentToolDefinitions({ assessmentService } = {}) {
       description: "Create assessment questions in the current learning unit.",
       policy: TOOL_POLICIES.COMMAND,
       inputSchema: createSchema,
-      handler: async (argumentsValue, context) => {
+      handler: async (argumentsValue, context, execution) => {
         const args = assertArguments(argumentsValue);
-        const trusted = trustedServiceInput(assertTrustedContext(context));
+        const trusted = trustedServiceInput(assertTrustedContext(context), execution);
         return service.createQuestions({ trusted, questions: args.questions });
       },
     },
@@ -138,9 +140,9 @@ export function createAssessmentToolDefinitions({ assessmentService } = {}) {
       description: "Update mutable business fields on an assessment question.",
       policy: TOOL_POLICIES.COMMAND,
       inputSchema: updateSchema,
-      handler: async (argumentsValue, context) => {
+      handler: async (argumentsValue, context, execution) => {
         const args = assertArguments(argumentsValue);
-        const trusted = trustedServiceInput(assertTrustedContext(context));
+        const trusted = trustedServiceInput(assertTrustedContext(context), execution);
         return service.updateQuestion({
           trusted,
           questionId: args.questionId,
@@ -154,9 +156,9 @@ export function createAssessmentToolDefinitions({ assessmentService } = {}) {
       description: "Retire an assessment question without deleting it.",
       policy: TOOL_POLICIES.COMMAND,
       inputSchema: retireSchema,
-      handler: async (argumentsValue, context) => {
+      handler: async (argumentsValue, context, execution) => {
         const args = assertArguments(argumentsValue);
-        const trusted = trustedServiceInput(assertTrustedContext(context));
+        const trusted = trustedServiceInput(assertTrustedContext(context), execution);
         return service.retireQuestion({
           trusted,
           questionId: args.questionId,

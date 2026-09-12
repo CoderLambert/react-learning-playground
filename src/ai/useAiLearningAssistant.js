@@ -20,6 +20,8 @@ import {
   buildCompletedChatHistory,
 } from "./learningAssistantContext.js";
 import { createUnicodeOutputLimiter } from "./outputLimit.js";
+import { createToolExecutionContext } from "./agent/agentContracts.js";
+import { MODEL_TURN_EVENT_TYPES } from "./providers/modelClient.js";
 
 const GATEWAY_TRANSPORT_INPUT_CAP_TOKENS = 24 * 1024;
 
@@ -42,7 +44,30 @@ function normalizeUsage(usage) {
   };
 }
 
-export function useAiLearningAssistant({ learningUnit, activeSourceFile } = {}) {
+function buildAgentMessages({ question, context, history = [] }) {
+  const material = [
+    "<learning_material>",
+    JSON.stringify(context, null, 2),
+    "</learning_material>",
+    "",
+    "<question>",
+    question,
+    "</question>",
+  ].join("\n");
+  return [
+    { role: "system", content: AI_LEARNING_ASSISTANT_SYSTEM_PROMPT },
+    ...history
+      .filter((message) => (
+        (message?.role === "user" || message?.role === "assistant") &&
+        typeof message.content === "string" &&
+        message.content.trim()
+      ))
+      .map(({ role, content }) => ({ role, content })),
+    { role: "user", content: material },
+  ];
+}
+
+export function useAiLearningAssistant({ learningUnit, activeSourceFile, assessmentRuntime = null } = {}) {
   const [chatState, dispatch] = useReducer(chatReducer, INITIAL_CHAT_STATE);
   const [inputValue, setInputValue] = useState("");
   const [deepSeekSettings, setDeepSeekSettings] = useState(() => loadDeepSeekBrowserSettings());
@@ -71,6 +96,10 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile } = {}) 
     model: deepSeekSettings.model,
   }), [deepSeekSettings.apiKey, deepSeekSettings.model]);
   const client = directClient.configured ? directClient : gatewayClient;
+  const agentRunner = useMemo(() => {
+    if (!assessmentRuntime?.createAgentRunner || typeof client?.streamTurn !== "function") return null;
+    return assessmentRuntime.createAgentRunner(client);
+  }, [assessmentRuntime, client]);
   const connectionMode = directClient.configured
     ? "browser"
     : gatewayClient.configured
@@ -604,16 +633,30 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile } = {}) 
         assertCurrentRequest();
       }
 
-      await client.stream(
-        { question: normalizedQuestion, context: outboundContext, history: selected.context.history },
-        {
+      if (agentRunner) {
+        const agentContext = createToolExecutionContext({
+          learningUnitId,
+          conversationId: conversation?.id ?? `conversation-${requestId}`,
+          agentRunId: requestId,
+          contextSnapshotId: snapshot?.id ?? `context-${requestId}`,
+          mutationId: `${requestId}:runtime`,
+          model: contextModelId,
+          actor: { type: "ai_agent", model: contextModelId },
+        });
+        await agentRunner.run({
+          messages: buildAgentMessages({
+            question: normalizedQuestion,
+            context: outboundContext,
+            history: selected.context.history,
+          }),
+          context: agentContext,
           signal: controller.signal,
           onEvent(event) {
             if (activeRequestIdRef.current !== requestId) return;
-            if (event.type === CHAT_EVENT_TYPES.START) {
+            if (event.type === MODEL_TURN_EVENT_TYPES.TURN_START) {
               dispatch({ type: "start", requestId });
               void enqueuePersistence();
-            } else if (event.type === CHAT_EVENT_TYPES.DELTA) {
+            } else if (event.type === MODEL_TURN_EVENT_TYPES.TEXT_DELTA) {
               const limited = outputLimiter.push(event.text);
               assistantText = limited.content;
               if (limited.acceptedText) {
@@ -623,12 +666,38 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile } = {}) 
               void enqueuePersistence(() => {
                 persister?.schedule({ content: persistedText, status: "streaming" });
               });
-            } else if (event.type === CHAT_EVENT_TYPES.DONE) {
+            } else if (event.type === MODEL_TURN_EVENT_TYPES.TURN_COMPLETE) {
               terminalEvent = event;
             }
           },
-        },
-      );
+        });
+      } else {
+        await client.stream(
+          { question: normalizedQuestion, context: outboundContext, history: selected.context.history },
+          {
+            signal: controller.signal,
+            onEvent(event) {
+              if (activeRequestIdRef.current !== requestId) return;
+              if (event.type === CHAT_EVENT_TYPES.START) {
+                dispatch({ type: "start", requestId });
+                void enqueuePersistence();
+              } else if (event.type === CHAT_EVENT_TYPES.DELTA) {
+                const limited = outputLimiter.push(event.text);
+                assistantText = limited.content;
+                if (limited.acceptedText) {
+                  dispatch({ type: "delta", requestId, text: limited.acceptedText });
+                }
+                const persistedText = assistantText;
+                void enqueuePersistence(() => {
+                  persister?.schedule({ content: persistedText, status: "streaming" });
+                });
+              } else if (event.type === CHAT_EVENT_TYPES.DONE) {
+                terminalEvent = event;
+              }
+            },
+          },
+        );
+      }
       const finishReason = outputLimitExceeded
         ? "output_limit"
         : normalizeFinishReason(terminalEvent?.finishReason);
@@ -685,7 +754,7 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile } = {}) 
         abortControllerRef.current = null;
       }
     }
-  }, [activeSourceFile, aiContext, chatState.messages, client, compactContext, compactedMessageCount, completedHistory, connectionMode, contextModelId, ensureConversation, lastActualUsage, learningUnitId, messagesSinceCompaction, noteState.loading, refreshConversations, repository, requestContext, summaryText]);
+  }, [activeSourceFile, agentRunner, aiContext, chatState.messages, client, compactContext, compactedMessageCount, completedHistory, connectionMode, contextModelId, ensureConversation, lastActualUsage, learningUnitId, messagesSinceCompaction, noteState.loading, refreshConversations, repository, requestContext, summaryText]);
 
   useEffect(() => () => abortControllerRef.current?.abort(), []);
 

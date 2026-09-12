@@ -124,7 +124,7 @@ test("update and retire tools pass only business args and trusted mutation ident
   }, context());
   assert.equal(updated.ok, true);
   assert.equal(calls[0][1].trusted.learningUnitId, "unit-1");
-  assert.equal(calls[0][1].trusted.mutationId, "run-1:call-1");
+  assert.equal(calls[0][1].trusted.mutationId, "run-1:call-3");
   assert.equal(calls[0][1].questionId, "q-1");
   assert.deepEqual(calls[0][1].patch, forged.patch);
 
@@ -135,7 +135,7 @@ test("update and retire tools pass only business args and trusted mutation ident
   }, context());
   assert.equal(retired.ok, true);
   assert.equal(calls[1][1].trusted.learningUnitId, "unit-1");
-  assert.equal(calls[1][1].trusted.mutationId, "run-1:call-1");
+  assert.equal(calls[1][1].trusted.mutationId, "run-1:call-4");
 });
 
 test("service errors become normalized failed tool results", async () => {

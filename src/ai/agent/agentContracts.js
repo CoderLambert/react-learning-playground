@@ -64,6 +64,7 @@ export function createToolExecutionContext(value = {}) {
     agentRunId: requiredText(value.agentRunId, "agentRunId"),
     contextSnapshotId: requiredText(value.contextSnapshotId, "contextSnapshotId"),
     mutationId: requiredText(value.mutationId, "mutationId"),
+    ...(typeof value.model === "string" && value.model.trim() ? { model: value.model.trim() } : {}),
     actor: Object.freeze({ ...actor }),
   });
 }

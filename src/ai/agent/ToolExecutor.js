@@ -52,7 +52,10 @@ export class ToolExecutor {
       if (signal?.aborted) throw new AgentError(AGENT_ERROR_CODES.ABORTED, "tool execution aborted");
       this.policy.assertAllowed(tool);
       validateObjectSchema(call.arguments, tool.inputSchema);
-      const result = await tool.handler(call.arguments, context, { signal });
+      const executionContext = context && typeof context === "object"
+        ? Object.freeze({ ...context, toolCallId: call.id })
+        : context;
+      const result = await tool.handler(call.arguments, executionContext, { signal, toolCallId: call.id });
       return createToolResult({ toolCallId: call.id, toolName: call.name, ok: true, result });
     } catch (error) {
       const code = error instanceof AgentError
