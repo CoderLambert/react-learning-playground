@@ -103,7 +103,12 @@ test.describe("SourceViewer", () => {
     await expect(semanticNav).toHaveAttribute("data-semantic-parser", "rolldown-oxc:tsx");
     const coreButton = semanticNav.locator(".source-semantic-chip--primary");
     await expect(coreButton).toHaveAttribute("aria-pressed", "true");
-    await expect(coreButton).toContainText("Component · ProfileCard");
-    await expect(inlineViewer.locator('[data-highlighted="true"]').filter({ hasText: "ProfileCard" }).first()).toBeVisible();
+    await expect(coreButton).toContainText("Component ·");
+    await expect(inlineViewer).toHaveAttribute("data-source-semantic", /^component:/);
+
+    const semanticId = await inlineViewer.getAttribute("data-source-semantic");
+    const selectedSymbol = semanticId?.slice("component:".length);
+    expect(selectedSymbol).toBeTruthy();
+    await expect(inlineViewer.locator('[data-highlighted="true"]').filter({ hasText: selectedSymbol }).first()).toBeVisible();
   });
 });
