@@ -16,6 +16,14 @@
 在中间 Demo 中修改可分享的页面状态，观察地址栏；复制当前 URL 后改变状态，再使用浏览器后退/前进。最后刷新页面，检查 UI 是否由 URL 恢复，而不是依赖内存中的旧 state。
 </Experiment>
 
+<Boundary title="Search Params 是不可信的字符串输入">
+ 地址栏、书签和外部链接都可能提供任意输入。`URLSearchParams` 读到的值不能直接当成合法业务状态：先做 parse，再应用 default，再做 enum validation / range validation，最后按产品协议做 canonicalization。比如 `?page=-1` 不能直接转成页码使用；`?sort=unknown` 和 `?tab=not-exist` 也不能直接传给查询或渲染逻辑，应回退到合法默认值、拒绝输入，或进入明确的错误边界。canonicalization 可以把等价输入归一为稳定表示，例如省略默认的 `page=1`，固定允许的枚举值和序列化规则。
+
+ 中间 Demo 只拥有 `q` 与 `category`，没有实现这套生产级 URL schema 校验；这里描述的是工程边界，不是 Demo 已经观察到的证据。连续输入搜索词时，也不要机械地为每个字符 `push` 一条历史记录，应根据“用户是否应该通过 Back 返回每一步”选择 `push`、`replace` 或 debounce。
+
+ URL 不应放密码、token、secret 或其他敏感信息；URL 可能进入浏览器历史、服务端或代理日志、分析系统以及分享/截图等传播面。URL 还有长度、可读性和分享语义限制，所以不是所有持久化状态都适合放进去。它应保存页面/查询意图，例如资源 id、筛选和分页，而不是复制整个 server-state response。
+</Boundary>
+
 <DemoReference action="改变 Demo 的 URL 状态并执行刷新、Back、Forward" observe="地址栏应成为页面状态的可重放记录；历史导航应恢复对应 UI。" />
 
 <Observation>

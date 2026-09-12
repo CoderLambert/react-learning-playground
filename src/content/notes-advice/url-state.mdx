@@ -31,16 +31,20 @@ URL / History 不是 React Core 状态模型。React Router 等 Router/Framework
 
 ## 缺失边界 / 反例
 
-可以进一步补充 URL schema 边界：search params 是不可信字符串输入，需要解析、默认值、枚举校验和 canonicalization。复杂筛选也应考虑 URL 长度、隐私与可读性，不是所有可持久化状态都适合进入 URL。
+本轮已补充 URL schema 边界：search params 是不可信字符串输入，需要解析、默认值、枚举校验和 canonicalization。复杂筛选也应考虑 URL 长度、隐私与可读性，不是所有可持久化状态都适合进入 URL。
 
-另一个重要边界是 history 写入策略：连续输入搜索词时每个字符都 `push` 会制造大量 history entries；生产 Router 常根据交互语义选择 push、replace 或 debounce。
+本轮也已补充 history 写入策略：连续输入搜索词时每个字符都 `push` 会制造大量 history entries；生产 Router 常根据交互语义选择 push、replace 或 debounce。
 
 ## 清晰度与工程决策
 
 当前决策规则明确：资源 identity、tab、筛选、排序、分页等页面语义优先 URL；modal 临时动画、hover、输入法组合等短生命周期 UI 留在组件；server response 本身属于 server-state/cache 层，URL 只保存查询意图。
 
-## 建议修改
+## 本轮处理状态
 
-1. 补充 search params 的解析/校验/canonicalization 边界。
-2. 补充高频输入场景选择 `replace` / debounce，避免 history pollution。
-3. 保留 Demo 中“History API 是实验工具，真实项目交给 Router”的显式声明。
+1. **resolved / closed**：Note 已补充 search params 的 parse、default、enum/range validation 与 canonicalization 边界，并用非法 page/sort/tab 说明不能直接信任输入。
+2. **resolved / closed**：Note 已补充敏感信息、URL 长度/可读性/分享语义，以及页面/查询意图与 server-state response 的边界。
+3. **resolved / closed**：Note 已补充连续输入场景下 `push`、`replace` 与 debounce 的生产决策；Demo 仍明确是 History API 教学实验，真实项目交给 Router。
+
+## 保留债务
+
+- 当前 Demo 只实现 `q` / `category`，没有执行完整生产 URL schema 的校验；本轮按 ownership 约束不扩展 Demo。

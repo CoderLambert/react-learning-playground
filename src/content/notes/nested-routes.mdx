@@ -28,12 +28,22 @@
 
 <Boundary title="组件组合与 Router 匹配是两层职责">
 React 能组合父子组件，但不会根据 URL 自动选择组件树。Nested routing、layout route、index route、loader 继承等都是具体 Router/Framework 的能力；不同 Router 的细节不能互换套用。
+
+ 不要把 `route hierarchy`、文件目录和 URL segment 画成同一棵树：`route hierarchy ≠ file hierarchy ≠ URL segments 必须一一对应`。Router/Framework 可能提供 pathless routes、layout routes 或 route groups，让 UI、数据和错误边界发生嵌套，却不增加对应的 URL segment；声明 route 的方式也不必等于文件夹的组织方式。
+
+ 共同匹配链只表示父级 route 可能成为共享边界，不保证组件实例永远不重建。是否复用 layout 还取决于 route identity、`key`、Router 实现和应用结构；不要从“路径看起来相同”推导出绝对的 mount/unmount 保证。
+</Boundary>
+
+<Boundary title="共享 Layout 不等于把所有 State 提升到 Root">
+ 共享 layout 解决的是页面组合与生命周期边界，不是“所有跨页面 state 都应该住在 root layout”。State 仍应放在能够表达其 ownership、lifetime、reset boundary 的最小层级：只服务一个子页面的 state 留在该页面，需要在同一布局下跨子路由保留的 state 才提升到合适的共享 layout；只有真正由整个应用拥有的 state 才进入更高层级。
 </Boundary>
 
 <Summary>
 - Nested route 把 URL 层级映射为可组合的页面/布局层级。
 - 父 route 管稳定结构，子 route 管局部变化。
+- route hierarchy、文件目录与 URL segments 不必一一对应；pathless/layout/group 机制可以增加组织边界而不改变 URL。
 - Outlet 是路由匹配结果进入父布局的插槽，而不是普通条件渲染的别名。
+- 共享 layout 不自动决定 state 所有权；按 ownership、lifetime 和 reset boundary 放在最小合适层级。
 - 用 route tree 表达信息架构，避免手写 pathname 分支。
 </Summary>
 

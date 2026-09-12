@@ -30,16 +30,20 @@ Route loader 与 server-state cache 也不是同义概念。Loader 解决“进�
 
 ## 缺失边界 / 反例
 
-建议补充 loader cancellation / race 边界：真实 Router 在连续导航时可能取消或忽略过时工作，不能把这个简单 `setTimeout` 模拟器的完成顺序当成 Router 的并发保证。
+本轮已补充 loader cancellation / race 边界：真实 Router 在连续导航时可能取消或忽略过时工作，不能把这个简单 `setTimeout` 模拟器的完成顺序当成 Router 的并发保证。
 
-还应强调 loader 数据是否缓存、何时 revalidate、错误/redirect response 的具体类型都取决于 Router 模式与版本；不要把概念 trace 直接翻译成固定 API 调用顺序。
+本轮也已强调 loader 数据是否缓存、何时 revalidate、错误/redirect response 的具体类型都取决于 Router 模式与版本；不要把概念 trace 直接翻译成固定 API 调用顺序。
 
 ## 清晰度与工程决策
 
 当前生产决策规则合理：页面进入所需数据优先 route/framework data boundary；跨页面复用与缓存生命周期交给 query/cache 层；真正由组件出现触发的外部同步才考虑 Effect。Router + Query 集成必须定义预取、缓存和 invalidation 所有权。
 
-## 建议修改
+## 本轮处理状态
 
-1. 保留“Demo 是阶段模拟器，不是 React Router runtime”的明确边界。
-2. 补充连续导航时 cancellation / stale-result 的并发边界。
-3. 后续若仓库真正安装 Data Router，再用真实 loader/redirect/errorElement/useNavigation 取代手写 trace。
+1. **resolved / closed**：Note 保留并强化“Demo 是阶段模拟器，不是 React Router runtime”的明确声明，并指出 `setTimeout` 与手写 trace 的教学范围。
+2. **resolved / closed**：Note 已补充连续导航中的 stale work、cancellation、ignored obsolete result 与 revalidation 边界，并明确不能由模拟 trace 推导真实 Router contract。
+3. **resolved / closed**：Note 已明确 redirect/error object contract、race behavior 与 revalidation order 必须以实际 Router/Framework 当前官方契约为准。
+
+## 保留债务
+
+- 当前 Demo 继续保持轻量阶段模拟器；若未来真实接入 Data Router，再用 runtime 的 loader、redirect、route error 和 navigation API 做专门实验。

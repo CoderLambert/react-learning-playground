@@ -31,16 +31,21 @@ Nested routing、Outlet、index route、layout route 都属于具体 Router/Fram
 
 ## 缺失边界 / 反例
 
-建议补充 route hierarchy 不一定等同于文件目录 hierarchy，也不一定与 URL segments 一一对应。现代 Framework Router 可能通过 route groups、layout routes、pathless routes 等机制组织 UI 边界而不改变 URL。
+本轮已补充 route hierarchy 不一定等同于文件目录 hierarchy，也不一定与 URL segments 一一对应。现代 Framework Router 可能通过 route groups、layout routes、pathless routes 等机制组织 UI 边界而不改变 URL。
 
-另外，“共享 layout”不是把所有跨页面 state 都提升到根 layout 的理由。状态仍应放在最小能够表达其生命周期/所有权的边界。
+本轮也已明确“共享 layout”不是把所有跨页面 state 都提升到根 layout 的理由。状态仍应放在最小能够表达其生命周期/所有权的边界。
 
 ## 清晰度与工程决策
 
 生产决策规则已经明确：页面有稳定 shell + 局部变化时，用 route tree 表达边界；不要在根组件里复制 pathname 判断形成第二套路由状态机。URL 信息架构和 UI 布局应联合设计，但不要机械绑定。
 
-## 建议修改
+## 本轮处理状态
 
-1. 保留“当前 Demo 是 match 模拟器，不是 Router runtime”的显式声明。
-2. 补充父 layout 是否保留取决于 route identity / key / Router 行为，避免“共同路径必然不重建”的误读。
-3. 后续若仓库真正接入 Router，可把本课升级为真实 Outlet + layout state preservation 实验，再恢复生命周期观察。
+1. **resolved / closed**：Note 保留并强化“当前 Demo 是 match 模拟器，不是 Router runtime”的显式声明。
+2. **resolved / closed**：Note 已补充 route identity、`key`、Router 行为和应用结构对 layout 复用/重建的影响，不再暗示共同路径必然不重建。
+3. **resolved / closed**：Note 已补充 `route hierarchy ≠ file hierarchy ≠ URL segments 必须一一对应`，以及 pathless/layout route、route groups 的框架无关边界。
+4. **resolved / closed**：Note 已补充共享 layout 不等于把所有跨页面 state 提升到 root；state 按 ownership、lifetime、reset boundary 的最小层级放置。
+
+## 保留债务
+
+- 若未来仓库接入真实 Router，可另做 Outlet 与 layout state preservation 实验；当前 Demo 仍不提供真实生命周期证据。
