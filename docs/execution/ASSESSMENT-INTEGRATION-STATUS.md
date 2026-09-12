@@ -27,7 +27,7 @@ The validation work did not reset, force-push, merge, or otherwise modify `main`
 | Capability Gate | PASS | Ordinary chat exposes no Assessment command tools. Explicit `assessment_authoring` mode supplies Assessment tools, exposes mode state in the UI, permits exit, and compaction always has no tools. |
 | Direct Provider Contract Gate | PASS | Node contract tests cover tool schema forwarding, assistant/tool continuations, split tool calls, errors, and abort normalization. |
 | Gateway Provider Contract Gate | PASS | Worker and client tests cover the same normalized tool continuations, stream assembly, cancellation, error handling, and tool-disabled compaction boundary. |
-| Product E2E Gate | PASS | Mock Chromium run covers AI create, source-evidence navigation/rejection, session reload/completion/snapshot isolation, ordinary-chat capability denial, and IndexedDB Memory fallback. |
+| Product E2E Gate | PASS | Mock Chromium run covers AI create, source-evidence navigation, session reload/completion/snapshot isolation, ordinary-chat capability denial, and IndexedDB Memory fallback. Invalid source-file and line-range evidence rejection is covered by Node composition/service tests. |
 
 ## Commands actually run
 
