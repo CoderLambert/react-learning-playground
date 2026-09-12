@@ -35,9 +35,16 @@ When locator mode is active:
 5. locator mode exits after a successful location;
 6. `Escape` exits without locating.
 
-`Alt / Option + Click` performs the same location directly without toggling locator mode.
+`Alt / Option` is also a press-and-hold locator mode, not merely a hidden click modifier. While the key is held:
 
-Normal Demo interaction is unchanged while locator mode is inactive.
+- a fixed high-contrast banner states `Alt / Option · 源码定位模式`;
+- a viewport inset border makes the global mode change visible;
+- every Demo locator scope receives a dashed focus outline and crosshair cursor;
+- moving over a locatable element immediately shows the file/line overlay;
+- clicking locates source without executing that Demo action;
+- releasing `Alt / Option`, window blur, or document hiding removes the transient visual mode.
+
+Normal Demo interaction is unchanged while neither the explicit locator toggle nor the modifier mode is active.
 
 ## Build-time instrumentation
 
@@ -73,6 +80,8 @@ For a hovered/clicked DOM node it:
 6. emits `{ learningUnitId, fileName, startLine, endLine }` to the workbench.
 
 The existing semantic manifest remains useful here because it already carries the physical registered source path for each learner-facing file name, including aliases where the display name differs from the physical filename.
+
+Transient `Alt / Option` state is tracked globally because the modifier describes an application interaction mode, not one particular Demo. Mounted locator scopes share one listener lifecycle; the document root carries `data-source-locator-alt="true"` while active, which drives the global banner, border, cursor and scope treatment without creating duplicate overlays in continuous-reading mode.
 
 ## Focused and continuous reading
 
@@ -132,7 +141,10 @@ The feature is considered valid when:
 - locator mode hover displays an overlay;
 - locator click prevents the Demo action for that click;
 - the correct learning unit, source file and JSX range open in the Inspector;
-- `Alt / Option + Click` performs the same direct location;
+- holding `Alt / Option` visibly enters locator mode before any click occurs;
+- the transient mode shows banner, viewport treatment, Demo scope outline and crosshair cursor;
+- releasing `Alt / Option` clears the transient mode;
+- `Alt / Option + Click` performs direct location without running the Demo action;
 - aliased supporting source files resolve through physical semantic paths;
 - continuous-reading cross-lesson location switches Inspector context correctly;
 - page-level Inline Source is absent;
