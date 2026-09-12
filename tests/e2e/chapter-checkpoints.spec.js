@@ -59,7 +59,7 @@ test.describe("chapter review checkpoints", () => {
     runner = page.locator('[data-assessment-runner="2"]');
     await expect(runner).toBeVisible();
     await runner.getByLabel("筛选").selectOption("review");
-    await expect(runner.getByLabel("你的回答")).toContainText("state 是一次 render 的快照");
+    await expect(runner.getByLabel("你的回答")).toHaveValue(/state 是一次 render 的快照/);
     await expect(runner.getByLabel("需要复习")).toBeChecked();
 
     await runner.getByRole("button", { name: "重新回答" }).click();
