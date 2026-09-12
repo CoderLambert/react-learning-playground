@@ -9,6 +9,7 @@ import {
   createQuestionRevision,
   reconcileAttemptQuestions,
   reopenAttempt,
+  resetAnswer,
   summarizeAttempt,
   updateAnswer,
 } from "../src/assessment/practiceAttempt.js";
@@ -50,6 +51,28 @@ test("repository restores attempt and rejects corrupt/version-mismatched payload
   assert.equal(repository.load(4), null);
 });
 
+test("repository read errors degrade to no restored attempt", () => {
+  const repository = createAttemptRepository({
+    getItem() { throw new Error("storage denied"); },
+    setItem() {},
+    removeItem() {},
+  });
+  assert.equal(repository.load(2), null);
+});
+
+test("chapter persistence stays isolated", () => {
+  const storage = createMemoryStorage();
+  const repository = createAttemptRepository(storage);
+  let chapter2 = createAttempt({ chapter: 2, questions, sessionId: "shared", now: 0 });
+  let chapter3 = createAttempt({ chapter: 3, questions, sessionId: "shared", now: 0 });
+  chapter2 = updateAnswer(chapter2, questions[0], { draft: "chapter two" }, 1);
+  chapter3 = updateAnswer(chapter3, questions[0], { draft: "chapter three" }, 1);
+  repository.save(chapter2);
+  repository.save(chapter3);
+  assert.equal(repository.load(2).answers[questions[0].id].draft, "chapter two");
+  assert.equal(repository.load(3).answers[questions[0].id].draft, "chapter three");
+});
+
 test("question revision changes when prompt changes", () => {
   const before = createQuestionRevision(questions[0]);
   const after = createQuestionRevision({ ...questions[0], prompt: `${questions[0].prompt}（补充）` });
@@ -65,6 +88,20 @@ test("reconcile resets only answers whose question revision changed", () => {
   assert.equal(reconciled.answers[questions[0].id].draft, "");
   assert.equal(reconciled.answers[questions[0].id].status, ANSWER_STATUS.DRAFT);
   assert.equal(reconciled.answers[questions[1].id].draft, "保留答案");
+});
+
+test("reset answer reopens a completed attempt without touching other answers", () => {
+  let attempt = createAttempt({ chapter: 2, questions, sessionId: "session-reset", now: 0 });
+  attempt = updateAnswer(attempt, questions[0], { draft: "旧回答" }, 1);
+  attempt = updateAnswer(attempt, questions[1], { draft: "保留回答" }, 1);
+  attempt = completeAttempt(attempt, 2);
+  attempt = resetAnswer(attempt, questions[0], 3);
+  assert.equal(attempt.status, "reopened");
+  assert.equal(attempt.completedAt, null);
+  assert.equal(attempt.currentQuestionId, questions[0].id);
+  assert.equal(attempt.answers[questions[0].id].draft, "");
+  assert.equal(attempt.answers[questions[0].id].status, ANSWER_STATUS.DRAFT);
+  assert.equal(attempt.answers[questions[1].id].draft, "保留回答");
 });
 
 test("completion and reopen keep answers without fabricating scores", () => {
