@@ -2,7 +2,7 @@
 
 ## 当前结论
 
-**事实主线正确，但实验契约需要收紧。** Gate A：PASS；Gate B：FAIL；Gate C：PASS。
+**事实、实验与心智模型现已对齐。** Gate A：PASS；Gate B：PASS；Gate C：PASS。
 
 ## Correctness / React 19.2
 
@@ -12,36 +12,31 @@
 
 ## Mental model
 
-Note 的“Context 是订阅读取而不是全局变量”是有效心智模型。建议再明确两层原因：父组件自身重新 render 与 Context value 变化是两种不同触发来源；`memo` 只是在 props 未变化时允许跳过父级传播造成的工作，它不是 Context subscription 的屏障。
+Note 的“Context 是订阅读取而不是全局变量”成立，并且现在清楚区分两类触发来源：父组件自身重新 render 与 Context value 变化。`memo` 可以在 props 不变时跳过父级带来的部分重复工作，但不是 Context subscription 的屏障。
 
 ## Demo ↔ Note
 
-当前 Gate B 不通过。Note 要求“观察 render 日志”，但 Demo 并没有记录真实组件 render 次数。`renderCounts` 是在按钮事件里手工递增的教学预测值，Demo 自己也明确说明它不是 Profiler/真实 instrumentation。
+此前 `renderCounts` 是按钮 handler 手工维护的预测值，不能证明真实 render。现在三个被观察组件都在组件函数执行点用 ref 累加计数：
 
-因此当前 Demo 可以可靠观察：
+- 普通 `ContextConsumer` 会随父组件重新执行；
+- `MemoConsumer` 在父级 local State 更新且 Context 不变时可以跳过，但 Theme Context 改变时仍会重新执行；
+- `MemoNonConsumer` 不订阅 Theme Context，且无变化 props，因此可跳过这些父级更新。
 
-- Context consumer 读到的新 `theme`；
-- memo consumer 仍收到新的 Context value；
-- memo non-consumer 在 props 不变时展示的 UI 不需要依赖 Context。
-
-但它不能用手工计数证明真实 render 次数或精确传播成本。
+Demo 也明确说明开发 Strict Mode 可能额外调用组件，因此计数用于观察相对传播行为，不应当作“一次点击等于一次 render”的绝对保证。Gate B 通过。
 
 ## 缺失边界 / 反例
 
-建议补充两个高价值边界：
+当前 Note 已补充两个关键边界：
 
-1. 如果 Provider 每次 render 都创建新的对象/函数 value，即使业务字段未变，也会因为 identity 变化触发消费者更新；是否值得 `useMemo/useCallback` 取决于实际性能问题。
-2. Context 没有 selector 语义；读取一个对象 Context 的组件订阅的是整个 value identity，而不是自动只订阅某个字段。
+1. Provider 每次 render 新建对象/函数 value 时，identity 变化会让消费者收到更新；是否值得稳定引用取决于实际性能问题。
+2. Context 没有对象字段级 selector 语义，消费者订阅的是整个 value identity，而不是自动只订阅访问过的字段。
 
 ## 清晰度与工程决策
 
-项目决策规则应是：先用 Context 解决“跨层传递”；当 value 更新频率、订阅粒度或大型状态协作成为瓶颈时，再考虑拆分 Context、稳定 value identity 或使用支持 selector 的外部 store。不要把 Context 本身描述成性能问题，也不要把 `memo` 当成通用解法。
+项目决策规则明确：先用 Context 解决跨层传递；当 value 更新频率、订阅粒度或大型状态协作成为瓶颈时，再考虑拆分 Context、稳定 value identity 或使用支持 selector 的外部 store。不要把 Context 本身描述成性能问题，也不要把 `memo` 当成通用解法。
 
 ## 建议修改
 
-1. 把 Experiment/DemoReference 中的“render 日志”改成当前 Demo 真能观察的 value 传播；若确实要教学 render 次数，再加入真实 instrumentation 或 Profiler 实验。
-2. 明确手工 `renderCounts` 只是预测/示意，不作为 Gate B 的证据。
-3. 加入对象 value identity 与“Context 无字段级 selector”的边界。
-4. 保留 `memo` 不能屏蔽 Context 更新这一核心结论。
+当前三个硬 Gate 已全部通过。后续只需避免把教学 render counter 当成 React Profiler 或生产级性能遥测。
 
 官方基线：React `useContext`、`memo`、`createContext`。
