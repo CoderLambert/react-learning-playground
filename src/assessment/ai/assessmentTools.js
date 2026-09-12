@@ -1,5 +1,6 @@
 import { TOOL_POLICIES } from "../../ai/agent/agentContracts.js";
 import {
+  ASSESSMENT_AUTHORING_INSTRUCTIONS,
   assertAssessmentAuthoringQuality,
   assertAssessmentQuestionPatchAuthoringQuality,
 } from "./assessmentAuthoringQuality.js";
@@ -91,7 +92,7 @@ export function createAssessmentToolDefinitions({ assessmentService } = {}) {
   return [
     {
       name: ASSESSMENT_TOOL_NAMES.LIST_QUESTIONS,
-      description: "List full assessment question records in the current learning unit. Use this before bulk edits and after mutations to read back and verify learner-facing content.",
+      description: "List full assessment question records in the current learning unit. Use this before bulk edits and after mutations to read back and verify learner-facing content; revisions alone are not content verification.",
       policy: TOOL_POLICIES.QUERY,
       inputSchema: assessmentListQuestionsInputSchema,
       handler: async (argumentsValue, context, execution) => {
@@ -102,7 +103,7 @@ export function createAssessmentToolDefinitions({ assessmentService } = {}) {
     },
     {
       name: ASSESSMENT_TOOL_NAMES.CREATE_QUESTIONS,
-      description: "Create self-contained assessment questions in the current learning unit. Learner-facing prompt/options must contain the information needed to answer; source file/line ranges belong in evidenceRefs, not as navigation instructions in the question text.",
+      description: `Create self-contained assessment questions in the current learning unit.\n\n${ASSESSMENT_AUTHORING_INSTRUCTIONS}`,
       policy: TOOL_POLICIES.COMMAND,
       inputSchema: assessmentCreateQuestionsInputSchema,
       handler: async (argumentsValue, context, execution) => {
@@ -116,7 +117,7 @@ export function createAssessmentToolDefinitions({ assessmentService } = {}) {
     },
     {
       name: ASSESSMENT_TOOL_NAMES.UPDATE_QUESTION,
-      description: "Update mutable business fields on an assessment question. Any learner-facing text being changed must remain self-contained; source file/line ranges are evidence metadata rather than question-text navigation.",
+      description: `Update mutable business fields on an assessment question. Re-read the stored question before editing and verify it with assessment_list_questions after the mutation.\n\n${ASSESSMENT_AUTHORING_INSTRUCTIONS}`,
       policy: TOOL_POLICIES.COMMAND,
       inputSchema: assessmentUpdateQuestionInputSchema,
       handler: async (argumentsValue, context, execution) => {
