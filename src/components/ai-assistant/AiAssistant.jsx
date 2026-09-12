@@ -476,8 +476,7 @@ export function AiAssistant({
           tabIndex={0}
           onScroll={handleTranscriptScroll}
           onWheel={markTranscriptUserScrollIntent}
-          onTouchStart={markTranscriptUserScrollIntent}
-          onPointerDown={markTranscriptUserScrollIntent}
+          onTouchMove={markTranscriptUserScrollIntent}
           onKeyDown={handleTranscriptKeyDown}
         >
           {messages.length === 0 ? (
