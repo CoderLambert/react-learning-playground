@@ -143,7 +143,7 @@ test("create/update command tools reject non-self-contained learner text before 
     arguments: { questions: [draft("根据第 170–176 行判断结果。")] },
   }, executionContext());
   assert.equal(createResult.ok, false);
-  assert.equal(createResult.error.code, "TOOL_EXECUTION_FAILED");
+  assert.equal(createResult.error.code, "TOOL_ARGUMENTS_INVALID");
 
   const updateResult = await executor.execute({
     id: "update-bad",
@@ -155,7 +155,7 @@ test("create/update command tools reject non-self-contained learner text before 
     },
   }, executionContext());
   assert.equal(updateResult.ok, false);
-  assert.equal(updateResult.error.code, "TOOL_EXECUTION_FAILED");
+  assert.equal(updateResult.error.code, "TOOL_ARGUMENTS_INVALID");
   assert.equal(calls.length, 0);
 });
 
