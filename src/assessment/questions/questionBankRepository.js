@@ -144,6 +144,13 @@ export function createQuestionBankRepository(storage = getDefaultStorage()) {
       });
     },
     addCustom,
+    restoreCustom(item) {
+      if (!item || item.origin !== "user" || typeof item.id !== "string") return read();
+      return update((state) => {
+        if (state.customQuestions.some((question) => question.id === item.id)) return state;
+        return { ...state, customQuestions: [...state.customQuestions, { ...item }] };
+      });
+    },
     duplicate(item) {
       return addCustom({ chapter: item.chapter, kind: item.kind, prompt: item.prompt });
     },
