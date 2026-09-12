@@ -30,6 +30,7 @@ Specialist ownership rechecked before this batch:
 10. `nested-routes.mdx`: removed claims that the local route-match simulator demonstrates browser history or real component lifecycle; experiment now targets matched route chains and Outlet boundaries that the Demo can actually show.
 11. `navigation-boundary.mdx`: replaced a nonexistent slow-navigation/pending experiment with the Demo's actual push/replace/Back/Forward/404 history experiment, while keeping pending navigation as an explicit real-Router boundary.
 12. `route-data-boundary.mdx`: narrowed the experiment to the Demo's real params → simulated loader → pending → data/error trace; real URL mutation, redirect, revalidation and Router instrumentation are explicitly out of scope.
+13. `src/demos/testing-samples/app.spec.js`: corrected stale source text that claimed Playwright was not installed, and changed `page.goto("/")` to `page.goto("./")` so the teaching sample preserves the repository's configured GitHub Pages-style base path instead of resolving to the origin root.
 
 ## Audited lessons
 
@@ -78,6 +79,9 @@ Each item has exactly one matching file under `src/content/notes-advice/`.
 41. `nested-routes.mdx` — A PASS / B PASS / C PASS (after Note/Demo contract fix)
 42. `navigation-boundary.mdx` — A PASS / B PASS / C PASS (after Note/Demo contract fix)
 43. `route-data-boundary.mdx` — A PASS / B PASS / C PASS (after Note/Demo contract fix)
+44. `testing-strategy.mdx` — A PASS / B PASS / C PASS (after Source sample correction)
+45. `accessibility-basics.mdx` — A PASS / B PASS / C PASS
+46. `accessible-modal.mdx` — A PASS / B PASS / C PASS for its explicitly limited teaching experiment
 
 ## Material open findings
 
@@ -106,22 +110,25 @@ Each item has exactly one matching file under `src/content/notes-advice/`.
 - `nested-routes`: the route tree simulation is useful, but it cannot prove actual Router lifecycle preservation. The Note now asks only for matched-chain and Outlet observations the Demo can support.
 - `navigation-boundary`: the prior Note was effectively a pending-navigation lesson attached to a history-stack simulator. It now teaches push/replace/history delta/404 accurately; real pending navigation remains a Data/Framework Router concern.
 - `route-data-boundary`: loader mental model is sound, but the Demo is explicitly a phase simulator. The Note no longer claims it mutates real URL, executes redirect or instruments a real Data Router runtime.
+- `testing-strategy`: mental model and Demo are aligned. The Playwright reference sample had become stale relative to the repository: Playwright is installed and the configured baseURL includes `/react-learning-playground/`. The sample now preserves that base path and is clearly labeled as Source reference code rather than the real `tests/e2e` suite.
+- `accessibility-basics`: all hard gates pass. Keep the distinction between HTML/ARIA platform semantics and React, and consider adding placeholder-vs-label and assertive-live-region misuse as future counterexamples.
+- `accessible-modal`: the focus lifecycle experiment is valid, but the teaching implementation intentionally lacks complete `inert`/background isolation, dynamic focusable handling, nested overlays and scroll locking. The Note/Demo both state this limitation, so Gate B passes only for the explicit teaching scope, not as certification of a production-ready dialog primitive.
 
 ## Factual sources
 
-Primary React semantics continue to use current official React documentation. Router lessons use current official React Router documentation for modes, Link/NavLink/useNavigate/redirect and pending navigation. Browser history details use MDN History API / `pushState` / `popstate` references. TanStack Query v5 official docs remain the source only where lessons explicitly map to Query behavior.
+Primary React semantics continue to use current official React documentation. Router lessons use current official React Router documentation for modes, Link/NavLink/useNavigate/redirect and pending navigation. Browser history details use MDN History API / `pushState` / `popstate` references. Accessibility reviews use WAI-ARIA APG, WCAG and MDN platform semantics. Testing reviews use Testing Library / Playwright behavior contracts plus this repository's actual `package.json` and Playwright configuration. TanStack Query v5 official docs remain the source only where lessons explicitly map to Query behavior.
 
 ## Validation
 
 Earlier executable-fix head `b2200ffd95d54a60cf3a1873a9d6d62951086615` passed both `React Learning Verify` and `Workbench Integration Verify`.
 
-For the latest executable/router batch, pre-status head `34bce2b9857c0c669d2a6c66164a881a02fe9787` started exact-head workflows:
+For Router pre-status head `34bce2b9857c0c669d2a6c66164a881a02fe9787`:
 
-- React Learning Verify #244 — in progress when inspected.
-- Workbench Integration Verify #183 — in progress when inspected.
+- React Learning Verify #244 — PASS.
+- Workbench Integration Verify #183 — CANCELLED, not a test failure; no PASS is claimed for that run.
 
-No exact-head PASS is claimed until GitHub reports completion. This environment does not expose a local executable checkout, so GitHub Actions remains the acceptance source.
+Latest pre-status head `4e848acfe267163b86094b70c9ba9f32dcc70c37` had no associated workflow run yet when inspected. The latest batch therefore has not received exact-head CI acceptance. This environment does not expose a local executable checkout, so GitHub Actions remains the acceptance source.
 
 ## Next
 
-Skip `typescript-react` while PR #81 owns it. Continue with the next unowned lesson in navigation/chapter order after the Router track, preferring concrete correctness or Demo-contract fixes before advice-only churn. Recheck specialist PR ownership before editing any shared or lesson-owned file.
+Skip `typescript-react` while PR #81 owns it. Continue with the next unowned Chapter 12 / framework lesson in navigation order, preferring concrete correctness or Demo-contract fixes before advice-only churn. Recheck specialist PR ownership before editing any shared or lesson-owned file.
