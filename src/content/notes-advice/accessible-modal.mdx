@@ -1,0 +1,48 @@
+# accessible-modal 审核建议
+
+## 当前结论
+
+- Gate A Correctness：PASS
+- Gate B Demo Contract：PASS（仅针对明确声明的教学实验范围）
+- Gate C Mental Model：PASS
+- 综合：Note 对 modal dialog 的完整协议描述准确，Demo 可以真实验证初始焦点、Tab/Shift+Tab 循环、Escape 与关闭后的焦点恢复，并且明确承认自己没有实现完整 background isolation，因此没有把教学 focus trap 冒充生产级 dialog primitive。
+
+## 事实与版本边界
+
+Portal 与 modal accessibility 是两层职责。React `createPortal` 只决定 DOM 放置位置；dialog role/name、焦点管理、背景隔离、滚动行为等仍由应用/Web 平台负责。
+
+`aria-modal="true"` 是辅助技术语义声明，不会自动让背景 DOM inert、阻止 pointer/keyboard interaction，也不会自动构建 focus trap。使用该属性时，实现必须确保用户确实处于 modal 交互边界中。
+
+原生 `<dialog>.showModal()` 能提供 top-layer 与平台 modal 行为，但仍应验证业务需要的初始焦点、关闭策略、表单/嵌套 overlay 以及目标浏览器/辅助技术组合。
+
+## Mental Model
+
+本课正确把 Modal 理解为“临时交互边界”，而不是 z-index 技巧。学习者能够解释打开、进入、循环、关闭、恢复五个阶段，以及为什么仅 autofocus 第一个 input 不足以构成完整 focus management。
+
+## Demo ↔ Note
+
+Note 声称的键盘实验当前都能执行：
+
+- 打开后 Effect 将焦点移到首个 focusable；
+- Tab / Shift+Tab 在当前静态 focusable 列表首尾循环；
+- Escape 关闭；
+- 关闭后通过 opener ref 恢复触发按钮焦点；
+- `aria-labelledby` / `aria-describedby` 提供 dialog 名称和描述。
+
+Demo 同时明确标注未实现 `inert`/background isolation、动态 focusable、嵌套 dialog 与 scroll lock。因此 Gate B 只对上述教学焦点实验判定 PASS，而不能把这个组件视为完整生产级 accessible modal。
+
+## 缺失边界 / 反例
+
+当前 focusable 列表只在 Effect setup 时计算。若 dialog 内动态增加/删除控件、控件在打开后变 disabled/hidden，首尾边界可能过期。这正是生产项目不应轻易手写通用 focus trap 的具体理由。
+
+焦点恢复也有边界：如果 opener 在 dialog 打开期间被删除或流程完成后下一合理焦点已变化，应按工作流语义选择恢复目标，而不是无条件尝试旧 ref。
+
+## 清晰度与工程决策
+
+生产规则明确：简单场景也应优先成熟 dialog primitive 或经过充分验证的原生 dialog 封装；自定义实现至少必须覆盖 name、初始焦点、循环、Escape、真实背景隔离、关闭后的合理焦点位置，并用键盘和屏幕阅读器验证。
+
+## 建议修改
+
+1. 后续若要把 Demo 标为“完整 accessible modal”，必须先补真实 background isolation（如合适的 inert 策略）与动态 focusable 处理。
+2. 可增加“触发元素被删除”的 focus restoration 反例。
+3. 保留当前显式教学边界，避免学习者复制该简化 focus trap 到生产组件库。

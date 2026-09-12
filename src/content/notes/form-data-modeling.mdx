@@ -6,15 +6,15 @@
 
 <Flow items={["用户编辑 DOM 字段", "submit", "new FormData(form)", "get/getAll/has", "转换 + 校验", "领域 payload"]} />
 
-<Experiment title="比较两种所有权">
-在中间 Demo 编辑非受控字段并提交，观察 React 无需为每次键入保存 State；再对比需要实时联动的字段，判断什么时候 controlled 更合适。
+<Experiment title="观察提交边界">
+在中间 Demo 修改标题、优先级、协作者和通知选项。输入期间右侧 React 输出不会跟随每次键入更新；点击提交后，再观察 `FormData` 如何一次性读取当前字段，并经 `get()`、`getAll()`、`has()` 转换成业务 payload。
 </Experiment>
 
 <Observation>`get()` 只返回一个同名字段值；checkbox group / multi-select 等多值字段应使用 `getAll()`。FormData 的值还可能是 `File`，不能假设全部是 string。</Observation>
 
 <AntiPattern title="把 FormData 当类型安全领域对象">直接 `Object.fromEntries(formData)` 可能丢失重复键语义，也不会自动把字符串转换为业务类型。</AntiPattern>
 
-<Boundary>需要实时验证、条件 UI 或跨字段联动时，React State 仍然有价值。可以混合建模，不必在“全受控”和“全非受控”之间二选一。</Boundary>
+<Boundary>是否 controlled 取决于 React 是否必须在提交前实时消费某个字段值。实时验证、条件 UI、即时预览或跨字段联动通常更适合 React State；只关心最终提交快照的字段可以继续由浏览器持有。同一表单可以混合两种所有权，不必二选一。</Boundary>
 
 <Summary>
 - FormData 是提交快照。

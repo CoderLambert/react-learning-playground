@@ -1,0 +1,29 @@
+# advanced-ref 审核建议
+
+## 当前结论
+
+- Gate A Correctness：**PASS**
+- Gate B Demo Contract：**PASS**
+- Gate C Mental Model：**PASS**
+
+## 复核结论
+
+React 19 边界保持准确：函数组件可以接收 `ref` prop；`forwardRef` 在 React 19 已不再必要；`useImperativeHandle` 用来缩小父组件获得的命令式能力；`useLayoutEffect` 用于确实必须在浏览器 repaint 前完成的布局读取/修正。
+
+Note 的 Experiment 已收敛到 Demo 真正支持的两件事：
+
+1. 切换 box 宽度并观察 `useLayoutEffect` 读取提交后的布局；
+2. 父组件通过 imperative handle 只能调用 `focus()` / `select()`，而不是获得整个 input DOM node。
+
+此前声称的 `useEffect` vs `useLayoutEffect` side-by-side 时序比较已移除，并明确标注当前 Demo 不包含该对照，因此 Note / Demo / Source 现在讲述同一实验。
+
+## 重要边界
+
+- `useLayoutEffect` 会阻塞 repaint，应把它视为有成本的浏览器布局 escape hatch，而不是“更及时的 useEffect”。
+- 只有需要在用户看到画面前读取布局并同步修正时才有理由使用它；订阅、日志、网络同步通常不需要。
+- imperative handle 应暴露最小能力；如果行为能用 props/state 表达，优先声明式 API。
+- React 18 兼容库仍可能需要 `forwardRef`，版本策略应与应用自身 React 19 写法分开讨论。
+
+## 后续可选增强
+
+若未来要专门教学两个 Effect 的时序差异，应加入能真实观察布局修正/闪烁的对照；当前课程不再把这一未实现现象列为实验要求。

@@ -1,0 +1,42 @@
+# react-memo 审核建议
+
+## 当前结论
+
+- Gate A Correctness：PASS
+- Gate B Demo Contract：PASS
+- Gate C Mental Model：PASS
+- 综合：Note/Demo 对 `memo` 命中、identity 击穿、自身 State/Context 边界和 React Compiler 定位都较准确。
+
+## 事实与版本边界
+
+React 19.2 中 `memo` 默认逐个 prop 使用 `Object.is`。它是性能优化而不是语义保证：React 仍可能重新 render memoized component；组件自身 State 或其消费的 Context 变化也仍会触发更新。当前 Note 的措辞基本符合官方定义。
+
+当前官方文档明确说明，启用 React Compiler 后通常不再需要手写 `React.memo`，Compiler 会自动提供等价的组件 memoization。Demo 也明确说明本仓库未启用 Compiler，这个边界很好。
+
+## Mental Model
+
+“只有昂贵组件 + 经常收到相同 props 才更可能从 memo 获益”是正确的工程判断标准。把 memo 视为跳过父驱动重复 render 的提示而非 correctness 工具，也能防止常见误用。
+
+## Demo ↔ Note
+
+Demo 真实使用三个 `memo` 子组件，并通过 Console `console.count` 比较：
+
+- primitive prop 稳定时可命中；
+- 每次创建的新对象使 memo miss；
+- `useMemo` 保持对象 identity 后再次具备命中条件。
+
+切换 `theme` 与更新无关父 State 都能直接验证 Note 的核心实验，因此 Gate B 通过。
+
+## 缺失边界 / 反例
+
+建议补充一句：`memo` 是优化而非保证，不能把“props 相同”描述成绝对不会执行组件。自定义 `arePropsEqual` 也应比较函数 props，因为函数可能闭包旧 props/state；错误 comparator 会引入 stale closure correctness bug。
+
+## 清晰度与工程决策
+
+当前工程决策已经足够明确：先 Profiler，再判断是否存在高频相同 props 的昂贵 render，最后再决定手动 memoization。在 Compiler 项目中应先确认编译覆盖与诊断，而不是默认保留手写 memo。
+
+## 建议修改
+
+1. 将“props 相同可跳过”保持为“通常/可以跳过”，避免写成语义保证。
+2. 增加 custom comparator 的 stale-closure 风险作为高级边界。
+3. 保留“本仓库未启用 Compiler”的明确说明，避免把官方 Compiler 能力误当成本项目当前运行行为。

@@ -1,0 +1,46 @@
+# react-compiler 审核建议
+
+## 当前结论
+
+- Gate A Correctness：PASS
+- Gate B Demo Contract：PASS
+- Gate C Mental Model：PASS
+- 综合：Note 与 Demo 都明确区分“本仓库未启用 Compiler”与“Compiler 的官方能力”，避免把手工 memo 实验伪装成编译器实测。
+
+## 事实与版本边界
+
+React Compiler 是构建期优化工具，会分析遵守 Rules of React 的组件和 Hooks，并自动 memoize 可安全复用的值、函数和组件工作。当前官方文档明确推荐新代码优先依赖 Compiler 的自动 memoization，只在需要精确控制时继续使用 `useMemo` / `useCallback`；已有手工 memoization 不建议未经验证就批量删除。
+
+Demo 对 `"use memo"` / `"use no memo"` 的说明与当前官方文档一致：默认 `compilationMode` 为 `infer`；`annotation` 模式主要通过 `"use memo"` opt-in；`"use no memo"` 可跳过编译，并被定位为应谨慎、通常临时使用的 escape hatch。
+
+## Mental Model
+
+当前 Note 的关键模型较强：Compiler 改变的是“谁负责做常规 memoization”，而不是 React 的数据流、State ownership、Render purity 或 Hooks 规则。它也正确避免了“Compiler 会自动修复不纯代码”这种误解。
+
+## Demo ↔ Note
+
+Demo 明确显示“本仓库当前没有启用 React Compiler”，然后只执行未启用 Compiler 环境下的手工对照：
+
+- 直接过滤每次生成新数组；
+- `useMemo` 保持数组 identity；
+- `memo(ProductList)` 观察新数组如何击穿 memo；
+- 无关父级更新用于比较 identity 稳定前后的差异。
+
+这与 Note 的 Experiment 定位一致：页面是 Compiler 心智模型和手工 memoization 对照，不声称展示编译后代码或实际 Compiler 性能。因此 Gate B 通过。
+
+## 缺失边界 / 反例
+
+建议补充两点：
+
+1. Compiler 的“自动 memoization”不是一个应由开发者预测具体缓存点的稳定业务 contract；若要确认某个函数是否被编译，应查看编译输出或 React DevTools 的 Memo 标记，而不是根据源码形状猜测。
+2. `compilationMode` 还存在 `syntax` 与 `all`，但当前课程不必展开；只需避免让学习者误以为只有 `infer` / `annotation` 两种模式。
+
+## 清晰度与工程决策
+
+当前生产决策规则清楚：先保证 Rules of React 与 lint diagnostics，渐进启用 Compiler，再用 Profiler 验证真实收益；既不默认继续添加手工 memo，也不机械删除已有 memoization。
+
+## 建议修改
+
+1. 增加“不要预测具体编译缓存点；用编译输出/DevTools 验证”的一句工程规则。
+2. 若提到 compilation modes，可写成“本课聚焦常见的 infer / annotation”，避免形成模式全集错觉。
+3. 保留“本仓库没有启用 Compiler”的显眼提示，这是防止 Demo Contract 误导的关键内容。

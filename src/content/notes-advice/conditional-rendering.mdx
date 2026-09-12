@@ -1,0 +1,26 @@
+# Review: 条件渲染与业务四态
+
+## Verdict
+
+原先关于 Empty 的自相矛盾已修复：Demo 现在明确区分“Empty 是一个需要设计的 UI 语义”和“是否需要单独存储 empty State”。当前主线“先建模状态，再映射 UI”成立。
+
+## Hard gates
+
+- **Gate A — Correctness: PASS**。React 条件渲染使用普通 JavaScript 控制流；`0 && <View />` 可能渲染 `0` 的边界准确。Demo 也不再宣称 Empty 必须独立存储。
+- **Gate B — Demo Contract: PASS**。四种教学 status、early return、ternary、`&&` 开关都能实际操作和观察。
+- **Gate C — Mental Model: PASS**。学习者可以区分 UI 分支语义、状态模型以及可派生值，避免为了渲染再制造第二份 state。
+
+## Important gaps / boundaries
+
+1. Empty 可以是明确的 UI 状态，但不必是独立 State。例如请求成功且 `items.length === 0` 时，可直接从成功数据派生 Empty；若业务协议本身把 empty 作为独立状态机节点，也可以显式建模。
+2. `loading/error/empty/success` 只是本 Demo 的互斥教学模型，不是所有 server-state UI 的通用真理。后台刷新时可以同时拥有已成功数据与 fetch-in-progress，这时“数据状态”和“后台同步状态”是正交维度。
+3. React 不渲染 `false/null/undefined`，但数字 `0` 是可渲染节点，因此 `&&` 的关键边界是左值类型，而不是把它当成通用模板语法。
+
+## Clarity / engineering usefulness
+
+当前 Demo 的四态切换适合讲控制流，不应进一步膨胀成网络状态管理课程。项目中真正复杂的异步状态应交给对应 server-state / router data lesson 解释。
+
+## Recommended changes
+
+- 后续可在 Note Boundary 增加“已有数据 + background refetch”这一正交状态反例，防止学习者把四态模型绝对化。
+- production decision rule：**先定义业务状态是否互斥，再决定用单一 status、派生布尔值还是多个正交状态；条件渲染只消费模型，不负责制造第二份状态。**

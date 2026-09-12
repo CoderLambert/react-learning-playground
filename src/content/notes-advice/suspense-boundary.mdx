@@ -1,0 +1,41 @@
+# suspense-boundary 审核建议
+
+## 当前结论
+
+- Gate A Correctness：PASS
+- Gate B Demo Contract：PASS
+- Gate C Mental Model：PASS
+- 综合：Note、Demo 与 React 19.2 Suspense 语义一致，实验可直接观察单一/嵌套 boundary 的 reveal 差异。
+
+## 事实与版本边界
+
+Suspense boundary 决定其子树 suspend 时使用哪个 fallback；嵌套 boundary 可表达渐进 reveal。Suspense 本身不提供通用数据缓存协议，也不会自动检测 Effect/event handler 内的数据请求。当前 Note 对这些边界说明准确。
+
+React 19.2 还有一个值得补充的更新场景：已经 reveal 的内容再次 suspend 时，默认可能重新显示 fallback；由 Transition 或 `useDeferredValue` 发起的非紧急更新可以避免某些不希望的已显示内容隐藏。这可作为下一课 Transition 的桥梁。
+
+## Mental Model
+
+“Boundary 是产品体验边界，不是每个组件一个 loading”非常有效。它能回答为何需要嵌套 boundary，以及为何 boundary 粒度应该由 UX/reveal sequence 决定。
+
+## Demo ↔ Note
+
+Demo 使用约 0.7s 的 Profile 和约 1.5s 的 Activity：
+
+- nested 模式：外层等待 Profile，Profile ready 后可以和内层 Activity fallback 一起 reveal，随后 Activity 单独完成；
+- 单一 boundary：Profile 与 Activity 共享外层等待范围，慢项会延迟整体 reveal。
+
+这与 Note 的实验描述一致。模块级 `promiseCache` 只是教学资源缓存，不应被理解为生产数据缓存实现；Demo/Note 已基本说明这一边界。
+
+## 缺失边界 / 反例
+
+建议明确当前 Map cache 没有失效、错误、GC、并发请求去重策略，只用于制造稳定 Promise；生产系统应使用框架或数据层的 Suspense-compatible cache。
+
+## 清晰度与工程决策
+
+整体简洁。工程决策规则可以更明确：把“必须同时有意义地出现”的 UI 放在同一 boundary，把可以独立等待且 fallback 有独立产品含义的区域放进嵌套 boundary。
+
+## 建议修改
+
+1. 补充“已 reveal 内容再次 suspend”与 Transition/deferred 的衔接边界。
+2. 明确 Demo `promiseCache` 仅为教学 fixture，不是生产 cache 方案。
+3. 保留当前实验，不需要增加更多机械化 teaching block。

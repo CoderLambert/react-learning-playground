@@ -8,11 +8,11 @@ Effect 的核心职责不是“State 变化后执行代码”，而是把 React 
 
 <Timeline steps={["render 计算 UI", "commit 更新 DOM", "Effect setup 与外部系统同步", "依赖变化", "旧 cleanup", "新 setup", "unmount 时最终 cleanup"]} />
 
-<Experiment title="观察 cleanup 闭环">
-运行中间 Demo 的定时器/事件监听实验，改变依赖并切换启用状态。重点看日志中 setup 与 cleanup 是否成对，以及旧监听是否在新同步前被移除。
+<Experiment title="观察两个真实外部同步边界">
+先挂载 resize watcher，缩放窗口确认浏览器事件订阅正在工作；再卸载 watcher，确认这个订阅随组件一起被撤销。然后修改未读数，直接观察浏览器标签标题如何跟随 `pageTitleBadge` 同步。前一个实验强调 setup/cleanup 对称性，后一个实验强调依赖值变化后 Effect 会用最新提交状态再次同步外部系统。
 </Experiment>
 
-<Observation>开发环境 Strict Mode 可能额外执行一次 setup → cleanup → setup，用来暴露缺失 cleanup 的问题；正确 Effect 应能承受这个序列。</Observation>
+<Observation>开发环境 Strict Mode 可能额外执行一次 setup → cleanup → setup，用来暴露缺失 cleanup 的问题；正确 Effect 应能承受这个序列。当前 Demo 没有把 Effect setup/cleanup 本身写成生命周期日志，因此不要把按钮点击时的提示文字当作 Effect instrumentation；以订阅是否仍工作、`document.title` 是否同步为实际观察结果。</Observation>
 
 <AntiPattern title="把业务事件绕成 Effect">用户点击导致的提交、购买、通知等因果明确的动作，应在 Event Handler 中执行；不要先 setState 再让 Effect 猜测“发生了什么”。</AntiPattern>
 

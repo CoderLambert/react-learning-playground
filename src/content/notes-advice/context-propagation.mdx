@@ -1,0 +1,42 @@
+# context-propagation.mdx 审核记录
+
+## 当前结论
+
+**事实、实验与心智模型现已对齐。** Gate A：PASS；Gate B：PASS；Gate C：PASS。
+
+## Correctness / React 19.2
+
+- `useContext` 读取并订阅组件树上方最近的对应 Context value；没有 Provider 时使用 `createContext(defaultValue)` 的静态 fallback。
+- Provider 的前后 value 使用 `Object.is` 比较；读取该 Context 的消费者会获得新值。`memo` 不能阻止组件因自己消费的 Context 改变而重新 render。
+- React 19 中 `<SomeContext value={...}>` 是当前 Provider 写法；`.Provider` 仍是兼容的旧写法。
+
+## Mental model
+
+Note 的“Context 是订阅读取而不是全局变量”成立，并且现在清楚区分两类触发来源：父组件自身重新 render 与 Context value 变化。`memo` 可以在 props 不变时跳过父级带来的部分重复工作，但不是 Context subscription 的屏障。
+
+## Demo ↔ Note
+
+此前 `renderCounts` 是按钮 handler 手工维护的预测值，不能证明真实 render。现在三个被观察组件都在组件函数执行点用 ref 累加计数：
+
+- 普通 `ContextConsumer` 会随父组件重新执行；
+- `MemoConsumer` 在父级 local State 更新且 Context 不变时可以跳过，但 Theme Context 改变时仍会重新执行；
+- `MemoNonConsumer` 不订阅 Theme Context，且无变化 props，因此可跳过这些父级更新。
+
+Demo 也明确说明开发 Strict Mode 可能额外调用组件，因此计数用于观察相对传播行为，不应当作“一次点击等于一次 render”的绝对保证。Gate B 通过。
+
+## 缺失边界 / 反例
+
+当前 Note 已补充两个关键边界：
+
+1. Provider 每次 render 新建对象/函数 value 时，identity 变化会让消费者收到更新；是否值得稳定引用取决于实际性能问题。
+2. Context 没有对象字段级 selector 语义，消费者订阅的是整个 value identity，而不是自动只订阅访问过的字段。
+
+## 清晰度与工程决策
+
+项目决策规则明确：先用 Context 解决跨层传递；当 value 更新频率、订阅粒度或大型状态协作成为瓶颈时，再考虑拆分 Context、稳定 value identity 或使用支持 selector 的外部 store。不要把 Context 本身描述成性能问题，也不要把 `memo` 当成通用解法。
+
+## 建议修改
+
+当前三个硬 Gate 已全部通过。后续只需避免把教学 render counter 当成 React Profiler 或生产级性能遥测。
+
+官方基线：React `useContext`、`memo`、`createContext`。

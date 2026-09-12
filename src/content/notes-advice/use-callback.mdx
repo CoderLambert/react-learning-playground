@@ -1,0 +1,46 @@
+# use-callback 审核建议
+
+## 当前结论
+
+- Gate A Correctness：PASS
+- Gate B Demo Contract：PASS
+- Gate C Mental Model：PASS
+- 综合：Note/Demo 对函数 identity、`memo` 消费边界、updater dependency reduction 和 Compiler 定位均较准确。
+
+## 事实与版本边界
+
+React 19.2 中 `useCallback(fn, deps)` 缓存的是函数定义本身；依赖使用 `Object.is` 比较。它不会让函数调用本身更快，也不能作为 correctness 保证。React 官方同样把它定位为性能优化，并说明 React Compiler 会减少手写 `useCallback` 的需求。
+
+官方也明确支持这样的 dependency reduction：当 callback 读取某个 state 仅为了计算下一 state 时，可以把读取改为 updater function，从而删除这个 state dependency；这不允许删除 callback 真正读取的其他响应式值。
+
+## Mental Model
+
+Note 的“先找 identity 消费者”规则很好。若函数既没有传给 memoized child，也没有成为其他 Hook / 外部 API 的 identity-sensitive 输入，稳定函数引用通常没有实际价值。
+
+## Demo ↔ Note
+
+Demo 真实实现了 Note 的核心对照：
+
+- `MemoChild` 被 `memo` 包裹；
+- stable 路径使用空依赖 `useCallback` + functional updater；
+- unstable 路径每次 render 创建新函数；
+- 点击父级“无关 Render”后，可通过 Console `MemoChild render` 比较是否命中 memo。
+
+“只有其他 props 也稳定时，stable callback 才有价值”的 Note 结论与 Demo 一致，因此 Gate B 通过。
+
+## 缺失边界 / 反例
+
+建议补充两个边界：
+
+1. `useCallback` 仍会在每次 render 创建传入的函数表达式；React 只是依赖不变时返回之前缓存的函数值，因此不应把它解释成“避免函数创建成本”。
+2. 与 `useMemo` 一样，React 在特定情况下可以丢弃 callback cache，所以需要稳定语义的订阅句柄/可变值应使用适合的数据所有权机制，而不是把 `useCallback` 当持久 identity 存储。
+
+## 清晰度与工程决策
+
+当前生产决策规则足够实用：先确认 memoized child、Hook dependency 或第三方 identity-sensitive API，再考虑 `useCallback`；不存在这些消费者时使用普通函数更清晰。
+
+## 建议修改
+
+1. 增加“不会避免函数表达式被创建，只会返回缓存函数”的一句说明。
+2. 补充 cache 可被 React 丢弃，因此不要将 identity 当业务语义保证。
+3. 保留 updater function 只能消除“仅用于计算下一 state”的 dependency 这一限制，避免学习者通过漏依赖制造稳定引用。

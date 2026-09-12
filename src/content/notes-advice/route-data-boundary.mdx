@@ -1,0 +1,45 @@
+# route-data-boundary 审核建议
+
+## 当前结论
+
+- Gate A Correctness：PASS
+- Gate B Demo Contract：PASS（本分支收口 Note 后）
+- Gate C Mental Model：PASS
+- 综合：route match → loader → pending → data/error 的职责模型准确。原 Note 要求观察真实 URL 与 redirect，但 Demo 明确只是阶段模拟器；本分支已把 Experiment / DemoReference 限定为实际可执行的 params、pending、success/error trace，并明确 redirect/revalidation 不在 Demo 证据范围内。
+
+## 事实与版本边界
+
+Loader、action、route error response、revalidation 等属于 Router/Framework，不是 React Core Hook。React Router 当前的 Data / Framework 模式提供 loader/action/pending 等数据路由能力，Declarative 模式不应被描述成具备同一整套协议。
+
+Route loader 与 server-state cache 也不是同义概念。Loader 解决“进入这个 route 前/期间需要什么数据以及如何进入导航状态机”；Query cache 负责 stale/fresh、dedupe、background refetch、mutation invalidation 等长期 server-state 生命周期。两者可以组合，但必须有明确 ownership。
+
+## Mental Model
+
+学习者应该先看到“页面身份由 route match 决定，因此页面进入所需数据可以绑定到 route boundary”，再理解为什么把所有页面请求都推到 mount Effect 会让 loading、error、race、redirect 等职责重新分散到组件。
+
+## Demo ↔ Note
+
+当前 Demo 可真实执行：
+
+- `/users/1` / `/users/2`：观察 params → loader pending → success data；
+- `/users/404`：观察 loader rejection → 模拟的最近 route error boundary；
+- trace 明确展示阶段顺序；
+- UI 明确说明仓库未安装 React Router，当前只是 Data Router 概念模拟。
+
+修复后的 Note 不再声称 Demo 会修改真实 URL、执行真实 redirect 或提供真实 Router instrumentation，因此 Gate B 通过。
+
+## 缺失边界 / 反例
+
+建议补充 loader cancellation / race 边界：真实 Router 在连续导航时可能取消或忽略过时工作，不能把这个简单 `setTimeout` 模拟器的完成顺序当成 Router 的并发保证。
+
+还应强调 loader 数据是否缓存、何时 revalidate、错误/redirect response 的具体类型都取决于 Router 模式与版本；不要把概念 trace 直接翻译成固定 API 调用顺序。
+
+## 清晰度与工程决策
+
+当前生产决策规则合理：页面进入所需数据优先 route/framework data boundary；跨页面复用与缓存生命周期交给 query/cache 层；真正由组件出现触发的外部同步才考虑 Effect。Router + Query 集成必须定义预取、缓存和 invalidation 所有权。
+
+## 建议修改
+
+1. 保留“Demo 是阶段模拟器，不是 React Router runtime”的明确边界。
+2. 补充连续导航时 cancellation / stale-result 的并发边界。
+3. 后续若仓库真正安装 Data Router，再用真实 loader/redirect/errorElement/useNavigation 取代手写 trace。

@@ -1,0 +1,27 @@
+# Review: 对象 / 数组 State 不可变更新
+
+## Verdict
+
+核心 React 语义准确，且 Demo 现在真正提供 mutation 与 copy 的可执行对照。学习者可以先执行 `mutate + set 同引用`，观察该操作本身不会可靠触发 DOM 更新，再通过无关 render 暴露被污染的旧 state，最后与 copy + new reference 路径比较。Gate A/B/C 均通过。
+
+## Hard gates
+
+- **Gate A — Correctness: PASS**。React 19.2 官方文档要求把 state 中对象/数组视为只读；mutation 不会可靠触发 render，并会改写过去 render 的 snapshot。嵌套更新需要沿变化路径复制；`reverse()` / `sort()` 等变异数组操作要先复制容器。
+- **Gate B — Demo Contract: PASS**。Note 声称的 mutation-vs-copy 实验现在可以在 Demo 中实际执行：错误同引用更新 → 无关 render → 正确 copy 更新，Demo/Note/Source 讲述同一个现象。
+- **Gate C — Mental Model: PASS**。内容把“不改写已有 snapshot”作为核心，而不是简化成“React 只比较引用”；同时解释了为什么新引用、路径复制和 shallow-copy 边界重要。
+
+## Important boundaries
+
+1. setter 收到与当前 state `Object.is` 相同的值时 React 可以跳过更新；实验因此强调“不会可靠触发自身 render”，而不是把所有运行环境描述成绝对一致的 DOM 时序。
+2. `[...items]` 只复制数组容器；直接改 `next[0].done` 仍会修改共享对象。Note 已补上这一反例。
+3. Immer 只是更新表达工具，不改变不可变结果这一约束，也不替代 state modeling。
+
+## Clarity / engineering usefulness
+
+实验现在形成完整因果链：mutation 看似“成功”修改 JavaScript 对象 → React 没收到下一份 state → 后续 render 暴露历史 snapshot 已被污染。相比只显示警告文字，这更容易形成稳定心智模型。
+
+## Recommended changes
+
+当前没有阻塞性修改。后续若扩展本课，优先增加 undo/history 或共享嵌套对象的例子，而不是继续堆数组 API。
+
+生产决策规则：**先设计可维护的 state 结构；每次更新只复制变化路径，并确保任何已有 snapshot 都不会被改写。**

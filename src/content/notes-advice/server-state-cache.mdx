@@ -1,0 +1,49 @@
+# server-state-cache 审核建议
+
+## 当前结论
+
+- Gate A Correctness：PASS
+- Gate B Demo Contract：PASS
+- Gate C Mental Model：PASS
+- 综合：作为“概念模拟器”而非 TanStack Query runtime 的边界声明充分，fresh/stale、query identity、in-flight dedupe、invalidation/refetch 均可实际观察。
+
+## 事实与版本边界
+
+当前 TanStack Query v5 官方默认行为与 Demo 末尾的映射基本一致：query 默认立即 stale；`staleTime` 可延长 fresh 窗口；inactive query 默认约 5 分钟后 GC；失败 query 默认重试 3 次；stale query 可在 mount、window focus、reconnect 等时机后台 refetch。
+
+`invalidateQueries` 会把匹配 query 标记为 invalid/stale，并默认对 active query 后台 refetch；它不会等价于删除缓存。当前 Note 已用“具体状态机与垃圾回收由所选库定义”避免把教学字段冒充库 API。
+
+## Mental Model
+
+“Server State 是远端事实的本地缓存视图，而不是普通 UI State”是本课最重要的模型。query key 负责资源身份，fresh/stale 负责重新验证策略，invalidation 表达领域事实已不可信，这套区分足以支持后续 mutation/rollback 学习。
+
+## Demo ↔ Note
+
+Demo 可以执行 Note 描述的实验：
+
+- `Ada` / `Lin` 形成不同 key；
+- fresh 窗口内重复读取命中本地 cache；
+- 连续读取同 key 可复用同一个 in-flight Promise；
+- stale cache 在 refetch 时仍展示旧数据；
+- invalidate 把当前 entry 的 freshness 失效；
+- force refetch 明确绕过 fresh cache；
+- requestCount 与 cache snapshot 给出可见证据。
+
+因此 Gate B 通过。
+
+## 缺失边界 / 反例
+
+建议补充两个工程边界：
+
+1. Demo 的 `force` 请求不会复用同 key 已存在的 in-flight Promise，因此它只是本课自定义语义；不要推导成 TanStack Query `refetch` 的并发保证。真实 v5 refetch/invalidation 的 cancellation/deduplication 行为应以具体 API options 为准。
+2. “stale 可以继续展示”是常见 stale-while-revalidate 模型，但 stale 本身只表示重新验证资格，不保证每种查询库/配置都一定保留当前 UI 数据。
+
+## 清晰度与工程决策
+
+当前决策规则清楚：不要把远端结果复制到多个局部 `useState` 再手工维护 freshness/race/loading；真实项目优先使用成熟 server-state 层。Demo 已显式声明没有安装 `@tanstack/react-query`，这一边界应保留。
+
+## 建议修改
+
+1. 保留“概念模型，不是 TanStack Query runtime”的显眼声明。
+2. 在 force/refetch 说明旁补充并发/cancellation 行为属于具体库契约。
+3. 若继续扩展课程，可把 inactive/GC、retry、focus/reconnect refetch 留作 Source/Note 边界，不必把所有成熟库能力塞进当前 Demo。

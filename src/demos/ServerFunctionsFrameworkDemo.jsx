@@ -21,7 +21,16 @@ const LAYERS = [
 export function ServerFunctionsFrameworkDemo() {
   const [layer, setLayer] = useState("react");
   const [authorized, setAuthorized] = useState(false);
+  const [attempt, setAttempt] = useState(null);
   const selected = LAYERS.find((item) => item.id === layer);
+
+  function simulateRequest() {
+    setAttempt({
+      id: Date.now(),
+      authorized,
+      result: authorized ? "mutation accepted" : "403 / mutation rejected",
+    });
+  }
 
   return (
     <div>
@@ -41,11 +50,17 @@ export function ServerFunctionsFrameworkDemo() {
               <input type="checkbox" checked={authorized} onChange={(event) => setAuthorized(event.target.checked)} />
               模拟服务端已验证当前用户权限
             </label>
-            <button type="button" className="btn btn-primary" style={{ marginTop: 12 }} onClick={() => {}}>调用 updateOrder() Server Function</button>
+            <button type="button" className="btn btn-primary" style={{ marginTop: 12 }} onClick={simulateRequest}>模拟请求 updateOrder()</button>
+            <p className="demo-section-desc">这是安全决策模拟器，不会发起真实 Server Function 网络请求。它只验证：服务端授权结果必须决定 mutation，而不是客户端能否拿到函数引用或按钮。</p>
           </div>
           <div className={`demo-alert ${authorized ? "demo-alert-tip" : "demo-alert-warning"}`}>
             <div className="demo-alert-title">Server-side decision</div>
             <p>{authorized ? "允许 mutation：服务端重新验证身份、授权和输入后执行。" : "拒绝 mutation：客户端参数、函数引用或 UI 状态都不能代替服务端授权。"}</p>
+            {attempt && (
+              <p role="status" style={{ marginTop: 10 }}>
+                最近模拟请求：<strong>{attempt.result}</strong>（请求时服务端授权：{attempt.authorized ? "通过" : "拒绝"}）
+              </p>
+            )}
           </div>
         </div>
         <p className="demo-section-desc" style={{ marginTop: 12 }}>React 官方要求把 Server Function 参数视为不可信输入，并在服务端验证 mutation 权限。<code>"use server"</code> 只能用于 async Server Function；它不是“这个组件在服务器渲染”的指令。直接从事件代码调用 Server Function 时应位于 Transition 中；当它传给 <code>&lt;form action&gt;</code> / <code>formAction</code> 时，React 会按 Action 语义调用。</p>

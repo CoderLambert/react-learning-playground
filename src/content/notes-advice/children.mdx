@@ -1,0 +1,29 @@
+# Review: Children 默认插槽与组合
+
+## Verdict
+
+Note 的组合心智模型准确，Demo 也确实提供了“同一外壳承载不同内容”的可观察实验。主要问题不在 Note，而在 Demo 的一段无关 React 19 宣传文案，以及对“容器负责可访问性”的表述略宽。
+
+## Hard gates
+
+- **Gate A — Correctness: PARTIAL**。Note 本身对 `children`、composition 与 state ownership 的区分正确。Demo 中“React 19 全新架构现已上线，默认支持编译器指令以及优化了并发渲染能力”不是本课需要的事实，而且把 React 19、React Compiler 与并发能力混在一句里，建议删除或替换为与 children 无关的普通示例文本。
+- **Gate B — Demo Contract: PASS**。CardContainer 和 ModalLayout 都能真实观察“容器结构不变、嵌套内容变化”；Note 没有声称发生 React 内部机制可视化。
+- **Gate C — Mental Model: PASS**。学习者可以理解 children 是普通 prop、容器决定放置位置、调用者拥有内容语义，以及 composition 不等于共享 state。
+
+## Important gaps / boundaries
+
+1. `children` 不保证“任意 HTML”；它可以是 React 可渲染节点。建议 Note/Demo 都优先说 React 节点/JSX，而不是 HTML。
+2. “容器负责可访问性”应收窄：容器可以负责它拥有的结构语义、焦点/关闭协议，但嵌入内容自身的 label、keyboard behavior 等仍由内容拥有者负责。
+3. Composition 并非永远优于 props。少量、稳定、语义明确的配置 props 往往比要求调用者手工拼 JSX 更好。真正的判断条件是变化轴是否是“结构”。
+4. 可以补 render prop / component prop 作为边界：当调用者需要传入“如何渲染”的策略而不只是静态 children 时，普通 children 未必足够。
+
+## Clarity / engineering usefulness
+
+当前 Note 自然、紧凑，没有模板堆叠。`大配置对象` 对比略显二元化，建议把它改成“结构变化优先组合；简单行为/样式配置继续用显式 props”。
+
+## Recommended changes
+
+- 删除 Demo 中与 React 19/Compiler 无关且容易过时的宣传句。
+- 把“任意 HTML”统一成“React 节点/JSX”。
+- 增加一条 decision rule：**结构由调用者变化 → composition；稳定语义参数 → props；共享可变数据 → 单独建模 ownership。**
+- Modal 示例若继续承担“可访问性”说明，应确认 Source 中确实实现相应 dialog/focus contract，否则不要把可访问性作为该容器已完成的能力来宣传。

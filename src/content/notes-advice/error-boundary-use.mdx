@@ -1,0 +1,45 @@
+# error-boundary-use 审核建议
+
+## 当前结论
+
+- Gate A Correctness：PASS
+- Gate B Demo Contract：PASS
+- Gate C Mental Model：PASS
+- 综合：Promise pending / fulfilled / rejected 到 Suspense / value / Error Boundary 的路由讲解准确，Demo 可执行。
+
+## 事实与版本边界
+
+React 19.2 的 `use(promise)` 要求 Promise identity 可复用；pending 会 suspend，rejected 会向最近的 Error Boundary 传播。Error Boundary 不会自动捕获事件 handler、普通异步 callback、服务端渲染或 boundary 自己抛出的错误。当前 Note 与 Demo 对这些边界基本准确。
+
+官方建议生产环境优先使用缓存、Suspense-enabled framework，或由 Server Component 创建并向 Client Component 传递稳定 Promise。当前 Demo 在事件阶段创建 Promise 并存入 State，因此同一 attempt 的 render 读取的是稳定实例，但这仍应明确为教学 fixture，而不是通用数据获取架构。
+
+## Mental Model
+
+“同一资源三态，由 Suspense 与 Error Boundary 分别处理等待和失败”清晰，能够解释 `use` 为什么不能简单视为普通同步读取。
+
+## Demo ↔ Note
+
+Demo 可以真实观察：
+
+- Promise pending → Suspense fallback；
+- resolve → 成功内容；
+- reject → Error Boundary fallback。
+
+每次 retry 通过新的 Promise 和 changing `key` 重置教学用 Error Boundary，保证成功/失败路径可重复实验。Note 没有虚构额外交互。
+
+## 缺失边界 / 反例
+
+值得补充两个工程边界：
+
+1. Demo 使用 changing `key` 重置 Error Boundary 是教学恢复机制，不代表生产 Error Boundary 的唯一 reset 策略。
+2. `use` 不能放进 try/catch 来截获其 Suspense/Promise rejection 控制流；应使用 Suspense / Error Boundary。
+
+## 清晰度与工程决策
+
+建议将决策规则写得更明确：如果资源协议不能保证 stable/cached Promise，就不要直接围绕 `use(Promise)` 自建生产数据层；优先使用框架/数据库提供的 Suspense integration。
+
+## 建议修改
+
+1. 标注 State-stored Promise + `key` reset 为教学实现。
+2. 增加 `use` 不应包 try/catch 的边界。
+3. 保留当前 pending/success/error 三态实验，它与 Note 已对齐。

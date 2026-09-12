@@ -1,0 +1,28 @@
+# use-reduce-with-context.mdx 审核记录
+
+## 当前结论
+
+**PASS。** 单 Context 与双 Context 现在都是真实可交互实现，Note/Demo/Source 对“订阅边界”的解释一致；此前只展示单 Context 静态代码的问题已关闭。
+
+## Hard gates
+
+- **Gate A — Correctness: PASS**。React 19.2 官方文档明确：`useReducer` 返回的 `dispatch` identity 稳定；`useContext` consumer 会在最近 Provider 的 value 按 `Object.is` 发生变化时收到更新。把 state 与 dispatch 分成两个 Context 可以让 dispatch-only consumer 不订阅 State Context。
+- **Gate B — Demo Contract: PASS**。左右两侧分别运行 `{ tasks, dispatch }` 单 Context 和 State/Dispatch 双 Context。学习者可在两侧执行 ADD / TOGGLE / DELETE，并观察 dispatch-only consumer 的 Effect 探针；不再以静态代码冒充可执行对照。
+- **Gate C — Mental Model: PASS**。课程明确把收益定义为 subscription boundary，而不是 reducer 魔法或“永不重渲染”保证，并给出了何时保持单 Context、何时拆分、何时考虑外部 store 的决策边界。
+
+## 重要边界 / 反例
+
+1. 双 Context 只避免 dispatch-only consumer 因 State Context value 变化被通知；props、自身 state、其他 Context、父级结构仍可能让组件更新。
+2. Effect 探针提供的是教学可见证据，不是精确 production render profiler。开发 Strict Mode 可能额外执行初始 Effect setup，因此不比较初始绝对数字。
+3. 拆 Context 不提供 selector；需要字段级订阅、devtools、跨模块组织等能力时应重新评估外部 store。
+4. 单 Context 在小模块和低频更新场景可能更简单，不能把双 Context 固化为默认模板。
+
+## 清晰度与工程决策
+
+当前 Note 的实验、边界和生产决策已经围绕一个核心问题组织：**谁真正需要订阅 state？** 这比“Reducer + Context 是工业级标准组合”更准确，也更容易迁移到真实项目。
+
+## 建议修改
+
+当前没有阻塞项。后续若要继续深化，优先加入 React DevTools Profiler 的独立性能验证，而不是在本课继续增加自制 render 计数器。
+
+项目决策规则：**当读 state 与只发 action 的消费者明显分离，并且订阅范围确实影响 API 清晰度或性能时，拆 State/Dispatch Context；否则保持简单。**

@@ -1,0 +1,29 @@
+# Review: Props 基础与解构
+
+## Verdict
+
+整体方向正确，基础心智模型清晰；Demo 与 Note 的主要实验可互相对应。当前更需要补的是“props 是每次 render 的只读快照”这一层机制解释，以及把 callback prop 的所有权语义说得更具体。
+
+## Hard gates
+
+- **Gate A — Correctness: PASS（本轮修正后）**。Note 对解构默认值只处理缺失/`undefined`、`null` 不触发默认值的描述准确。Demo 原先把直接修改 props 的后果写成“不可预测的副作用”，容易把 immutability 与 side effect 混为一谈；已改为“破坏基于输入的局部推理并可能造成不一致输出”。
+- **Gate B — Demo Contract: PASS**。Note 要求观察父级输入改变、默认值、spread props、派生值；Demo 都有对应可执行场景。Note 没有声称 Demo 能证明编译器或 React 内部调度行为。
+- **Gate C — Mental Model: PASS**。学习者可以回答 props 从哪里来、为何不应修改、何时直接派生、何时通过 callback 把意图交还给拥有状态的一侧。
+
+## Important gaps / boundaries
+
+1. 建议把“Props 是父组件给子组件的一次 render 输入”再明确成：同一个组件实例会在不同 render 中收到不同 props，但当前 render 看到的是固定快照；不要让初学者把“immutable”误解成“永远不会变化”。
+2. callback prop 可以再补一句：它不是 React 特殊机制，本质仍是父组件传下来的函数；它之所以常用于“向上通知”，是因为状态所有权通常在父级。
+3. `...props` 的边界已有提示，但可以更工程化：DOM wrapper / polymorphic primitive 可能合理透传；业务组件应优先显式 API，避免把内部实现细节无意暴露出去。
+4. “能从 props 计算就不要存 state”需要保留例外边界：如果需求是“用 prop 作为初始值，之后本地独立演化”，那是新的 state 模型，不是镜像同步。
+
+## Clarity / engineering usefulness
+
+当前 Note 篇幅适中，没有明显模板堆叠。`Props vs State` 对比是有效的，但生产决策规则可以再压缩成一句：**谁拥有变化权，谁保存 state；只负责展示或派生的组件消费 props，不复制数据源。**
+
+## Recommended changes
+
+- 在 Mental Model 中补“跨 render 可变化、单次 render 是快照”。
+- 在 callback 段落强调普通函数 prop + ownership，而不是暗示存在特殊的“子传父通道”。
+- 补一个 spread props 的正当使用边界与业务组件反例。
+- 保留当前 Demo，不需要为 immutability 故意加入运行时 mutation 实验；这条规则更适合通过 Source/说明理解，而不是教学习者执行错误 mutation。

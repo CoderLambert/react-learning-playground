@@ -1,0 +1,41 @@
+# testing-strategy 审核建议
+
+## 当前结论
+
+- Gate A Correctness：PASS
+- Gate B Demo Contract：PASS（Source 样例事实修正后）
+- Gate C Mental Model：PASS
+- 综合：课程没有把 Vitest / RTL / Playwright 错绑成严格测试层级，而是以反馈速度、系统边界和用户可观察结果组织测试，模型可靠。Demo 的异步保存行为与 RTL reference sample 对齐；Playwright sample 也与仓库当前真实浏览器测试基础设施一致。
+
+## 事实与版本边界
+
+本课主要涉及测试工程而非 React 19.2 新语义。React 组件测试仍应通过公开行为验证状态/事件结果，不应依赖组件实例或私有 Hook state。涉及 React 更新的测试工具需要正确处理 `act` 边界；高层用户事件工具通常负责大部分必要封装，但这不意味着所有任意异步源都会自动被正确等待。
+
+Testing Library 的核心原则是让测试尽量接近用户使用方式；`getByRole` + accessible name 通常是首选，但不是为了机械追求某个 query 排名。Playwright 则提供真实浏览器边界，适合导航、focus、history、网络和关键业务流。
+
+## Demo ↔ Note
+
+当前契约成立：
+
+- Demo 中可真实点击“保存资料”，经历 loading 后出现 `role="status"` 的“保存成功”；
+- `behavior.test.jsx` 用 `userEvent` 点击按钮并通过 `findByRole("status")` 等待可见结果，与 Demo 行为一致；
+- `app.spec.js` 展示同一行为如何提升到真实浏览器路径；
+- 本分支修正了 Playwright reference sample 的两处源码事实：仓库实际上已经安装 Playwright；同时 `page.goto("/")` 会绕过当前 GitHub Pages 风格 base path，因此改为 `page.goto("./")` 保留配置的 `/react-learning-playground/` 路径。
+
+Reference samples 不在当前 `playwright.config.js` 的 `tests/e2e` testDir 中，RTL 依赖也尚未安装，因此这些文件是 Source 教学证据，不应被描述成当前 CI 已执行的测试。Note 当前没有做这一虚假承诺。
+
+## 缺失边界 / 反例
+
+建议补充“用户可观察行为”不等于只测试 DOM 文案。对于纯 reducer/parser/schema 等确定性边界，直接单元测试输入输出通常更便宜、更清晰；对于无障碍、焦点、history、layout、真实网络等浏览器能力，模拟 DOM 不能替代真实浏览器。
+
+另一个重要边界是 mock：mock 外部不稳定边界，而不是把业务协作链全部替换掉。过度 mock 会让测试只验证自己编写的桩。
+
+## 清晰度与工程决策
+
+当前决策规则可直接用于生产：先列风险与可观察结果，再选最便宜、最接近失败来源的测试层；局部纯逻辑优先快速测试，组件交互用 RTL，真正依赖浏览器/路由/网络契约的关键路径才进入 Playwright。避免同一断言在所有层重复。
+
+## 建议修改
+
+1. 保持“工具 ≠ 固定测试层级”的表述，这是本课比传统测试金字塔口诀更准确的部分。
+2. 后续若安装 RTL 依赖并把 reference sample 纳入 CI，应在 Note 中明确区分“可查看样例”与“持续执行的 contract test”。
+3. 可以增加一个反例：同一个保存流程在 RTL 与 E2E 重复断言所有细节，说明跨层重复测试如何增加维护成本。

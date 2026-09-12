@@ -1,0 +1,43 @@
+# use-memo 审核建议
+
+## 当前结论
+
+- Gate A Correctness：PASS
+- Gate B Demo Contract：PASS
+- Gate C Mental Model：PASS
+- 综合：Note 与 Demo 对昂贵计算缓存、依赖变化、identity 消费者和 Compiler 边界的叙述基本一致。
+
+## 事实与版本边界
+
+React 19.2 中 `useMemo` 会在依赖经 `Object.is` 比较未变化时复用上次计算结果；它只应作为性能优化，而不是 correctness 或持久语义保证。React 也可能在特定情况下丢弃缓存，例如开发期编辑组件文件、组件初次挂载时 suspend，未来还可能因新特性增加丢弃场景。
+
+当前官方文档也明确说明 React Compiler 会自动 memoize 值和函数，从而减少手写 `useMemo` 的需要；这不是说所有已有手工 memo 都应机械删除。
+
+## Mental Model
+
+当前 Note 的核心决策模型较好：先确认计算确实昂贵，或存在明确 identity 消费者，再考虑缓存。它也正确区分了“缓存计算结果”与“保证对象永远同一引用”。
+
+## Demo ↔ Note
+
+Demo 可以真实执行 Note 描述的两类更新：
+
+- 修改 `query` / `threshold`：真实依赖变化，缓存路径必须重算；
+- 点击“无关 Render”：依赖不变，缓存路径可复用已有结果；
+- 切换 direct / `useMemo`：可比较直接计算与缓存计算；
+- `ResultSummary` 使用 `memo`，同时展示稳定派生对象 identity 对下游 memo 命中的价值。
+
+因此 Gate B 通过。开发 StrictMode 下计算函数可能额外执行，Demo 已明确提醒不要把单次 Console 次数当作生产性能结论。
+
+## 缺失边界 / 反例
+
+建议补充一个容易被忽略的边界：`useMemo` 的缓存是组件实例局部的最近一次结果，不是跨组件共享的数据缓存，也不适合承担数据请求缓存职责。对于 Effect 中仅为了稳定对象依赖而添加 `useMemo` 的情况，优先考虑把对象创建移入 Effect，通常比增加 memoization 更简单。
+
+## 清晰度与工程决策
+
+当前工程规则已经较明确：只有“昂贵纯计算”或“明确 identity contract”两类理由成立时才优先考虑 `useMemo`，并用 Profiler/Performance 工具验证收益。建议避免把 synthetic workload 的毫秒数描述成通用阈值。
+
+## 建议修改
+
+1. 补充“组件实例局部缓存，不是业务/请求缓存”的边界。
+2. 对 Effect dependency 场景优先展示“移入 Effect / 简化依赖”，再把 `useMemo` 作为次选。
+3. 保留“性能优化而非语义保证”和 Compiler 环境下减少机械 memoization 的现有表述。

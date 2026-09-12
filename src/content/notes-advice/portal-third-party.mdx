@@ -1,0 +1,47 @@
+# portal-third-party 审核建议
+
+## 当前结论
+
+- Gate A Correctness：PASS
+- Gate B Demo Contract：PASS（本轮修复后）
+- Gate C Mental Model：PASS
+- 综合：Portal 的 React Tree / DOM Tree 边界准确；第三方实例实验现已由真实 Effect setup/cleanup 驱动，并支持挂载/卸载验证。
+
+## 事实与版本边界
+
+`createPortal(children, domNode)` 只改变 children 的物理 DOM 放置位置；从 React 的视角，Portal 内容仍是原 React Tree 的 child，因此 Context 继续按 React Tree 生效，Portal 内事件也按 React Tree 冒泡。
+
+第三方命令式 DOM 实例属于 external system。正确集成模式是 Render 保持纯净，以 ref 定位宿主节点，在 Effect 中 setup，并在 cleanup 中撤销实例、listener、observer 等资源。开发 Strict Mode 下可能出现额外的 setup → cleanup → setup 压力测试，因此教学日志不应把开发期多一次生命周期误判为生产行为。
+
+## Mental Model
+
+当前 Note 清楚区分了两种 ownership：Portal 子树仍由 React 拥有；第三方库则应拥有一个明确容器内部的命令式 DOM。这个区分能回答“谁拥有 DOM、为什么需要 cleanup、什么时候不应让双方同时写同一子树”。
+
+## Demo ↔ Note
+
+原 Demo 存在一个实质问题：显示的 `cleanup series-X / setup series-Y` 日志是根据 `seriesKey` 在 render 中推导出来的，并不是 Effect 真正执行产生；同时 Note 要求“反复挂载第三方实例”，Demo 没有 mount/unmount 控件。
+
+本轮已修复：
+
+- Effect setup 真正记录 `setup series-X`；
+- cleanup 真正记录 `cleanup series-X`；
+- 增加“卸载/重新挂载第三方实例”控件；
+- lifecycle 日志保存在父级，卸载后仍可观察 cleanup；
+- series 变化仍可验证 cleanup old → setup new；
+- Portal 内按钮仍可验证事件按 React Tree 冒泡。
+
+因此当前 Note 声称的核心实验均可执行，Gate B 通过。
+
+## 缺失边界 / 反例
+
+Portal 不是完整 Modal primitive。当前 Note 已明确指出 accessible name、focus trap、Escape、背景交互限制和焦点恢复需要单独实现，这是重要边界。还可补一句：事件若不希望沿 React Tree 冒泡，需要在 Portal child 内显式停止传播，或调整 Portal 在 React Tree 中的位置；DOM 挂载位置本身不会改变 React 事件父链。
+
+## 清晰度与工程决策
+
+生产规则足够明确：需要逃离 overflow/stacking context 时使用 Portal；接第三方编辑器/图表/地图时，给外部库一个单一 ownership 容器，通过 Effect 对称管理生命周期。不要在 render 中 `new` 外部实例，也不要让 React 和第三方库同时管理容器内部相同节点。
+
+## 建议修改
+
+1. Note 增加 Strict Mode 开发期额外 setup/cleanup 的一句说明，避免日志教学歧义。
+2. 保留 Portal a11y 边界，不要把 `role="dialog"` 误当完整 modal 行为。
+3. 保留本轮真实 lifecycle instrumentation；不要恢复通过 state 推导“预测日志”的实现。

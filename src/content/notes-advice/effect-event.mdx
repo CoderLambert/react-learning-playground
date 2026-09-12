@@ -1,0 +1,27 @@
+# effect-event 审核建议
+
+## 当前结论
+
+- Gate A Correctness：**PASS**
+- Gate B Demo Contract：**FAIL**
+- Gate C Mental Model：**PASS**
+
+## 主要问题
+
+职责划分正确：明确用户动作属于 Event Handler；外部同步属于 Effect；Effect Event 用于 Effect 逻辑中需要读取最新 committed props/state、但这些值不应成为重新同步条件的部分。React 19.2 也明确要求 Effect Event 只能从 Effect 或其他 Effect Event 调用，不能拿来逃避依赖。
+
+Demo 原先把 `connectCount` 在 room change handler 中手工加一，却展示成“连接次数”；这并不能证明 Effect 实际执行。本审核分支已改为在 Effect setup 内计数，并明确开发 Strict Mode 可能额外执行 setup → cleanup → setup。
+
+但 Note 的 Experiment 仍要求比较“错误版本：Effect 同时依赖 roomId + theme”与“Effect Event 版本”。实际 Demo 只实现后一种正确版本，没有可执行的错误对照，因此无法观察“主题改变导致不必要重连”这一半实验。
+
+## 重要边界
+
+- Effect Event 的函数 identity 并不保证稳定；它的价值是读取最新 committed 值且不参与外层 Effect 的响应性，不应被包装成 memoization 技术。
+- 真正决定外部同步关系的 reactive value 必须仍在 Effect dependencies 中。
+- 如果逻辑由用户交互直接触发，应优先普通 Event Handler，而不是 Effect Event。
+
+## 建议修改
+
+1. 要么增加错误版本的隔离对照，真实统计 theme 改变导致的 setup 次数；要么把 Experiment 改为当前 Demo 支持的“theme 不增加 setup、roomId 增加 setup”。
+2. 保留真实 setup counter，不再由事件 handler 代替 Effect instrumentation。
+3. 在 Note 中补一句 Effect Event identity 不是稳定性保证，避免学习者把它误解为 `useCallback` 替代物。

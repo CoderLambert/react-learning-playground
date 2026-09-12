@@ -1,0 +1,38 @@
+# lazy-suspense 审核建议
+
+## 当前结论
+
+- Gate A Correctness：PASS
+- Gate B Demo Contract：PASS
+- Gate C Mental Model：PASS
+- 综合：内容准确，Demo 能直接验证首次 lazy load 与后续复用；只需补少量边界说明。
+
+## 事实与版本边界
+
+React 19.2 下，`lazy(load)` 会把 `load` 的返回 Promise 与解析后的模块结果缓存起来；首次尝试渲染该 lazy component 时才调用 `load`。加载 pending 时组件 suspend，由最近的 Suspense boundary 显示 fallback。Note 与 Demo 对这一点表述一致。
+
+“再次打开通常不再经历首次加载”应继续明确归因于同一个 `lazy` 声明及其缓存结果，而不是泛化成浏览器对所有动态 import 都必然永久缓存。
+
+## Mental Model
+
+“lazy 决定代码加载边界，Suspense 决定等待 UI”是有效心智模型。建议再强调：Suspense 不等于请求层，也不会观察普通 Effect 中的 fetch。
+
+## Demo ↔ Note
+
+Demo 在模块顶层定义 `LazyLessonPanel`，人为增加约 900ms loader 延迟，首次点击能够观察 fallback，隐藏后再次显示能观察已加载模块复用。Note 描述的实验可以完整执行。
+
+该 900ms 是教学延迟，不是 React/lazy 本身的加载时序；建议在文案中明确这一点，避免学习者把时间值当成 React 行为。
+
+## 缺失边界 / 反例
+
+可补充：lazy loader Promise rejection 会向最近的 Error Boundary 传播；这与后续 Error Boundary 课程形成自然衔接。
+
+## 清晰度与工程决策
+
+内容结构自然，没有明显模板堆叠。项目决策规则可进一步压缩为：只有当代码不是当前首屏/当前交互立即需要，且独立加载不会破坏用户流程时才建立 lazy 边界；Suspense 粒度按产品 reveal 单元设计。
+
+## 建议修改
+
+1. 标注 900ms 为 Demo 人工延迟。
+2. 把“首次加载后模块会缓存”精确为 React 对该 `lazy(load)` 的 loader Promise/解析结果缓存。
+3. 增加 loader rejection → Error Boundary 的衔接边界。

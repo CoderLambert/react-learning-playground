@@ -1,0 +1,40 @@
+# render-vs-dom-update 审核建议
+
+## 当前结论
+
+- Gate A Correctness：PASS
+- Gate B Demo Contract：PASS
+- Gate C Mental Model：PASS
+- 综合：核心模型、实验与 instrumentation 现已对齐；Demo 能真实对照组件函数执行与目标 DOM 子树 mutation。
+
+## 事实与版本边界
+
+React 的 render 阶段计算下一份 UI，commit 阶段只把需要的宿主变化应用到 DOM。组件重新执行不等于对应 DOM 节点必然发生 mutation。当前 Note 对这一点表述准确。
+
+开发环境 Strict Mode 可能额外调用组件以帮助发现不纯 render，因此组件执行次数不能机械解释为“一次交互只执行一次”。MutationObserver 只覆盖被观察 DOM 子树，也不是整个 React commit 的全局 profiler。
+
+## Mental Model
+
+“Render 是计算，Commit 才是写宿主环境”能有效避免把 re-render 数量等同于 DOM 成本，也自然引出 Profiler、memo 与 Compiler 课程。Note 同时保留了关键反例：DOM mutation 很少不代表 render CPU 免费。
+
+## Demo ↔ Note
+
+Demo 已移除事件 handler 手工维护的 `renderRequest` 推算值。`RenderedPreview` 现在直接在组件函数执行点维护 render execution count；无关 State 更新会让该组件再次执行，而只观察目标 `<strong>` 的 MutationObserver 不会因此记录文本 mutation。修改 `label` 时则可以观察到目标 DOM mutation。
+
+因此 Note 所要求的“组件执行次数 vs 目标 DOM mutation”实验可以真实执行，Gate B 通过。
+
+## 缺失边界 / 反例
+
+当前主要边界已经明确：
+
+1. Strict Mode 开发期可能带来额外组件调用；
+2. MutationObserver 只证明被观察子树是否 mutation；
+3. DOM 不变并不意味着 render 免费。
+
+## 清晰度与工程决策
+
+生产决策规则成立：先确认用户可感知的性能问题，再使用 Profiler/浏览器性能工具区分 render、commit、layout、paint 等成本；只有测量证明 render 工作值得优化时，才引入 memoization。
+
+## 建议修改
+
+当前硬 Gate 已全部通过。后续只需避免把教学计数器升级成“React 内部 render/commit profiler”的表述即可。

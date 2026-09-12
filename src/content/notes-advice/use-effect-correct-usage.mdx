@@ -1,0 +1,27 @@
+# use-effect-correct-usage 审核建议
+
+## 当前结论
+
+- Gate A Correctness：**PASS**
+- Gate B Demo Contract：**PASS**
+- Gate C Mental Model：**PASS**
+
+## 复核结论
+
+Note 现在只要求 Demo 实际支持的两个外部同步实验：
+
+1. 挂载 resize watcher、缩放窗口确认订阅工作，再卸载 watcher 观察订阅随组件撤销；
+2. 修改 `pageTitleBadge`，观察 `document.title` 跟随最新提交状态同步。
+
+此前不存在的 timer 实验和“修改 watcher 依赖来观察 cleanup → setup”要求已移除，因此 Note / Demo / Source 不再声称不可执行的现象。
+
+## 心智模型与边界
+
+- Effect 的主线保持为“React 与外部系统的同步过程”，而不是通用的 State 变化回调。
+- cleanup 负责撤销 setup 建立且需要释放的同步，不是每个 Effect 都必须机械返回的仪式。
+- 开发 Strict Mode 的额外 setup → cleanup → setup 属于压力测试；Note 现在明确区分实际可观察行为与按钮 handler 中的提示文案，不把后者伪装成 Effect lifecycle instrumentation。
+- 没有外部系统时优先 render 派生或 Event Handler，仍是清晰的生产决策规则。
+
+## 后续可选增强
+
+如果未来要专门教学“依赖变化导致旧 cleanup → 新 setup”，再增加可切换订阅目标，并让 Effect setup/cleanup 自己产生 instrumentation；这不是当前课程契约的必需条件。

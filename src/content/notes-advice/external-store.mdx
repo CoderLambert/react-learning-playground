@@ -1,0 +1,48 @@
+# external-store 审核建议
+
+## 当前结论
+
+- Gate A Correctness：PASS
+- Gate B Demo Contract：PASS（本分支修复后）
+- Gate C Mental Model：PASS
+- 综合：`useSyncExternalStore` 的 snapshot/subscribe 协议准确，原先无法执行的 mount/unmount cleanup 实验已经补齐，并把生命周期 instrumentation 从业务 counter snapshot 中分离。
+
+## 事实与版本边界
+
+React 19.2 中 `useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot?)` 用于订阅 React 外部数据源。Store 未变化时，重复调用 `getSnapshot` 必须返回 `Object.is` 相等的值；若底层 store 可变，应缓存不可变 snapshot，而不是每次创建新对象。
+
+SSR 场景下，`getServerSnapshot` 用于服务端渲染及 hydration 初始读取，其服务端结果必须与客户端初始数据协调。若组件在服务端渲染而没有提供 `getServerSnapshot`，React 会要求改为客户端渲染。
+
+若 external store 在非阻塞 Transition 中发生变化，React 会在提交前再次读取 snapshot；值不一致时会退回 blocking 更新以保证屏幕上的 store 视图一致。因此 `useSyncExternalStore` 是一致订阅协议，不是把外部 store mutation 变成可中断 Transition。
+
+## Mental Model
+
+“subscribe 只负责通知可能变化，React 再通过 getSnapshot 读取真值”是正确模型。生命周期统计现在独立于业务 snapshot，更清楚地说明 instrumentation 不应反过来改变被观察的数据协议。
+
+## Demo ↔ Note
+
+修复后的 Demo 可真实观察：
+
+- Reader A / B 读取同一个 immutable counter snapshot；
+- `increment/reset` 只在业务值变化时产生新 snapshot/version；
+- 可实际卸载/重新挂载 Reader B；
+- 独立 lifecycle store 记录 counterStore 的真实 subscribe/unsubscribe 与最终 listener count；
+- 开发 Strict Mode 下若出现额外 setup/cleanup pair，Demo 明确提示关注最终订阅数与成对释放，而不是假设 subscribe 只调用一次。
+
+Note 的 Experiment / DemoReference 已同步成这些真实可执行证据，不再声称 UI 直接统计 `getSnapshot` 调用次数，因此 Gate B 通过。
+
+## 缺失边界 / 反例
+
+仍可补充官方指出的 Suspense 边界：不建议让 `useSyncExternalStore` 返回值直接驱动会 suspend 的资源，因为 external-store mutation 不能被标记为 non-blocking Transition，可能导致已展示内容突然回退到 fallback。
+
+另一个生产边界是 selector：大型 store 往往通过状态库 binding/selector 控制 snapshot 粒度；不要在业务组件里重复手写一套订阅协议。
+
+## 清晰度与工程决策
+
+项目决策规则保持合理：已有 React 外部真源、浏览器 API 或状态库 binding 时使用该协议；普通 UI state 优先 `useState` / `useReducer` / Context。Zustand/Redux Toolkit/Jotai 不是 React Core，也不是 server-state cache。
+
+## 建议修改
+
+1. 保留业务 snapshot 与 lifecycle instrumentation 的分离。
+2. 可增加 external-store + Suspense 的反例，解释官方为何不推荐该组合。
+3. 若后续加入 SSR fixture，再用真实 `getServerSnapshot` / hydration 验证服务端一致性。

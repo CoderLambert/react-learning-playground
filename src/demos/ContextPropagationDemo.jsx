@@ -1,4 +1,4 @@
-import { createContext, memo, useContext, useState } from "react";
+import { createContext, memo, useContext, useRef, useState } from "react";
 
 const ThemeContext = createContext("light");
 
@@ -10,13 +10,14 @@ function RenderBadge({ label, count }) {
   );
 }
 
-function ContextConsumer({ parentRenderCount }) {
+function ContextConsumer() {
   const theme = useContext(ThemeContext);
-  const renderCount = parentRenderCount.consumer;
+  const renderCountRef = useRef(0);
+  renderCountRef.current += 1;
 
   return (
     <div style={{ padding: 12, border: "1px solid var(--border-color)", borderRadius: "var(--radius-sm)" }}>
-      <RenderBadge label="Consumer" count={renderCount} />
+      <RenderBadge label="Consumer" count={renderCountRef.current} />
       <div style={{ marginTop: 8 }}>
         useContext(ThemeContext) = <strong>{theme}</strong>
       </div>
@@ -24,13 +25,14 @@ function ContextConsumer({ parentRenderCount }) {
   );
 }
 
-const MemoConsumer = memo(function MemoConsumer({ parentRenderCount }) {
+const MemoConsumer = memo(function MemoConsumer() {
   const theme = useContext(ThemeContext);
-  const renderCount = parentRenderCount.memoConsumer;
+  const renderCountRef = useRef(0);
+  renderCountRef.current += 1;
 
   return (
     <div style={{ padding: 12, border: "1px solid var(--border-color)", borderRadius: "var(--radius-sm)" }}>
-      <RenderBadge label="memo Consumer" count={renderCount} />
+      <RenderBadge label="memo Consumer" count={renderCountRef.current} />
       <div style={{ marginTop: 8 }}>
         context = <strong>{theme}</strong>
       </div>
@@ -38,12 +40,13 @@ const MemoConsumer = memo(function MemoConsumer({ parentRenderCount }) {
   );
 });
 
-const MemoNonConsumer = memo(function MemoNonConsumer({ parentRenderCount }) {
-  const renderCount = parentRenderCount.nonConsumer;
+const MemoNonConsumer = memo(function MemoNonConsumer() {
+  const renderCountRef = useRef(0);
+  renderCountRef.current += 1;
 
   return (
     <div style={{ padding: 12, border: "1px solid var(--border-color)", borderRadius: "var(--radius-sm)" }}>
-      <RenderBadge label="memo Non-consumer" count={renderCount} />
+      <RenderBadge label="memo Non-consumer" count={renderCountRef.current} />
       <div style={{ marginTop: 8 }}>这个组件没有读取 ThemeContext。</div>
     </div>
   );
@@ -52,24 +55,13 @@ const MemoNonConsumer = memo(function MemoNonConsumer({ parentRenderCount }) {
 export function ContextPropagationDemo() {
   const [theme, setTheme] = useState("light");
   const [localCount, setLocalCount] = useState(0);
-  const [renderCounts, setRenderCounts] = useState({ consumer: 1, memoConsumer: 1, nonConsumer: 1 });
 
   function toggleTheme() {
     setTheme((current) => (current === "light" ? "dark" : "light"));
-    setRenderCounts((counts) => ({
-      consumer: counts.consumer + 1,
-      memoConsumer: counts.memoConsumer + 1,
-      nonConsumer: counts.nonConsumer,
-    }));
   }
 
   function updateLocalState() {
     setLocalCount((count) => count + 1);
-    setRenderCounts((counts) => ({
-      consumer: counts.consumer + 1,
-      memoConsumer: counts.memoConsumer,
-      nonConsumer: counts.nonConsumer,
-    }));
   }
 
   return (
@@ -92,7 +84,7 @@ export function ContextPropagationDemo() {
         <div className="demo-section-header">
           <h3 className="demo-section-title">1. 两种更新来源</h3>
           <p className="demo-section-desc">
-            点击“切换 Theme”改变 Provider value；点击“更新局部 State”只改变父组件自己的 localCount。观察消费者和非消费者的差异。
+            点击“切换 Theme”改变 Provider value；点击“更新局部 State”只改变父组件自己的 localCount。比较普通 Consumer、memo Consumer 和 memo Non-consumer 的真实组件执行次数。
           </p>
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -107,9 +99,9 @@ export function ContextPropagationDemo() {
 
       <ThemeContext value={theme}>
         <div className="demo-grid-2">
-          <ContextConsumer parentRenderCount={renderCounts} />
-          <MemoConsumer parentRenderCount={renderCounts} />
-          <MemoNonConsumer parentRenderCount={renderCounts} />
+          <ContextConsumer />
+          <MemoConsumer />
+          <MemoNonConsumer />
         </div>
       </ThemeContext>
 
@@ -150,7 +142,7 @@ but does NOT block fresh Context values`}</pre>
       <div className="demo-alert demo-alert-tip">
         <div className="demo-alert-title">关于本页 render 计数</div>
         <div>
-          计数用于教学可视化，显式按实验动作记录预期传播路径，不作为 React Profiler 的替代品。真实性能诊断应使用 React DevTools Profiler。
+          计数在各组件函数执行点通过 ref 累加，因此反映真实组件调用，而不是按钮事件中的预测值。开发环境启用 Strict Mode 时，React 可能额外调用组件来检查纯度，所以不要把“一次点击”机械解释为“一次 render”。真实性能诊断仍应使用 React DevTools Profiler。
         </div>
       </div>
     </div>
