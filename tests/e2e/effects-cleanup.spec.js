@@ -25,7 +25,8 @@ test.describe("effects and cleanup", () => {
     await expect(page.getByText("房间 #102 实时消息通道", { exact: true })).toBeVisible();
     await page.getByRole("button", { name: /开启静音/ }).click();
     await expect(page.getByRole("button", { name: /当前已静音/ })).toBeVisible();
-    await expect(page.getByText(/来自房间 #102 的实时消息/)).toHaveCount(1, { timeout: 3_000 });
+    const messagePane = page.getByText("房间 #102 实时消息通道", { exact: true }).locator("..");
+    await expect(messagePane.getByText(/来自房间 #102 的实时消息/)).toHaveCount(1, { timeout: 3_000 });
 
     await openDemo(page, "useEffectEvent 非响应式逻辑");
     const reactivePanel = page.locator(".demo-alert-warning").filter({ hasText: "对照：Effect 依赖 roomId + theme" }).first();
@@ -69,12 +70,12 @@ test.describe("effects and cleanup", () => {
     await openDemo(page, "useSyncExternalStore 外部订阅");
     const readerA = page.locator(".demo-alert-tip").filter({ hasText: "Reader A" }).first();
     const readerB = page.locator(".demo-alert-tip").filter({ hasText: "Reader B" }).first();
-    await expect(readerA).toContainText("当前订阅者：2");
+    await expect(page.locator(".demo-alert-info")).toContainText("counterStore 当前订阅者：2");
     await page.getByRole("button", { name: /externalStore.increment/ }).click();
     await expect(readerA).toContainText("snapshot.value = 1");
     await expect(readerB).toContainText("snapshot.value = 1");
     await openDemo(page, "Props 基础与解构");
     await openDemo(page, "useSyncExternalStore 外部订阅");
-    await expect(readerA).toContainText("当前订阅者：2");
+    await expect(page.locator(".demo-alert-info")).toContainText("counterStore 当前订阅者：2");
   });
 });
