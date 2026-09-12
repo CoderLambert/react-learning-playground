@@ -19,6 +19,26 @@ export function buildAssistantFollowUpPrompt(actionId) {
   return prompt;
 }
 
+export function buildCodeExplainPrompt({ code, language = "text", label = "" } = {}) {
+  const normalizedCode = String(code ?? "").trim();
+  if (!normalizedCode) throw new Error("Cannot explain an empty code block");
+  const normalizedLanguage = String(language || "text").trim() || "text";
+  const normalizedLabel = String(label ?? "").trim();
+  const labelLine = normalizedLabel ? `代码来源/标题：${normalizedLabel}\n` : "";
+  return `请解释下面这段代码在当前学习单元中的作用。重点说明：它解决什么问题、关键执行步骤、涉及的 React 心智模型，以及最容易误解的边界。${labelLine}\n\`\`\`${normalizedLanguage}\n${normalizedCode}\n\`\`\``;
+}
+
+export function buildCitationExplainPrompt({ fileName, startLine, endLine } = {}) {
+  const normalizedFile = String(fileName ?? "").trim();
+  const start = Number(startLine);
+  const end = Number(endLine ?? startLine);
+  if (!normalizedFile || !Number.isInteger(start) || start < 1 || !Number.isInteger(end) || end < start) {
+    throw new Error("Invalid source citation for explanation");
+  }
+  const range = start === end ? `L${start}` : `L${start}-L${end}`;
+  return `请结合当前学习单元解释源码引用 [${normalizedFile}:${range}]。说明这段代码在完整执行流程中的位置、为什么这样写、它与当前 React 概念的关系，以及修改它时最需要注意的边界。`;
+}
+
 export function shouldOfferContinue(finishReason) {
   return finishReason === "length" || finishReason === "output_limit" || finishReason === "user_abort" || finishReason === "error";
 }
