@@ -49,6 +49,17 @@ function createCustomId(chapter) {
   return `custom-ch${String(chapter).padStart(2, "0")}-${time}-${entropy}`;
 }
 
+function toStoredCustom(item) {
+  return {
+    id: item.id,
+    chapter: item.chapter,
+    kind: item.kind === "exercise" ? "exercise" : "question",
+    prompt: item.prompt.trim(),
+    origin: "user",
+    order: Number(item.order) || Date.now(),
+  };
+}
+
 export function createQuestionBankRepository(storage = getDefaultStorage()) {
   const read = () => {
     if (!storage) return cloneEmptyState();
@@ -145,10 +156,11 @@ export function createQuestionBankRepository(storage = getDefaultStorage()) {
     },
     addCustom,
     restoreCustom(item) {
-      if (!item || item.origin !== "user" || typeof item.id !== "string") return read();
+      if (!item || item.origin !== "user" || typeof item.id !== "string" || !item.prompt?.trim()) return read();
+      const stored = toStoredCustom(item);
       return update((state) => {
-        if (state.customQuestions.some((question) => question.id === item.id)) return state;
-        return { ...state, customQuestions: [...state.customQuestions, { ...item }] };
+        if (state.customQuestions.some((question) => question.id === stored.id)) return state;
+        return { ...state, customQuestions: [...state.customQuestions, stored] };
       });
     },
     duplicate(item) {
