@@ -6,9 +6,12 @@
 - Base audit PR: #80 / `automation/content-audit-queue`
 - Base audit head at lane start: `3c15c8eecc68e6be3ab95b35fa456357fb6f409c`
 - Lane branch: `automation/content-audit-concurrency`
+- Stacked PR: #83 targeting `automation/content-audit-queue`, kept open and unmerged.
 - Scope: `effect-event`, `transition-deferred`, and audit-queue Browser E2E diagnosis only.
 
 Reserved ownership remains untouched: PR #78 state-design lessons, PR #79 shared content/package/test infrastructure, PR #81 TypeScript lesson/samples, PR #82 runtime lessons, Core Lane files (`immutable-state`, `render-commit`, `use-reduce-with-context`), and Effects Lane files (`not-need-effect`, `lifecycle-of-reactive-effects`).
+
+During this run Core Lane advanced PR #80. This lane synchronized the then-latest base `46bcb80c7c1c80738306bf3eee76f04d12962e7a` with a normal non-force merge commit, preserving both lanes' commits and file ownership.
 
 ## Completed content fixes
 
@@ -42,7 +45,7 @@ The base PR #80 exact head `3c15c8e...` had:
 - Workbench Integration Verify #226: **FAIL** at Browser E2E; Build and browser installation passed, Preview HTTP smoke was skipped after the E2E failure.
 - A Playwright artifact was uploaded for that run.
 
-No test file has been changed in this lane yet because the available job metadata does not identify the failing assertion, and editing E2E spec without attributable evidence would risk weakening coverage. Exact-head CI on this stacked branch is the next diagnostic signal. If it reproduces, only an attributable stale assertion/test assumption in `tests/e2e/**` may be changed here; a lesson-owned failure must be returned to its owning lane.
+No test file has been changed in this lane because the available job metadata does not identify the failing assertion, and editing E2E spec without attributable evidence would risk weakening coverage. Core Lane has since advanced PR #80 and triggered fresh main-targeted workflow runs; those runs are the next useful signal for determining whether the earlier failure was persistent, stale-test-related, or transient.
 
 ## Factual sources
 
@@ -50,4 +53,11 @@ Primary factual baseline is current official React 19.2 documentation for `useEf
 
 ## Validation state
 
-Repository CI on the stacked PR head is the acceptance source. Do not treat the earlier PR #80 green workflow as validation for this branch's new executable changes.
+- Stacked PR #83 does not automatically trigger the repository verification workflows because the workflow `pull_request.branches` filters include `main` and integration branches, not `automation/content-audit-queue`.
+- A direct local checkout attempt is unavailable in this automation runtime because outbound DNS/network access to `github.com` is blocked; no local npm command is falsely claimed as executed.
+- The lane therefore relies on code/contract inspection plus subsequent validation when these commits are reconciled onto PR #80 (which targets `main`) or when repository CI is explicitly made available for stacked branches.
+- Fresh PR #80 exact-head workflow results are also used to continue diagnosing the pre-existing Browser E2E failure; they do not by themselves validate this lane's new files.
+
+## Next
+
+The two lane-owned content findings are closed. Continue only if fresh PR #80 E2E evidence yields an attributable stale assertion/test assumption, or if a new unowned Gate A/B/C regression appears in Chapters 06–12. Do not re-audit unchanged PASS notes merely to consume a run.
