@@ -15,17 +15,36 @@ function hashText(value) {
   return (hash >>> 0).toString(36);
 }
 
+function normalizeSemanticId(value) {
+  const id = String(value ?? "").trim().toLowerCase();
+  if (!id) return "";
+  if (!/^[a-z0-9][a-z0-9-]*$/.test(id)) {
+    throw new Error(`Invalid builtin semantic id: ${value}`);
+  }
+  return id;
+}
+
+function checkpointEntry(entry) {
+  if (typeof entry === "string") return { id: "", text: entry };
+  if (!entry || typeof entry !== "object") return { id: "", text: "" };
+  return { id: normalizeSemanticId(entry.id), text: entry.text };
+}
+
 export function questionFingerprint({ kind, text }) {
   return `${kind}:${hashText(text)}`;
 }
 
-export function createBuiltinQuestion({ chapter, kind, text }) {
+export function createBuiltinQuestion({ chapter, kind, text, semanticId = "" }) {
   const normalizedKind = kind === "exercise" ? "exercise" : "question";
   const normalizedText = normalizeText(text);
   const fingerprint = questionFingerprint({ kind: normalizedKind, text: normalizedText });
+  const normalizedSemanticId = normalizeSemanticId(semanticId);
 
   return Object.freeze({
-    id: `builtin:ch${String(chapter).padStart(2, "0")}:${fingerprint}`,
+    id: normalizedSemanticId
+      ? `builtin:ch${String(chapter).padStart(2, "0")}:${normalizedKind}:${normalizedSemanticId}`
+      : `builtin:ch${String(chapter).padStart(2, "0")}:${fingerprint}`,
+    semanticId: normalizedSemanticId || null,
     source: "builtin",
     chapter,
     kind: normalizedKind,
@@ -53,8 +72,14 @@ export function createCustomQuestion({ id, chapter, kind = "question", text }) {
 export function structureCheckpoint(chapter, checkpoint) {
   if (!checkpoint) return [];
   return [
-    ...(checkpoint.questions || []).map((text) => createBuiltinQuestion({ chapter, kind: "question", text })),
-    ...(checkpoint.exercises || []).map((text) => createBuiltinQuestion({ chapter, kind: "exercise", text })),
+    ...(checkpoint.questions || []).map((entry) => {
+      const item = checkpointEntry(entry);
+      return createBuiltinQuestion({ chapter, kind: "question", text: item.text, semanticId: item.id });
+    }),
+    ...(checkpoint.exercises || []).map((entry) => {
+      const item = checkpointEntry(entry);
+      return createBuiltinQuestion({ chapter, kind: "exercise", text: item.text, semanticId: item.id });
+    }),
   ];
 }
 
@@ -152,9 +177,11 @@ export function resolveQuestionBank({ chapter, checkpoint, state }) {
   const safeState = sanitizeState(state);
   const builtins = structureCheckpoint(chapter, checkpoint).map((item) => {
     const override = safeState.overrides[item.id] || {};
+    const resolvedText = normalizeText(override.text ?? item.text);
     return {
       ...item,
-      text: normalizeText(override.text ?? item.text),
+      text: resolvedText,
+      revision: questionFingerprint({ kind: item.kind, text: resolvedText }),
       hidden: Boolean(override.hidden),
       overridden: Object.keys(override).length > 0,
       originalText: item.text,
@@ -163,7 +190,13 @@ export function resolveQuestionBank({ chapter, checkpoint, state }) {
 
   const custom = Object.values(safeState.custom)
     .filter((item) => item.chapter === chapter)
-    .map((item) => ({ ...item, hidden: false, overridden: false, originalText: null }));
+    .map((item) => ({
+      ...item,
+      revision: questionFingerprint({ kind: item.kind, text: item.text }),
+      hidden: false,
+      overridden: false,
+      originalText: null,
+    }));
 
   return ["question", "exercise"].flatMap((kind) => {
     const items = [...builtins, ...custom].filter((item) => item.kind === kind);
@@ -191,4 +224,31 @@ export function migratePositionalOverrides({ chapter, checkpoint, legacy }) {
     if (target) migrated[target.id] = patch;
   }
   return migrated;
+}
+
+export function migrateBuiltinIdentity({ chapter, checkpoint, state }) {
+  const next = sanitizeState(structuredClone(state));
+  const structured = structureCheckpoint(chapter, checkpoint);
+  const semanticByFingerprint = new Map(
+    structured.filter((item) => item.semanticId).map((item) => [item.fingerprint, item.id]),
+  );
+
+  for (const [id, patch] of Object.entries(next.overrides)) {
+    const match = /^builtin:ch\d+:(question|exercise):([a-z0-9]+)$/.exec(id);
+    if (!match) continue;
+    const stableId = semanticByFingerprint.get(`${match[1]}:${match[2]}`);
+    if (!stableId || stableId === id) continue;
+    next.overrides[stableId] = { ...(next.overrides[stableId] || {}), ...patch };
+    delete next.overrides[id];
+  }
+
+  for (const [orderKey, ids] of Object.entries(next.order)) {
+    next.order[orderKey] = ids.map((id) => {
+      const match = /^builtin:ch\d+:(question|exercise):([a-z0-9]+)$/.exec(id);
+      if (!match) return id;
+      return semanticByFingerprint.get(`${match[1]}:${match[2]}`) || id;
+    });
+  }
+
+  return next;
 }
