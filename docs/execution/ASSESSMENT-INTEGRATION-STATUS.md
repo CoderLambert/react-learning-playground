@@ -2,77 +2,92 @@
 
 ## Validation candidate
 
-- A5 validation branch: `codex/assessment-hardening-release`
-- Validation tip before this status commit: `ce6c4a5`
-- PR branch to update: `codex/assessment-finalization`
+- PR branch: `codex/assessment-finalization`
 - PR base: `auto/assessment-integration`
 - Baseline audited before hardening: `d0130d35a35392fac3ea1059a611ba85c326a93f`
+- Assessment/Tailwind production-code verification commit: `2f3376f289aa4a3e5dce20343b929e888df6b3d8`
+- Verification workflow run: `34697800904`
 
 The validation work did not reset, force-push, merge, or otherwise modify `main`.
+
+## UI direction
+
+Assessment UI is now the first incremental migration to Tailwind CSS and local, copy-owned shadcn-style UI primitives. Tailwind preflight is disabled so the existing application design system is not globally reset. New/refactored UI should prefer `src/components/ui/*` primitives plus Tailwind utilities instead of adding component-specific rules to `App.css`; legacy CSS can migrate incrementally.
+
+Current local primitives include `Button`, `Badge`, `Card`, and `Progress`. Assessment keeps native `fieldset`, `legend`, and radio semantics while presenting card-style options, selected/correct/incorrect states, progress, feedback, evidence actions, and completion UI.
 
 ## Architecture and product gates
 
 | Gate | Result | Evidence |
 | --- | --- | --- |
-| Architecture Gate | PASS | Boundary tests confirm UI stays behind application/query-store boundaries; tools call `AssessmentService`; provider/worker and generic agent core remain Assessment-agnostic; domain remains React/IndexedDB/AI-independent. |
+| Architecture Gate | PASS | UI stays behind application/query-store boundaries; tools call `AssessmentService`; provider/worker and generic agent core remain Assessment-agnostic; domain remains React/IndexedDB/AI-independent. |
 | Repository Gate | PASS | Memory and IndexedDB contract suites cover scoped queries, atomic mutation receipts/replay, revision conflicts, retire metadata, sessions, attempts, and completion mutation parity. |
-| Service Gate | PASS | Service tests cover trusted scope injection, domain validation, attempt grading from snapshots, query refresh, and repository-error propagation. |
-| Tool Schema Gate | PASS | Ajv-backed reusable Assessment schemas accept complete single-choice/true-false drafts and reject forged runtime fields, invalid patches, nested unknown fields, malformed discriminated content, and fewer than two choice options. |
-| Runtime Validation Gate | PASS | `ToolExecutor` compiles/caches the registered `inputSchema`; invalid model arguments normalize to `TOOL_ARGUMENTS_INVALID`; provider definitions and local validation share the schema. |
-| Trusted Scope Gate | PASS | Model arguments cannot set learning-unit identity, mutation identity, provenance, conversation/run/tool identity, snapshot identity, model, or other system fields; adapters inject trusted runtime context and the service validates it again. |
-| Evidence Gate | PASS | Non-empty evidence fails closed without a resolver. Production composition resolves only the current LearningUnit's declared source file and rejects missing files and out-of-range source lines before persistence. |
-| Question Mutation Idempotency Gate | PASS | Create/update/retire tests cover receipt replay, revision conflict, atomic receipt storage, and trusted AI provenance replacement. Retire atomically changes status, revision, `updatedAt`, and provenance. |
-| Session Snapshot/Recovery Gate | PASS | Session items retain question/revision snapshots; attempts grade against snapshots; partial sessions recover the first unanswered item after reload; final attempt atomically completes the session; later question update/retire does not alter the active snapshot. |
-| Agent Audit Persistence Gate | PASS | AI IndexedDB migration preserves conversation data and persists `agentRuns` plus `toolExecutions` across reopen. Runner tests cover successful, failed, aborted, multi-tool, and recovered interrupted runs; Memory remains an explicit fallback. |
-| Capability Gate | PASS | Ordinary chat exposes no Assessment command tools. Explicit `assessment_authoring` mode supplies Assessment tools, exposes mode state in the UI, permits exit, and compaction always has no tools. |
-| Direct Provider Contract Gate | PASS | Node contract tests cover tool schema forwarding, assistant/tool continuations, split tool calls, errors, and abort normalization. |
-| Gateway Provider Contract Gate | PASS | Worker and client tests cover the same normalized tool continuations, stream assembly, cancellation, error handling, and tool-disabled compaction boundary. |
-| Product E2E Gate | PASS | Mock Chromium run covers AI create, source-evidence navigation, session reload/completion/snapshot isolation, ordinary-chat capability denial, and IndexedDB Memory fallback. Invalid source-file and line-range evidence rejection is covered by Node composition/service tests. |
+| Service Gate | PASS | Service tests cover trusted scope, domain validation, snapshot grading, query refresh, evidence validation, and repository-error propagation. |
+| Tool Schema Gate | PASS | Ajv-backed reusable schemas validate complete drafts, reject forged runtime fields and malformed nested data, and make question type immutable in V1 updates. |
+| Runtime Validation Gate | PASS | `ToolExecutor` compiles/caches the same registered `inputSchema` exposed to providers; invalid model arguments normalize to `TOOL_ARGUMENTS_INVALID`. |
+| Trusted Scope Gate | PASS | Model arguments cannot set learning-unit identity, mutation identity, provenance, conversation/run/tool identity, snapshot identity, model, or other system fields. |
+| Trusted Tool Provenance Gate | PASS | The adapter propagates the runtime `toolCallId` separately from `mutationId`, preserving conversation/run/tool/snapshot/model provenance through the service boundary. |
+| Question Canonical Shape Gate | PASS | Domain validation rejects mixed `single_choice`/`true_false` content; V1 updates cannot change the question discriminant. |
+| Evidence Gate | PASS | Non-empty evidence fails closed without a resolver; production composition validates LearningUnit source membership and real source line ranges before persistence. |
+| Question Mutation Idempotency Gate | PASS | Create/update/retire cover receipt replay, revision conflict, atomic receipt storage, trusted provenance replacement, and retire metadata. |
+| Session Snapshot/Recovery Gate | PASS | Sessions retain question/revision snapshots, recover the first unanswered item after reload, and atomically complete with the final attempt. |
+| Agent Audit Persistence Gate | PASS | `react-learning-ai` persists `agentRuns` and `toolExecutions`; runner tests cover completed, failed, aborted, multi-tool, and interrupted recovery states. |
+| Capability Gate | PASS | Ordinary chat exposes no Assessment command tools; explicit `assessment_authoring` mode supplies tools; compaction always has no tools. |
+| Assessment UX Gate | PASS | Assessment uses Tailwind/shadcn-style primitives with responsive card layout, native-radio accessibility, feedback/evidence states, and stable E2E accessibility names. |
+| Direct Provider Contract Gate | PASS | Node tests cover tool schema forwarding, assistant/tool continuations, split tool calls, errors, and abort normalization. |
+| Gateway Provider Contract Gate | PASS | Worker/client tests cover normalized tool continuations, stream assembly, cancellation, errors, and tool-disabled compaction. |
+| Product E2E Gate | PASS | Chromium mock-provider coverage includes AI create, session reload/completion, source evidence navigation, ordinary-chat capability denial, Memory fallback, accessibility, responsive layout, and the rest of the application shell. |
 
-## Commands actually run
+## Verified commands on `2f3376f`
 
 | Command | Result |
 | --- | --- |
-| `npm ci` | PASS — 265 packages added; audit reported 0 vulnerabilities. |
-| `node --test tests/*.mjs worker/deepseek-assistant/test/*.test.js` | PASS — 216 passed, 0 failed. |
-| `npm run lint` | PASS — exit 0; pre-existing warnings only. |
-| `npm run build` | PASS — exit 0; Vite built 1,073 modules. Existing large-chunk warning only. |
-| `npm exec --yes --package=wrangler@4.36.0 -- wrangler deploy --dry-run --config worker/deepseek-assistant/wrangler.jsonc` | PASS — dry-run upload plan generated. Wrangler warned that the existing top-level `secrets` config field is unexpected. |
-| `VITE_AI_ASSISTANT_URL=http://127.0.0.1:4173/__ai-test__ CI=true npm run test:e2e` after a bare build | Diagnostic failure — 28/46 passed and 18 existing AI tests found the composer disabled. Vite substitutes `VITE_*` values at build time while Playwright serves `vite preview`; setting the variable only for the preview/test process cannot modify an already bare-built `dist`. This is superseded by the self-contained command below. |
-| `npm run test:e2e:mock` | PASS — 46/46 Chromium tests in 28.4 s. The script builds with the mock endpoint first, then runs Playwright. It uses no production endpoint or credential. |
+| `npm ci` | PASS — 314 packages added; 315 audited; 0 vulnerabilities. |
+| `node --test tests/*.mjs worker/deepseek-assistant/test/*.test.js` | PASS — 219 passed, 0 failed. |
+| `npm run lint` | PASS — 30 existing warnings, 0 errors. |
+| `npm run build` | PASS — Vite transformed 1,078 modules; existing large-chunk warning only. |
+| `npm run test:e2e:mock` | PASS — 46/46 Chromium tests. |
+| `npm exec --yes --package=wrangler@4.36.0 -- wrangler deploy --dry-run --config worker/deepseek-assistant/wrangler.jsonc` | PASS — dry-run upload plan generated; existing warning remains for the top-level `secrets` config field. |
 
 ## Provider and CI status
 
-- Mock tool lifecycle: `PASS` — the Chromium mock-provider path invokes tool continuation through executor, service, repository, UI, and IndexedDB.
-- Provider wire contract: `PASS` — Direct and Gateway contract coverage is part of the 216-passing Node run.
-- Live DeepSeek function-call smoke: `PENDING_NO_CREDENTIAL` — `DEEPSEEK_API_KEY`, `DEEPSEEK_TEST_API_KEY`, and `VITE_DEEPSEEK_API_KEY` were absent. No secret was added, no live request was fabricated, and no live-provider PASS is claimed.
-- CI Gate (exact remote PR head): `NOT_AVAILABLE_WITH_REASON` — A5 performed local gates only and did not query or modify remote PR checks. The PR owner must refresh checks after integrating this status commit.
+- Mock tool lifecycle: `PASS` — mock Chromium exercises provider continuation through executor, service, repository, UI, and IndexedDB.
+- Provider wire contract: `PASS` — Direct and Gateway contract coverage is included in the 219-passing Node run.
+- Live DeepSeek function-call smoke: `PENDING_NO_CREDENTIAL` — no live-provider PASS is claimed and no secret is committed or printed.
+- Verification CI: `PASS` on production-code commit `2f3376f289aa4a3e5dce20343b929e888df6b3d8`, workflow run `34697800904`.
+- Final documentation/workflow-cleanup commit is metadata-only and does not change the verified production code.
 
-## Integrated hardening commits
+## Final hardening additions
 
-- `21cdbe7` — Ajv runtime validation and Assessment tool schemas.
-- `98b31c1` — Assessment provenance, evidence, retire metadata, and session lifecycle integrity.
-- `c5c91a2` — persistent AI agent-run/tool-execution audit records.
-- `5d50db6` — production composition, explicit capability mode, evidence resolver, and product session recovery.
-- `8a8c556` / merge `a77146f` — self-contained mock E2E build-and-test command.
+- Tailwind CSS added with preflight disabled for incremental migration.
+- Local shadcn-style primitives added under `src/components/ui/`.
+- Assessment UI rebuilt around those primitives and Tailwind utilities rather than new component CSS.
+- Native radios remain the actual interaction targets for pointer, keyboard, accessibility, and Playwright behavior.
+- Trusted `toolCallId` now reaches Assessment provenance.
+- Question type is immutable in V1 update tools.
+- Domain rejects cross-type canonical question fields.
 
 ## Release conclusion
 
-All local code-level gates required for this hardening are passing and there is no known P1 blocker.
+All code-level gates currently required for this Assessment + Agent finalization are passing and there is no known P1 blocker.
 
 ```text
 Tool Runtime Validation: PASS
 Assessment Tool Schema: PASS
 Trusted Scope: PASS
+Trusted Tool Provenance: PASS
+Question Canonical Shape: PASS
+Question Type Immutability: PASS
 Evidence Scope Validation: PASS
 Question Mutation Idempotency: PASS
 Session Snapshot/Recovery: PASS
 Agent Run Persistence: PASS
+Assessment UX: PASS
 Direct Provider Contract: PASS
 Gateway Provider Contract: PASS
 Mock Chromium E2E: PASS
 Live DeepSeek Smoke: PENDING_NO_CREDENTIAL
-Exact-head CI: NOT_AVAILABLE_WITH_REASON
+Verification CI (production code): PASS
 MERGE_READY=YES
 ```
 
