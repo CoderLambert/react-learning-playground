@@ -46,7 +46,7 @@ export function UseRefDemo() {
   // ==========================================
   const [timerSeconds, setTimerSeconds] = useState(0);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
-  // 💡 定时器句柄保存在 Ref 中，更新 timerId 绝对不会、也不需要引发组件重渲染！
+  // 💡 定时器句柄保存在 Ref 中；写入句柄本身不会请求组件重新渲染。
   const timerIdRef = useRef(null);
 
   const startTimer = () => {
@@ -168,14 +168,14 @@ export function UseRefDemo() {
             <div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
                 <h4 style={{ margin: 0, fontSize: "14px" }}>
-                  2. 可变值存储：高精度秒表
+                  2. 可变值存储：计时器句柄
                 </h4>
                 <span className={`badge ${isTimerRunning ? "badge-green" : "badge-gray"}`}>
                   {isTimerRunning ? "⏱️ 计时中 (Ref 持有句柄)" : "⏸️ 处于就绪状态"}
                 </span>
               </div>
               <p style={{ margin: "0 0 16px 0", fontSize: "12.5px", color: "var(--text-muted)", lineHeight: "1.5" }}>
-                定时器的 <code>timerId</code> 是纯逻辑变量。如果保存在 <code>useState</code> 中，每次赋值都会造成无意义重渲染；保存在 <code>useRef</code> 中既能安全跨周期存活，又绝不造成多余渲染。
+                定时器的 <code>timerId</code> 不参与 JSX 计算。放进 <code>useRef</code> 可以让句柄跨 render 保留，而写入 <code>ref.current</code> 本身不会请求新的 render；屏幕上的秒数仍由 State 驱动。这里的 <code>setInterval</code> 只用于演示句柄生命周期，并不代表高精度计时。
               </p>
 
               <div style={{ textAlign: "center", padding: "12px 0", fontSize: "36px", fontWeight: "800", color: isTimerRunning ? "var(--color-primary)" : "var(--text-muted)" }}>
@@ -186,11 +186,11 @@ export function UseRefDemo() {
             <div style={{ display: "flex", gap: "8px", justifyContent: "center" }}>
               {!isTimerRunning ? (
                 <button className="btn btn-success btn-sm" onClick={startTimer}>
-                  ▶️ 启动秒表
+                  ▶️ 启动计时器
                 </button>
               ) : (
                 <button className="btn btn-warning btn-sm" onClick={stopTimer}>
-                  ⏸️ 暂停秒表
+                  ⏸️ 暂停计时器
                 </button>
               )}
               <button className="btn btn-secondary btn-sm" onClick={resetTimer}>
@@ -201,15 +201,15 @@ export function UseRefDemo() {
         </div>
       </div>
 
-      {/* 核心禁忌守则 */}
+      {/* Ref 在 render 中的边界 */}
       <div className="demo-alert demo-alert-danger">
         <div className="demo-alert-title">
-          <span>⚠️</span> React 官方黄金禁忌守则：切勿在渲染阶段读写 ref.current！
+          <span>⚠️</span> Render 边界：通常不要在渲染阶段读写 ref.current
         </div>
         <div style={{ fontSize: "13px", lineHeight: "1.6" }}>
-          不要在组件函数的顶层（即 JSX 返回期间）写入或读取 <code>ref.current</code>，例如 <code>ref.current = 123</code> 或 <code>&lt;p&gt;&#123;ref.current&#125;&lt;/p&gt;</code>！
-          因为 React 的渲染阶段必须是一个<strong>无副作用的纯计算过程</strong>。在并发渲染（Concurrent Mode）下，React 可能会多次尝试渲染某个组件，在渲染期修改 Ref 会导致渲染逻辑不纯、不可重入，引发严重难以排查的竞态 Bug。
-          <strong>仅在事件处理函数（onClick）或 useEffect / useLayoutEffect 回调中操作 Ref！</strong>
+          如果某个值参与 JSX 计算，应使用 State，而不是依赖 <code>ref.current</code>。React 官方也建议通常不要在 render 中读写 <code>ref.current</code>，因为这会让渲染行为难以预测。
+          一个明确的窄例外是<strong>完全可预测的一次性初始化</strong>，例如仅在 <code>ref.current === null</code> 时创建并保存同一个对象。
+          其他命令式读写通常放在事件处理函数，或确实用于外部系统同步时放在合适的 Effect 中。
         </div>
       </div>
     </div>
