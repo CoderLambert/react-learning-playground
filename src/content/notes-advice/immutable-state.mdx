@@ -2,29 +2,26 @@
 
 ## Verdict
 
-核心 React 语义准确，Source 中的 nested copy / map / filter / copy+reverse 示例也正确。但 Note 声称实验可以“比较原地 mutation 与 copy”，当前 Demo 实际并没有提供可执行的 mutation 对照，只展示正确更新路径和一段警告文本，因此 Demo Contract 未通过。
+核心 React 语义准确，且 Demo 现在真正提供 mutation 与 copy 的可执行对照。学习者可以先执行 `mutate + set 同引用`，观察该操作本身不会可靠触发 DOM 更新，再通过无关 render 暴露被污染的旧 state，最后与 copy + new reference 路径比较。Gate A/B/C 均通过。
 
 ## Hard gates
 
-- **Gate A — Correctness: PASS**。React 官方明确要求把 state 中对象/数组视为只读；更新嵌套对象要沿修改路径复制到顶层；`reverse()`/`sort()` 会修改数组，因此需要先复制。Demo 的正确路径符合这些语义。React 官方也明确指出 mutation 会改变过去 render 的 snapshot，并可能妨碍依赖不可变模型的新特性。
-- **Gate B — Demo Contract: FAIL**。Note 的 Experiment 写“比较原地修改和复制后更新会给 React 留下什么信号”，但 Demo 没有 mutation 按钮、对照视图或旧 snapshot 被破坏的可观察实验。学习者只能阅读警告，不能执行 Note 声称的比较。
-- **Gate C — Mental Model: PASS**。只读 snapshot、浅复制、修改路径复制、顶层新引用的模型是连贯的。
+- **Gate A — Correctness: PASS**。React 19.2 官方文档要求把 state 中对象/数组视为只读；mutation 不会可靠触发 render，并会改写过去 render 的 snapshot。嵌套更新需要沿变化路径复制；`reverse()` / `sort()` 等变异数组操作要先复制容器。
+- **Gate B — Demo Contract: PASS**。Note 声称的 mutation-vs-copy 实验现在可以在 Demo 中实际执行：错误同引用更新 → 无关 render → 正确 copy 更新，Demo/Note/Source 讲述同一个现象。
+- **Gate C — Mental Model: PASS**。内容把“不改写已有 snapshot”作为核心，而不是简化成“React 只比较引用”；同时解释了为什么新引用、路径复制和 shallow-copy 边界重要。
 
-## Important gaps / boundaries
+## Important boundaries
 
-1. “新顶层引用”是必要的更新表达方式，但不要教成“React 只看引用所以必须 spread”的单一机制口号。核心是不要修改已有 snapshot，并向 setter 提交下一份 state。
-2. spread 是浅复制这一点已有说明，应再强调复制数组后仍不能直接改共享对象元素，例如 `const next = [...items]; next[0].done = true` 仍然 mutation。
-3. `Date.now()` 生成 demo id 不是本课重点，但生产代码若在同一毫秒批量创建实体可能冲突；不需要在 Note 展开，只避免把它宣传为通用稳定 ID 策略。
-4. Immer 是可选表达工具，不改变“最终产生新的不可变结果”这一模型。当前 Demo 的边界措辞合理。
+1. setter 收到与当前 state `Object.is` 相同的值时 React 可以跳过更新；实验因此强调“不会可靠触发自身 render”，而不是把所有运行环境描述成绝对一致的 DOM 时序。
+2. `[...items]` 只复制数组容器；直接改 `next[0].done` 仍会修改共享对象。Note 已补上这一反例。
+3. Immer 只是更新表达工具，不改变不可变结果这一约束，也不替代 state modeling。
 
 ## Clarity / engineering usefulness
 
-内容简洁，Source 比文字更有价值。最大问题是实验承诺超出了 Demo 能力。
+实验现在形成完整因果链：mutation 看似“成功”修改 JavaScript 对象 → React 没收到下一份 state → 后续 render 暴露历史 snapshot 已被污染。相比只显示警告文字，这更容易形成稳定心智模型。
 
 ## Recommended changes
 
-- 二选一：
-  1. **更推荐**：增加一个隔离的 mutation 对照实验，保留旧 snapshot 引用，执行错误 mutation 后直接观察“旧 snapshot 也被改写”或同引用更新行为；明确标记为教学反例并提供 reset。
-  2. 或收窄 Note Experiment，只要求观察 nested copy 后哪些引用变化、哪些保持不变，不再声称能执行 mutation 对照。
-- 增加“浅复制数组但修改共享元素仍是 mutation”的边界例子。
-- production decision rule：**先设计 state 结构；更新时只复制发生变化的路径，并保证不改写任何已有 snapshot。**
+当前没有阻塞性修改。后续若扩展本课，优先增加 undo/history 或共享嵌套对象的例子，而不是继续堆数组 API。
+
+生产决策规则：**先设计可维护的 state 结构；每次更新只复制变化路径，并确保任何已有 snapshot 都不会被改写。**
