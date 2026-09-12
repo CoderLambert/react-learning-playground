@@ -43,7 +43,7 @@ function QuestionEditor({ item, onSave, onCancel }) {
   );
 }
 
-function ManagedItem({ item, onEdit, onHide, onRestore, onDelete }) {
+function ManagedItem({ item, onEdit, onHide, onRestore, onDelete, onDuplicate, onMove }) {
   const [editing, setEditing] = useState(false);
   return (
     <li data-question-id={item.id} style={{ marginBottom: 12 }}>
@@ -61,13 +61,18 @@ function ManagedItem({ item, onEdit, onHide, onRestore, onDelete }) {
           <div>{item.prompt}</div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 6 }} aria-label="题目操作">
             <button type="button" style={actionButtonStyle} onClick={() => setEditing(true)}>编辑</button>
+            <button type="button" style={actionButtonStyle} onClick={() => onDuplicate(item)}>复制题目</button>
             {item.origin === "builtin" ? (
               <>
                 <button type="button" style={actionButtonStyle} onClick={() => onHide(item)}>从评测中移除</button>
                 {item.customized ? <button type="button" style={actionButtonStyle} onClick={() => onRestore(item)}>恢复默认</button> : null}
               </>
             ) : (
-              <button type="button" style={actionButtonStyle} onClick={() => onDelete(item)}>删除自定义题</button>
+              <>
+                <button type="button" style={actionButtonStyle} onClick={() => onMove(item, "up")}>上移</button>
+                <button type="button" style={actionButtonStyle} onClick={() => onMove(item, "down")}>下移</button>
+                <button type="button" style={actionButtonStyle} onClick={() => onDelete(item)}>删除自定义题</button>
+              </>
             )}
           </div>
         </>
@@ -76,7 +81,7 @@ function ManagedItem({ item, onEdit, onHide, onRestore, onDelete }) {
   );
 }
 
-function ManagedList({ items, hiddenItems, onEdit, onHide, onRestore, onDelete }) {
+function ManagedList({ items, hiddenItems, onEdit, onHide, onRestore, onDelete, onDuplicate, onMove }) {
   const visible = items.filter((item) => !item.hidden);
   return (
     <>
@@ -90,6 +95,8 @@ function ManagedList({ items, hiddenItems, onEdit, onHide, onRestore, onDelete }
               onHide={onHide}
               onRestore={onRestore}
               onDelete={onDelete}
+              onDuplicate={onDuplicate}
+              onMove={onMove}
             />
           ))}
         </ol>
@@ -183,6 +190,8 @@ export function ChapterCheckpoint({ chapter }) {
   const restore = (item) => commit(() => repository.restoreBuiltin(item.id), "已恢复课程默认题目。");
   const removeCustom = (item) => commit(() => repository.deleteCustom(item.id), "自定义题已删除。");
   const add = ({ kind, prompt }) => commit(() => repository.addCustom({ chapter, kind, prompt }), "自定义题已添加。");
+  const duplicate = (item) => commit(() => repository.duplicate(item), "已创建题目副本，可继续编辑。");
+  const move = (item, direction) => commit(() => repository.moveCustom(item.id, direction), direction === "up" ? "题目已上移。" : "题目已下移。");
   const undoHide = () => {
     if (!lastHiddenId) return;
     commit(() => repository.setBuiltinHidden(lastHiddenId, false), "已撤销移除。");
@@ -191,12 +200,20 @@ export function ChapterCheckpoint({ chapter }) {
 
   const hiddenQuestions = checkpoint.questions.filter((item) => item.hidden);
   const hiddenExercises = checkpoint.exercises.filter((item) => item.hidden);
+  const listProps = {
+    onEdit: edit,
+    onHide: hide,
+    onRestore: restore,
+    onDelete: removeCustom,
+    onDuplicate: duplicate,
+    onMove: move,
+  };
 
   return (
     <section className="demo-section" data-chapter-checkpoint={chapter} aria-labelledby={`chapter-${chapter}-checkpoint-title`}>
       <div className="demo-section-header">
         <h2 id={`chapter-${chapter}-checkpoint-title`} className="demo-section-title">🧭 {checkpoint.title} · 学习检查</h2>
-        <p className="demo-section-desc">先独立回答，再回到对应 Demo 验证。题目可按你的学习需要编辑、隐藏或补充。</p>
+        <p className="demo-section-desc">先独立回答，再回到对应 Demo 验证。题目可按你的学习需要编辑、隐藏、复制、排序或补充。</p>
       </div>
 
       {feedback ? (
@@ -209,26 +226,12 @@ export function ChapterCheckpoint({ chapter }) {
       <div className="demo-grid-2">
         <div className="demo-alert demo-alert-tip" style={{ margin: 0 }}>
           <div className="demo-alert-title">你现在应该能回答什么？</div>
-          <ManagedList
-            items={checkpoint.questions}
-            hiddenItems={hiddenQuestions}
-            onEdit={edit}
-            onHide={hide}
-            onRestore={restore}
-            onDelete={removeCustom}
-          />
+          <ManagedList items={checkpoint.questions} hiddenItems={hiddenQuestions} {...listProps} />
         </div>
 
         <div className="demo-alert demo-alert-warning" style={{ margin: 0 }}>
           <div className="demo-alert-title">练习</div>
-          <ManagedList
-            items={checkpoint.exercises}
-            hiddenItems={hiddenExercises}
-            onEdit={edit}
-            onHide={hide}
-            onRestore={restore}
-            onDelete={removeCustom}
-          />
+          <ManagedList items={checkpoint.exercises} hiddenItems={hiddenExercises} {...listProps} />
         </div>
       </div>
 
