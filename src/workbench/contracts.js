@@ -1,7 +1,30 @@
 /**
+ * @typedef {Object} SourceSemanticRegion
+ * @property {string} id Stable build-generated region id within one source file.
+ * @property {string} kind Semantic role such as component, reducer, effect or event-handler.
+ * @property {string} symbol Display symbol or hook name.
+ * @property {number} startLine One-based current source line resolved from the build AST.
+ * @property {number} endLine One-based inclusive current source line resolved from the build AST.
+ * @property {string | undefined} hookName
+ * @property {string | undefined} parentSymbol
+ * @property {number} score Build-time relevance score used to choose the core implementation.
+ */
+
+/**
+ * @typedef {Object} SourceSemantics
+ * @property {number} version
+ * @property {string | null} path Repository-relative authoritative source path.
+ * @property {string | null} parser Build parser identifier.
+ * @property {string | null} primaryRegionId
+ * @property {SourceSemanticRegion | null} primaryRegion
+ * @property {SourceSemanticRegion[]} regions
+ */
+
+/**
  * @typedef {Object} LearningSourceFile
  * @property {string} name Stable file identity shown across inline, inspector and AI citation surfaces.
  * @property {string} code Authoritative source text. Learning surfaces must render this instead of duplicating snippets.
+ * @property {SourceSemantics | null | undefined} semantics Build-generated semantic navigation metadata.
  */
 
 /**

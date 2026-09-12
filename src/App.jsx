@@ -12,6 +12,7 @@ import { NoteToc } from "./components/notes/NoteToc";
 import { NoteViewer } from "./components/notes/NoteViewer";
 import { MDX_TEACHING_COMPONENTS } from "./components/mdx";
 import { useAiLearningAssistant } from "./ai/useAiLearningAssistant.js";
+import { enrichLearningUnitSourceSemantics } from "./source/semanticSources";
 import { WorkbenchNavigation } from "./workbench/WorkbenchNavigation";
 import { WorkbenchShell } from "./workbench/WorkbenchShell";
 import { toLearningUnit } from "./workbench/contracts";
@@ -63,7 +64,10 @@ export default function App() {
   } = usePersistedWorkbenchState();
   const { demoId, selectDemo } = useDemoUrlState({ learningUnits: demos, defaultDemoId: demos[0]?.id });
   const currentDemo = useMemo(() => demos.find((demo) => demo.id === demoId) || demos[0], [demoId]);
-  const currentLearningUnit = useMemo(() => (currentDemo ? toLearningUnit(currentDemo) : null), [currentDemo]);
+  const currentLearningUnit = useMemo(
+    () => (currentDemo ? enrichLearningUnitSourceSemantics(toLearningUnit(currentDemo)) : null),
+    [currentDemo],
+  );
   const currentCategory = useMemo(() => CATEGORIES.find((category) => category.id === currentDemo?.category), [currentDemo]);
   const currentCheckpointChapter = currentDemo ? getCheckpointChapter(currentDemo.id) : null;
   const aiAssistant = useAiLearningAssistant({
@@ -90,10 +94,10 @@ export default function App() {
     });
   };
 
-  const handleInlineSourceOpen = (fileName) => {
+  const handleInlineSourceOpen = (fileName, focusRange = null) => {
     const exists = currentLearningUnit?.sources?.some((source) => source.name === fileName);
     if (!exists) return;
-    setSourceFocus(null);
+    setSourceFocus(focusRange);
     setSourceFile(fileName);
     setInspectorOpen(true);
     setInspectorTab("source");
@@ -258,6 +262,7 @@ export default function App() {
               if (sourceFocus?.fileName !== fileName) setSourceFocus(null);
             }}
             focusRange={sourceFocus}
+            onFocusRangeChange={setSourceFocus}
           />
         </Suspense>
       )}
@@ -350,7 +355,7 @@ export default function App() {
           <div className="demo-all-container">
             {demos.map((demo, index) => {
               const checkpointChapter = getCheckpointChapter(demo.id);
-              const learningUnit = toLearningUnit(demo);
+              const learningUnit = enrichLearningUnitSourceSemantics(toLearningUnit(demo));
               return (
                 <div key={demo.id} id={`demo-${demo.id}`}>
                   {index > 0 && <hr className="demo-divider" />}

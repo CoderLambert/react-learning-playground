@@ -6,6 +6,7 @@ import react from "@vitejs/plugin-react";
 import rehypeSlug from "rehype-slug";
 import remarkGfm from "remark-gfm";
 import { defineConfig } from "vite";
+import { sourceSemanticManifestPlugin } from "./build/sourceSemanticManifestPlugin.js";
 
 const RAW_NOTE_REGISTRY_ID = "virtual:raw-mdx-note-registry";
 const RESOLVED_RAW_NOTE_REGISTRY_ID = `\0${RAW_NOTE_REGISTRY_ID}`;
@@ -72,6 +73,7 @@ function rawMdxNotesPlugin() {
 export default defineConfig({
   base: "/react-learning-playground/",
   plugins: [
+    sourceSemanticManifestPlugin(),
     rawMdxNotesPlugin(),
     {
       // MDX rendering and raw-note loading are deliberately separate paths.

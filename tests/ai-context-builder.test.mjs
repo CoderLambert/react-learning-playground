@@ -48,6 +48,7 @@ test("buildAiContext creates note and single-source envelope", () => {
     activeSourceFile: "PropsDemo.jsx",
   });
 
+  assert.equal(context.version, 2);
   assert.deepEqual(context.learningUnit, {
     id: "props",
     title: "Props 基础传递、解构与派生计算",
@@ -84,6 +85,42 @@ test("buildAiContext supports explicit multi-source input and active file", () =
     activeSourceFile: "missing.js",
   });
   assert.equal(fallback.activeSourceFile, "Demo.jsx");
+});
+
+test("AI context keeps only semantic ranges backed by included source lines", () => {
+  const context = buildAiContext({
+    learningUnit: { id: "semantic", title: "Semantic", categoryId: "state" },
+    rawNote: "# Semantic",
+    sources: [
+      {
+        name: "Demo.jsx",
+        code: "a\nb\nc\nd\ne",
+        semantics: {
+          path: "src/demos/Demo.jsx",
+          parser: "rolldown-oxc:jsx",
+          primaryRegionId: "component:Late",
+          regions: [
+            { id: "component:Early", kind: "component", symbol: "Early", startLine: 1, endLine: 2, score: 100 },
+            { id: "component:Late", kind: "component", symbol: "Late", startLine: 4, endLine: 5, score: 120 },
+          ],
+        },
+      },
+    ],
+    limits: {
+      maxSourceCharsPerFile: 5,
+      maxTotalSourceChars: 5,
+    },
+  });
+
+  assert.equal(context.sources[0].code, "a\nb\nc");
+  assert.deepEqual(context.sources[0].semantics, {
+    path: "src/demos/Demo.jsx",
+    parser: "rolldown-oxc:jsx",
+    primaryRegionId: "component:Early",
+    regions: [
+      { id: "component:Early", kind: "component", symbol: "Early", startLine: 1, endLine: 2 },
+    ],
+  });
 });
 
 test("missing note and source content are explicit and non-fatal", () => {

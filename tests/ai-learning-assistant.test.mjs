@@ -7,19 +7,27 @@ import {
 } from "../src/ai/learningAssistantContext.js";
 import { getConfiguredAiAssistantUrl } from "../src/ai/chatClient.js";
 
-test("gateway adapter maps raw note filename and numbered source code", () => {
+test("gateway adapter maps raw note, numbered source code and semantic regions", () => {
+  const semantics = {
+    path: "src/demos/PropsDemo.jsx",
+    parser: "rolldown-oxc:jsx",
+    primaryRegionId: "component:PropsDemo",
+    regions: [
+      { id: "component:PropsDemo", kind: "component", symbol: "PropsDemo", startLine: 1, endLine: 1 },
+    ],
+  };
   const context = adaptLearningContextForGateway({
     learningUnit: { id: "props", title: "Props", category: "components" },
     note: { available: true, fileName: "props.mdx", content: "# Props" },
     sources: [
-      { name: "PropsDemo.jsx", code: "const x = 1;", numberedCode: "1 | const x = 1;" },
+      { name: "PropsDemo.jsx", code: "const x = 1;", numberedCode: "1 | const x = 1;", semantics },
     ],
     activeSourceFile: "PropsDemo.jsx",
   });
 
   assert.deepEqual(context.note, { name: "props.mdx", content: "# Props" });
   assert.deepEqual(context.sources, [
-    { name: "PropsDemo.jsx", code: "1 | const x = 1;" },
+    { name: "PropsDemo.jsx", code: "1 | const x = 1;", semantics },
   ]);
   assert.equal(context.activeSourceFile, "PropsDemo.jsx");
 });

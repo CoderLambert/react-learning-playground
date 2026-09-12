@@ -15,9 +15,9 @@ AI/source citations remain a third navigation surface, but they resolve into the
 
 ### Keep demo and implementation in one learning context
 
-The default path should be:
+The default path is:
 
-`explanation -> interactive demo -> inline implementation -> deeper inspector`
+`explanation -> interactive demo -> inline implementation -> semantic region -> deeper inspector`
 
 The learner should not be forced to change panels merely to answer “how is this demo implemented?”.
 
@@ -40,32 +40,36 @@ A source file `name` is the stable identity shared by:
 - inline file tabs;
 - inspector file tabs;
 - AI context selection;
-- `source://` citations.
+- `source://` citations;
+- semantic source manifest lookup.
 
-Switching the inline active file in focused mode updates the same persisted source-file selection used by the inspector. “在源码面板打开” therefore hands off to the exact file the learner is already reading.
+Switching the inline active file in focused mode updates the same persisted source-file selection used by the inspector. “在源码面板打开” therefore hands off to the exact file and selected source range the learner is already reading.
 
 ## Technical architecture
 
 ```text
 src/demos/index.js (?raw source)
           |
-          v
-    LearningUnit.sources
-          |
-          v
-      SourceViewer
-       /        \
- inline mode   inspector mode
-      |             |
-      +------ CodeViewer ------+
-                 |
-                 v
-          shared Shiki cache
+          +----------------------+
+          |                      |
+          v                      v
+    LearningUnit.sources   build-time AST manifest
+          |                      |
+          +----------+-----------+
+                     v
+                SourceViewer
+                 /        \
+          inline mode   inspector mode
+               |             |
+               +------ CodeViewer ------+
+                          |
+                          v
+                   shared Shiki cache
 ```
 
-`SourceViewer` owns source-surface semantics. `CodeViewer` owns file tabs, expansion, copy behavior, syntax highlighting and focus-range rendering.
+`SourceViewer` owns source-surface and semantic-navigation behavior. `CodeViewer` owns file tabs, expansion, copy behavior, syntax highlighting and focus-range rendering.
 
-The application should not create a second source rendering implementation for inline mode.
+The application does not create a second source rendering implementation for inline mode or semantic mode.
 
 ## Rendering and performance
 
@@ -74,18 +78,21 @@ The application should not create a second source rendering implementation for i
 - Highlight results are cached in a bounded shared cache, so opening the same file inline and then in the inspector does not repeat the expensive Shiki transform.
 - The cache is bounded to avoid retaining arbitrary source strings for the full application lifetime.
 - `CodeViewer` validates cached HTML against the current source text, preventing stale highlighting when a component instance receives a different file with the same name.
+- Semantic parsing happens at build/dev-server time and adds no parser dependency to the browser bundle.
 
 ## Responsive behavior
 
 Desktop/tablet:
 
 - inline disclosure lives in the main lesson column;
+- semantic controls remain horizontally scrollable when several regions exist;
 - inspector remains available as the deeper workspace;
 - expanded inline source is capped to a useful reading height.
 
 Narrow screens:
 
 - header controls may wrap;
+- semantic controls remain touch-scrollable;
 - source remains full-width in the lesson column;
 - no dependency on the inspector being visible side-by-side.
 
@@ -93,17 +100,17 @@ A future mobile bottom-sheet can be added without changing the `LearningUnit.sou
 
 ## Source regions and “core implementation”
 
-The next source-navigation layer should support semantic regions such as `Reducer`, `Event Handler`, `Effect`, `Provider`, etc. Do **not** standardize manually maintained line ranges as authored metadata: line numbers drift on ordinary edits.
+This layer is implemented by `docs/architecture/SEMANTIC-SOURCE-MANIFEST.md`.
 
-Preferred future implementation:
+The source viewer now supports semantic regions such as `Reducer`, `Event`, `Effect`, `Provider`, `Context`, `Component` and relevant React hooks. Line numbers remain generated output rather than authored metadata.
 
-1. generate a source manifest at build time from JS/JSX/TS/TSX ASTs;
-2. address regions by symbol/export identity;
+The implementation rules are:
+
+1. generate a source manifest at build time from registered JS/JSX/TS/TSX source ASTs;
+2. address regions by symbol/hook identity;
 3. resolve symbol -> current line range during build;
-4. let inline viewers offer semantic tabs such as `核心实现` / `完整文件`;
-5. keep `source://...#Lx-Ly` as a resolved navigation format rather than the authoring source of truth.
-
-Until that manifest exists, the product renders the authoritative full file rather than introducing fragile pseudo-symbol parsing.
+4. let inline viewers default to `核心实现` and always provide `完整文件`;
+5. keep `source://...#Lx-Ly` as the resolved evidence/navigation format rather than the authoring source of truth.
 
 ## Rollout rules
 
@@ -116,6 +123,8 @@ A demo is source-ready when:
 - supporting files use stable, unique names where practical;
 - source shown to learners is executable/current rather than a hand-copied teaching variant.
 
+Semantic metadata is enhancement-only: if one source cannot be semantically parsed, full-file source viewing remains available.
+
 ## Verification gates
 
 Changes to source presentation should preserve:
@@ -123,8 +132,10 @@ Changes to source presentation should preserve:
 - inspector source switching;
 - syntax highlighting;
 - source citation focus;
+- semantic-region focus;
 - copy behavior;
 - inline collapsed-by-default behavior;
-- inline-to-inspector active-file handoff;
+- inline-to-inspector active-file/range handoff;
 - continuous-reading source disclosures;
-- lint/build/content/AI contract checks.
+- JS/JSX/TS/TSX source parsing coverage;
+- lint/build/content/AI/browser contract checks.

@@ -37,6 +37,103 @@
   white-space: nowrap;
 }
 
+.source-semantic-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-subtle);
+  background: color-mix(in srgb, var(--bg-surface-secondary) 72%, var(--bg-surface));
+}
+
+.source-semantic-nav__heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+}
+
+.source-semantic-nav__eyebrow {
+  color: var(--text-subtle);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.source-semantic-nav__citation {
+  overflow: hidden;
+  color: var(--color-primary);
+  font-size: 11px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.source-semantic-nav__controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow-x: auto;
+  padding-bottom: 1px;
+  scrollbar-width: thin;
+}
+
+.source-semantic-chip {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 5px;
+  min-height: 28px;
+  padding: 4px 9px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-full);
+  background: var(--bg-surface);
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
+  transition: border-color var(--transition-fast), background var(--transition-fast), color var(--transition-fast);
+}
+
+.source-semantic-chip:hover {
+  border-color: var(--color-primary-border);
+  color: var(--color-primary);
+}
+
+.source-semantic-chip:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.source-semantic-chip.is-active {
+  border-color: var(--color-primary-border);
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+.source-semantic-chip--primary {
+  border-style: solid;
+}
+
+.source-semantic-chip__detail {
+  max-width: 180px;
+  overflow: hidden;
+  color: inherit;
+  font-weight: 500;
+  opacity: 0.78;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.source-semantic-chip--full {
+  margin-left: auto;
+}
+
 .source-viewer-empty {
   display: grid;
   min-height: 180px;
@@ -59,5 +156,23 @@
 
   .source-viewer-open-inspector {
     padding-inline: 8px;
+  }
+
+  .source-semantic-nav {
+    padding-inline: 10px;
+  }
+
+  .source-semantic-nav__heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .source-semantic-chip__detail {
+    max-width: 120px;
+  }
+
+  .source-semantic-chip--full {
+    margin-left: 0;
   }
 }
