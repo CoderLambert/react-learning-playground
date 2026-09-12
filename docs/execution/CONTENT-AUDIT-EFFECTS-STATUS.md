@@ -6,12 +6,15 @@
 - Stacked base: `automation/content-audit-queue`
 - Base head at lane creation: `3c15c8eecc68e6be3ab95b35fa456357fb6f409c`
 - Branch: `automation/content-audit-effects`
+- Stacked PR: `#84` → `automation/content-audit-queue`, kept open and unmerged.
 - Scope: Effect/lifecycle residuals only; no edits to Lane A/Lane C files or specialist PR #78/#79/#81/#82 ownership.
 
-The base PR #80 exact head had:
+The base PR #80 exact head at lane creation had:
 
 - `React Learning Verify #287`: PASS
-- `Workbench Integration Verify #226`: FAIL in the broader audit queue; this lane does not own the queue-level E2E stabilization unless a failure is attributable to its files.
+- `Workbench Integration Verify #226`: FAIL in the broader audit queue; this lane does not own queue-level E2E stabilization unless a failure is attributable to its files.
+
+The Core Lane advanced PR #80 while this run was editing. This branch was reconciled with the newer queue head using a normal merge commit (no force update / history rewrite), preserving both lanes' files.
 
 ## Completed this run
 
@@ -65,10 +68,14 @@ No additional dependency-ready Effect/lifecycle hard-gate failure was found with
 
 ## Validation
 
-This environment does not expose a local checkout, so no local `npm` command is claimed. Exact-head GitHub Actions on the stacked PR are the acceptance source. Do not treat base-head CI as proof for this branch's executable changes.
+Validation evidence is intentionally conservative:
+
+- PR #84 is a stacked PR targeting `automation/content-audit-queue`.
+- The repository's `React Learning Verify` workflow only triggers pull requests targeting `main` or the listed integration branches, so PR #84 currently has no exact-head Actions run. This is a workflow-trigger limitation, not a PASS.
+- A local checkout was attempted for `npm` validation, but the execution container could not resolve `github.com` (`Could not resolve host: github.com`) and therefore could not clone/install the repository. No local test/lint/build PASS is claimed.
+- The stacked PR diff/mergeability and branch ownership are still checked through GitHub; executable validation remains pending until this head is tested in a workflow-eligible integration/base context or a later environment with a runnable checkout.
 
 ## Next
 
-- Inspect exact-head CI for this branch/stacked PR.
-- Fix only failures attributable to these Effect/lifecycle changes.
-- If exact-head validation passes and no new Effect/lifecycle hard-gate regression appears, this lane has no further safe scope and can remain ready for review rather than expanding into another lane.
+- If executable validation becomes available, run the repository lint/build/content/browser gates on the exact Effects head and fix only failures attributable to these files.
+- If no new Effect/lifecycle hard-gate regression appears, this lane has no further safe content scope and should remain ready for review rather than expanding into another lane.
