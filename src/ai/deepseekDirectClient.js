@@ -7,6 +7,7 @@ import {
 } from "./deepseekBrowserSettings.js";
 import { AI_LEARNING_ASSISTANT_SYSTEM_PROMPT } from "./assistantSystemPrompt.js";
 import { normalizeFinishReason } from "./finishReason.js";
+import { createDeepSeekChatCompletionsAdapter } from "./providers/deepseek/DeepSeekChatCompletionsAdapter.js";
 
 // Provider token allowance, deliberately distinct from the 6000-character UI cap.
 // DeepSeek currently supports a much larger official maximum output; 16K gives
@@ -168,11 +169,26 @@ export function createDeepSeekDirectClient({
   const normalizedKey = typeof apiKey === "string" ? apiKey.trim() : "";
   const normalizedModel = normalizeDeepSeekModel(model);
   const endpoint = `${normalizeBaseUrl(baseUrl)}/chat/completions`;
+  const modelClient = createDeepSeekChatCompletionsAdapter({
+    apiKey: normalizedKey,
+    model: normalizedModel,
+    baseUrl: normalizeBaseUrl(baseUrl),
+    maxTokens,
+    fetchImpl,
+  });
 
   return {
     endpoint,
     model: normalizedModel,
     configured: Boolean(normalizedKey),
+
+    /**
+     * Provider-neutral AgentRunner entry point. The legacy stream() method
+     * below remains the browser chat compatibility surface.
+     */
+    async *streamTurn(request, options = {}) {
+      yield* modelClient.streamTurn(request, options);
+    },
 
     async stream(request, { signal, onEvent } = {}) {
       if (!normalizedKey) {

@@ -1,3 +1,5 @@
+import { INSPECTOR_PANEL_IDS } from "./inspectorPanels.js";
+
 export const WORKBENCH_DIMENSIONS = Object.freeze({
   navigationExpandedWidth: 288,
   navigationCollapsedWidth: 56,
@@ -27,7 +29,9 @@ export const WORKBENCH_CSS_VARS = Object.freeze({
   resizeHandleWidth: "--workbench-resize-handle-width",
 });
 
-export const INSPECTOR_TABS = Object.freeze(["notes", "source", "ai"]);
+// Backward-compatible alias for existing workbench state/storage consumers.
+// The registry is now the single source of truth for inspector panel ids.
+export const INSPECTOR_TABS = INSPECTOR_PANEL_IDS;
 
 export const DEFAULT_INSPECTOR_STATE = Object.freeze({
   open: true,

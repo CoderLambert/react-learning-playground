@@ -20,6 +20,9 @@ import {
   buildCompletedChatHistory,
 } from "./learningAssistantContext.js";
 import { createUnicodeOutputLimiter } from "./outputLimit.js";
+import { createToolExecutionContext } from "./agent/agentContracts.js";
+import { createAgentRunStore } from "./agent/agentRunStore.js";
+import { MODEL_TURN_EVENT_TYPES } from "./providers/modelClient.js";
 
 const GATEWAY_TRANSPORT_INPUT_CAP_TOKENS = 24 * 1024;
 
@@ -42,7 +45,30 @@ function normalizeUsage(usage) {
   };
 }
 
-export function useAiLearningAssistant({ learningUnit, activeSourceFile } = {}) {
+function buildAgentMessages({ question, context, history = [] }) {
+  const material = [
+    "<learning_material>",
+    JSON.stringify(context, null, 2),
+    "</learning_material>",
+    "",
+    "<question>",
+    question,
+    "</question>",
+  ].join("\n");
+  return [
+    { role: "system", content: AI_LEARNING_ASSISTANT_SYSTEM_PROMPT },
+    ...history
+      .filter((message) => (
+        (message?.role === "user" || message?.role === "assistant") &&
+        typeof message.content === "string" &&
+        message.content.trim()
+      ))
+      .map(({ role, content }) => ({ role, content })),
+    { role: "user", content: material },
+  ];
+}
+
+export function useAiLearningAssistant({ learningUnit, activeSourceFile, assessmentRuntime = null } = {}) {
   const [chatState, dispatch] = useReducer(chatReducer, INITIAL_CHAT_STATE);
   const [inputValue, setInputValue] = useState("");
   const [deepSeekSettings, setDeepSeekSettings] = useState(() => loadDeepSeekBrowserSettings());
@@ -61,6 +87,8 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile } = {}) 
   const [compacting, setCompacting] = useState(false);
   const [compactionNotice, setCompactionNotice] = useState(null);
   const [contextSelectionNotice, setContextSelectionNotice] = useState(null);
+  const [mode, setMode] = useState("chat");
+  const [agentAuditStore, setAgentAuditStore] = useState(null);
   const abortControllerRef = useRef(null);
   const activeRequestIdRef = useRef(null);
   const compactionPromiseRef = useRef(null);
@@ -71,6 +99,10 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile } = {}) 
     model: deepSeekSettings.model,
   }), [deepSeekSettings.apiKey, deepSeekSettings.model]);
   const client = directClient.configured ? directClient : gatewayClient;
+  const agentRunner = useMemo(() => {
+    if (!assessmentRuntime?.createAgentRunner || !agentAuditStore || typeof client?.streamTurn !== "function") return null;
+    return assessmentRuntime.createAgentRunner(client, { auditStore: agentAuditStore });
+  }, [agentAuditStore, assessmentRuntime, client]);
   const connectionMode = directClient.configured
     ? "browser"
     : gatewayClient.configured
@@ -97,6 +129,20 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile } = {}) 
       setRepository(repo);
       setConversationStorage({ mode: store.mode, reason: store.fallbackReason ?? null });
       setConversations(await repo.listConversations({ includeArchived: true }));
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    void createAgentRunStore().then(async (store) => {
+      await store.recoverInterruptedRuns();
+      if (!cancelled) setAgentAuditStore(store);
+    }).catch(() => {
+      // createAgentRunStore normally supplies a Memory fallback. If a custom
+      // browser blocks even that initialization, chat remains available and
+      // assessment authoring is simply unavailable until the next load.
+      if (!cancelled) setAgentAuditStore(null);
     });
     return () => { cancelled = true; };
   }, []);
@@ -604,16 +650,36 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile } = {}) 
         assertCurrentRequest();
       }
 
-      await client.stream(
-        { question: normalizedQuestion, context: outboundContext, history: selected.context.history },
-        {
+      // Capability is explicit UI/runtime state, never inferred from natural
+      // language. Ordinary chat continues through the no-tools transport.
+      if (mode === "assessment_authoring" && agentRunner) {
+        const agentContext = createToolExecutionContext({
+          learningUnitId,
+          conversationId: conversation?.id ?? `conversation-${requestId}`,
+          agentRunId: requestId,
+          contextSnapshotId: snapshot?.id ?? `context-${requestId}`,
+          mutationId: `${requestId}:runtime`,
+          model: contextModelId,
+          actor: { type: "ai_agent", model: contextModelId },
+        });
+        await agentRunner.run({
+          messages: buildAgentMessages({
+            question: normalizedQuestion,
+            context: outboundContext,
+            history: selected.context.history,
+          }),
+          context: agentContext,
           signal: controller.signal,
+          // Provider wire contracts deliberately only distinguish chat and
+          // compaction. Capability selection happened above; this remains a
+          // normal tool-enabled chat turn on both direct and gateway clients.
+          purpose: "chat",
           onEvent(event) {
             if (activeRequestIdRef.current !== requestId) return;
-            if (event.type === CHAT_EVENT_TYPES.START) {
+            if (event.type === MODEL_TURN_EVENT_TYPES.TURN_START) {
               dispatch({ type: "start", requestId });
               void enqueuePersistence();
-            } else if (event.type === CHAT_EVENT_TYPES.DELTA) {
+            } else if (event.type === MODEL_TURN_EVENT_TYPES.TEXT_DELTA) {
               const limited = outputLimiter.push(event.text);
               assistantText = limited.content;
               if (limited.acceptedText) {
@@ -623,12 +689,38 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile } = {}) 
               void enqueuePersistence(() => {
                 persister?.schedule({ content: persistedText, status: "streaming" });
               });
-            } else if (event.type === CHAT_EVENT_TYPES.DONE) {
+            } else if (event.type === MODEL_TURN_EVENT_TYPES.TURN_COMPLETE) {
               terminalEvent = event;
             }
           },
-        },
-      );
+        });
+      } else {
+        await client.stream(
+          { question: normalizedQuestion, context: outboundContext, history: selected.context.history },
+          {
+            signal: controller.signal,
+            onEvent(event) {
+              if (activeRequestIdRef.current !== requestId) return;
+              if (event.type === CHAT_EVENT_TYPES.START) {
+                dispatch({ type: "start", requestId });
+                void enqueuePersistence();
+              } else if (event.type === CHAT_EVENT_TYPES.DELTA) {
+                const limited = outputLimiter.push(event.text);
+                assistantText = limited.content;
+                if (limited.acceptedText) {
+                  dispatch({ type: "delta", requestId, text: limited.acceptedText });
+                }
+                const persistedText = assistantText;
+                void enqueuePersistence(() => {
+                  persister?.schedule({ content: persistedText, status: "streaming" });
+                });
+              } else if (event.type === CHAT_EVENT_TYPES.DONE) {
+                terminalEvent = event;
+              }
+            },
+          },
+        );
+      }
       const finishReason = outputLimitExceeded
         ? "output_limit"
         : normalizeFinishReason(terminalEvent?.finishReason);
@@ -685,7 +777,7 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile } = {}) 
         abortControllerRef.current = null;
       }
     }
-  }, [activeSourceFile, aiContext, chatState.messages, client, compactContext, compactedMessageCount, completedHistory, connectionMode, contextModelId, ensureConversation, lastActualUsage, learningUnitId, messagesSinceCompaction, noteState.loading, refreshConversations, repository, requestContext, summaryText]);
+  }, [activeSourceFile, agentRunner, aiContext, chatState.messages, client, compactContext, compactedMessageCount, completedHistory, connectionMode, contextModelId, ensureConversation, lastActualUsage, learningUnitId, messagesSinceCompaction, mode, noteState.loading, refreshConversations, repository, requestContext, summaryText]);
 
   useEffect(() => () => abortControllerRef.current?.abort(), []);
 
@@ -713,6 +805,9 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile } = {}) 
   if (conversationStorage.mode === "memory") {
     noticeParts.push("浏览器本地持久化不可用，本次会话仅保存在内存中。");
   }
+  if (mode === "assessment_authoring" && !agentRunner) {
+    noticeParts.push("正在初始化评测工具审计存储…");
+  }
 
   return {
     configured: client.configured,
@@ -727,6 +822,9 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile } = {}) 
     conversations: visibleConversations,
     conversationHistory: conversations,
     conversationStorage,
+    mode,
+    enterAssessmentAuthoring: () => setMode("assessment_authoring"),
+    exitAssessmentAuthoring: () => setMode("chat"),
     learningUnitId,
     activeConversationId,
     selectConversation: hydrateConversation,
@@ -739,7 +837,8 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile } = {}) 
     status: chatState.status,
     error: noteState.error?.message || chatState.error,
     notice: noticeParts.filter(Boolean).join(" ") || null,
-    disabled: !client.configured || !contextReady || chatState.status === CHAT_STATUS.STREAMING,
+    disabled: !client.configured || !contextReady || chatState.status === CHAT_STATUS.STREAMING ||
+      (mode === "assessment_authoring" && !agentRunner),
     settingsDisabled: chatState.status === CHAT_STATUS.STREAMING,
     saveConnectionSettings,
     clearConnectionSettings,
