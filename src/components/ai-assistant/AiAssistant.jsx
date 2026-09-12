@@ -1,4 +1,4 @@
-import { useId } from "react";
+import { useId, useMemo, useState } from "react";
 import MarkdownRender from "markstream-react";
 import "markstream-react/index.css";
 import {
@@ -8,8 +8,14 @@ import {
 import { AiSourcePreviewProvider } from "./citations/AiSourceLink.jsx";
 import { SourceCitation } from "./citations/SourceCitation.js";
 import { AI_MARKDOWN_CUSTOM_ID } from "./code/registerAiCodeBlock.js";
+import {
+  copyTextToClipboard,
+  formatMessageForClipboard,
+} from "./message-actions/messageClipboard.js";
+import { useTranscriptAutoFollow } from "./hooks/useTranscriptAutoFollow.js";
 import "./citations/SourceCitation.css";
 import "./AiAssistant.css";
+import "./AiAssistantMessageUx.css";
 
 const DEFAULT_SUGGESTIONS = [
   "解释当前 Demo 最重要的 React 概念",
@@ -25,68 +31,39 @@ const FINISH_REASON_COPY = Object.freeze({
 
 function normalizeContextItems(contextSummary) {
   if (!contextSummary) return [];
-
   if (Array.isArray(contextSummary)) {
-    return contextSummary
-      .filter(Boolean)
-      .map((item, index) => {
-        if (typeof item === "string") {
-          return { key: `context-${index}`, label: item, kind: "context" };
-        }
-
-        return {
-          key: item.key ?? `${item.kind ?? "context"}-${item.label ?? index}`,
-          label: item.label ?? item.name ?? "当前上下文",
-          kind: item.kind ?? "context",
-          active: Boolean(item.active),
-        };
-      });
+    return contextSummary.filter(Boolean).map((item, index) => {
+      if (typeof item === "string") return { key: `context-${index}`, label: item, kind: "context" };
+      return {
+        key: item.key ?? `${item.kind ?? "context"}-${item.label ?? index}`,
+        label: item.label ?? item.name ?? "当前上下文",
+        kind: item.kind ?? "context",
+        active: Boolean(item.active),
+      };
+    });
   }
 
   const items = [];
-  if (contextSummary.note) {
-    items.push({ key: "note", label: contextSummary.note, kind: "note" });
-  }
-
+  if (contextSummary.note) items.push({ key: "note", label: contextSummary.note, kind: "note" });
   const sources = Array.isArray(contextSummary.sources)
     ? contextSummary.sources
     : contextSummary.source
       ? [contextSummary.source]
       : [];
-
   for (const source of sources) {
     const label = typeof source === "string" ? source : source?.name ?? source?.label;
     if (!label) continue;
-    items.push({
-      key: `source-${label}`,
-      label,
-      kind: "source",
-      active: label === contextSummary.activeSourceFile,
-    });
+    items.push({ key: `source-${label}`, label, kind: "source", active: label === contextSummary.activeSourceFile });
   }
-
-  if (
-    contextSummary.activeSourceFile &&
-    !items.some((item) => item.label === contextSummary.activeSourceFile)
-  ) {
-    items.push({
-      key: "active-source",
-      label: contextSummary.activeSourceFile,
-      kind: "source",
-      active: true,
-    });
+  if (contextSummary.activeSourceFile && !items.some((item) => item.label === contextSummary.activeSourceFile)) {
+    items.push({ key: "active-source", label: contextSummary.activeSourceFile, kind: "source", active: true });
   }
-
   return items;
 }
 
 function ContextChips({ contextSummary }) {
   const items = normalizeContextItems(contextSummary);
-
-  if (items.length === 0) {
-    return <span className="ai-assistant-context-empty">未提供学习上下文</span>;
-  }
-
+  if (items.length === 0) return <span className="ai-assistant-context-empty">未提供学习上下文</span>;
   return (
     <div className="ai-assistant-context-list" aria-label="AI 当前参考内容">
       {items.map((item) => (
@@ -96,9 +73,7 @@ function ContextChips({ contextSummary }) {
           data-context-kind={item.kind}
           title={item.active ? `${item.label}（当前源码）` : item.label}
         >
-          <span aria-hidden="true">
-            {item.kind === "note" ? "笔记" : item.kind === "source" ? "源码" : "上下文"}
-          </span>
+          <span aria-hidden="true">{item.kind === "note" ? "笔记" : item.kind === "source" ? "源码" : "上下文"}</span>
           <strong>{item.label}</strong>
           {item.active ? <em>当前</em> : null}
         </span>
@@ -135,13 +110,11 @@ function AssistantMarkdown({ content, isStreaming, sources }) {
   );
 }
 
-function Message({ message, isStreaming, onCitationOpen, sources }) {
+function Message({ message, isStreaming, onCitationOpen, onCopy, sources }) {
   const role = message?.role === "user" ? "user" : "assistant";
   const content = typeof message?.content === "string" ? message.content : "";
   const isAssistant = role === "assistant";
-  const finishReason = isAssistant
-    ? message?.finishReason ?? message?.metadata?.finishReason ?? null
-    : null;
+  const finishReason = isAssistant ? message?.finishReason ?? message?.metadata?.finishReason ?? null : null;
   const finishReasonCopy = finishReason ? FINISH_REASON_COPY[finishReason] : null;
   const citations = isAssistant && content ? extractSourceCitations(content, { dedupe: true }) : [];
 
@@ -152,9 +125,7 @@ function Message({ message, isStreaming, onCitationOpen, sources }) {
       data-finish-reason={finishReason || undefined}
       aria-busy={isAssistant && isStreaming ? "true" : undefined}
     >
-      <div className="ai-assistant-message-avatar" aria-hidden="true">
-        {isAssistant ? "AI" : "你"}
-      </div>
+      <div className="ai-assistant-message-avatar" aria-hidden="true">{isAssistant ? "AI" : "你"}</div>
       <div className="ai-assistant-message-body">
         <header className="ai-assistant-message-header">
           <strong>{isAssistant ? "AI 学习助手" : "你"}</strong>
@@ -189,11 +160,20 @@ function Message({ message, isStreaming, onCitationOpen, sources }) {
             </div>
           ) : null}
         </div>
-        {finishReasonCopy ? (
-          <p className="ai-assistant-finish-reason">
-            {finishReasonCopy}
-          </p>
+        {content ? (
+          <div className="ai-assistant-message-actions" aria-label={`${isAssistant ? "AI 回答" : "你的消息"}操作`}>
+            <button
+              type="button"
+              className="ai-assistant-message-action"
+              onClick={() => onCopy?.(content, role)}
+              disabled={isAssistant && isStreaming}
+              aria-label={`复制${isAssistant ? "回答" : "消息"}`}
+            >
+              复制
+            </button>
+          </div>
         ) : null}
+        {finishReasonCopy ? <p className="ai-assistant-finish-reason">{finishReasonCopy}</p> : null}
       </div>
     </article>
   );
@@ -201,7 +181,6 @@ function Message({ message, isStreaming, onCitationOpen, sources }) {
 
 function EmptyState({ suggestions, onSuggestionSelect, disabled }) {
   const resolvedSuggestions = suggestions?.length ? suggestions : DEFAULT_SUGGESTIONS;
-
   return (
     <div className="ai-assistant-empty-state">
       <div className="ai-assistant-empty-icon" aria-hidden="true">✦</div>
@@ -209,12 +188,7 @@ function EmptyState({ suggestions, onSuggestionSelect, disabled }) {
       <p>问题越具体，越容易得到针对当前 Demo 的解释。</p>
       <div className="ai-assistant-suggestions" aria-label="建议问题">
         {resolvedSuggestions.slice(0, 4).map((suggestion) => (
-          <button
-            key={suggestion}
-            type="button"
-            onClick={() => onSuggestionSelect?.(suggestion)}
-            disabled={disabled}
-          >
+          <button key={suggestion} type="button" onClick={() => onSuggestionSelect?.(suggestion)} disabled={disabled}>
             {suggestion}
           </button>
         ))}
@@ -251,13 +225,24 @@ export function AiAssistant({
   const errorId = useId();
   const noticeId = useId();
   const statusId = useId();
+  const [toast, setToast] = useState(null);
   const isStreaming = status === "streaming" || status === "loading";
   const isSubmitDisabled = disabled || isStreaming || !inputValue.trim();
-  const statusText = isStreaming
-    ? "AI 正在生成回答"
-    : status === "error"
-      ? "AI 回答失败"
-      : "";
+  const statusText = isStreaming ? "AI 正在生成回答" : status === "error" ? "AI 回答失败" : "";
+  const latestContentVersion = useMemo(() => {
+    const latest = messages[messages.length - 1];
+    return typeof latest?.content === "string" ? latest.content.length : 0;
+  }, [messages]);
+  const {
+    transcriptRef,
+    showBackToLatest,
+    handleScroll,
+    scrollToLatest,
+  } = useTranscriptAutoFollow({
+    messageCount: messages.length,
+    contentVersion: latestContentVersion,
+    isStreaming,
+  });
 
   const submit = () => {
     const question = inputValue.trim();
@@ -284,74 +269,78 @@ export function AiAssistant({
     onInputChange?.(suggestion);
   };
 
+  const handleCopyMessage = async (content, role) => {
+    try {
+      await copyTextToClipboard(formatMessageForClipboard(content));
+      setToast({ kind: "success", text: role === "user" ? "已复制消息" : "已复制回答" });
+    } catch (copyError) {
+      setToast({ kind: "error", text: copyError?.message ?? "复制失败，请重试。" });
+    }
+    globalThis.setTimeout?.(() => setToast(null), 2200);
+  };
+
   const sourcePreviewEntries = Array.isArray(contextSummary?.sources) ? contextSummary.sources : [];
 
   return (
-    <section
-      className={`ai-assistant ${className}`.trim()}
-      aria-label="AI 学习助手"
-      data-ai-status={status}
-    >
+    <section className={`ai-assistant ${className}`.trim()} aria-label="AI 学习助手" data-ai-status={status}>
       <header className="ai-assistant-context">
         <div>
           <strong>当前学习上下文</strong>
           {(providerLabel || modelLabel) && (
-            <span className="ai-assistant-provider">
-              {[providerLabel, modelLabel].filter(Boolean).join(" · ")}
-            </span>
+            <span className="ai-assistant-provider">{[providerLabel, modelLabel].filter(Boolean).join(" · ")}</span>
           )}
         </div>
         <ContextChips contextSummary={contextSummary} />
         {settings ? <div className="ai-assistant-settings-slot">{settings}</div> : null}
       </header>
 
-      {conversationNavigation ? (
-        <div className="ai-assistant-conversation-navigation">{conversationNavigation}</div>
-      ) : null}
+      {conversationNavigation ? <div className="ai-assistant-conversation-navigation">{conversationNavigation}</div> : null}
 
-      <div
-        className="ai-assistant-transcript"
-        role="log"
-        aria-label="AI 对话记录"
-        aria-live="off"
-      >
-        {messages.length === 0 ? (
-          <EmptyState
-            suggestions={suggestions}
-            onSuggestionSelect={handleSuggestion}
-            disabled={disabled || isStreaming}
-          />
-        ) : (
-          messages.map((message, index) => (
-            <Message
-              key={message.id ?? `${message.role ?? "message"}-${index}`}
-              message={message}
-              isStreaming={Boolean(message.streaming) || (isStreaming && index === messages.length - 1 && message.role !== "user")}
-              onCitationOpen={onCitationOpen}
-              sources={sourcePreviewEntries}
-            />
-          ))
-        )}
+      <div className="ai-assistant-transcript-wrap">
+        <div
+          ref={transcriptRef}
+          className="ai-assistant-transcript"
+          role="log"
+          aria-label="AI 对话记录"
+          aria-live="off"
+          onScroll={handleScroll}
+        >
+          {messages.length === 0 ? (
+            <EmptyState suggestions={suggestions} onSuggestionSelect={handleSuggestion} disabled={disabled || isStreaming} />
+          ) : (
+            messages.map((message, index) => (
+              <Message
+                key={message.id ?? `${message.role ?? "message"}-${index}`}
+                message={message}
+                isStreaming={Boolean(message.streaming) || (isStreaming && index === messages.length - 1 && message.role !== "user")}
+                onCitationOpen={onCitationOpen}
+                onCopy={handleCopyMessage}
+                sources={sourcePreviewEntries}
+              />
+            ))
+          )}
+        </div>
+        {showBackToLatest ? (
+          <button type="button" className="ai-assistant-back-to-latest" onClick={() => scrollToLatest("smooth")}>
+            ↓ 回到最新消息
+          </button>
+        ) : null}
       </div>
 
-      <div id={statusId} className="ai-assistant-live-status" role="status" aria-live="polite" aria-atomic="true">
-        {statusText}
-      </div>
+      <div id={statusId} className="ai-assistant-live-status" role="status" aria-live="polite" aria-atomic="true">{statusText}</div>
 
-      {notice ? (
-        <div id={noticeId} className="ai-assistant-notice" role="status">
-          {notice}
+      {toast ? (
+        <div className={`ai-assistant-toast ${toast.kind === "error" ? "is-error" : ""}`.trim()} role="status" aria-live="polite">
+          {toast.text}
         </div>
       ) : null}
+
+      {notice ? <div id={noticeId} className="ai-assistant-notice" role="status">{notice}</div> : null}
 
       {error ? (
         <div id={errorId} className="ai-assistant-error" role="alert">
           <span>{typeof error === "string" ? error : error.message ?? "请求失败，请稍后重试。"}</span>
-          {onRetry ? (
-            <button type="button" onClick={onRetry} disabled={disabled || isStreaming}>
-              重试
-            </button>
-          ) : null}
+          {onRetry ? <button type="button" onClick={onRetry} disabled={disabled || isStreaming}>重试</button> : null}
         </div>
       ) : null}
 
@@ -373,23 +362,14 @@ export function AiAssistant({
           <span className="ai-assistant-shortcut">Enter 发送 · Shift+Enter 换行</span>
           <div className="ai-assistant-actions">
             {onReset ? (
-              <button
-                type="button"
-                className="ai-assistant-secondary-button"
-                onClick={onReset}
-                disabled={disabled || isStreaming || messages.length === 0}
-              >
+              <button type="button" className="ai-assistant-secondary-button" onClick={onReset} disabled={disabled || isStreaming || messages.length === 0}>
                 新对话
               </button>
             ) : null}
             {isStreaming && onStop ? (
-              <button type="button" className="ai-assistant-stop-button" onClick={onStop}>
-                停止
-              </button>
+              <button type="button" className="ai-assistant-stop-button" onClick={onStop}>停止</button>
             ) : (
-              <button type="submit" className="ai-assistant-send-button" disabled={isSubmitDisabled}>
-                发送
-              </button>
+              <button type="submit" className="ai-assistant-send-button" disabled={isSubmitDisabled}>发送</button>
             )}
           </div>
         </div>
