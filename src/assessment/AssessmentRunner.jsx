@@ -30,7 +30,11 @@ function createInitialAttempt(repository, chapter, questions) {
 }
 
 export function AssessmentRunner({ chapter, prompts, onAskAi }) {
-  const questions = useMemo(() => toPracticeQuestions(chapter, prompts), [chapter, prompts]);
+  const serializedPrompts = JSON.stringify(prompts ?? []);
+  const questions = useMemo(
+    () => toPracticeQuestions(chapter, JSON.parse(serializedPrompts)),
+    [chapter, serializedPrompts],
+  );
   const repository = useMemo(() => createAttemptRepository(), []);
   const [attempt, setAttempt] = useState(() => createInitialAttempt(repository, chapter, questions));
   const [filter, setFilter] = useState("all");
