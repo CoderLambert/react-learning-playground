@@ -90,6 +90,16 @@ export function AssessmentRunner({ chapter, prompts, onAskAi }) {
     focusAnswer();
   }
 
+  function skipCurrent() {
+    if (!current) return;
+    const next = visibleQuestions[visibleIndex + 1];
+    setAttempt((value) => {
+      const skipped = updateAnswer(value, current, { status: ANSWER_STATUS.SKIPPED, draft: "" });
+      return next ? navigateAttempt(skipped, next.id) : skipped;
+    });
+    if (next) focusAnswer();
+  }
+
   function restart() {
     repository.clear(chapter);
     setAttempt(createAttempt({ chapter, questions, sessionId: `chapter-${chapter}-current` }));
@@ -111,6 +121,22 @@ export function AssessmentRunner({ chapter, prompts, onAskAi }) {
       setFeedback("Markdown Summary 已复制。");
     } catch {
       setFeedback("复制失败，请检查浏览器剪贴板权限。");
+    }
+  }
+
+  async function handoffToAi() {
+    if (!current) return;
+    const handoff = buildAssessmentAiHandoff({ chapter, question: current, answer });
+    if (onAskAi) {
+      onAskAi(handoff);
+      setFeedback("已将当前题与回答发送到 AI Tutor。");
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(handoff.prompt);
+      setFeedback("AI 辅导 Prompt 已复制，可粘贴到 AI Tutor 继续推理。");
+    } catch {
+      setFeedback("复制 AI 辅导 Prompt 失败，请检查浏览器剪贴板权限。");
     }
   }
 
@@ -180,10 +206,10 @@ export function AssessmentRunner({ chapter, prompts, onAskAi }) {
 
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 16 }}>
             <button type="button" onClick={() => move(-1)} disabled={visibleIndex <= 0}>上一题</button>
-            <button type="button" onClick={() => patchCurrent({ status: ANSWER_STATUS.SKIPPED, draft: "" })}>跳过</button>
+            <button type="button" onClick={skipCurrent}>跳过</button>
             <button type="button" onClick={() => move(1)} disabled={visibleIndex < 0 || visibleIndex >= visibleQuestions.length - 1}>保存并继续</button>
             <button type="button" onClick={reanswerCurrent}>重新回答</button>
-            {onAskAi && <button type="button" onClick={() => onAskAi(buildAssessmentAiHandoff({ chapter, question: current, answer }))}>让 AI 帮我继续推理</button>}
+            <button type="button" onClick={handoffToAi}>{onAskAi ? "让 AI 帮我继续推理" : "复制 AI 辅导 Prompt"}</button>
             <button type="button" onClick={() => setAttempt((value) => completeAttempt(value))}>完成练习</button>
           </div>
         </div>
