@@ -65,8 +65,7 @@ function parserLanguage(filePath) {
 function getProperty(objectNode, name) {
   if (!objectNode || objectNode.type !== "ObjectExpression") return null;
   return objectNode.properties?.find((property) => {
-    if (!property || property.type !== "Property") return false;
-    if (property.computed) return false;
+    if (!property || property.type !== "Property" || property.computed) return false;
     return property.key?.name === name || property.key?.value === name;
   }) ?? null;
 }
@@ -163,6 +162,7 @@ function nodeLines(node, lineStarts) {
       endLine: Math.max(node.loc.start.line, node.loc.end.line),
     };
   }
+
   const start = Number.isFinite(node.start) ? node.start : 0;
   const end = Number.isFinite(node.end) ? Math.max(start, node.end - 1) : start;
   const startLine = offsetToLine(start, lineStarts);
@@ -180,7 +180,6 @@ function conceptBoost({ demoId, demoTitle, kind, symbol, hookName }) {
   const concept = normalizeSearch(`${demoId} ${demoTitle}`);
   const candidate = normalizeSearch(`${kind} ${symbol} ${hookName}`);
   let boost = 0;
-
   const rules = [
     [/reducer|reduce/, new Set(["reducer", "reducer-hook"]), 110],
     [/effect/, new Set(["effect"]), 105],
@@ -238,8 +237,16 @@ function makeRegion({
   };
 }
 
-function functionNameForNode(functionNode, descriptorsByFunction) {
-  return descriptorsByFunction.get(functionNode)?.symbol ?? null;
+function dedupeRegions(regions) {
+  const seen = new Set();
+  const output = [];
+  for (const region of regions) {
+    const key = `${region.kind}:${region.startLine}:${region.endLine}:${region.symbol}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    output.push(region);
+  }
+  return output;
 }
 
 function analyzeSource(ast, metadata) {
@@ -254,12 +261,14 @@ function analyzeSource(ast, metadata) {
 
   walk(ast, (node, parents) => {
     if (node.type === "FunctionDeclaration" && node.id?.name) {
+      const parentFunctionNode = nearest(parents, (item) => descriptorsByFunction.has(item));
+      const parentSymbol = parentFunctionNode ? descriptorsByFunction.get(parentFunctionNode)?.symbol ?? null : null;
       const descriptor = {
         symbol: node.id.name,
-        functionNode: node,
         rangeNode: nearest(parents, (item) => item.type === "ExportNamedDeclaration" || item.type === "ExportDefaultDeclaration") ?? node,
         exported: exportedFromParents(parents),
-        topLevel: !nearest(parents, (item) => item.type === "FunctionDeclaration" || item.type === "FunctionExpression" || item.type === "ArrowFunctionExpression"),
+        topLevel: !parentFunctionNode,
+        parentSymbol,
         hasJsx: false,
         providesContext: false,
       };
@@ -268,33 +277,32 @@ function analyzeSource(ast, metadata) {
       return;
     }
 
-    if (node.type === "VariableDeclarator" && node.id?.type === "Identifier") {
-      const init = node.init;
-      const declaration = nearest(parents, (item) => item.type === "VariableDeclaration") ?? node;
-      const exported = exportedFromParents(parents);
-      const outerFunction = nearest(parents, (item) => descriptorsByFunction.has(item));
+    if (node.type !== "VariableDeclarator" || node.id?.type !== "Identifier") return;
+    const init = node.init;
+    const declaration = nearest(parents, (item) => item.type === "VariableDeclaration") ?? node;
+    const exported = exportedFromParents(parents);
+    const parentFunctionNode = nearest(parents, (item) => descriptorsByFunction.has(item));
+    const parentSymbol = parentFunctionNode ? descriptorsByFunction.get(parentFunctionNode)?.symbol ?? null : null;
 
-      if (init?.type === "ArrowFunctionExpression" || init?.type === "FunctionExpression") {
-        const descriptor = {
-          symbol: node.id.name,
-          functionNode: init,
-          rangeNode: declaration,
-          exported,
-          topLevel: !outerFunction,
-          hasJsx: false,
-          providesContext: false,
-        };
-        functionDescriptors.push(descriptor);
-        descriptorsByFunction.set(init, descriptor);
-      } else if (init?.type === "CallExpression" && /(^|\.)createContext$/.test(calleeName(init) ?? "")) {
-        contextDescriptors.push({
-          symbol: node.id.name,
-          rangeNode: declaration,
-          exported,
-          topLevel: !outerFunction,
-        });
-      }
-      return;
+    if (init?.type === "ArrowFunctionExpression" || init?.type === "FunctionExpression") {
+      const descriptor = {
+        symbol: node.id.name,
+        rangeNode: declaration,
+        exported,
+        topLevel: !parentFunctionNode,
+        parentSymbol,
+        hasJsx: false,
+        providesContext: false,
+      };
+      functionDescriptors.push(descriptor);
+      descriptorsByFunction.set(init, descriptor);
+    } else if (init?.type === "CallExpression" && /(^|\.)createContext$/.test(calleeName(init) ?? "")) {
+      contextDescriptors.push({
+        symbol: node.id.name,
+        rangeNode: declaration,
+        exported,
+        topLevel: !parentFunctionNode,
+      });
     }
   });
 
@@ -323,11 +331,10 @@ function analyzeSource(ast, metadata) {
     const kind = HOOK_KIND[hookName] ?? "hook";
     const occurrence = (hookOccurrences.get(hookName) ?? 0) + 1;
     hookOccurrences.set(hookName, occurrence);
-    const rangeNode = rangeContainer(node, parents);
-    const parentSymbol = parentFunctionNode ? functionNameForNode(parentFunctionNode, descriptorsByFunction) : null;
+    const parentSymbol = parentDescriptor?.symbol ?? null;
 
     hookRegions.push(makeRegion({
-      node: rangeNode,
+      node: rangeContainer(node, parents),
       lineStarts,
       kind,
       symbol: hookName,
@@ -342,9 +349,8 @@ function analyzeSource(ast, metadata) {
   });
 
   const functionRegions = functionDescriptors.map((descriptor) => {
-    const { symbol } = descriptor;
-    const outerFunction = nearestFunctionDescriptor(ast, descriptor.functionNode, descriptorsByFunction);
-    const nested = Boolean(outerFunction);
+    const { symbol, parentSymbol } = descriptor;
+    const nested = Boolean(parentSymbol);
     let kind = "helper";
 
     if (reducerNames.has(symbol) || /Reducer$/i.test(symbol)) {
@@ -364,7 +370,7 @@ function analyzeSource(ast, metadata) {
       lineStarts,
       kind,
       symbol,
-      parentSymbol: outerFunction?.symbol ?? null,
+      parentSymbol,
       exported: descriptor.exported,
       topLevel: descriptor.topLevel,
       demoId,
@@ -392,38 +398,15 @@ function analyzeSource(ast, metadata) {
     .sort((left, right) => right.score - left.score || left.startLine - right.startLine)
     .slice(0, MAX_REGIONS_PER_SOURCE);
 
-  const primaryRegionId = regions[0]?.id ?? null;
   return {
     path: relative(PROJECT_ROOT, metadata.filePath).split("\\").join("/"),
     parser: `rolldown-oxc:${parserLanguage(metadata.filePath)}`,
-    primaryRegionId,
+    primaryRegionId: regions[0]?.id ?? null,
     regions,
   };
 }
 
-function nearestFunctionDescriptor(ast, targetFunction, descriptorsByFunction) {
-  let result = null;
-  walk(ast, (node, parents) => {
-    if (node !== targetFunction) return;
-    const parentFunctionNode = nearest(parents, (item) => descriptorsByFunction.has(item));
-    if (parentFunctionNode) result = descriptorsByFunction.get(parentFunctionNode) ?? null;
-  });
-  return result;
-}
-
-function dedupeRegions(regions) {
-  const seen = new Set();
-  const output = [];
-  for (const region of regions) {
-    const key = `${region.kind}:${region.startLine}:${region.endLine}:${region.symbol}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    output.push(region);
-  }
-  return output;
-}
-
-function extractRegistryEntries(ast, registrySource) {
+function extractRegistryEntries(ast) {
   const rawImports = new Map();
   for (const node of ast.body ?? []) {
     if (node.type !== "ImportDeclaration") continue;
@@ -475,14 +458,14 @@ function serializeManifest(manifest) {
 }
 
 export function sourceSemanticManifestPlugin() {
-  let manifest = { version: 1, learningUnits: {} };
+  let manifest = null;
   let watchedSourceFiles = new Set();
 
   const rebuild = function rebuild() {
     const registrySource = readFileSync(REGISTRY_PATH, "utf8");
     this.addWatchFile(REGISTRY_PATH);
     const registryAst = this.parse(registrySource, { lang: "js" });
-    const entries = extractRegistryEntries(registryAst, registrySource);
+    const entries = extractRegistryEntries(registryAst);
     const nextLearningUnits = {};
     const nextWatched = new Set();
 
@@ -525,16 +508,17 @@ export function sourceSemanticManifestPlugin() {
 
     load(id) {
       if (id !== RESOLVED_SOURCE_SEMANTIC_MANIFEST_ID) return null;
+      if (!manifest) rebuild.call(this);
       return serializeManifest(manifest);
     },
 
     handleHotUpdate(context) {
       if (context.file !== REGISTRY_PATH && !watchedSourceFiles.has(context.file)) return;
-      rebuild.call(this);
+      manifest = null;
       const semanticModule = context.server.moduleGraph.getModuleById(RESOLVED_SOURCE_SEMANTIC_MANIFEST_ID);
       if (semanticModule) context.server.moduleGraph.invalidateModule(semanticModule);
       context.server.ws.send({ type: "full-reload", path: "*" });
-      return [];
+      return semanticModule ? [semanticModule] : [];
     },
   };
 }
