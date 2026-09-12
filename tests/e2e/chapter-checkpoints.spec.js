@@ -23,19 +23,79 @@ const REAL_INTEGRATION_LABS = [
 ];
 
 test.describe("chapter review checkpoints", () => {
-  test("shows one question/exercise checkpoint at every chapter boundary", async ({ page }) => {
+  test("shows a manageable question bank at every chapter boundary", async ({ page }) => {
     await loadApp(page);
 
     for (const [demoLabel, chapter] of CHAPTER_END_DEMOS) {
       await openDemo(page, demoLabel);
       const checkpoint = page.locator(`[data-chapter-checkpoint="${chapter}"]`);
       await expect(checkpoint).toBeVisible();
-      await expect(checkpoint.getByText("你现在应该能回答什么？", { exact: true })).toBeVisible();
-      await expect(checkpoint.getByText("练习", { exact: true })).toBeVisible();
+      await expect(checkpoint.getByText("题库管理", { exact: true })).toBeVisible();
+      await expect(checkpoint.getByLabel("查看已隐藏内置题")).toBeVisible();
       await expect(checkpoint.locator(`[data-chapter-next-step="${chapter}"]`)).toBeVisible();
-      expect(await checkpoint.locator("ol").nth(0).locator("li").count()).toBeGreaterThanOrEqual(4);
-      expect(await checkpoint.locator("ol").nth(1).locator("li").count()).toBeGreaterThanOrEqual(2);
+      expect(await checkpoint.locator('[data-question-id*=":question:"]').count()).toBeGreaterThanOrEqual(4);
+      expect(await checkpoint.locator('[data-question-id*=":exercise:"]').count()).toBeGreaterThanOrEqual(2);
     }
+  });
+
+  test("persists builtin overrides and custom CRUD/order across reload", async ({ page }) => {
+    await loadApp(page);
+    await openDemo(page, CHAPTER_END_DEMOS[0][0]);
+
+    const checkpoint = page.locator('[data-chapter-checkpoint="1"]');
+    const firstBuiltin = checkpoint.locator('[data-question-id^="builtin:ch01:question:"]').first();
+    const builtinId = await firstBuiltin.getAttribute("data-question-id");
+    const originalText = (await firstBuiltin.locator("p").textContent())?.trim();
+
+    await firstBuiltin.getByRole("button", { name: "编辑", exact: true }).click();
+    await firstBuiltin.getByLabel("编辑问题").fill("Render 纯函数为什么必须可重复执行？");
+    await firstBuiltin.getByRole("button", { name: "保存", exact: true }).click();
+    await expect(firstBuiltin).toHaveAttribute("data-question-id", builtinId);
+    await expect(firstBuiltin).toContainText("Render 纯函数为什么必须可重复执行？");
+
+    await firstBuiltin.getByRole("button", { name: "隐藏", exact: true }).click();
+    await expect(checkpoint.locator(`[data-question-id="${builtinId}"]`)).toHaveCount(0);
+    await checkpoint.getByRole("button", { name: "撤销上一步", exact: true }).click();
+    await expect(checkpoint.locator(`[data-question-id="${builtinId}"]`)).toContainText("Render 纯函数为什么必须可重复执行？");
+
+    const restoredBuiltin = checkpoint.locator(`[data-question-id="${builtinId}"]`);
+    await restoredBuiltin.getByRole("button", { name: "恢复默认", exact: true }).click();
+    await expect(restoredBuiltin).toContainText(originalText);
+
+    await restoredBuiltin.getByRole("button", { name: "隐藏", exact: true }).click();
+    await checkpoint.getByLabel("查看已隐藏内置题").check();
+    const hiddenBuiltin = checkpoint.locator(`[data-question-id="${builtinId}"]`);
+    await expect(hiddenBuiltin).toContainText("已隐藏");
+    await hiddenBuiltin.getByRole("button", { name: "恢复显示", exact: true }).click();
+    await checkpoint.getByLabel("查看已隐藏内置题").uncheck();
+
+    const newContent = checkpoint.getByLabel("新内容");
+    await newContent.focus();
+    await page.keyboard.type("自定义：解释组件身份与 stable key");
+    await checkpoint.getByRole("button", { name: "新增", exact: true }).click();
+
+    let custom = checkpoint.locator('[data-question-id^="custom:"]').filter({ hasText: "组件身份与 stable key" }).first();
+    await expect(custom).toBeVisible();
+    await custom.getByRole("button", { name: "编辑", exact: true }).click();
+    await custom.getByLabel("编辑问题").fill("自定义：用反例解释组件身份与 stable key");
+    await custom.getByRole("button", { name: "保存", exact: true }).click();
+    await custom.getByRole("button", { name: "复制", exact: true }).click();
+
+    const copies = checkpoint.locator('[data-question-id^="custom:"]').filter({ hasText: "stable key" });
+    await expect(copies).toHaveCount(2);
+    const copy = copies.filter({ hasText: "（副本）" });
+    await expect(copy).toHaveCount(1);
+    await copy.getByRole("button", { name: "上移", exact: true }).click();
+
+    custom = checkpoint.locator('[data-question-id^="custom:"]').filter({ hasText: "用反例解释组件身份与 stable key" }).filter({ hasNotText: "副本" });
+    await custom.getByRole("button", { name: "删除", exact: true }).click();
+    await expect(custom).toHaveCount(0);
+
+    await page.reload();
+    await openDemo(page, CHAPTER_END_DEMOS[0][0]);
+    const reloaded = page.locator('[data-chapter-checkpoint="1"]');
+    await expect(reloaded.locator('[data-question-id^="custom:"]').filter({ hasText: "（副本）" })).toHaveCount(1);
+    await expect(reloaded.locator(`[data-question-id="${builtinId}"]`)).toContainText(originalText);
   });
 
   test("provides real integration lab handoffs after the relevant checkpoints", async ({ page }) => {
