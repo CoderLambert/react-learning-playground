@@ -4,7 +4,6 @@ import { ToolPolicy } from "../../ai/agent/ToolPolicy.js";
 import { ToolRegistry } from "../../ai/agent/ToolRegistry.js";
 import { assertModelClient } from "../../ai/providers/modelClient.js";
 import { AssessmentService } from "../application/AssessmentService.js";
-import { ASSESSMENT_AUTHORING_INSTRUCTIONS } from "../ai/assessmentAuthoringQuality.js";
 import { createAssessmentToolDefinitions } from "../ai/assessmentTools.js";
 import {
   createIndexedDbAssessmentRepository,
@@ -72,7 +71,6 @@ export async function createAssessmentRuntime({
   return Object.freeze({
     mode: repository.mode,
     storageNotice,
-    authoringInstructions: ASSESSMENT_AUTHORING_INSTRUCTIONS,
     repository,
     queryStore,
     service,
