@@ -5,6 +5,7 @@ import { CHECKPOINTS, getAllBuiltinItems } from "../src/assessment/questions/che
 import {
   QUESTION_BANK_STORAGE_KEY,
   createQuestionBankRepository,
+  getQuestionFingerprint,
 } from "../src/assessment/questions/questionBankRepository.js";
 
 function createMemoryStorage(seed = {}) {
@@ -78,6 +79,22 @@ test("custom questions survive repository reload and can be updated/deleted", ()
   assert.equal(reloaded.resolveChapter(4).questions.some((item) => item.id === created.id), false);
 });
 
+test("duplicate creates a user-owned copy and custom items can be reordered", () => {
+  const repository = createQuestionBankRepository(createMemoryStorage());
+  const duplicate = repository.duplicate(CHECKPOINTS[3].questions[0]);
+  const second = repository.addCustom({ chapter: 3, kind: "question", prompt: "第二个自定义问题" });
+
+  let custom = repository.resolveChapter(3).questions.filter((item) => item.origin === "user");
+  assert.equal(custom[0].id, duplicate.id);
+  assert.equal(custom[0].prompt, CHECKPOINTS[3].questions[0].prompt);
+  assert.equal(custom[1].id, second.id);
+
+  repository.moveCustom(second.id, "up");
+  custom = repository.resolveChapter(3).questions.filter((item) => item.origin === "user");
+  assert.equal(custom[0].id, second.id);
+  assert.equal(custom[1].id, duplicate.id);
+});
+
 test("corrupted or future-version storage fails safe to builtin content", () => {
   const corrupted = createQuestionBankRepository(createMemoryStorage({ [QUESTION_BANK_STORAGE_KEY]: "not-json" }));
   assert.equal(corrupted.resolveChapter(1).questions.length, 5);
@@ -88,9 +105,11 @@ test("corrupted or future-version storage fails safe to builtin content", () => 
   assert.equal(future.resolveChapter(1).questions[0].hidden, false);
 });
 
-test("resolved revision changes when effective prompt changes", () => {
+test("resolved fingerprint is deterministic and changes with effective prompt", () => {
   const repository = createQuestionBankRepository(createMemoryStorage());
   const before = repository.resolveChapter(5).questions[0].revision;
+  assert.equal(before, getQuestionFingerprint(repository.resolveChapter(5).questions[0]));
+
   repository.setBuiltinPrompt("ch05-q01", "修改后的表单状态问题");
   const after = repository.resolveChapter(5).questions[0].revision;
   assert.notEqual(before, after);
