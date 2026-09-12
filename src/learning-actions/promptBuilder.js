@@ -57,15 +57,19 @@ export function createLearningActionContext({
     throw new TypeError("Unsupported learning context kind");
   }
 
-  const selection = clampLearningSelection(selectedText);
-  const normalizedRange = normalizeRange(range);
+  const normalizedFileName = clean(fileName);
+  const rangeFileName = clean(range?.fileName);
+  const staleSourceRange = kind === LEARNING_CONTEXT_KINDS.SOURCE &&
+    Boolean(normalizedFileName && rangeFileName && normalizedFileName !== rangeFileName);
+  const selection = clampLearningSelection(staleSourceRange ? "" : selectedText);
+  const normalizedRange = staleSourceRange ? null : normalizeRange(range);
   return Object.freeze({
     kind,
     learningUnitId: clean(learningUnit?.id),
     learningUnitTitle: clean(learningUnit?.label ?? learningUnit?.title),
-    fileName: clean(fileName),
+    fileName: normalizedFileName,
     range: normalizedRange,
-    semanticRegion: clean(semanticRegion),
+    semanticRegion: staleSourceRange ? "full-file" : clean(semanticRegion),
     selectedText: selection.text,
     selectionTruncated: selection.truncated,
   });
