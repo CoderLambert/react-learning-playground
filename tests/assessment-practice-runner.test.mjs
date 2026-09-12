@@ -51,6 +51,14 @@ test("repository restores attempt and rejects corrupt/version-mismatched payload
   assert.equal(repository.load(4), null);
 });
 
+test("repository rejects a payload stored under the wrong chapter key", () => {
+  const storage = createMemoryStorage();
+  const repository = createAttemptRepository(storage);
+  const chapter3Attempt = createAttempt({ chapter: 3, questions, sessionId: "wrong-chapter", now: 0 });
+  storage.setItem("react-learning-playground:assessment-attempt:v1:chapter-2:current", JSON.stringify(chapter3Attempt));
+  assert.equal(repository.load(2), null);
+});
+
 test("repository read errors degrade to no restored attempt", () => {
   const repository = createAttemptRepository({
     getItem() { throw new Error("storage denied"); },
@@ -71,6 +79,19 @@ test("chapter persistence stays isolated", () => {
   repository.save(chapter3);
   assert.equal(repository.load(2).answers[questions[0].id].draft, "chapter two");
   assert.equal(repository.load(3).answers[questions[0].id].draft, "chapter three");
+});
+
+test("session persistence stays isolated within the same chapter", () => {
+  const storage = createMemoryStorage();
+  const repository = createAttemptRepository(storage);
+  let first = createAttempt({ chapter: 2, questions, sessionId: "session-a", now: 0 });
+  let second = createAttempt({ chapter: 2, questions, sessionId: "session-b", now: 0 });
+  first = updateAnswer(first, questions[0], { draft: "first session" }, 1);
+  second = updateAnswer(second, questions[0], { draft: "second session" }, 1);
+  repository.save(first, "session-a");
+  repository.save(second, "session-b");
+  assert.equal(repository.load(2, "session-a").answers[questions[0].id].draft, "first session");
+  assert.equal(repository.load(2, "session-b").answers[questions[0].id].draft, "second session");
 });
 
 test("question revision changes when prompt changes", () => {
