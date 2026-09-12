@@ -1,3 +1,5 @@
+import { openIndexedDb } from "../../../platform/storage/indexedDb.js";
+
 export const ASSESSMENT_DB_NAME = "react-learning-assessment";
 export const ASSESSMENT_DB_VERSION = 1;
 
@@ -56,21 +58,14 @@ export function migrateAssessmentDb({ db, oldVersion = 0 } = {}) {
   }
 }
 
-export function openAssessmentDb(indexedDb, { name = ASSESSMENT_DB_NAME, version = ASSESSMENT_DB_VERSION } = {}) {
-  if (!indexedDb?.open) throw new TypeError("indexedDb implementation is required");
-
-  return new Promise((resolve, reject) => {
-    const request = indexedDb.open(name, version);
-
-    request.onupgradeneeded = (event) => {
-      migrateAssessmentDb({
-        db: request.result,
-        oldVersion: Number(event?.oldVersion ?? 0),
-      });
-    };
-
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error ?? new Error("Unable to open assessment IndexedDB"));
-    request.onblocked = () => reject(new Error("Assessment IndexedDB upgrade is blocked by another tab"));
+export function openAssessmentDb(
+  indexedDb,
+  { name = ASSESSMENT_DB_NAME, version = ASSESSMENT_DB_VERSION } = {},
+) {
+  return openIndexedDb({
+    indexedDb,
+    name,
+    version,
+    migrate: ({ db, oldVersion }) => migrateAssessmentDb({ db, oldVersion }),
   });
 }
