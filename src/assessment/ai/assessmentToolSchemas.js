@@ -8,9 +8,18 @@
  */
 
 const nonBlankStringSchema = Object.freeze({ type: "string", minLength: 1, pattern: "\\S" });
+const learnerPromptSchema = Object.freeze({
+  ...nonBlankStringSchema,
+  description: "Self-contained learner-facing question stem. Include the concrete code/text needed to answer when the question depends on source details. Never make file names, source:// links, or line ranges such as 'L10-L20'/'第 10-20 行' the learner's required navigation path; keep those in evidenceRefs.",
+});
+const learnerOptionTextSchema = Object.freeze({
+  ...nonBlankStringSchema,
+  description: "Complete learner-facing option text. Do not use source file/line navigation as an option or required premise.",
+});
 
 export const sourceEvidenceRefSchema = Object.freeze({
   type: "object",
+  description: "Machine-facing evidence locator for validation, audit and post-answer navigation. It does not replace the learner-facing context that must be present in content.prompt.",
   properties: {
     kind: { const: "source" },
     fileName: nonBlankStringSchema,
@@ -25,7 +34,7 @@ export const singleChoiceOptionSchema = Object.freeze({
   type: "object",
   properties: {
     id: nonBlankStringSchema,
-    text: nonBlankStringSchema,
+    text: learnerOptionTextSchema,
   },
   required: ["id", "text"],
   additionalProperties: false,
@@ -34,7 +43,7 @@ export const singleChoiceOptionSchema = Object.freeze({
 export const singleChoiceContentSchema = Object.freeze({
   type: "object",
   properties: {
-    prompt: nonBlankStringSchema,
+    prompt: learnerPromptSchema,
     options: { type: "array", items: singleChoiceOptionSchema, minItems: 2 },
     correctOptionId: nonBlankStringSchema,
     explanation: nonBlankStringSchema,
@@ -46,7 +55,7 @@ export const singleChoiceContentSchema = Object.freeze({
 export const trueFalseContentSchema = Object.freeze({
   type: "object",
   properties: {
-    prompt: nonBlankStringSchema,
+    prompt: learnerPromptSchema,
     correct: { type: "boolean" },
     explanation: nonBlankStringSchema,
   },
@@ -57,7 +66,11 @@ export const trueFalseContentSchema = Object.freeze({
 const commonQuestionProperties = Object.freeze({
   difficulty: { type: "string", enum: ["easy", "medium", "hard"] },
   conceptTags: { type: "array", items: nonBlankStringSchema },
-  evidenceRefs: { type: "array", items: sourceEvidenceRefSchema },
+  evidenceRefs: {
+    type: "array",
+    items: sourceEvidenceRefSchema,
+    description: "Machine-facing source anchors. Keep exact file/line coordinates here while making content.prompt independently understandable.",
+  },
 });
 
 export const singleChoiceQuestionDraftSchema = Object.freeze({
