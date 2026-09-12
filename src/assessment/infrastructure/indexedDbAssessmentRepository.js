@@ -14,13 +14,18 @@ import {
   normalizeRetireCommand,
   normalizeSessionGetQuery,
   normalizeSessionInput,
+  normalizeSessionListQuery,
   normalizeUpdateCommand,
+  normalizeAttemptProgressInput,
   questionNotFound,
   requiredQuestionRecord,
   replayResult,
   revisionConflict,
   sortAttempts,
   sortById,
+  sortSessionsNewestFirst,
+  sessionCompleted,
+  sessionNotFound,
   storageUnavailable,
 } from "./repositorySupport.js";
 
@@ -185,6 +190,8 @@ export class IndexedDbAssessmentRepository {
         ...cloneValue(current),
         status: "retired",
         revision: current.revision + 1,
+        updatedAt: command.metadata.updatedAt,
+        provenance: cloneValue(command.metadata.provenance),
       };
       await requestToPromise(store.put(result));
       return result;
@@ -210,6 +217,16 @@ export class IndexedDbAssessmentRepository {
     return cloneRequestResult(session);
   }
 
+  async listSessions(input) {
+    const query = normalizeSessionListQuery(input);
+    const sessions = await this.readStore(ASSESSMENT_STORES.SESSIONS, (store) => store.getAll());
+    return sessions
+      .filter((session) => session.learningUnitId === query.learningUnitId)
+      .filter((session) => query.status === undefined || session.status === query.status)
+      .sort(sortSessionsNewestFirst)
+      .map(cloneValue);
+  }
+
   async saveAttempt(input) {
     const attempt = normalizeAttemptInput(input);
     await this.writeStore(
@@ -217,6 +234,42 @@ export class IndexedDbAssessmentRepository {
       (store) => store.put(cloneValue(attempt)),
     );
     return cloneValue(attempt);
+  }
+
+  async saveAttemptAndProgressSession(input) {
+    const command = normalizeAttemptProgressInput(input);
+    const transaction = this.db.transaction(
+      [ASSESSMENT_STORES.SESSIONS, ASSESSMENT_STORES.ATTEMPTS],
+      "readwrite",
+    );
+    const done = transactionDone(transaction);
+    try {
+      const sessionStore = getObjectStore(transaction, ASSESSMENT_STORES.SESSIONS);
+      const attemptStore = getObjectStore(transaction, ASSESSMENT_STORES.ATTEMPTS);
+      const current = await requestToPromise(sessionStore.get(command.sessionId));
+      if (!current || current.learningUnitId !== command.learningUnitId) throw sessionNotFound(command);
+      if (current.status === "completed") throw sessionCompleted(command);
+
+      const attempt = cloneValue(command.attempt);
+      await requestToPromise(attemptStore.put(attempt));
+      const attempts = await requestToPromise(attemptStore.getAll());
+      const answeredQuestionIds = new Set(
+        attempts
+          .filter((candidate) => candidate.sessionId === command.sessionId)
+          .map((candidate) => candidate.questionId),
+      );
+      const complete = current.items.every((item) => answeredQuestionIds.has(item.questionId));
+      const session = complete
+        ? { ...cloneValue(current), status: "completed", completedAt: command.completedAt }
+        : cloneValue(current);
+      if (complete) await requestToPromise(sessionStore.put(session));
+      await done;
+      return { attempt: cloneValue(attempt), session: cloneValue(session) };
+    } catch (error) {
+      transaction.abort?.();
+      await done.catch(() => {});
+      throw error;
+    }
   }
 
   async listAttempts(input) {

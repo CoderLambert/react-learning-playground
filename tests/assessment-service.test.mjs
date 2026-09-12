@@ -105,7 +105,13 @@ function createRepository() {
       if (current.revision !== command.expectedRevision) {
         throw new AssessmentError(ASSESSMENT_ERROR_CODES.REVISION_CONFLICT, "revision conflict");
       }
-      const result = { ...current, status: "retired", revision: current.revision + 1 };
+      const result = {
+        ...current,
+        status: "retired",
+        revision: current.revision + 1,
+        updatedAt: command.metadata.updatedAt,
+        provenance: structuredClone(command.metadata.provenance),
+      };
       questions.set(result.id, structuredClone(result));
       return { result: structuredClone(result), replayed: false };
     },
@@ -117,9 +123,35 @@ function createRepository() {
       const session = sessions.get(sessionId);
       return session?.learningUnitId === learningUnitId ? structuredClone(session) : null;
     },
+    async listSessions({ learningUnitId, status }) {
+      return [...sessions.values()]
+        .filter((session) => session.learningUnitId === learningUnitId)
+        .filter((session) => status === undefined || session.status === status)
+        .map((session) => structuredClone(session));
+    },
     async saveAttempt({ attempt }) {
       attempts.set(attempt.id, structuredClone(attempt));
       return structuredClone(attempt);
+    },
+    async saveAttemptAndProgressSession({ learningUnitId, sessionId, attempt, completedAt }) {
+      const session = sessions.get(sessionId);
+      if (!session || session.learningUnitId !== learningUnitId) {
+        throw new AssessmentError(ASSESSMENT_ERROR_CODES.SESSION_NOT_FOUND, "missing session");
+      }
+      if (session.status === "completed") {
+        throw new AssessmentError(ASSESSMENT_ERROR_CODES.SESSION_COMPLETED, "completed session");
+      }
+      attempts.set(attempt.id, structuredClone(attempt));
+      const answered = new Set(
+        [...attempts.values()]
+          .filter((candidate) => candidate.sessionId === sessionId)
+          .map((candidate) => candidate.questionId),
+      );
+      const nextSession = session.items.every((item) => answered.has(item.questionId))
+        ? { ...session, status: "completed", completedAt }
+        : session;
+      sessions.set(sessionId, structuredClone(nextSession));
+      return { attempt: structuredClone(attempt), session: structuredClone(nextSession) };
     },
     async listAttempts({ sessionId, questionId }) {
       return [...attempts.values()].filter((attempt) => (
@@ -164,6 +196,12 @@ test("createQuestions normalizes system fields and injects trusted scope/provena
     createdAt: "forged",
     updatedAt: "forged",
     provenance: { source: "forged" },
+    conversationId: "forged-conversation",
+    agentRunId: "forged-run",
+    toolCallId: "forged-call",
+    contextSnapshotId: "forged-context",
+    mutationId: "forged-mutation",
+    model: "forged-model",
     ...choiceQuestion({ id: "model-controlled-id", learningUnitId: "another-unit" }),
   };
 
@@ -175,6 +213,9 @@ test("createQuestions normalizes system fields and injects trusted scope/provena
   assert.equal(created.revision, 1);
   assert.deepEqual(created.provenance, trusted.provenance);
   assert.equal(created.createdAt, TIMESTAMP);
+  for (const field of ["conversationId", "agentRunId", "toolCallId", "contextSnapshotId", "mutationId", "model"]) {
+    assert.equal(Object.hasOwn(created, field), false);
+  }
   assert.equal(repository.questions.get(created.id).learningUnitId, "unit-1");
   assert.deepEqual(queryStore.getSnapshot(), { learningUnitId: "unit-1", questions: [created] });
 });
@@ -246,6 +287,8 @@ test("retireQuestion is a status mutation and refreshes the query store", async 
 
   const command = await service.retireQuestion({ trusted, questionId: "q-1", expectedRevision: 1 });
   assert.equal(command.result.status, "retired");
+  assert.equal(command.result.updatedAt, TIMESTAMP);
+  assert.deepEqual(command.result.provenance, trusted.provenance);
   assert.equal(repository.questions.get("q-1").status, "retired");
   assert.deepEqual(queryStore.getSnapshot(), {
     learningUnitId: "unit-1",
@@ -289,6 +332,15 @@ test("submitAnswer grades against the session snapshot and persists independent 
   assert.equal(booleanAttempt.correct, false);
   assert.equal(booleanAttempt.questionRevision, 1);
   assert.equal(repository.attempts.size, 2);
+  assert.equal(repository.sessions.get(session.id).status, "completed");
+  assert.equal(repository.sessions.get(session.id).completedAt, TIMESTAMP);
+
+  await assert.rejects(
+    service.submitAnswer({
+      trusted: { learningUnitId: "unit-1" }, sessionId: session.id, questionId: "q-1", answer: "b",
+    }),
+    (error) => error.code === ASSESSMENT_ERROR_CODES.SESSION_COMPLETED,
+  );
 });
 
 test("evidence validator rejects references outside the trusted learning unit", async () => {
@@ -304,6 +356,81 @@ test("evidence validator rejects references outside the trusted learning unit", 
     service.createQuestions({ trusted, questions: [payload] }),
     (error) => error.code === ASSESSMENT_ERROR_CODES.INVALID_EVIDENCE,
   );
+});
+
+test("non-empty evidence fails closed when no resolver can prove it", async () => {
+  const { service } = createHarness();
+  await assert.rejects(
+    service.createQuestions({
+      trusted,
+      questions: [{
+        ...choiceQuestion(),
+        evidenceRefs: [{ kind: "source", fileName: "unit-1.jsx", startLine: 1, endLine: 2 }],
+      }],
+    }),
+    (error) => error.code === ASSESSMENT_ERROR_CODES.INVALID_EVIDENCE,
+  );
+});
+
+test("AI provenance is derived exclusively from trusted runtime identity", async () => {
+  const { service } = createHarness();
+  const created = await service.createQuestions({
+    trusted: {
+      learningUnitId: "unit-1",
+      mutationId: "run-42:call-9",
+      conversationId: "conversation-42",
+      agentRunId: "run-42",
+      toolCallId: "call-9",
+      contextSnapshotId: "snapshot-42",
+      model: "trusted-model",
+      actor: { type: "ai_agent", model: "ignored-actor-model" },
+    },
+    questions: [{ ...choiceQuestion(), provenance: { source: "forged" } }],
+  });
+  assert.deepEqual(created.result[0].provenance, {
+    source: "ai",
+    conversationId: "conversation-42",
+    agentRunId: "run-42",
+    toolCallId: "call-9",
+    contextSnapshotId: "snapshot-42",
+    model: "trusted-model",
+  });
+});
+
+test("AI update and retirement replace provenance with the current trusted actor", async () => {
+  const { service } = createHarness();
+  const runtime = (toolCallId, mutationId) => ({
+    learningUnitId: "unit-1",
+    mutationId,
+    conversationId: "conversation-42",
+    agentRunId: "run-42",
+    toolCallId,
+    contextSnapshotId: "snapshot-42",
+    model: "trusted-model",
+    actor: { type: "ai_agent" },
+  });
+  const created = (await service.createQuestions({
+    trusted: runtime("call-create", "run-42:call-create"), questions: [choiceQuestion()],
+  })).result[0];
+  const updated = (await service.updateQuestion({
+    trusted: runtime("call-update", "run-42:call-update"),
+    questionId: created.id,
+    expectedRevision: created.revision,
+    patch: { content: { prompt: "trusted update" } },
+  })).result;
+  const retired = (await service.retireQuestion({
+    trusted: runtime("call-retire", "run-42:call-retire"),
+    questionId: updated.id,
+    expectedRevision: updated.revision,
+  })).result;
+
+  assert.equal(updated.provenance.toolCallId, "call-update");
+  assert.equal(updated.provenance.source, "ai");
+  assert.equal(retired.provenance.toolCallId, "call-retire");
+  assert.equal(retired.provenance.conversationId, "conversation-42");
+  assert.equal(retired.provenance.model, "trusted-model");
+  assert.equal(retired.status, "retired");
+  assert.equal(retired.revision, 3);
 });
 
 test("repository errors are not swallowed by the service", async () => {

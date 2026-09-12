@@ -167,17 +167,22 @@ export function registerAssessmentRepositoryContract({ name, createRepository })
     repository.close?.();
   });
 
-  test(`${name}: retire advances revision without deleting the question`, async () => {
+  test(`${name}: retire atomically advances revision and trusted metadata without deleting the question`, async () => {
     const repository = await fresh();
     const first = question("q-1", "unit-1");
     await repository.createQuestions({ learningUnitId: "unit-1", questions: [first], mutationId: "create-1" });
-    const retired = { ...first, status: "retired", revision: 2 };
+    const metadata = {
+      updatedAt: "2026-09-12T00:00:01.000Z",
+      provenance: { source: "ai", agentRunId: "run-1", toolCallId: "call-1" },
+    };
+    const retired = { ...first, status: "retired", revision: 2, ...metadata };
     assert.deepEqual(
       await repository.retireQuestion({
         learningUnitId: "unit-1",
         questionId: "q-1",
         expectedRevision: 1,
         mutationId: "retire-1",
+        metadata,
       }),
       { result: retired, replayed: false },
     );
@@ -188,6 +193,10 @@ export function registerAssessmentRepositoryContract({ name, createRepository })
       questionId: "q-1",
       expectedRevision: 1,
       mutationId: "retire-1",
+      metadata: {
+        updatedAt: "2099-01-01T00:00:00.000Z",
+        provenance: { source: "forged-replay" },
+      },
     }), { result: retired, replayed: true });
     repository.close?.();
   });
@@ -201,6 +210,7 @@ export function registerAssessmentRepositoryContract({ name, createRepository })
       savedSession,
     );
     assert.equal(await repository.getSession({ learningUnitId: "unit-2", sessionId: "session-1" }), null);
+    assert.deepEqual(await repository.listSessions({ learningUnitId: "unit-1", status: "in_progress" }), [savedSession]);
 
     const firstAttempt = attempt("attempt-1", "session-1", "q-1");
     const secondAttempt = attempt("attempt-2", "session-1", "q-2", { correct: false, answer: "b" });
@@ -209,6 +219,45 @@ export function registerAssessmentRepositoryContract({ name, createRepository })
     assert.deepEqual(await repository.listAttempts({ sessionId: "session-1" }), [firstAttempt, secondAttempt]);
     assert.deepEqual(await repository.listAttempts({ sessionId: "session-1", questionId: "q-2" }), [secondAttempt]);
     assert.deepEqual(await repository.listAttempts({ sessionId: "unknown" }), []);
+    repository.close?.();
+  });
+
+  test(`${name}: attempt persistence and session completion are atomic`, async () => {
+    const repository = await fresh();
+    const savedSession = await repository.createSession({
+      session: {
+        ...session("session-progress", "unit-1"),
+        items: [{ questionId: "q-1" }, { questionId: "q-2" }],
+      },
+    });
+    const first = await repository.saveAttemptAndProgressSession({
+      learningUnitId: "unit-1",
+      sessionId: savedSession.id,
+      attempt: attempt("attempt-1", savedSession.id, "q-1"),
+      completedAt: "2026-09-12T00:01:00.000Z",
+    });
+    assert.equal(first.session.status, "in_progress");
+    assert.equal(first.session.completedAt, undefined);
+
+    const second = await repository.saveAttemptAndProgressSession({
+      learningUnitId: "unit-1",
+      sessionId: savedSession.id,
+      attempt: attempt("attempt-2", savedSession.id, "q-2"),
+      completedAt: "2026-09-12T00:02:00.000Z",
+    });
+    assert.equal(second.session.status, "completed");
+    assert.equal(second.session.completedAt, "2026-09-12T00:02:00.000Z");
+    assert.equal((await repository.listAttempts({ sessionId: savedSession.id })).length, 2);
+    await assert.rejects(
+      repository.saveAttemptAndProgressSession({
+        learningUnitId: "unit-1",
+        sessionId: savedSession.id,
+        attempt: attempt("attempt-3", savedSession.id, "q-1"),
+        completedAt: "2026-09-12T00:03:00.000Z",
+      }),
+      (error) => error?.code === ASSESSMENT_ERROR_CODES.SESSION_COMPLETED,
+    );
+    assert.equal((await repository.listAttempts({ sessionId: savedSession.id })).length, 2);
     repository.close?.();
   });
 

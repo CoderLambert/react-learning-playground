@@ -103,12 +103,20 @@ test("question mutation commands normalize trusted scope, revision, and mutation
       questionId: "q-1",
       expectedRevision: 3,
       mutationId: "run-1:call-3",
+      metadata: {
+        updatedAt: "2026-09-12T00:00:00.000Z",
+        provenance: { source: "ai" },
+      },
     }),
     {
       learningUnitId: "unit-1",
       questionId: "q-1",
       expectedRevision: 3,
       mutationId: "run-1:call-3",
+      metadata: {
+        updatedAt: "2026-09-12T00:00:00.000Z",
+        provenance: { source: "ai" },
+      },
     },
   );
 
@@ -131,6 +139,7 @@ test("question mutation commands normalize trusted scope, revision, and mutation
       learningUnitId: "unit-1",
       questionId: "q-1",
       expectedRevision: 1,
+      metadata: { updatedAt: "2026-09-12T00:00:00.000Z", provenance: { source: "ai" } },
     }),
     /retireQuestion\.mutationId is required/,
   );
