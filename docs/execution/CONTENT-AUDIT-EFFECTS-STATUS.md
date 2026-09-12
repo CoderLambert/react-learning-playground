@@ -7,75 +7,78 @@
 - Base head at lane creation: `3c15c8eecc68e6be3ab95b35fa456357fb6f409c`
 - Branch: `automation/content-audit-effects`
 - Stacked PR: `#84` → `automation/content-audit-queue`, kept open and unmerged.
-- Scope: Effect/lifecycle residuals only; no edits to Lane A/Lane C files or specialist PR #78/#79/#81/#82 ownership.
+- Scope: Effect/lifecycle and adjacent unowned Ch04 residuals only; no edits to Lane A/Lane C files or specialist PR #78/#79/#81/#82 ownership.
 
-The base PR #80 exact head at lane creation had:
+Specialist PRs #78/#79/#81/#82 remain open and mergeable, so their file ownership is still reserved. Concurrency PR #83 owns `effect-event`, `transition-deferred`, and attributable audit E2E stabilization.
 
-- `React Learning Verify #287`: PASS
-- `Workbench Integration Verify #226`: FAIL in the broader audit queue; this lane does not own queue-level E2E stabilization unless a failure is attributable to its files.
-
-The Core Lane advanced PR #80 while this run was editing. This branch was reconciled with the newer queue head using a normal merge commit (no force update / history rewrite), preserving both lanes' files.
-
-## Completed this run
+## Completed residuals
 
 ### `not-need-effect`
 
 Gate state: A PASS / B PASS / C PASS.
 
-The previous Note over-promised an executable “Effect-derived State vs render-derived State” performance comparison even though the bad path existed only as static source text. The Note now explicitly scopes the experiment to the three interactions the Demo really implements:
+The previous Note over-promised an executable “Effect-derived State vs render-derived State” performance comparison even though the bad path existed only as static source text. The Note now scopes the experiment to the interactions the Demo really implements:
 
-1. render-time list derivation from query/category;
+1. render-time derivation from query/category;
 2. purchase behavior directly caused by an Event Handler;
 3. `key={userId}` resetting local draft State when component identity changes.
 
-The static Effect anti-pattern remains explanatory source, not fake runtime evidence. The Note also makes the `key`/State-ownership boundary explicit.
+The static Effect anti-pattern remains explanatory source, not fake runtime evidence.
 
 ### `lifecycle-of-reactive-effects`
 
 Gate state: A PASS / B PASS / C PASS.
 
-The previous Demo predicted cleanup/setup from the room-switch handler rather than recording React Effect lifecycle events. It now:
+The Demo now records setup/cleanup from the actual Effect lifecycle, not from handler predictions. It also uses `setMessages(prev => ...)`, so the connection Effect does not read `messages`; incoming messages update UI without reconnecting. `isMuted` remains a latest-value read through Effect Event rather than a connection dependency. Development Strict Mode's extra setup → cleanup → setup stress test is explicitly scoped as development-only.
 
-- records setup from the actual Effect setup body;
-- records cleanup from the actual Effect cleanup function;
-- sequences lifecycle log entries so cleanup/setup causality is inspectable even when timestamps are close;
-- uses `setMessages(prev => ...)` inside the connection callback, so the Effect no longer reads `messages` and message-list updates do not trigger reconnects;
-- keeps `isMuted` in an Effect Event so it can read the latest committed value without becoming a connection dependency;
-- documents the development Strict Mode setup → cleanup → setup stress-test boundary.
+### `use-ref`
 
-The Note now asks the learner to perform exactly those observable experiments: switch room, toggle mute without reconnecting, and wait for message updates without reconnecting.
+Gate state remains A PASS / B PASS / C PASS, with residual wording corrected.
 
-## Factual baseline
+Adjacent Ch04 scan found two concrete correctness/clarity problems that were still recorded in the existing advice:
 
-Primary sources checked:
+- the Demo labeled a `setInterval` example “高精度秒表”, although browser intervals provide no high-precision timing guarantee;
+- the Demo used an absolute “only operate refs in events/effects” rule and vague “Concurrent Mode” wording, omitting React's documented predictable one-time initialization exception.
 
-- React: You Might Not Need an Effect
-- React: Lifecycle of Reactive Effects
-- React: Removing Effect Dependencies
+This run corrected Note + Demo + advice together:
 
-Key rules applied:
+- the example is now a normal timer-handle lifecycle example, explicitly not a precision clock;
+- the visible seconds remain State while the interval ID is a Ref, making the decision boundary explicit;
+- render-time ref access is described as normally disallowed, with the narrow deterministic initialization exception such as `if (ref.current === null) ref.current = new Thing()`;
+- the explanation is based on render purity/predictability rather than the obsolete/vague “Concurrent Mode” label;
+- `useLayoutEffect` is explicitly limited to cases that truly require layout work before paint, not presented as the default companion to refs.
 
-- Effects synchronize React with external systems; render-derived data usually should not be copied into State and synchronized by Effect.
-- Effect dependencies describe reactive values actually read by the Effect; change code before changing dependencies.
-- Functional State updaters can remove a read of previous State when the next State is derived from the previous State.
-- Development Strict Mode may run an extra setup/cleanup cycle and should not be described as production lifecycle frequency.
+Primary factual source: current official React `useRef` and `Referencing Values with Refs` documentation.
 
 ## Adjacent Effect/lifecycle scan
 
-After closing the two named residuals, the existing advice records for adjacent unowned Effect/lifecycle material were rechecked. `use-effect-correct-usage` and `custom-hooks` are already A/B/C PASS. `advanced-ref` was already closed by PR #80. `effect-event` is reserved for the separate Concurrency Lane and was not touched.
+- `use-effect-correct-usage`: A/B/C PASS; no new hard-gate finding.
+- `custom-hooks`: A/B/C PASS; no new hard-gate finding.
+- `advanced-ref`: A/B/C PASS; prior mismatch already closed on the audit queue.
+- `effect-event`: reserved for Concurrency Lane; not edited here.
 
-No additional dependency-ready Effect/lifecycle hard-gate failure was found without crossing another lane's ownership.
+No further dependency-ready Ch04 Effect/lifecycle hard-gate failure is currently known without crossing another owner's files.
 
-## Validation
+## Current base CI / attribution
 
-Validation evidence is intentionally conservative:
+PR #80 exact head `f04d3b896d8e5b68707bfeff6794c92ef43eee09` reports:
 
-- PR #84 is a stacked PR targeting `automation/content-audit-queue`.
-- The repository's `React Learning Verify` workflow only triggers pull requests targeting `main` or the listed integration branches, so PR #84 currently has no exact-head Actions run. This is a workflow-trigger limitation, not a PASS.
-- A local checkout was attempted for `npm` validation, but the execution container could not resolve `github.com` (`Could not resolve host: github.com`) and therefore could not clone/install the repository. No local test/lint/build PASS is claimed.
-- The stacked PR diff/mergeability and branch ownership are still checked through GitHub; executable validation remains pending until this head is tested in a workflow-eligible integration/base context or a later environment with a runnable checkout.
+- `React Learning Verify #298`: PASS.
+- `Workbench Integration Verify #237`: FAIL only in Browser E2E after Build passed.
+
+The job log provides exact attribution: 38 browser tests ran, 37 passed, and the sole failure is `tests/e2e/effects-cleanup.spec.js` expecting old `effect-event` UI text (`连接次数：` / `已连接 general，当前主题 light`). `effect-event` and audit E2E stabilization are Concurrency Lane ownership, so this Effects lane does not modify that test or lesson.
+
+## Effects PR validation
+
+Validation remains conservative:
+
+- PR #84 targets `automation/content-audit-queue`, and the repository workflows do not currently produce an exact-head run for this stacked target.
+- Therefore no executable PASS is claimed for the current Effects head.
+- PR #84 remains mergeable by GitHub inspection.
+- The queue base has advanced three commits since this branch's merge base; those commits touch only Core Lane queue/status and `use-reduce-with-context` files, not this lane's lesson files. The branch is intentionally not force-updated or rebased.
 
 ## Next
 
-- If executable validation becomes available, run the repository lint/build/content/browser gates on the exact Effects head and fix only failures attributable to these files.
-- If no new Effect/lifecycle hard-gate regression appears, this lane has no further safe content scope and should remain ready for review rather than expanding into another lane.
+1. Re-scan ownership and current queue head before any further content edit.
+2. If no new unowned Ch04–05 hard-gate regression appears, avoid churn; the content scope is review-ready.
+3. Obtain exact-head executable validation once the stacked changes enter a workflow-eligible combined tree; fix only failures attributable to this lane.
