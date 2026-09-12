@@ -12,11 +12,11 @@
   "导航到兄弟子路由时，稳定父层可以保留，子层按新匹配更新"
 ]} />
 
-<Experiment title="观察父布局是否真的需要重建">
-在中间 Demo 中依次进入父路由的多个子页面，关注共享导航/布局与子区域。再用浏览器历史导航，判断哪些 UI 属于父级稳定结构，哪些属于子 route 内容。
+<Experiment title="从匹配链判断父布局与 Outlet 边界">
+在中间 Demo 中依次选择 Dashboard index、Settings、Project 和 Login，比较每个 URL 对应的 matched route chain。重点观察 `/dashboard` 与 `/dashboard/settings` 共享 `DashboardLayout`，变化发生在它的 Outlet 子内容；再比较 `/login` 为什么进入另一条 layout chain。当前 Demo 是 route-match 模拟器，不执行真实 Router 生命周期。
 </Experiment>
 
-<DemoReference action="在多个 nested route 间导航" observe="比较父 layout 与 outlet 内容的生命周期和状态边界。" />
+<DemoReference action="切换多个模拟 nested route，并比较 matched route chain" observe="识别共同父 layout、最深层 Outlet 内容，以及 index route / pathless layout route 对 URL 和 UI 层级的不同影响。" />
 
 <Observation>
 嵌套路由的核心不是“URL 多了斜杠”，而是把信息架构显式编码成 route tree。这样布局、数据边界、错误边界和 pending UI 都可以沿匹配层级组织。
