@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
+import { dispatchLearningAction } from "../../learning-actions/learningActions.js";
+import { LearningActionBar } from "../learning-actions/LearningActionBar.jsx";
 import "./DemoSourceLocator.css";
 
 const SOURCE_ATTRIBUTE = "data-source-loc";
@@ -198,6 +200,13 @@ export function DemoSourceLocator({ learningUnit, enabled = false, onLocate, chi
     });
   };
 
+  const askAboutDemo = (action) => dispatchLearningAction({
+    kind: "demo",
+    action,
+    learningUnitId: learningUnit?.id,
+    learningUnitTitle: learningUnit?.title,
+  });
+
   return (
     <div
       className={`source-locator-scope ${enabled ? "source-locator-scope--active" : ""}`.trim()}
@@ -208,6 +217,16 @@ export function DemoSourceLocator({ learningUnit, enabled = false, onLocate, chi
       onPointerLeave={() => setHovered(null)}
       onClickCapture={handleClickCapture}
     >
+      <LearningActionBar
+        compact
+        label="当前 Demo"
+        actions={[
+          { id: "explain", label: "解释 Demo", onSelect: () => askAboutDemo("explain") },
+          { id: "walkthrough", label: "带我读实现", onSelect: () => askAboutDemo("walkthrough") },
+          { id: "purpose", label: "它验证什么", onSelect: () => askAboutDemo("purpose") },
+          { id: "quiz", label: "测测我", onSelect: () => askAboutDemo("quiz") },
+        ]}
+      />
       {children}
       {hovered && <Overlay value={overlay} modifierOnly={!enabled} />}
     </div>
