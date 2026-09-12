@@ -16,6 +16,7 @@ import {
 } from "../src/assessment/ai/assessmentTools.js";
 
 function draft(prompt, overrides = {}) {
+  const { content: contentOverrides = {}, ...questionOverrides } = overrides;
   return {
     type: "single_choice",
     content: {
@@ -26,7 +27,7 @@ function draft(prompt, overrides = {}) {
       ],
       correctOptionId: "a",
       explanation: "函数直接返回收到的 count。",
-      ...overrides.content,
+      ...contentOverrides,
     },
     difficulty: "medium",
     conceptTags: ["pure-render"],
@@ -36,7 +37,7 @@ function draft(prompt, overrides = {}) {
       startLine: 14,
       endLine: 23,
     }],
-    ...overrides,
+    ...questionOverrides,
   };
 }
 
