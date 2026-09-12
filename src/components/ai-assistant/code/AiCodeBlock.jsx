@@ -5,6 +5,7 @@ import {
   normalizeCodeBlockOptions,
   performCodeBlockCopy,
 } from "./aiCodeBlockModel.js";
+import { requestAiCodeExplanation } from "./aiCodeExplainEvent.js";
 import "./AiCodeBlock.css";
 
 async function copyToClipboard(text) {
@@ -64,6 +65,15 @@ export function AiCodeBlock({
     window.setTimeout(() => setCopyState("idle"), 1200);
   };
 
+  const handleExplain = () => {
+    if (!model.code) return;
+    requestAiCodeExplanation({
+      code: model.code,
+      language: model.language,
+      label: model.label,
+    });
+  };
+
   return (
     <section
       className={`ai-code-block ${collapsed ? "is-collapsed" : "is-expanded"}`}
@@ -76,6 +86,15 @@ export function AiCodeBlock({
           <span>{lineLabel}</span>
         </div>
         <div className="ai-code-block-actions">
+          <button
+            type="button"
+            className="ai-code-block-action"
+            onClick={handleExplain}
+            disabled={!model.code}
+            aria-label="解释这段代码"
+          >
+            解释这段
+          </button>
           <button
             type="button"
             className="ai-code-block-action"
