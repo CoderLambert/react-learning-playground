@@ -1,8 +1,8 @@
 # UI Platform Status
 
-**Branch:** `chore/ui-platform-shadcn-tailwind` → `auto/assessment-integration`  
-**Base HEAD:** `c3743684d8f01873177e51f213d346df621523ee` (`feat: finalize Assessment AI agent integration`)  
-**Integration HEAD before this status-only commit:** `ac31526e36bc74f9856fab9c5ca12ada4f7abd2e`  
+**Branch:** `chore/ui-platform-shadcn-tailwind` → `auto/assessment-integration`
+**Base HEAD:** `c3743684d8f01873177e51f213d346df621523ee` (`feat: finalize Assessment AI agent integration`)
+**Integration HEAD before this status-only commit:** `ac31526e36bc74f9856fab9c5ca12ada4f7abd2e`
 **Scope:** Freeze the Tailwind + copy-owned shadcn primitive standard for new
 and touched UI. This change deliberately does **not** perform a repository-wide
 legacy-CSS bulk migration. No branch was merged, rebased, force-pushed, or
@@ -90,7 +90,7 @@ All commands were run sequentially from the integration HEAD above.
   configuration warning are outside this UI-platform scope and did not produce
   failed checks.
 
-`UI_ARCHITECTURE_GATE=PASS`  
+`UI_ARCHITECTURE_GATE=PASS`
 `MERGE_READY=YES`
 
 This readiness status does not authorize automatic merge. The intended PR title
