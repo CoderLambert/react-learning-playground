@@ -3,36 +3,38 @@
 ## 当前结论
 
 - Gate A Correctness：PASS
-- Gate B Demo Contract：PARTIAL
+- Gate B Demo Contract：PASS
 - Gate C Mental Model：PASS
-- 综合：核心模型正确，MutationObserver 对照有效；但 Demo 的“Render 请求编号”不是实际组件 render instrumentation。
+- 综合：核心模型、实验与 instrumentation 现已对齐；Demo 能真实对照组件函数执行与目标 DOM 子树 mutation。
 
 ## 事实与版本边界
 
 React 的 render 阶段计算下一份 UI，commit 阶段只把需要的宿主变化应用到 DOM。组件重新执行不等于对应 DOM 节点必然发生 mutation。当前 Note 对这一点表述准确。
 
-“浏览器随后布局、绘制与合成”属于浏览器渲染流水线，不是 React 自身保证的逐步可观测 API；保持为宏观模型即可，不应进一步承诺内部时序细节。
+开发环境 Strict Mode 可能额外调用组件以帮助发现不纯 render，因此组件执行次数不能机械解释为“一次交互只执行一次”。MutationObserver 只覆盖被观察 DOM 子树，也不是整个 React commit 的全局 profiler。
 
 ## Mental Model
 
-“Render 是计算，Commit 才是写宿主环境”能有效避免把 re-render 数量等同于 DOM 成本，也自然引出 Profiler、memo 与 Compiler 课程。
+“Render 是计算，Commit 才是写宿主环境”能有效避免把 re-render 数量等同于 DOM 成本，也自然引出 Profiler、memo 与 Compiler 课程。Note 同时保留了关键反例：DOM mutation 很少不代表 render CPU 免费。
 
 ## Demo ↔ Note
 
-MutationObserver 确实只观察目标 `<strong>` 子树：无关 State 更新时目标文本不变，修改 `label` 时可以观察真实 DOM mutation。
+Demo 已移除事件 handler 手工维护的 `renderRequest` 推算值。`RenderedPreview` 现在直接在组件函数执行点维护 render execution count；无关 State 更新会让该组件再次执行，而只观察目标 `<strong>` 的 MutationObserver 不会因此记录文本 mutation。修改 `label` 时则可以观察到目标 DOM mutation。
 
-但 `renderRequest` 是事件 handler 手工递增的 State，并不是在组件函数执行时采集的 render count。Strict Mode、额外父级 render 或未来其他更新路径都可能使它与真实 render 次数不一致。因此 Note 中“比较 render 计数与 MutationObserver 日志”略有过度；当前 Demo 更准确地证明“触发一次预期会导致 render 的更新，但目标 DOM 未 mutation”。
+因此 Note 所要求的“组件执行次数 vs 目标 DOM mutation”实验可以真实执行，Gate B 通过。
 
 ## 缺失边界 / 反例
 
-可补充：DOM mutation 很少并不代表 render CPU 免费；反过来，MutationObserver 也只覆盖被观察子树，不是 React 整个 commit 的通用 profiler。
+当前主要边界已经明确：
+
+1. Strict Mode 开发期可能带来额外组件调用；
+2. MutationObserver 只证明被观察子树是否 mutation；
+3. DOM 不变并不意味着 render 免费。
 
 ## 清晰度与工程决策
 
-决策规则正确：先测用户可感知问题，再定位 render/commit/layout 等成本，不追求 render 次数归零。
+生产决策规则成立：先确认用户可感知的性能问题，再使用 Profiler/浏览器性能工具区分 render、commit、layout、paint 等成本；只有测量证明 render 工作值得优化时，才引入 memoization。
 
 ## 建议修改
 
-1. 将 `renderRequest` 明确命名为“更新/实验请求编号”，不要称为真实 render count。
-2. 若希望教学真实 render 次数，在组件函数执行点增加可解释的 instrumentation，并标注 Strict Mode 开发期可能额外执行。
-3. 明确 MutationObserver 只证明目标 DOM 子树是否发生 mutation，不代表整个 commit 是否完全没有其他宿主变化。
+当前硬 Gate 已全部通过。后续只需避免把教学计数器升级成“React 内部 render/commit profiler”的表述即可。
