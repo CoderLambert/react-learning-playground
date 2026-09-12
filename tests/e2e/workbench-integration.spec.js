@@ -29,9 +29,9 @@ test.describe("React Learning Workbench integration", () => {
       expect(Number(await resize.getAttribute("aria-valuenow"))).toBeGreaterThan(before);
     }
 
-    await page.getByRole("tab", { name: "源码" }).click();
-    await expect(page.locator(".source-viewer")).toBeVisible();
-    await page.getByRole("tab", { name: "笔记" }).click();
+    await page.getByRole("tab", { name: "源码", exact: true }).click();
+    await expect(page.locator(".source-viewer--inspector")).toBeVisible();
+    await page.getByRole("tab", { name: "笔记", exact: true }).click();
 
     await page.getByRole("button", { name: "进入专注模式" }).click();
     await expect(page.locator(".learning-inspector")).toHaveClass(/is-focus-mode/);
