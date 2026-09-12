@@ -62,10 +62,11 @@ test.describe("SourceViewer", () => {
     await expect(semanticNav).toBeVisible();
     await expect(semanticNav).toHaveAttribute("data-semantic-parser", "rolldown-oxc:jsx");
 
-    const coreButton = semanticNav.getByRole("button", { name: /核心实现.*Reducer.*counterReducer/ });
+    const coreButton = semanticNav.locator(".source-semantic-chip--primary");
     await expect(coreButton).toHaveAttribute("aria-pressed", "true");
+    await expect(coreButton).toContainText("Reducer · counterReducer");
     await expect(inlineViewer).toHaveAttribute("data-source-semantic", "reducer:counterReducer");
-    await expect(inlineViewer.locator('[data-highlighted="true"]')).toContainText("counterReducer");
+    await expect(inlineViewer.locator('[data-highlighted="true"]').filter({ hasText: "counterReducer" }).first()).toBeVisible();
 
     const coreFocus = await inlineViewer.getAttribute("data-source-focus");
     expect(coreFocus).toMatch(/^\d+-\d+$/);
@@ -77,7 +78,7 @@ test.describe("SourceViewer", () => {
     const componentButton = semanticNav.getByRole("button", { name: "Component · StateReducerDemo" });
     await componentButton.click();
     await expect(inlineViewer).toHaveAttribute("data-source-semantic", "component:StateReducerDemo");
-    await expect(inlineViewer.locator('[data-highlighted="true"]')).toContainText("StateReducerDemo");
+    await expect(inlineViewer.locator('[data-highlighted="true"]').filter({ hasText: "StateReducerDemo" }).first()).toBeVisible();
 
     await coreButton.click();
     await expect(inlineViewer).toHaveAttribute("data-source-focus", coreFocus);
@@ -87,7 +88,7 @@ test.describe("SourceViewer", () => {
     const inspectorViewer = page.locator(".source-viewer--inspector");
     await expect(inspectorViewer).toHaveAttribute("data-source-file", "StateReducerDemo.jsx");
     await expect(inspectorViewer).toHaveAttribute("data-source-focus", coreFocus);
-    await expect(inspectorViewer.locator('[data-highlighted="true"]')).toContainText("counterReducer");
+    await expect(inspectorViewer.locator('[data-highlighted="true"]').filter({ hasText: "counterReducer" }).first()).toBeVisible();
   });
 
   test("builds semantic navigation for registered TSX sources", async ({ page }) => {
@@ -100,7 +101,9 @@ test.describe("SourceViewer", () => {
 
     const semanticNav = inlineViewer.locator(".source-semantic-nav");
     await expect(semanticNav).toHaveAttribute("data-semantic-parser", "rolldown-oxc:tsx");
-    await expect(semanticNav.getByRole("button", { name: /核心实现.*Component.*ProfileCard/ })).toHaveAttribute("aria-pressed", "true");
-    await expect(inlineViewer.locator('[data-highlighted="true"]')).toContainText("ProfileCard");
+    const coreButton = semanticNav.locator(".source-semantic-chip--primary");
+    await expect(coreButton).toHaveAttribute("aria-pressed", "true");
+    await expect(coreButton).toContainText("Component · ProfileCard");
+    await expect(inlineViewer.locator('[data-highlighted="true"]').filter({ hasText: "ProfileCard" }).first()).toBeVisible();
   });
 });
