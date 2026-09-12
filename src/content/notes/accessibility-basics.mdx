@@ -22,12 +22,24 @@
 ARIA 不会自动增加键盘行为。给 `div` 加 `role="button"` 后，你仍要自己实现 focus、Enter/Space、disabled 等完整交互契约；原生 `<button>` 已经提供这些基础行为。
 </Observation>
 
+## Label、Placeholder 与可见焦点
+
+`placeholder` 是输入提示，不是稳定的 label：用户开始输入后提示会消失，也不能可靠表达字段名称。表单字段应有持续可识别的 `<label>` 或等价的 accessible name；提示、格式和错误信息可以作为额外描述关联，而不是用 placeholder 承担字段身份。
+
+如果设计系统覆盖了浏览器默认的 `outline`，必须提供等价或更清晰的 visible focus indicator，例如明确的 `:focus-visible` 边框或焦点环。不要让焦点只靠颜色差异或短暂的鼠标样式来表达。
+
+## Live Region 的取舍
+
+`aria-live` / `assertive` 不是越多越好。非紧急的状态变化通常应允许辅助技术在合适时机播报；只有确实需要立即打断当前朗读的重要信息，才考虑 assertive。重复渲染、频繁进度更新或不必要的 assertive 通知会打断屏幕阅读器用户，降低可用性。
+
+本 Demo 用 polite status 与 assertive error 展示两种语义通道；学习者可以从 Demo 的 DOM 状态看到这种映射，但这不代表每条生产错误消息都应该抢占播报。真实产品仍要按信息紧急程度、重复频率和用户任务验证。
+
 <AntiPattern title="No ARIA is better than bad ARIA">
 错误 role、错误 `aria-*` 状态或重复 label 会让辅助技术得到比纯 HTML 更错误的信息。ARIA 应补充缺失语义，而不是覆盖本来正确的原生语义。
 </AntiPattern>
 
 <Boundary title="自动化测试不能证明完整可访问性">
-axe 等规则可以发现大量确定性问题，但无法判断所有交互是否符合用户任务、朗读顺序是否自然、复杂组件是否真正可操作。生产验收仍需要键盘测试，并对关键流程进行真实屏幕阅读器验证。
+axe 等规则可以发现大量确定性问题，但无法判断所有交互是否符合用户任务、朗读顺序是否自然、复杂组件是否真正可操作。axe ≠ 完整 accessibility 验收；keyboard ≠ screen reader；automated checks ≠ 实际辅助技术。生产验收仍需要键盘测试，并对关键流程进行真实屏幕阅读器验证。
 </Boundary>
 
 <Summary>

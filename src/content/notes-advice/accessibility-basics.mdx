@@ -29,18 +29,17 @@
 
 Note 要求的 Tab / Shift+Tab / Enter 键盘路径都可执行，因此 Gate B 通过。
 
-## 缺失边界 / 反例
+## 本轮已关闭的边界与反例
 
-建议补充两个常见误区：第一，accessible name 并不等于视觉占位符，placeholder 不应替代稳定 label；第二，动态 live region 应避免重复、过度 assertive 的播报，否则会打断屏幕阅读器用户。
-
-还可以明确 focus visible 不应只靠浏览器默认“碰运气”：设计系统若覆盖 outline，必须提供等价或更清晰的 focus indicator。
+- 已补充 placeholder 不能替代稳定 label，并说明帮助文本和错误信息应作为额外描述，而不是承担字段身份。
+- 已补充 `aria-live` / `assertive` 不是越多越好；重复或过度 assertive 的播报会打断屏幕阅读器用户。Note 同时区分了 Demo 的 DOM 语义展示与生产消息紧急程度决策。
+- 已补充设计系统覆盖浏览器 `outline` 后必须提供等价或更清晰的 visible focus indicator。
 
 ## 清晰度与工程决策
 
 生产决策规则已经明确：先选正确原生元素，再补名称/状态；只有平台语义不足时才加 ARIA；自动化扫描之后仍需键盘和关键流程的真实辅助技术验证。
 
-## 建议修改
+## 尚存人工验证债务
 
-1. 增加 placeholder 不能替代 label 的反例。
-2. 增加 live region 不应滥用 `assertive` 的边界。
-3. 保留“自动化 + 键盘 + 屏幕阅读器”的验证链，不要把 axe 通过写成最终验收。
+1. 已新增 `docs/manual-accessibility-checklist.md`，覆盖 sidebar/navigation、search、Demo controls、forms、validation error、live region 和 modal focus 生命周期；状态继续为 `real screen reader validation: PENDING`。
+2. 保留“自动化 + 键盘 + 屏幕阅读器”的验证链，不把 axe 通过写成最终验收。除非真的使用 VoiceOver、NVDA 或 Orca 完成验证，否则不改为 PASS。
