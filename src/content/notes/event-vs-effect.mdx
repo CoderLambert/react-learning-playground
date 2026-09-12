@@ -1,21 +1,44 @@
 # Event vs Effect：按“为什么执行”划分职责
 
-Event Handler 因特定交互发生；Effect 因组件需要与外部系统保持同步而发生。二者都能执行副作用，但因果模型不同。
+Event Handler 和 Effect 都能执行副作用，区别不在“有没有副作用”，而在**这段逻辑为什么必须执行**。
 
-<MentalModel title="Event 是一次因果；Effect 是持续同步">“用户点击购买”属于事件；“只要 roomId 为 X，就保持连接 X”属于 Effect。判断依据不是代码有没有副作用，而是它为什么必须执行。</MentalModel>
+<MentalModel title="Event 是一次因果；Effect 是持续同步">
+“用户刚点击购买，所以发起一次购买命令”属于 Event。 “只要 online 是 true，外部连接就必须保持在线”属于 Effect。前者由具体交互触发，后者由当前渲染状态决定同步关系。
+</MentalModel>
 
-<Flow items={["用户动作 → Event Handler → 一次业务命令", "render/commit → Effect → 外部系统与当前 UI 状态同步"]} />
+## 先做 A/B 实验
 
-<Experiment title="观察重复触发风险">
-在中间 Demo 对比直接在点击 handler 发送动作，与 setState 后让 Effect 根据 State 发送动作。改变其他依赖或重新挂载，观察后者为什么可能重复执行业务命令。
+<Experiment title="把一次命令错误地改成 State + Effect">
+先用左侧“直接购买”触发一次命令。再用右侧 `setRequested(true)` 让 Effect 发起同样的命令；在请求尚未完成时切换商品。观察右侧命令启动次数为什么会增加，而左侧不会因为商品选择变化自动重放已经发生的点击。
 </Experiment>
 
-<Observation>Effect 可以因为依赖变化、重新挂载或开发环境检查而重新同步；因此不能把“只能发生一次的用户动作”依赖于 Effect 的执行时机。</Observation>
+<DemoReference action="分别触发 Event 路径和 State + Effect 路径，并在 Effect 请求中途切换 product" observe="比较两边实际命令启动次数，以及依赖变化为何会让 Effect 重新同步。" />
 
-<AntiPattern title="State 充当事件总线">为了让 Effect 知道按钮被点过而增加 `submitted`、`shouldNotify` 等瞬时 State，通常是在把清晰事件因果改造成间接状态机。</AntiPattern>
+React 的 Effect 是 reactive 的：它读取的 reactive values 发生变化时，需要重新同步。这个性质非常适合连接、订阅、浏览器 API、第三方实例等外部系统；但如果一条业务命令只应该由某次明确交互触发，把它改造成 `flag → Effect → command`，就把一次性因果错误地建模成了持续同步关系。
 
-<Boundary>有些事件会改变 State，而新的 State 又要求外部系统同步；这时 handler 更新 State，Effect 负责同步，各自保持职责清晰。</Boundary>
+<AntiPattern title="State 充当事件总线">
+为了让 Effect 知道“按钮刚被点击”，额外创建 `requested`、`submitted`、`shouldNotify` 等瞬时 State，通常会扩大状态空间，并让依赖变化、恢复状态或重新同步参与到本来只属于一次交互的业务命令里。
+</AntiPattern>
 
-<Summary items={["Event 回答发生了什么", "Effect 回答当前状态需要同步什么", "一次性业务命令优先放 handler", "不要用 State + Effect 模拟事件"]} />
+## Effect 什么时候反而是正确答案
 
-<FurtherReading links={[{label:"React: Separating Events from Effects",href:"https://react.dev/learn/separating-events-from-effects"}]} />
+Demo 下方的 online 示例展示了另一类需求：只要当前 React 状态是 online，外部系统就应该保持 online；状态变为 offline，就应该重新同步。这里 Effect 的重复 setup / cleanup 不是风险，而正是需求本身。
+
+<Boundary>
+事件可以更新 State，而新的 State 又要求外部系统同步。这种情况下 handler 负责“发生了什么”，Effect 负责“当前状态要求外部系统保持什么”，两者可以同时存在，并不冲突。
+</Boundary>
+
+## 项目决策规则
+
+- 逻辑只因为这次点击、提交、删除、下载等动作发生 → 放 Event Handler。
+- 逻辑要求某个外部系统始终与当前 props/state 保持一致 → 用 Effect。
+- 如果发现自己创建一个 boolean flag 只是为了让 Effect 执行一次命令 → 先重新检查因果模型。
+
+<Summary>
+- Event 回答“刚发生了什么”。
+- Effect 回答“当前状态要求外部系统同步成什么”。
+- 不要用 State + Effect 模拟一次性用户命令。
+- Event 改 State、Effect 再同步外部系统，是合法且常见的组合。
+</Summary>
+
+<FurtherReading items={[{label:"React: Separating Events from Effects",href:"https://react.dev/learn/separating-events-from-effects"}]} />
