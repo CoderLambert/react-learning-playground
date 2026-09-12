@@ -87,12 +87,56 @@ test("learning action event bridge delivers prompt once and can unsubscribe", ()
   const received = [];
   const unsubscribe = subscribeLearningActions((detail) => received.push(detail), target);
 
-  assert.equal(emitLearningAction({ prompt: "解释当前笔记", action: "explain" }, target), true);
+  assert.equal(emitLearningAction({ prompt: "解释当前笔记", action: "explain" }, target, { now: 1000 }), true);
   assert.deepEqual(received, [{ prompt: "解释当前笔记", action: "explain" }]);
 
   unsubscribe();
-  emitLearningAction({ prompt: "不应收到" }, target);
+  emitLearningAction({ prompt: "不应收到" }, target, { now: 1400 });
   assert.equal(received.length, 1);
+});
+
+test("learning action event bridge suppresses accidental rapid duplicate clicks", () => {
+  const target = new EventTarget();
+  const received = [];
+  const unsubscribe = subscribeLearningActions((detail) => received.push(detail), target);
+  const detail = {
+    prompt: "解释当前源码",
+    action: "explain",
+    context: {
+      kind: "source",
+      learningUnitId: "state-snapshot",
+      fileName: "Demo.jsx",
+      range: { startLine: 10, endLine: 20 },
+    },
+  };
+
+  assert.equal(emitLearningAction(detail, target, { now: 1000 }), true);
+  assert.equal(emitLearningAction(detail, target, { now: 1100 }), false);
+  assert.equal(received.length, 1);
+  assert.equal(emitLearningAction(detail, target, { now: 1400 }), true);
+  assert.equal(received.length, 2);
+
+  unsubscribe();
+});
+
+test("learning action event bridge does not dedupe different contexts", () => {
+  const target = new EventTarget();
+  const received = [];
+  const unsubscribe = subscribeLearningActions((detail) => received.push(detail), target);
+
+  assert.equal(emitLearningAction({
+    prompt: "解释源码",
+    action: "explain",
+    context: { kind: "source", learningUnitId: "unit-a", fileName: "Demo.jsx" },
+  }, target, { now: 1000 }), true);
+  assert.equal(emitLearningAction({
+    prompt: "解释源码",
+    action: "explain",
+    context: { kind: "source", learningUnitId: "unit-b", fileName: "Demo.jsx" },
+  }, target, { now: 1050 }), true);
+  assert.equal(received.length, 2);
+
+  unsubscribe();
 });
 
 test("learning action event bridge ignores empty prompts", () => {
