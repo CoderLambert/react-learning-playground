@@ -1,8 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 
-function RenderedPreview({ label, renderRequest }) {
+function RenderedPreview({ label }) {
   const observedNodeRef = useRef(null);
+  const renderCountRef = useRef(0);
   const [domMutationCount, setDomMutationCount] = useState(0);
+
+  renderCountRef.current += 1;
 
   useEffect(() => {
     const node = observedNodeRef.current;
@@ -39,7 +42,7 @@ function RenderedPreview({ label, renderRequest }) {
       }}
     >
       <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-        <span className="badge badge-blue">Render 请求 #{renderRequest}</span>
+        <span className="badge badge-blue">组件执行次数：{renderCountRef.current}</span>
         <span className="badge badge-green">目标 DOM mutation：{domMutationCount}</span>
       </div>
 
@@ -60,25 +63,26 @@ function RenderedPreview({ label, renderRequest }) {
           {label}
         </strong>
       </div>
+
+      <div className="demo-alert demo-alert-info" style={{ margin: 0 }}>
+        开发环境启用 Strict Mode 时，React 可能额外调用组件来帮助发现不纯渲染，因此这里的组件执行次数可能比一次交互增加更多；它仍然是在组件函数执行点采集的真实计数，而不是事件 handler 手工推算。
+      </div>
     </div>
   );
 }
 
 export function RenderVsDomUpdateDemo() {
-  const [renderRequest, setRenderRequest] = useState(1);
   const [label, setLabel] = useState("稳定的 DOM 内容");
   const [unrelated, setUnrelated] = useState(0);
 
   const triggerUnrelatedUpdate = () => {
     setUnrelated((value) => value + 1);
-    setRenderRequest((value) => value + 1);
   };
 
   const changeDomContent = () => {
     setLabel((current) =>
       current === "稳定的 DOM 内容" ? "DOM 内容真的改变了" : "稳定的 DOM 内容",
     );
-    setRenderRequest((value) => value + 1);
   };
 
   return (
@@ -112,12 +116,12 @@ export function RenderVsDomUpdateDemo() {
           </h3>
           <p className="demo-section-desc">
             “无关 State 更新”会让当前组件树再次执行 render，但传给目标节点的 <code>label</code>
-            没变。观察目标 DOM mutation 是否增加；再点击“修改 DOM 内容”进行对照。
+            没变。比较组件函数执行次数与目标 DOM mutation；再点击“修改 DOM 内容”进行对照。
           </p>
         </div>
 
         <div style={{ display: "grid", gap: "14px" }}>
-          <RenderedPreview label={label} renderRequest={renderRequest} />
+          <RenderedPreview label={label} />
 
           <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
             <button className="btn btn-primary" onClick={triggerUnrelatedUpdate}>
@@ -131,7 +135,7 @@ export function RenderVsDomUpdateDemo() {
           <div className="demo-alert demo-alert-info" style={{ margin: 0 }}>
             <div className="demo-alert-title">观察结论</div>
             <div>
-              点击无关更新时，Render 请求编号继续增长，但目标节点文本没有变化，因此 React
+              点击无关更新时，组件函数会再次执行，但目标节点文本没有变化，因此 React
               没必要改写这个节点。只有 <code>label</code> 真正改变时，MutationObserver 才会观察到对应 DOM mutation。
             </div>
           </div>
