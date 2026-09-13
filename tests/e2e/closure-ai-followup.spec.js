@@ -123,7 +123,7 @@ test("conversation mutations expose persistence failures and remain retryable", 
   const panel = toolbar.locator(".ai-conversation-popover__panel");
 
   await setConversationMutationFailure(page, { put: true });
-  let item = panel.locator("li").filter({ hasText: "mutation failure fixture" });
+  let item = panel.getByLabel("mutation failure fixture 操作").locator("..");
   await item.getByRole("button", { name: "重命名" }).click();
   const renameInput = item.getByRole("textbox", { name: "重命名会话" });
   await renameInput.fill("renamed fixture");
@@ -135,7 +135,7 @@ test("conversation mutations expose persistence failures and remain retryable", 
   await renameInput.press("Enter");
   await expect(panel.getByText("renamed fixture", { exact: true })).toBeVisible();
 
-  item = panel.locator("li").filter({ hasText: "renamed fixture" });
+  item = panel.getByLabel("renamed fixture 操作").locator("..");
   await setConversationMutationFailure(page, { put: true });
   await item.getByRole("button", { name: "归档" }).click();
   await expect(item.getByRole("alert")).toContainText("归档失败");
@@ -144,7 +144,7 @@ test("conversation mutations expose persistence failures and remain retryable", 
   await setConversationMutationFailure(page);
   await item.getByRole("button", { name: "归档" }).click();
   const archivedList = panel.locator("nav.ai-conversation-list").filter({ hasText: "已归档" });
-  item = archivedList.locator("li").filter({ hasText: "renamed fixture" });
+  item = archivedList.getByLabel("renamed fixture 操作").locator("..");
   await expect(item).toBeVisible();
 
   await setConversationMutationFailure(page, { put: true });
@@ -155,7 +155,7 @@ test("conversation mutations expose persistence failures and remain retryable", 
   await setConversationMutationFailure(page);
   await item.getByRole("button", { name: "恢复" }).click();
   const currentList = panel.locator("nav.ai-conversation-list").filter({ hasText: "当前学习单元" });
-  item = currentList.locator("li").filter({ hasText: "renamed fixture" });
+  item = currentList.getByLabel("renamed fixture 操作").locator("..");
   await expect(item).toBeVisible();
 
   await item.getByRole("button", { name: "删除", exact: true }).click();
