@@ -103,7 +103,8 @@
 .ai-source-citation-preview {
   position: absolute;
   z-index: 80;
-  inset-inline-start: 0;
+  box-sizing: border-box;
+  inset-inline-start: var(--ai-citation-preview-offset-x, 0px);
   inset-inline-end: auto;
   inset-block-start: calc(100% + 0.48rem);
   width: max-content;
@@ -126,20 +127,20 @@
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
-  transform: translate(var(--ai-citation-preview-offset-x, 0px), -0.2rem);
+  transform: translateY(-0.2rem);
   transition: opacity 120ms ease, transform 120ms ease, visibility 120ms ease;
 }
 
 .ai-source-citation-wrap[data-preview-align="end"] .ai-source-citation-preview {
   inset-inline-start: auto;
-  inset-inline-end: 0;
+  inset-inline-end: calc(0px - var(--ai-citation-preview-offset-x, 0px));
 }
 
 .ai-source-citation-wrap:hover .ai-source-citation-preview,
 .ai-source-citation-wrap:focus-within .ai-source-citation-preview {
   opacity: 1;
   visibility: visible;
-  transform: translate(var(--ai-citation-preview-offset-x, 0px), 0);
+  transform: translateY(0);
 }
 
 @media (max-width: 720px) {
