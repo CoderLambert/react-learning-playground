@@ -452,7 +452,7 @@ export function AiAssistant({
     if (!isStreaming || !onStop) return;
     onStop();
     showActionNotice("已请求停止生成");
-    inputRef.current?.focus();
+    requestAnimationFrame(() => inputRef.current?.focus());
   };
 
   const sourcePreviewEntries = Array.isArray(contextSummary?.sources) ? contextSummary.sources : [];
