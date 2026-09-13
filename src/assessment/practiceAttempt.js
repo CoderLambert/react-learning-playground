@@ -27,6 +27,7 @@ function createBlankAnswer(question, now = Date.now()) {
 }
 
 export function createQuestionRevision(question) {
+  if (question?.revision) return String(question.revision);
   const source = `${question.id ?? ""}|${question.prompt ?? ""}|${question.kind ?? "free-text"}`;
   let hash = 2166136261;
   for (let index = 0; index < source.length; index += 1) {
