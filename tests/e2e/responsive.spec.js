@@ -65,17 +65,33 @@ test.describe("narrow viewport", () => {
   test("keeps mobile navigation and full-screen inspector operable", async ({ page }) => {
     await loadApp(page);
     const navigationHeading = page.getByRole("heading", { name: "React 核心实验室", exact: true });
+    const shell = page.locator(".workbench-shell");
+    const navigationSlot = page.locator(".workbench-navigation-slot");
+    const contentSlot = page.locator(".workbench-content-slot");
     await expect(navigationHeading).toBeHidden();
     await expect(page.locator(".workbench-inspector-slot")).toBeVisible();
     await page.getByRole("button", { name: "关闭学习面板" }).last().click();
     const menu = page.getByRole("button", { name: /打开侧边导航/ });
     await expect(menu).toBeVisible();
+    await menu.focus();
     await menu.press("Enter");
-    await expect(page.locator(".workbench-shell")).toHaveAttribute("data-mobile-navigation-open", "true");
+    await expect(shell).toHaveAttribute("data-mobile-navigation-open", "true");
     await expect(navigationHeading).toBeVisible();
+    await expect(navigationSlot).toBeFocused();
+    await expect(contentSlot).toHaveAttribute("inert", "");
+
+    await page.keyboard.press("Escape");
+    await expect(shell).toHaveAttribute("data-mobile-navigation-open", "false");
+    await expect(navigationHeading).toBeHidden();
+    await expect(contentSlot).not.toHaveAttribute("inert", "");
+    await expect(menu).toBeFocused();
+
+    await menu.press("Enter");
+    await expect(shell).toHaveAttribute("data-mobile-navigation-open", "true");
+    await expect(navigationSlot).toBeFocused();
     await page.getByRole("searchbox", { name: "搜索知识点或关键词" }).fill("Modal Focus");
     await page.locator("button.workbench-navigation-item").filter({ hasText: "Modal Focus" }).click();
-    await expect(page.locator(".workbench-shell")).toHaveAttribute("data-mobile-navigation-open", "false");
+    await expect(shell).toHaveAttribute("data-mobile-navigation-open", "false");
     await expect(navigationHeading).toBeHidden();
     await expect(page.locator(".demo-page h2.demo-title")).toContainText("Modal Focus");
     await expectNoPageOverflow(page);
