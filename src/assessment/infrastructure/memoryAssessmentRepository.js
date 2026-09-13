@@ -15,11 +15,13 @@ import {
   normalizeSessionGetQuery,
   normalizeSessionInput,
   normalizeSessionListQuery,
+  normalizeSessionReconcileInput,
   normalizeUpdateCommand,
   normalizeAttemptProgressInput,
   nowIso,
   questionNotFound,
   questionRetired,
+  reconcileInProgressSessionRecords,
   requiredQuestionRecord,
   replayResult,
   revisionConflict,
@@ -176,10 +178,29 @@ export class MemoryAssessmentRepository {
     return committedResult(result);
   }
 
+  #reconcileInProgressSessions(learningUnitId) {
+    const sessionStore = this.state[ASSESSMENT_STORES.SESSIONS];
+    const reconciliation = reconcileInProgressSessionRecords(
+      [...sessionStore.values()],
+      { learningUnitId, supersededAt: nowIso(this.clock) },
+    );
+    for (const session of reconciliation.superseded) {
+      sessionStore.set(session.id, cloneValue(session));
+    }
+    return cloneValue(reconciliation.winner);
+  }
+
   async createSession(input) {
     const session = normalizeSessionInput(input);
+    const existing = this.#reconcileInProgressSessions(session.learningUnitId);
+    if (existing) return existing;
     this.state[ASSESSMENT_STORES.SESSIONS].set(session.id, cloneValue(session));
     return cloneValue(session);
+  }
+
+  async reconcileInProgressSessions(input) {
+    const query = normalizeSessionReconcileInput(input);
+    return this.#reconcileInProgressSessions(query.learningUnitId);
   }
 
   async getSession(input) {
@@ -210,7 +231,7 @@ export class MemoryAssessmentRepository {
     const attemptStore = this.state[ASSESSMENT_STORES.ATTEMPTS];
     const current = sessionStore.get(command.sessionId);
     if (!current || current.learningUnitId !== command.learningUnitId) throw sessionNotFound(command);
-    if (current.status === "completed") throw sessionCompleted(command);
+    if (current.status !== "in_progress") throw sessionCompleted(command);
 
     const duplicate = [...attemptStore.values()].some((candidate) => (
       candidate.sessionId === command.sessionId && candidate.questionId === command.attempt.questionId
