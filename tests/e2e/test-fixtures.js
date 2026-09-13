@@ -34,8 +34,9 @@ export const test = base.extend({
 
 export async function loadApp(page) {
   await page.goto("./");
-  await expect(page.getByRole("heading", { name: "React 核心实验室", exact: true })).toBeVisible();
+  await expect(page.locator(".workbench-shell")).toBeVisible();
   await expect(page.locator("main.app-content")).toBeVisible();
+  await expect(page.locator(".demo-page h2.demo-title")).toBeVisible();
 }
 
 export async function openDemo(page, label) {
