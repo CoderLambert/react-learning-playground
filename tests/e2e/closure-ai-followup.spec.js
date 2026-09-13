@@ -105,7 +105,7 @@ test("narrow right-edge citation preview stays inside the viewport without horiz
   const transcript = page.getByRole("log", { name: "AI 对话记录" });
   const responseMessage = transcript.locator('[data-message-role="assistant"]').last();
   const rightEdgeCitation = responseMessage.locator(
-    '.ai-source-citation.is-preview-only[aria-label="PropsBasicsDemo.jsx，源码片段 PropsBasicsDemo.jsx L5–L6"]',
+    '.ai-source-citation.is-preview-only[aria-label="PropsBasicsDemo.jsx，源码片段 PropsBasicsDemo.jsx L1–L2"]',
   );
   await expect(rightEdgeCitation).toHaveCount(1);
   const citationWrap = rightEdgeCitation.locator("..");
