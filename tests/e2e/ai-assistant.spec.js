@@ -103,7 +103,7 @@ test("AI assistant handles normalized errors, stop and New Chat", async ({ page 
     const body = route.request().postDataJSON();
     requests.push(body);
 
-    if (body.question.includes("错误")) {
+    if (body.question.includes("错误") && requests.filter((request) => request.question === body.question).length === 1) {
       await route.fulfill({
         status: 200,
         contentType: "application/x-ndjson",
@@ -138,6 +138,14 @@ test("AI assistant handles normalized errors, stop and New Chat", async ({ page 
   await composer.fill("触发错误");
   await page.getByRole("button", { name: "发送" }).click();
   await expect(page.getByRole("alert")).toContainText("mock quota");
+  await expect(page.getByRole("button", { name: "重试" })).toBeVisible();
+
+  await page.getByRole("button", { name: "重试" }).click();
+  await expect(transcript.getByText("ok", { exact: true })).toBeVisible();
+  expect(requests.filter((request) => request.question === "触发错误")).toHaveLength(2);
+  await expect(transcript.getByText("触发错误", { exact: true })).toHaveCount(1);
+  await expect(page.getByRole("alert")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "重试" })).toHaveCount(0);
 
   await page.getByRole("button", { name: "新对话" }).click();
   await expect(page.getByRole("alert")).toHaveCount(0);
