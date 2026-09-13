@@ -573,6 +573,7 @@ export default function App() {
           inputValue={aiAssistant.inputValue}
           onInputChange={aiAssistant.setInputValue}
           onSubmit={aiAssistant.submit}
+          onRetry={aiAssistant.canRetry ? aiAssistant.retryFailedTurn : undefined}
           onStop={aiAssistant.stop}
           onCitationOpen={handleCitationOpen}
           disabled={aiAssistant.disabled}

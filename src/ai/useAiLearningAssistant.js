@@ -83,6 +83,7 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile, assessm
   const [conversations, setConversations] = useState([]);
   const [conversationStorage, setConversationStorage] = useState({ mode: "initializing", reason: null });
   const [activeConversationId, setActiveConversationId] = useState(null);
+  const [retryDescriptor, setRetryDescriptor] = useState(null);
   const [latestCompaction, setLatestCompaction] = useState(null);
   const [compactedMessageCount, setCompactedMessageCount] = useState(0);
   const [compacting, setCompacting] = useState(false);
@@ -122,6 +123,8 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile, assessm
     setCompacting(false);
   }, []);
 
+  const clearRetryDescriptor = useCallback(() => setRetryDescriptor(null), []);
+
   const refreshConversations = useCallback(async (repo = repository) => {
     if (!repo) return [];
     const next = await repo.listConversations({ includeArchived: true });
@@ -158,6 +161,7 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile, assessm
 
   const hydrateConversation = useCallback(async (conversationId) => {
     invalidateCompactionContext();
+    clearRetryDescriptor();
     const hydrationRequest = ++hydrationRequestRef.current;
     const activeRequestId = activeRequestIdRef.current;
     abortControllerRef.current?.abort();
@@ -192,10 +196,11 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile, assessm
     setLatestCompaction(latest);
     dispatch({ type: "hydrate", messages });
     setInputValue("");
-  }, [invalidateCompactionContext, learningUnitId, repository]);
+  }, [clearRetryDescriptor, invalidateCompactionContext, learningUnitId, repository]);
 
   useEffect(() => {
     invalidateCompactionContext();
+    clearRetryDescriptor();
     hydrationRequestRef.current += 1;
     abortControllerRef.current?.abort();
     abortControllerRef.current = null;
@@ -241,7 +246,7 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile, assessm
     return () => {
       cancelled = true;
     };
-  }, [hydrateConversation, invalidateCompactionContext, learningUnitId, repository]);
+  }, [clearRetryDescriptor, hydrateConversation, invalidateCompactionContext, learningUnitId, repository]);
 
   const contextReady = Boolean(
     learningUnit &&
@@ -323,6 +328,7 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile, assessm
 
   const newConversation = useCallback(async () => {
     invalidateCompactionContext();
+    clearRetryDescriptor();
     hydrationRequestRef.current += 1;
     abortControllerRef.current?.abort();
     abortControllerRef.current = null;
@@ -334,7 +340,7 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile, assessm
     setContextSelectionNotice(null);
     setInputValue("");
     dispatch({ type: "hydrate", messages: [] });
-  }, [invalidateCompactionContext]);
+  }, [clearRetryDescriptor, invalidateCompactionContext]);
 
   const renameConversation = useCallback(async (id, title) => {
     if (!repository) return;
@@ -498,7 +504,7 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile, assessm
     return promise;
   }, [activeSourceFile, aiContext, chatState.messages, client.configured, contextModelId, ensureConversation, latestCompaction, messagesSinceCompaction, repository, requestContext, summarizeMessages]);
 
-  const submit = useCallback(async (question) => {
+  const submit = useCallback(async (question, retry = null) => {
     const normalizedQuestion = typeof question === "string" ? question.trim() : "";
     if (
       !normalizedQuestion ||
@@ -507,13 +513,19 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile, assessm
       noteState.loading ||
       activeRequestIdRef.current
     ) return;
+    if (retry && (
+      retry.learningUnitId !== learningUnitId ||
+      retry.generation !== hydrationRequestRef.current ||
+      retry.conversationId !== activeConversationId
+    )) return;
 
     const controller = new AbortController();
     const requestId = createRequestId();
     const requestGeneration = hydrationRequestRef.current;
     abortControllerRef.current = controller;
     activeRequestIdRef.current = requestId;
-    dispatch({ type: "request", requestId, question: normalizedQuestion });
+    if (retry) dispatch({ type: "retry", requestId, previousRequestId: retry.requestId });
+    else dispatch({ type: "request", requestId, question: normalizedQuestion });
     dispatch({ type: "start", requestId });
     setInputValue("");
     let conversation = null;
@@ -571,8 +583,11 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile, assessm
     };
 
     try {
-      conversation = await ensureConversation();
+      conversation = retry
+        ? await repository?.getConversation(retry.conversationId)
+        : await ensureConversation();
       assertCurrentRequest();
+      if (!conversation || conversation.learningUnitId !== learningUnitId) throw new AiChatAbortError();
 
       let effectiveSummary = summaryText;
       let effectiveCompactedMessageCount = compactedMessageCount;
@@ -660,7 +675,7 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile, assessm
         : null;
       assertCurrentRequest();
 
-      if (repository && conversation) {
+      if (repository && conversation && !retry) {
         userRecord = await repository.appendMessage({
           conversationId: conversation.id,
           role: "user",
@@ -755,6 +770,7 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile, assessm
       }));
       await persistenceQueue;
       await persister?.flush();
+      clearRetryDescriptor();
       await refreshConversations(repository);
     } catch (error) {
       await persistenceQueue.catch(() => null);
@@ -782,6 +798,16 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile, assessm
           requestId,
           message: error?.message || "AI assistant request failed",
         });
+        if (conversation && userRecord) {
+          setRetryDescriptor({
+            conversationId: conversation.id,
+            learningUnitId,
+            generation: requestGeneration,
+            requestId,
+            question: normalizedQuestion,
+            userMessageId: userRecord.id,
+          });
+        }
         if (userRecord || assistantRecordPromise || assistantRecord) {
           await ensureAssistantRecord();
           await persister?.finalize({
@@ -798,7 +824,12 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile, assessm
         abortControllerRef.current = null;
       }
     }
-  }, [activeSourceFile, agentRunner, aiContext, chatState.messages, client, compactContext, compactedMessageCount, completedHistory, connectionMode, contextModelId, ensureConversation, lastActualUsage, learningUnitId, messagesSinceCompaction, mode, noteState.loading, refreshConversations, repository, requestContext, summaryText]);
+  }, [activeConversationId, activeSourceFile, agentRunner, aiContext, chatState.messages, clearRetryDescriptor, client, compactContext, compactedMessageCount, completedHistory, connectionMode, contextModelId, ensureConversation, lastActualUsage, learningUnitId, messagesSinceCompaction, mode, noteState.loading, refreshConversations, repository, requestContext, summaryText]);
+
+  const retryFailedTurn = useCallback(() => {
+    if (!retryDescriptor) return;
+    return submit(retryDescriptor.question, retryDescriptor);
+  }, [retryDescriptor, submit]);
 
   useEffect(() => () => abortControllerRef.current?.abort(), []);
 
@@ -857,6 +888,7 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile, assessm
     messages: chatState.messages,
     status: chatState.status,
     error: noteState.error?.message || chatState.error,
+    canRetry: Boolean(retryDescriptor && chatState.error),
     notice: noticeParts.filter(Boolean).join(" ") || null,
     disabled: !client.configured || !contextReady || chatState.status === CHAT_STATUS.STREAMING ||
       (mode === "assessment_authoring" && !agentRunner),
@@ -864,6 +896,7 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile, assessm
     saveConnectionSettings,
     clearConnectionSettings,
     submit,
+    retryFailedTurn,
     stop,
     reset: newConversation,
   };
