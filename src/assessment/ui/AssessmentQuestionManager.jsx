@@ -1,7 +1,8 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useSyncExternalStore } from "react";
 import { Badge } from "../../components/ui/badge.jsx";
 import { Button } from "../../components/ui/button.jsx";
 import { Card, CardContent, CardHeader } from "../../components/ui/card.jsx";
+import { getActiveAssessmentRuntime } from "../composition/assessmentRuntime.js";
 import {
   buildQuestionPatch,
   createAssessmentManagerTrustedContext,
@@ -11,6 +12,9 @@ import {
 
 const TYPE_LABELS = { single_choice: "单选题", true_false: "判断题" };
 const STATUS_LABELS = { active: "启用中", retired: "已停用" };
+const EMPTY_SNAPSHOT = null;
+const EMPTY_SUBSCRIBE = () => () => {};
+const EMPTY_GET_SNAPSHOT = () => EMPTY_SNAPSHOT;
 
 function Field({ label, children }) {
   return (
@@ -72,13 +76,7 @@ function QuestionEditor({ question, onSave, onCancel, saving }) {
                 onChange={() => setDraft((current) => ({ ...current, correctOptionId: option.id }))}
                 aria-label={`设为正确答案：选项 ${index + 1}`}
               />
-              <input
-                className={inputClassName()}
-                value={option.text}
-                onChange={(event) => updateOption(option.id, event.target.value)}
-                aria-label={`选项 ${index + 1}`}
-                required
-              />
+              <input className={inputClassName()} value={option.text} onChange={(event) => updateOption(option.id, event.target.value)} aria-label={`选项 ${index + 1}`} required />
             </div>
           ))}
         </fieldset>
@@ -100,7 +98,16 @@ function QuestionEditor({ question, onSave, onCancel, saving }) {
   );
 }
 
-export function AssessmentQuestionManager({ learningUnitId, questions = [], service, session = null }) {
+export function AssessmentQuestionManager({ session = null }) {
+  const runtime = getActiveAssessmentRuntime();
+  const snapshot = useSyncExternalStore(
+    runtime?.queryStore.subscribe ?? EMPTY_SUBSCRIBE,
+    runtime?.queryStore.getSnapshot ?? EMPTY_GET_SNAPSHOT,
+    EMPTY_GET_SNAPSHOT,
+  );
+  const learningUnitId = snapshot?.learningUnitId ?? null;
+  const questions = snapshot?.questions ?? [];
+  const service = runtime?.service ?? null;
   const [showRetired, setShowRetired] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [busyId, setBusyId] = useState(null);
@@ -114,16 +121,17 @@ export function AssessmentQuestionManager({ learningUnitId, questions = [], serv
   const retiredCount = questions.filter((question) => question.status === "retired").length;
 
   const refreshAfterError = async () => {
-    if (!service || !learningUnitId) return;
+    if (!service || !learningUnitId || !runtime?.queryStore) return;
     try {
-      await service.listQuestions({ trusted: { learningUnitId } });
+      const latest = await service.listQuestions({ trusted: { learningUnitId } });
+      runtime.queryStore.replaceSnapshot({ learningUnitId, questions: latest });
     } catch {
-      // Query store refresh is performed by successful mutations; App also refreshes when unit changes.
+      // Keep the existing snapshot if refresh also fails.
     }
   };
 
   const save = async (question, patch) => {
-    if (!service) return;
+    if (!service || !learningUnitId) return;
     setBusyId(question.id);
     setNotice(null);
     try {
@@ -136,8 +144,7 @@ export function AssessmentQuestionManager({ learningUnitId, questions = [], serv
       setEditingId(null);
       setNotice({ kind: "success", message: "题目已保存。正在进行的评测仍使用开始时的题目快照。" });
     } catch (error) {
-      const described = describeAssessmentMutationError(error);
-      setNotice(described);
+      setNotice(describeAssessmentMutationError(error));
       await refreshAfterError();
     } finally {
       setBusyId(null);
@@ -145,7 +152,7 @@ export function AssessmentQuestionManager({ learningUnitId, questions = [], serv
   };
 
   const retire = async (question) => {
-    if (!service || question.status !== "active") return;
+    if (!service || !learningUnitId || question.status !== "active") return;
     setBusyId(question.id);
     setNotice(null);
     try {
@@ -157,13 +164,14 @@ export function AssessmentQuestionManager({ learningUnitId, questions = [], serv
       if (editingId === question.id) setEditingId(null);
       setNotice({ kind: "success", message: "题目已停用。已有评测会话仍保留创建时的快照。" });
     } catch (error) {
-      const described = describeAssessmentMutationError(error);
-      setNotice(described);
+      setNotice(describeAssessmentMutationError(error));
       await refreshAfterError();
     } finally {
       setBusyId(null);
     }
   };
+
+  if (!runtime || !learningUnitId) return null;
 
   return (
     <section className="min-w-0 p-4 pb-0 sm:p-5 sm:pb-0" aria-labelledby="assessment-manager-title">
@@ -180,51 +188,23 @@ export function AssessmentQuestionManager({ learningUnitId, questions = [], serv
             </div>
           </div>
           <label className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
-            <input type="checkbox" checked={showRetired} onChange={(event) => setShowRetired(event.target.checked)} />
-            显示已停用题目
+            <input type="checkbox" checked={showRetired} onChange={(event) => setShowRetired(event.target.checked)} />显示已停用题目
           </label>
         </CardHeader>
         <CardContent className="space-y-4 pt-5">
-          {session?.status === "in_progress" && (
-            <p role="status" className="m-0 rounded-md border border-[var(--border-color)] bg-[var(--bg-surface-secondary)] p-3 text-xs leading-5 text-[var(--text-muted)]">
-              当前有进行中的评测。编辑或停用题库不会修改本轮 session 的题目快照。
-            </p>
-          )}
+          {session?.status === "in_progress" && <p role="status" className="m-0 rounded-md border border-[var(--border-color)] bg-[var(--bg-surface-secondary)] p-3 text-xs leading-5 text-[var(--text-muted)]">当前有进行中的评测。编辑或停用题库不会修改本轮 session 的题目快照。</p>}
           {notice && <p role="status" data-notice-kind={notice.kind} className="m-0 text-sm text-[var(--text-muted)]">{notice.message}</p>}
-          {visibleQuestions.length === 0 ? (
-            <p className="m-0 text-sm text-[var(--text-muted)]">{showRetired ? "当前没有题目。" : "当前没有启用题目。"}</p>
-          ) : visibleQuestions.map((question) => (
+          {visibleQuestions.length === 0 ? <p className="m-0 text-sm text-[var(--text-muted)]">{showRetired ? "当前没有题目。" : "当前没有启用题目。"}</p> : visibleQuestions.map((question) => (
             <article key={question.id} className="rounded-lg border border-[var(--border-subtle)] p-4" data-question-status={question.status}>
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
-                  <div className="mb-2 flex flex-wrap gap-2">
-                    <Badge variant="outline">{TYPE_LABELS[question.type] ?? question.type}</Badge>
-                    <Badge variant={question.status === "active" ? "success" : "secondary"}>{STATUS_LABELS[question.status] ?? question.status}</Badge>
-                    <span className="text-xs text-[var(--text-subtle)]">rev {question.revision}</span>
-                  </div>
+                  <div className="mb-2 flex flex-wrap gap-2"><Badge variant="outline">{TYPE_LABELS[question.type] ?? question.type}</Badge><Badge variant={question.status === "active" ? "success" : "secondary"}>{STATUS_LABELS[question.status] ?? question.status}</Badge><span className="text-xs text-[var(--text-subtle)]">rev {question.revision}</span></div>
                   <p className="m-0 text-sm font-semibold leading-6 text-[var(--text-main)]">{question.content?.prompt}</p>
                 </div>
-                <div className="flex gap-2">
-                  {question.status === "active" && (
-                    <>
-                      <Button size="sm" variant="outline" onClick={() => setEditingId((id) => id === question.id ? null : question.id)} disabled={busyId === question.id}>
-                        {editingId === question.id ? "收起编辑" : "编辑"}
-                      </Button>
-                      <Button size="sm" variant="outline" onClick={() => retire(question)} disabled={busyId === question.id}>
-                        停用
-                      </Button>
-                    </>
-                  )}
-                </div>
+                <div className="flex gap-2">{question.status === "active" && <><Button size="sm" variant="outline" onClick={() => setEditingId((id) => id === question.id ? null : question.id)} disabled={busyId === question.id}>{editingId === question.id ? "收起编辑" : "编辑"}</Button><Button size="sm" variant="outline" onClick={() => retire(question)} disabled={busyId === question.id}>停用</Button></>}</div>
               </div>
-              {question.status === "retired" && (
-                <p className="mt-3 mb-0 text-xs leading-5 text-[var(--text-muted)]">当前 domain 只提供 retire 语义，没有恢复命令；因此这里仅展示历史题目，不提供伪恢复操作。</p>
-              )}
-              {editingId === question.id && question.status === "active" && (
-                <div className="mt-4 border-t border-[var(--border-subtle)] pt-4">
-                  <QuestionEditor question={question} saving={busyId === question.id} onSave={(patch) => save(question, patch)} onCancel={() => setEditingId(null)} />
-                </div>
-              )}
+              {question.status === "retired" && <p className="mt-3 mb-0 text-xs leading-5 text-[var(--text-muted)]">当前 domain 只提供 retire 语义，没有恢复命令；因此这里只展示历史题目。</p>}
+              {editingId === question.id && question.status === "active" && <div className="mt-4 border-t border-[var(--border-subtle)] pt-4"><QuestionEditor question={question} saving={busyId === question.id} onSave={(patch) => save(question, patch)} onCancel={() => setEditingId(null)} /></div>}
             </article>
           ))}
         </CardContent>
