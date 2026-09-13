@@ -6,13 +6,7 @@ function withConversationExports(conversationNavigation, props) {
   if (!isValidElement(conversationNavigation)) return conversationNavigation;
 
   const existingChildren = Children.toArray(conversationNavigation.props.children);
-  return cloneElement(
-    conversationNavigation,
-    {
-      ...conversationNavigation.props,
-      role: conversationNavigation.props.role ?? "group",
-    },
-    ...existingChildren,
+  const exportActions = (
     <ConversationExportActions
       key="conversation-export-actions"
       messages={props.messages}
@@ -22,7 +16,21 @@ function withConversationExports(conversationNavigation, props) {
       title={props.exportTitle}
       filePrefix={props.exportFilePrefix}
       disabled={props.status === "streaming" || props.status === "loading"}
-    />,
+    />
+  );
+  const children = [
+    ...existingChildren.slice(0, 2),
+    exportActions,
+    ...existingChildren.slice(2),
+  ];
+
+  return cloneElement(
+    conversationNavigation,
+    {
+      ...conversationNavigation.props,
+      role: conversationNavigation.props.role ?? "group",
+    },
+    ...children,
   );
 }
 
