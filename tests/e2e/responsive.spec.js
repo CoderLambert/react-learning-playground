@@ -71,20 +71,26 @@ test.describe("narrow viewport", () => {
     await expect(navigationHeading).toBeHidden();
     await expect(page.locator(".workbench-inspector-slot")).toBeVisible();
     await page.getByRole("button", { name: "关闭学习面板" }).last().click();
-    const menu = page.getByRole("button", { name: /打开侧边导航/ });
+    const menu = page.getByRole("button", { name: "打开侧边导航" });
     await expect(menu).toBeVisible();
+    await expect(menu).toHaveAttribute("aria-expanded", "false");
+    await expect(menu).toHaveAttribute("aria-controls", "workbench-navigation");
     await menu.focus();
     await menu.press("Enter");
     await expect(shell).toHaveAttribute("data-mobile-navigation-open", "true");
     await expect(navigationHeading).toBeVisible();
     await expect(navigationSlot).toBeFocused();
     await expect(contentSlot).toHaveAttribute("inert", "");
+    const closeMenu = page.getByRole("button", { name: "关闭侧边导航" });
+    await expect(closeMenu).toHaveAttribute("aria-expanded", "true");
+    await expect(closeMenu).toHaveAttribute("aria-controls", "workbench-navigation");
 
     await page.keyboard.press("Escape");
     await expect(shell).toHaveAttribute("data-mobile-navigation-open", "false");
     await expect(navigationHeading).toBeHidden();
     await expect(contentSlot).not.toHaveAttribute("inert", "");
     await expect(menu).toBeFocused();
+    await expect(menu).toHaveAttribute("aria-expanded", "false");
 
     await menu.press("Enter");
     await expect(shell).toHaveAttribute("data-mobile-navigation-open", "true");
