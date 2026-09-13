@@ -269,9 +269,10 @@ test("A7.7 PASS: abort before mutation does not write; abort after commit preser
   assert.equal((await afterRepository.listQuestions({ learningUnitId: UNIT })).length, 1);
 });
 
-test("A7.8 PASS: runtime reports memory fallback when IndexedDB is unavailable", async () => {
+test("A7.8 PASS: runtime reports memory fallback and Assessment-owned capabilities when IndexedDB is unavailable", async () => {
   const runtime = await createAssessmentRuntime({ indexedDb: undefined });
   assert.equal(runtime.mode, "memory");
   assert.equal(runtime.storageNotice, "本地持久化不可用，评测当前为本次会话存储。");
-  assert.equal(runtime.toolExecutor.registry.has("assessment_create_questions"), true);
+  assert.equal(runtime.capabilities.some((capability) => capability.name === "assessment_create_questions"), true);
+  assert.equal(runtime.createAgentRunner, undefined);
 });
