@@ -1,5 +1,6 @@
 import "./tokens.css";
 import "./WorkbenchShell.css";
+import "./ClosureSurfaceFixes.css";
 
 export function WorkbenchShell({
   navigation,
