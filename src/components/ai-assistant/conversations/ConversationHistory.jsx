@@ -20,8 +20,8 @@ export function ConversationHistory({
     }));
     return {
       current: withLabels.filter((item) => item.learningUnitId === learningUnitId && !item.archived),
-      archived: withLabels.filter((item) => item.learningUnitId === learningUnitId && item.archived),
-      other: withLabels.filter((item) => item.learningUnitId !== learningUnitId),
+      archived: withLabels.filter((item) => item.archived),
+      other: withLabels.filter((item) => item.learningUnitId !== learningUnitId && !item.archived),
     };
   }, [conversations, learningUnitId, learningUnitLabels]);
 
