@@ -67,6 +67,35 @@ function clampPreviewLeft(left, width, viewportWidth, edge) {
   return Math.min(Math.max(left, minimum), maximum);
 }
 
+export function resolveCitationPreviewPlacement({
+  wrapperLeft,
+  wrapperRight,
+  previewWidth,
+  viewportWidth,
+  edge = 8,
+}) {
+  const safeViewportWidth = Math.max(0, Number(viewportWidth) || 0);
+  const safeEdge = Math.max(0, Number(edge) || 0);
+  const safeWrapperLeft = Number(wrapperLeft) || 0;
+  const safeWrapperRight = Number(wrapperRight) || safeWrapperLeft;
+  const safePreviewWidth = Math.max(0, Number(previewWidth) || 0);
+  const width = Math.min(safePreviewWidth, Math.max(0, safeViewportWidth - safeEdge * 2));
+  const startLeft = safeWrapperLeft;
+  const endLeft = safeWrapperRight - width;
+  const startOverflow = horizontalOverflow(startLeft, width, safeViewportWidth, safeEdge);
+  const endOverflow = horizontalOverflow(endLeft, width, safeViewportWidth, safeEdge);
+  const align = endOverflow < startOverflow ? "end" : "start";
+  const baseLeft = align === "end" ? endLeft : startLeft;
+  const left = clampPreviewLeft(baseLeft, width, safeViewportWidth, safeEdge);
+
+  return {
+    align,
+    left,
+    width,
+    offsetX: left - baseLeft,
+  };
+}
+
 export function createSourceCitationOpenPayload(citation) {
   const normalized = normalizeSourceCitation(citation);
   if (!normalized) return null;
@@ -113,19 +142,15 @@ export function SourceCitation({
 
       const wrapperRect = wrapper.getBoundingClientRect();
       const previewRect = element.getBoundingClientRect();
-      const edge = 8;
-      const width = Math.min(previewRect.width, Math.max(0, viewportWidth - edge * 2));
-      const startLeft = wrapperRect.left;
-      const endLeft = wrapperRect.right - width;
-      const startOverflow = horizontalOverflow(startLeft, width, viewportWidth, edge);
-      const endOverflow = horizontalOverflow(endLeft, width, viewportWidth, edge);
-      const align = endOverflow < startOverflow ? "end" : "start";
-      const baseLeft = align === "end" ? endLeft : startLeft;
-      const clampedLeft = clampPreviewLeft(baseLeft, width, viewportWidth, edge);
-      const offsetX = clampedLeft - baseLeft;
+      const placement = resolveCitationPreviewPlacement({
+        wrapperLeft: wrapperRect.left,
+        wrapperRight: wrapperRect.right,
+        previewWidth: previewRect.width,
+        viewportWidth,
+      });
 
-      setPreviewAlign((current) => current === align ? current : align);
-      setPreviewOffsetX((current) => Math.abs(current - offsetX) < 0.5 ? current : offsetX);
+      setPreviewAlign((current) => current === placement.align ? current : placement.align);
+      setPreviewOffsetX((current) => Math.abs(current - placement.offsetX) < 0.5 ? current : placement.offsetX);
     });
   }, [previewText]);
 

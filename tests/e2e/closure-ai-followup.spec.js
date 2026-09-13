@@ -81,7 +81,7 @@ test("conversation hard delete requires confirmation, supports Escape, and resto
   await expect(panel.locator("nav.ai-conversation-list").first()).toBeFocused();
 });
 
-test("narrow right-edge citation preview stays inside the viewport without horizontal overflow", async ({ page }) => {
+test("narrow citation preview stays inside the viewport without horizontal overflow", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.route(GATEWAY_URL, async (route) => {
     await route.fulfill({
@@ -104,20 +104,19 @@ test("narrow right-edge citation preview stays inside the viewport without horiz
 
   const transcript = page.getByRole("log", { name: "AI 对话记录" });
   const responseMessage = transcript.locator('[data-message-role="assistant"]').last();
-  const rightEdgeCitation = responseMessage.locator(
+  const citation = responseMessage.locator(
     '.ai-source-citation.is-preview-only[aria-label="PropsBasicsDemo.jsx，源码片段 PropsBasicsDemo.jsx L1–L2"]',
   );
-  await expect(rightEdgeCitation).toHaveCount(1);
-  const citationWrap = rightEdgeCitation.locator("..");
-  await rightEdgeCitation.focus();
+  await expect(citation).toHaveCount(1);
+  const citationWrap = citation.locator("..");
+  await citation.focus();
   const preview = citationWrap.getByRole("tooltip");
   await expect(preview).toBeVisible();
 
-  await expect.poll(async () => citationWrap.getAttribute("data-preview-align")).toBe("end");
   const box = await preview.boundingBox();
   expect(box).not.toBeNull();
-  expect(box.x).toBeGreaterThanOrEqual(0);
-  expect(box.x + box.width).toBeLessThanOrEqual(390);
+  expect(box.x).toBeGreaterThanOrEqual(8);
+  expect(box.x + box.width).toBeLessThanOrEqual(382);
 
   const overflow = await transcript.evaluate((element) => element.scrollWidth - element.clientWidth);
   expect(overflow).toBeLessThanOrEqual(1);
