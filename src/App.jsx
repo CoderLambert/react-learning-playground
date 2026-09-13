@@ -18,6 +18,7 @@ import { NoteViewer } from "./components/notes/NoteViewer";
 import { MDX_TEACHING_COMPONENTS } from "./components/mdx";
 import { DemoSourceLocator } from "./components/source-locator/DemoSourceLocator";
 import { useAiLearningAssistant } from "./ai/useAiLearningAssistant.js";
+import { createAiAssessmentIntegration } from "./app/aiAssessmentIntegration.js";
 import { enrichLearningUnitSourceSemantics } from "./source/semanticSources";
 import { WorkbenchNavigation } from "./workbench/WorkbenchNavigation";
 import { WorkbenchShell } from "./workbench/WorkbenchShell";
@@ -115,10 +116,17 @@ export default function App() {
     };
   }, [learningUnitsById]);
 
+  const aiAssessmentIntegration = useMemo(
+    () => assessmentRuntime
+      ? createAiAssessmentIntegration({ assessmentCapabilities: assessmentRuntime.capabilities })
+      : null,
+    [assessmentRuntime],
+  );
+
   const aiAssistant = useAiLearningAssistant({
     learningUnit: currentLearningUnit,
     activeSourceFile: workbenchState.sourceFile,
-    assessmentRuntime,
+    assessmentRuntime: aiAssessmentIntegration,
   });
 
   const assessmentQuestions = selectAssessmentQuestionsForLearningUnit(
