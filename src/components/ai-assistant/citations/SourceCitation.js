@@ -56,6 +56,17 @@ function isRedundantLabel(label, fileName, lineLabel) {
   return normalized === normalizedRange || normalized === normalizedCanonical;
 }
 
+function horizontalOverflow(left, width, viewportWidth, edge) {
+  const right = left + width;
+  return Math.max(0, edge - left) + Math.max(0, right - (viewportWidth - edge));
+}
+
+function clampPreviewLeft(left, width, viewportWidth, edge) {
+  const minimum = edge;
+  const maximum = Math.max(minimum, viewportWidth - edge - width);
+  return Math.min(Math.max(left, minimum), maximum);
+}
+
 export function createSourceCitationOpenPayload(citation) {
   const normalized = normalizeSourceCitation(citation);
   if (!normalized) return null;
@@ -78,22 +89,43 @@ export function SourceCitation({
   variant = "default",
 }) {
   const tooltipId = useId();
+  const wrapperRef = useRef(null);
   const previewRef = useRef(null);
   const [previewAlign, setPreviewAlign] = useState("start");
+  const [previewOffsetX, setPreviewOffsetX] = useState(0);
   const citation = normalizeSourceCitation({ fileName, startLine, endLine, label });
   const previewText = normalizePreview(preview);
 
   const containPreview = useCallback(() => {
     if (!previewText) return;
     globalThis.requestAnimationFrame?.(() => {
+      const wrapper = wrapperRef.current;
       const element = previewRef.current;
-      if (!element || typeof element.getBoundingClientRect !== "function") return;
+      if (
+        !wrapper
+        || !element
+        || typeof wrapper.getBoundingClientRect !== "function"
+        || typeof element.getBoundingClientRect !== "function"
+      ) return;
+
       const viewportWidth = globalThis.innerWidth || globalThis.document?.documentElement?.clientWidth || 0;
       if (!viewportWidth) return;
-      const rect = element.getBoundingClientRect();
+
+      const wrapperRect = wrapper.getBoundingClientRect();
+      const previewRect = element.getBoundingClientRect();
       const edge = 8;
-      if (rect.right > viewportWidth - edge) setPreviewAlign("end");
-      else if (rect.left < edge) setPreviewAlign("start");
+      const width = Math.min(previewRect.width, Math.max(0, viewportWidth - edge * 2));
+      const startLeft = wrapperRect.left;
+      const endLeft = wrapperRect.right - width;
+      const startOverflow = horizontalOverflow(startLeft, width, viewportWidth, edge);
+      const endOverflow = horizontalOverflow(endLeft, width, viewportWidth, edge);
+      const align = endOverflow < startOverflow ? "end" : "start";
+      const baseLeft = align === "end" ? endLeft : startLeft;
+      const clampedLeft = clampPreviewLeft(baseLeft, width, viewportWidth, edge);
+      const offsetX = clampedLeft - baseLeft;
+
+      setPreviewAlign((current) => current === align ? current : align);
+      setPreviewOffsetX((current) => Math.abs(current - offsetX) < 0.5 ? current : offsetX);
     });
   }, [previewText]);
 
@@ -151,8 +183,10 @@ export function SourceCitation({
   return createElement(
     "span",
     {
+      ref: wrapperRef,
       className: `ai-source-citation-wrap ${className}`.trim(),
       "data-preview-align": previewAlign,
+      style: { "--ai-citation-preview-offset-x": `${previewOffsetX}px` },
       onMouseEnter: containPreview,
       onFocusCapture: containPreview,
     },
