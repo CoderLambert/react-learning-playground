@@ -3,6 +3,7 @@ import {
   assertMutablePatch,
   cloneValue,
   committedResult,
+  duplicateAttempt,
   makeMutationReceipt,
   normalizeAttemptInput,
   normalizeAttemptListQuery,
@@ -207,6 +208,11 @@ export class MemoryAssessmentRepository {
     const current = sessionStore.get(command.sessionId);
     if (!current || current.learningUnitId !== command.learningUnitId) throw sessionNotFound(command);
     if (current.status === "completed") throw sessionCompleted(command);
+
+    const duplicate = [...attemptStore.values()].some((candidate) => (
+      candidate.sessionId === command.sessionId && candidate.questionId === command.attempt.questionId
+    ));
+    if (duplicate) throw duplicateAttempt(command.attempt);
 
     const attempt = cloneValue(command.attempt);
     attemptStore.set(attempt.id, cloneValue(attempt));
