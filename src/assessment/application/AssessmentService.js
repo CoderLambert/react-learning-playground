@@ -475,8 +475,12 @@ export class AssessmentService {
 
   async #notifyQuestionMutation(learningUnitId) {
     if (!this.#queryStore || typeof this.#queryStore.replaceSnapshot !== "function") return;
+    if (this.#queryStore.getSnapshot()?.learningUnitId !== learningUnitId) return;
+
     const questions = await this.#repository.listQuestions({ learningUnitId });
     if (!Array.isArray(questions)) throw new TypeError("assessment repository.listQuestions must return an array");
+    if (this.#queryStore.getSnapshot()?.learningUnitId !== learningUnitId) return;
+
     this.#queryStore.replaceSnapshot({ learningUnitId, questions: clone(questions) });
   }
 }
