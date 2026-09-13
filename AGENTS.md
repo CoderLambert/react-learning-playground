@@ -2,13 +2,43 @@
 
 These instructions apply to the whole repository.
 
-The detailed orchestration reference is:
+Canonical collaboration references:
 
-- `docs/execution/AUTOMATION-AND-AGENT-ORCHESTRATION.md`
+- `issue-rule.md` — Issue creation, revision, execution-scope, acceptance, validation, and closure rules.
+- `docs/execution/AUTOMATION-AND-AGENT-ORCHESTRATION.md` — scheduled-task, parent/sub-agent, concurrency, integration, and handoff rules.
 
-Use that document when planning ChatGPT scheduled tasks, Codex parent/sub-agent work, parallel branches, or integration waves.
+**Before creating, materially rewriting, or executing a GitHub Issue, read `issue-rule.md`.**
+Use it as the default reference for all future Issue submissions and updates.
 
-## Core rules
+Use the orchestration document when planning ChatGPT scheduled tasks, Codex parent/sub-agent work, parallel branches, or integration waves.
+
+## Issue contract rules
+
+1. **Issues constrain risk, not implementation freedom.**
+   Treat an Issue as the current best-known execution contract, not a frozen implementation specification.
+
+2. **Keep outcome, invariants, and implementation direction distinct.**
+   Outcome/Target defines the desired end state. Invariants define the small set of boundaries that must not be silently broken. Working Direction is provisional and may be corrected by implementation evidence.
+
+3. **Do not silently expand shared or cross-domain scope.**
+   Owner-local implementation changes may proceed autonomously. If work expands into shared hotspots, another domain, persistence/public contracts, required CI, or other sensitive surfaces, apply the Scope Drift Protocol in `issue-rule.md` before continuing the expansion.
+
+4. **Correct stale Issues instead of obeying known-wrong assumptions.**
+   When code evidence invalidates an Issue assumption, update the Issue/decision record or split a dependency Issue. Do not force an obsolete design merely because it was written first.
+
+5. **Acceptance Criteria may be refined with evidence, but not weakened for convenience.**
+   Never remove correctness requirements simply because implementation is difficult or tests fail.
+
+6. **Open does not automatically mean ready.**
+   Before autonomous implementation, confirm that Target, key Invariants, hard dependencies, risk surfaces, Acceptance Criteria, and Validation are sufficiently clear.
+
+7. **Separate Acceptance from Validation.**
+   Acceptance Criteria describe the required result. Tests, lint, build, E2E, and required checks belong to the validation contract and provide evidence; green tests alone do not prove every Acceptance Criterion is satisfied.
+
+8. **Refresh execution state before acting.**
+   Re-read the latest Issue, current `main`, relevant open/merged PRs, dependencies, and concurrent work. Do not treat an old audit SHA as the automatic branch base.
+
+## Core orchestration rules
 
 1. **Optimize for independent write domains, not maximum agent count.**
    Two tasks are parallel-safe only when their required writes and contracts are sufficiently independent.
@@ -45,6 +75,26 @@ Use that document when planning ChatGPT scheduled tasks, Codex parent/sub-agent 
 
 12. **Do not opportunistically edit `main` unless explicitly instructed.**
     Preserve task → branch → PR → validation → merge traceability.
+
+## Issue execution preflight
+
+Before implementing an Issue:
+
+```text
+1. Read AGENTS.md and issue-rule.md
+2. Fetch the latest Issue body/comments and relevant PR state
+3. Confirm Target, Invariants, Acceptance Criteria, and Validation
+4. Confirm hard dependencies and current execution base
+5. Identify expected write surfaces and sensitive/shared surfaces
+6. Check concurrent tasks for hotspot overlap
+7. Run a focused baseline when useful
+8. Implement while the current contract remains valid
+9. If evidence invalidates scope/design assumptions, apply Scope Drift Protocol
+10. Validate focused → repository/regression → required CI as applicable
+11. Record concise handoff/closure evidence
+```
+
+Do not turn this preflight into bureaucracy: owner-local implementation details should remain autonomous unless they cross a meaningful risk boundary.
 
 ## Required handoff
 
