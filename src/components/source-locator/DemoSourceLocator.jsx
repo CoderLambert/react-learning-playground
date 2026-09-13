@@ -1,5 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
+import {
+  LEARNING_CONTEXT_KINDS,
+  LearningActionBar,
+  createLearningActionContext,
+  emitLearningAction,
+} from "../../learning-actions";
 import "./DemoSourceLocator.css";
 
 const SOURCE_ATTRIBUTE = "data-source-loc";
@@ -161,6 +167,10 @@ function Overlay({ value, modifierOnly = false }) {
 export function DemoSourceLocator({ learningUnit, enabled = false, onLocate, children }) {
   const [hovered, setHovered] = useState(null);
   const overlay = useMemo(() => getOverlay(hovered), [hovered]);
+  const learningActionContext = useMemo(() => createLearningActionContext({
+    kind: LEARNING_CONTEXT_KINDS.DEMO,
+    learningUnit,
+  }), [learningUnit]);
 
   useEffect(() => acquireGlobalAltModeListeners(), []);
 
@@ -208,6 +218,11 @@ export function DemoSourceLocator({ learningUnit, enabled = false, onLocate, chi
       onPointerLeave={() => setHovered(null)}
       onClickCapture={handleClickCapture}
     >
+      <LearningActionBar
+        context={learningActionContext}
+        onAction={emitLearningAction}
+        label="针对当前 Demo 的 AI 学习动作"
+      />
       {children}
       {hovered && <Overlay value={overlay} modifierOnly={!enabled} />}
     </div>
