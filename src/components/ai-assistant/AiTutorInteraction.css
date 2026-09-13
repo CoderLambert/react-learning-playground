@@ -1,0 +1,125 @@
+.ai-assistant-transcript-shell {
+  min-height: 0;
+  flex: 1;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.ai-assistant-transcript-shell .ai-assistant-transcript {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.ai-assistant-transcript-shell .ai-assistant-transcript:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
+}
+
+.ai-assistant-message-actions {
+  margin: 7px 2px 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.ai-assistant-message.is-user .ai-assistant-message-actions {
+  justify-content: flex-end;
+}
+
+.ai-assistant-message-actions button,
+.ai-assistant-citation-explain,
+.ai-assistant-jump-latest {
+  min-height: 28px;
+  padding: 4px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface);
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 10.5px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: border-color var(--transition-fast), background var(--transition-fast), color var(--transition-fast), transform var(--transition-fast);
+}
+
+.ai-assistant-message-actions button:hover:not(:disabled),
+.ai-assistant-message-actions button:focus-visible,
+.ai-assistant-citation-explain:hover:not(:disabled),
+.ai-assistant-citation-explain:focus-visible,
+.ai-assistant-jump-latest:hover,
+.ai-assistant-jump-latest:focus-visible {
+  border-color: var(--color-primary);
+  background: var(--color-primary-light);
+  color: var(--text-main);
+}
+
+.ai-assistant-message-actions button:focus-visible,
+.ai-assistant-citation-explain:focus-visible,
+.ai-assistant-jump-latest:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.ai-assistant-message-actions button:disabled,
+.ai-assistant-citation-explain:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.ai-assistant-source-citation-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+}
+
+.ai-assistant-citation-explain {
+  min-height: 26px;
+  padding-inline: 7px;
+  white-space: nowrap;
+}
+
+.ai-assistant-jump-latest {
+  position: absolute;
+  right: 14px;
+  bottom: 12px;
+  z-index: 2;
+  min-height: 34px;
+  padding-inline: 11px;
+  box-shadow: var(--shadow-md);
+  color: var(--text-main);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ai-assistant-message-actions button,
+  .ai-assistant-citation-explain,
+  .ai-assistant-jump-latest {
+    transition: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .ai-assistant-message-actions {
+    gap: 6px;
+  }
+
+  .ai-assistant-message-actions button,
+  .ai-assistant-citation-explain {
+    min-height: 36px;
+    padding: 7px 9px;
+  }
+
+  .ai-assistant-source-citation-actions {
+    align-items: stretch;
+    flex-wrap: wrap;
+  }
+
+  .ai-assistant-jump-latest {
+    right: 12px;
+    bottom: 10px;
+    min-height: 40px;
+  }
+}
