@@ -19,6 +19,7 @@ import {
   normalizeAttemptProgressInput,
   nowIso,
   questionNotFound,
+  questionRetired,
   requiredQuestionRecord,
   replayResult,
   revisionConflict,
@@ -110,6 +111,7 @@ export class MemoryAssessmentRepository {
     if (!current || current.learningUnitId !== command.learningUnitId) {
       throw questionNotFound(command);
     }
+    if (current.status !== "active") throw questionRetired(command);
     if (current.revision !== command.expectedRevision) {
       throw revisionConflict({
         ...command,
@@ -146,6 +148,7 @@ export class MemoryAssessmentRepository {
     if (!current || current.learningUnitId !== command.learningUnitId) {
       throw questionNotFound(command);
     }
+    if (current.status !== "active") throw questionRetired(command);
     if (current.revision !== command.expectedRevision) {
       throw revisionConflict({
         ...command,
