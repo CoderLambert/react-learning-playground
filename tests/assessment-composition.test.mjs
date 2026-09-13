@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { MODEL_FINISH_REASONS, MODEL_TURN_EVENT_TYPES } from "../src/ai/providers/modelClient.js";
+import { createAiAssessmentIntegration } from "../src/app/aiAssessmentIntegration.js";
 import { createAssessmentRuntime } from "../src/assessment/composition/assessmentRuntime.js";
 import { createLearningUnitEvidenceResolver } from "../src/assessment/composition/learningUnitEvidenceResolver.js";
 
@@ -18,24 +19,27 @@ const choiceDraft = (prompt, evidenceRefs = []) => ({
   evidenceRefs,
 });
 
-test("assessment composition falls back to session-only memory and registers tools", async () => {
+test("assessment composition falls back to session-only memory and exposes semantic capabilities", async () => {
   const runtime = await createAssessmentRuntime({ indexedDb: undefined });
 
   assert.equal(runtime.mode, "memory");
   assert.match(runtime.storageNotice, /本次会话存储/);
-  assert.deepEqual(runtime.registry.list().map((tool) => tool.name), [
+  assert.deepEqual(runtime.capabilities.map((capability) => capability.name), [
     "assessment_list_questions",
     "assessment_create_questions",
     "assessment_update_question",
     "assessment_retire_question",
   ]);
+  assert.equal(runtime.capabilities.every((capability) => typeof capability.execute === "function"), true);
+  assert.equal(runtime.createAgentRunner, undefined);
   assert.equal(runtime.queryStore.getSnapshot(), null);
 });
 
-test("assessment composition creates a generic AgentRunner over the wired tool registry", async () => {
+test("app integration maps Assessment capabilities into a generic AgentRunner", async () => {
   const runtime = await createAssessmentRuntime({ indexedDb: undefined });
+  const integration = createAiAssessmentIntegration({ assessmentCapabilities: runtime.capabilities });
   const requests = [];
-  const runner = runtime.createAgentRunner({
+  const runner = integration.createAgentRunner({
     async *streamTurn(request) {
       requests.push(request);
       yield { type: MODEL_TURN_EVENT_TYPES.TEXT_DELTA, text: "ready" };
