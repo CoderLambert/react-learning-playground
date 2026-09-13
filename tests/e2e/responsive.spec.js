@@ -68,9 +68,30 @@ test.describe("narrow viewport", () => {
     const shell = page.locator(".workbench-shell");
     const navigationSlot = page.locator(".workbench-navigation-slot");
     const contentSlot = page.locator(".workbench-content-slot");
+    const inspectorClose = page.getByRole("button", { name: "关闭学习面板" }).last();
     await expect(navigationHeading).toBeHidden();
     await expect(page.locator(".workbench-inspector-slot")).toBeVisible();
-    await page.getByRole("button", { name: "关闭学习面板" }).last().click();
+    await expect(inspectorClose).toBeFocused();
+    await expect(contentSlot).toHaveAttribute("inert", "");
+    await expect(navigationSlot).toHaveAttribute("inert", "");
+
+    await page.keyboard.press("Escape");
+    await expect(shell).toHaveAttribute("data-inspector-open", "false");
+    await expect(contentSlot).not.toHaveAttribute("inert", "");
+    await expect(navigationSlot).not.toHaveAttribute("inert", "");
+    const inspectorReopen = page.getByRole("button", { name: "打开学习面板" }).last();
+    await expect(inspectorReopen).toBeFocused();
+
+    const topBarInspectorToggle = page.locator(".workbench-inspector-toggle");
+    await topBarInspectorToggle.focus();
+    await topBarInspectorToggle.click();
+    await expect(shell).toHaveAttribute("data-inspector-open", "true");
+    await expect(inspectorClose).toBeFocused();
+    await expect(contentSlot).toHaveAttribute("inert", "");
+    await page.keyboard.press("Escape");
+    await expect(shell).toHaveAttribute("data-inspector-open", "false");
+    await expect(topBarInspectorToggle).toBeFocused();
+
     const menu = page.getByRole("button", { name: "打开侧边导航" });
     await expect(menu).toBeVisible();
     await expect(menu).toHaveAttribute("aria-expanded", "false");
@@ -100,6 +121,7 @@ test.describe("narrow viewport", () => {
     await expect(shell).toHaveAttribute("data-mobile-navigation-open", "false");
     await expect(navigationHeading).toBeHidden();
     await expect(page.locator(".demo-page h2.demo-title")).toContainText("Modal Focus");
+    await expect(menu).toBeFocused();
     await expectNoPageOverflow(page);
   });
 });
