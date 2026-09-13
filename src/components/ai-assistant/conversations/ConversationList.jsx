@@ -13,6 +13,16 @@ function formatConversationTime(value) {
   }).format(date);
 }
 
+function getMutationErrorCopy(operation, error) {
+  const fallback = {
+    rename: "重命名失败，请重试。",
+    archive: "归档失败，请重试。",
+    restore: "恢复失败，请重试。",
+    delete: "删除失败，请重试。",
+  }[operation] ?? "会话操作失败，请重试。";
+  return error?.message ? `${fallback} ${error.message}` : fallback;
+}
+
 export function ConversationList({
   conversations = [],
   activeConversationId = null,
@@ -29,6 +39,7 @@ export function ConversationList({
   const [editingId, setEditingId] = useState(null);
   const [draftTitle, setDraftTitle] = useState("");
   const [pendingDeleteId, setPendingDeleteId] = useState(null);
+  const [mutationState, setMutationState] = useState({ pending: null, error: null });
   const renameButtonsRef = useRef(new Map());
   const deleteButtonsRef = useRef(new Map());
   const confirmDeleteButtonsRef = useRef(new Map());
@@ -47,6 +58,30 @@ export function ConversationList({
     });
   };
 
+  const clearMutationError = () => {
+    setMutationState((current) => ({ ...current, error: null }));
+  };
+
+  const runMutation = async ({ operation, conversationId, action }) => {
+    clearMutationError();
+    setMutationState({ pending: { operation, conversationId }, error: null });
+    try {
+      await action();
+      setMutationState({ pending: null, error: null });
+      return true;
+    } catch (error) {
+      setMutationState({
+        pending: null,
+        error: {
+          operation,
+          conversationId,
+          message: getMutationErrorCopy(operation, error),
+        },
+      });
+      return false;
+    }
+  };
+
   const finishRename = (conversationId) => {
     setEditingId(null);
     setDraftTitle("");
@@ -54,6 +89,7 @@ export function ConversationList({
   };
 
   const startRename = (conversation) => {
+    clearMutationError();
     setPendingDeleteId(null);
     setEditingId(conversation.id);
     setDraftTitle(conversation.title ?? "");
@@ -63,13 +99,22 @@ export function ConversationList({
     finishRename(conversation.id);
   };
 
-  const commitRename = (conversation) => {
+  const commitRename = async (conversation) => {
     const title = draftTitle.trim();
-    finishRename(conversation.id);
-    if (title && title !== conversation.title) onRename?.(conversation.id, title);
+    if (!title || title === conversation.title) {
+      finishRename(conversation.id);
+      return;
+    }
+    const succeeded = await runMutation({
+      operation: "rename",
+      conversationId: conversation.id,
+      action: () => onRename?.(conversation.id, title),
+    });
+    if (succeeded) finishRename(conversation.id);
   };
 
   const startDelete = (conversationId) => {
+    clearMutationError();
     setPendingDeleteId(conversationId);
     globalThis.requestAnimationFrame?.(() => {
       confirmDeleteButtonsRef.current.get(conversationId)?.focus();
@@ -81,12 +126,26 @@ export function ConversationList({
     restoreDeleteFocus(conversationId);
   };
 
-  const confirmDelete = (conversationId) => {
+  const confirmDelete = async (conversationId) => {
+    const succeeded = await runMutation({
+      operation: "delete",
+      conversationId,
+      action: () => onDelete?.(conversationId),
+    });
+    if (!succeeded) return;
     setPendingDeleteId(null);
-    onDelete?.(conversationId);
     globalThis.requestAnimationFrame?.(() => {
       if (newButtonRef.current) newButtonRef.current.focus();
       else listRef.current?.focus();
+    });
+  };
+
+  const commitArchive = async (conversation) => {
+    const nextArchived = !conversation.archived;
+    await runMutation({
+      operation: nextArchived ? "archive" : "restore",
+      conversationId: conversation.id,
+      action: () => onArchive?.(conversation.id, nextArchived),
     });
   };
 
@@ -106,6 +165,12 @@ export function ConversationList({
         ) : null}
       </div>
 
+      {mutationState.error ? (
+        <p className="ai-conversation-list__mutation-error" role="alert">
+          {mutationState.error.message}
+        </p>
+      ) : null}
+
       {conversations.length === 0 ? (
         <p className="ai-conversation-list__empty">{emptyMessage}</p>
       ) : (
@@ -114,14 +179,18 @@ export function ConversationList({
             const active = conversation.id === activeConversationId;
             const editing = editingId === conversation.id;
             const confirmingDelete = pendingDeleteId === conversation.id;
+            const pendingOperation = mutationState.pending?.conversationId === conversation.id
+              ? mutationState.pending.operation
+              : null;
+            const itemDisabled = disabled || Boolean(pendingOperation);
             return (
-              <li key={conversation.id} data-active={active ? "true" : undefined}>
+              <li key={conversation.id} data-active={active ? "true" : undefined} aria-busy={pendingOperation ? "true" : undefined}>
                 {editing ? (
                   <form
                     className="ai-conversation-list__rename"
                     onSubmit={(event) => {
                       event.preventDefault();
-                      commitRename(conversation);
+                      void commitRename(conversation);
                     }}
                   >
                     <label className="sr-only" htmlFor={`conversation-title-${conversation.id}`}>重命名会话</label>
@@ -136,9 +205,11 @@ export function ConversationList({
                         event.stopPropagation();
                         cancelRename(conversation);
                       }}
-                      onBlur={() => cancelRename(conversation)}
+                      onBlur={() => {
+                        if (!pendingOperation) cancelRename(conversation);
+                      }}
                       maxLength={120}
-                      disabled={disabled}
+                      disabled={itemDisabled}
                     />
                   </form>
                 ) : onSelect ? (
@@ -147,7 +218,7 @@ export function ConversationList({
                     className="ai-conversation-list__select"
                     aria-current={active ? "page" : undefined}
                     onClick={() => onSelect?.(conversation.id)}
-                    disabled={disabled}
+                    disabled={itemDisabled}
                   >
                     <span>{conversation.title || "新对话"}</span>
                     <small>
@@ -169,7 +240,7 @@ export function ConversationList({
                   className="ai-conversation-list__actions"
                   aria-label={`${conversation.title || "新对话"} 操作`}
                   onKeyDown={(event) => {
-                    if (!confirmingDelete || event.key !== "Escape") return;
+                    if (!confirmingDelete || event.key !== "Escape" || pendingOperation) return;
                     event.preventDefault();
                     event.stopPropagation();
                     cancelDelete(conversation.id);
@@ -181,8 +252,8 @@ export function ConversationList({
                       role="group"
                       aria-label={`确认删除 ${conversation.title || "新对话"}`}
                     >
-                      <span>永久删除此会话？</span>
-                      <button type="button" onClick={() => cancelDelete(conversation.id)} disabled={disabled}>
+                      <span>{pendingOperation === "delete" ? "正在删除…" : "永久删除此会话？"}</span>
+                      <button type="button" onClick={() => cancelDelete(conversation.id)} disabled={itemDisabled}>
                         取消
                       </button>
                       <button
@@ -192,8 +263,8 @@ export function ConversationList({
                         }}
                         type="button"
                         className="is-destructive"
-                        onClick={() => confirmDelete(conversation.id)}
-                        disabled={disabled}
+                        onClick={() => void confirmDelete(conversation.id)}
+                        disabled={itemDisabled}
                       >
                         确认删除
                       </button>
@@ -207,13 +278,19 @@ export function ConversationList({
                         }}
                         type="button"
                         onClick={() => startRename(conversation)}
-                        disabled={disabled || editing}
+                        disabled={itemDisabled || editing}
                       >
                         重命名
                       </button>
                       {onArchive ? (
-                        <button type="button" onClick={() => onArchive(conversation.id, !conversation.archived)} disabled={disabled}>
-                          {conversation.archived ? "恢复" : "归档"}
+                        <button type="button" onClick={() => void commitArchive(conversation)} disabled={itemDisabled}>
+                          {pendingOperation === "archive"
+                            ? "归档中…"
+                            : pendingOperation === "restore"
+                              ? "恢复中…"
+                              : conversation.archived
+                                ? "恢复"
+                                : "归档"}
                         </button>
                       ) : null}
                       {onDelete ? (
@@ -224,7 +301,7 @@ export function ConversationList({
                           }}
                           type="button"
                           onClick={() => startDelete(conversation.id)}
-                          disabled={disabled}
+                          disabled={itemDisabled}
                         >
                           删除
                         </button>
