@@ -104,14 +104,16 @@ test("narrow right-edge citation preview stays inside the viewport without horiz
 
   const transcript = page.getByRole("log", { name: "AI 对话记录" });
   const responseMessage = transcript.locator('[data-message-role="assistant"]').last();
-  const citations = responseMessage.locator(".ai-source-citation-wrap");
-  await expect(citations).toHaveCount(3);
-  const lastCitation = citations.nth(2);
-  await lastCitation.locator(".ai-source-citation").focus();
-  const preview = lastCitation.getByRole("tooltip");
+  const rightEdgeCitation = responseMessage.locator(
+    '.ai-source-citation.is-preview-only[aria-label="PropsBasicsDemo.jsx，源码片段 PropsBasicsDemo.jsx L5–L6"]',
+  );
+  await expect(rightEdgeCitation).toHaveCount(1);
+  const citationWrap = rightEdgeCitation.locator("..");
+  await rightEdgeCitation.focus();
+  const preview = citationWrap.getByRole("tooltip");
   await expect(preview).toBeVisible();
 
-  await expect.poll(async () => lastCitation.getAttribute("data-preview-align")).toBe("end");
+  await expect.poll(async () => citationWrap.getAttribute("data-preview-align")).toBe("end");
   const box = await preview.boundingBox();
   expect(box).not.toBeNull();
   expect(box.x).toBeGreaterThanOrEqual(0);
