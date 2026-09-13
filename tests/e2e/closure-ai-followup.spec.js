@@ -121,6 +121,7 @@ test("conversation mutations expose persistence failures and remain retryable", 
   await expect(toolbar.locator("summary")).toHaveText("历史会话 1");
   await toolbar.locator("summary").click();
   const panel = toolbar.locator(".ai-conversation-popover__panel");
+  const mutationAlert = panel.getByRole("alert");
 
   await setConversationMutationFailure(page, { put: true });
   let item = panel.getByLabel("mutation failure fixture 操作").locator("..");
@@ -128,7 +129,7 @@ test("conversation mutations expose persistence failures and remain retryable", 
   const renameInput = item.getByRole("textbox", { name: "重命名会话" });
   await renameInput.fill("renamed fixture");
   await renameInput.press("Enter");
-  await expect(item.getByRole("alert")).toContainText("重命名失败");
+  await expect(mutationAlert).toContainText("重命名失败");
   await expect(renameInput).toHaveValue("renamed fixture");
 
   await setConversationMutationFailure(page);
@@ -138,7 +139,7 @@ test("conversation mutations expose persistence failures and remain retryable", 
   item = panel.getByLabel("renamed fixture 操作").locator("..");
   await setConversationMutationFailure(page, { put: true });
   await item.getByRole("button", { name: "归档" }).click();
-  await expect(item.getByRole("alert")).toContainText("归档失败");
+  await expect(mutationAlert).toContainText("归档失败");
   await expect(item.getByRole("button", { name: "归档" })).toBeVisible();
 
   await setConversationMutationFailure(page);
@@ -149,7 +150,7 @@ test("conversation mutations expose persistence failures and remain retryable", 
 
   await setConversationMutationFailure(page, { put: true });
   await item.getByRole("button", { name: "恢复" }).click();
-  await expect(item.getByRole("alert")).toContainText("恢复失败");
+  await expect(mutationAlert).toContainText("恢复失败");
   await expect(item.getByRole("button", { name: "恢复" })).toBeVisible();
 
   await setConversationMutationFailure(page);
@@ -161,7 +162,7 @@ test("conversation mutations expose persistence failures and remain retryable", 
   await item.getByRole("button", { name: "删除", exact: true }).click();
   await setConversationMutationFailure(page, { deleteRecord: true });
   await item.getByRole("button", { name: "确认删除", exact: true }).click();
-  await expect(item.getByRole("alert")).toContainText("删除失败");
+  await expect(mutationAlert).toContainText("删除失败");
   await expect(page.getByRole("log", { name: "AI 对话记录" })).toContainText("saved");
 
   await setConversationMutationFailure(page);
