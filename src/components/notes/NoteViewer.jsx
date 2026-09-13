@@ -1,6 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { MDXProvider } from "@mdx-js/react";
 import { getNoteLoader } from "../../workbench/noteRegistry";
+import {
+  LEARNING_CONTEXT_KINDS,
+  LearningActionBar,
+  createLearningActionContext,
+  emitLearningAction,
+} from "../../learning-actions";
 import { collectNoteToc } from "./noteToc";
 
 function RuntimeLink({ href = "", children, ...props }) {
@@ -14,6 +20,14 @@ function RuntimeLink({ href = "", children, ...props }) {
 
 const RUNTIME_COMPONENTS = Object.freeze({ a: RuntimeLink });
 
+function readContainedSelection(root) {
+  const selection = globalThis.getSelection?.();
+  if (!selection || selection.isCollapsed || !selection.rangeCount || !root) return "";
+  const range = selection.getRangeAt(0);
+  if (!root.contains(range.commonAncestorContainer)) return "";
+  return selection.toString().trim();
+}
+
 export function NoteViewer({
   learningUnitId,
   components,
@@ -24,6 +38,7 @@ export function NoteViewer({
   className = "",
 }) {
   const contentRef = useRef(null);
+  const [selectedText, setSelectedText] = useState("");
   const [loaded, setLoaded] = useState({ learningUnitId: null, Component: null, error: null });
 
   const resolution = useMemo(() => {
@@ -39,6 +54,16 @@ export function NoteViewer({
     () => ({ ...RUNTIME_COMPONENTS, ...(components || {}) }),
     [components],
   );
+
+  const learningActionContext = useMemo(() => createLearningActionContext({
+    kind: LEARNING_CONTEXT_KINDS.NOTE,
+    learningUnit: { id: learningUnitId },
+    selectedText,
+  }), [learningUnitId, selectedText]);
+
+  useEffect(() => {
+    setSelectedText("");
+  }, [learningUnitId]);
 
   useEffect(() => {
     if (!resolution.loader || !learningUnitId) return;
@@ -101,12 +126,25 @@ export function NoteViewer({
     );
   }
 
+  const updateSelection = () => setSelectedText(readContainedSelection(contentRef.current));
   const NoteComponent = loaded.Component;
   return (
     <MDXProvider components={mergedComponents}>
-      <article ref={contentRef} className={`note-runtime-content ${className}`.trim()}>
-        <NoteComponent components={mergedComponents} />
-      </article>
+      <div className="note-runtime-learning-shell">
+        <LearningActionBar
+          context={learningActionContext}
+          onAction={emitLearningAction}
+          label={selectedText ? "针对选中笔记内容的 AI 学习动作" : "针对当前笔记的 AI 学习动作"}
+        />
+        <article
+          ref={contentRef}
+          className={`note-runtime-content ${className}`.trim()}
+          onMouseUp={updateSelection}
+          onKeyUp={updateSelection}
+        >
+          <NoteComponent components={mergedComponents} />
+        </article>
+      </div>
     </MDXProvider>
   );
 }
