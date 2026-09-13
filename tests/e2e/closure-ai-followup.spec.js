@@ -13,6 +13,30 @@ async function openAiTab(page, demoId = "props") {
   return page.getByRole("textbox", { name: "向 AI 助手提问" });
 }
 
+async function setConversationMutationFailure(page, { put = false, deleteRecord = false } = {}) {
+  await page.evaluate(({ put, deleteRecord }) => {
+    const proto = IDBObjectStore.prototype;
+    if (!globalThis.__conversationStoreOriginalPut) {
+      globalThis.__conversationStoreOriginalPut = proto.put;
+      globalThis.__conversationStoreOriginalDelete = proto.delete;
+      proto.put = function patchedPut(...args) {
+        if (this.name === "conversations" && globalThis.__failConversationPut) {
+          throw new DOMException("simulated conversation put failure", "UnknownError");
+        }
+        return globalThis.__conversationStoreOriginalPut.apply(this, args);
+      };
+      proto.delete = function patchedDelete(...args) {
+        if (this.name === "conversations" && globalThis.__failConversationDelete) {
+          throw new DOMException("simulated conversation delete failure", "UnknownError");
+        }
+        return globalThis.__conversationStoreOriginalDelete.apply(this, args);
+      };
+    }
+    globalThis.__failConversationPut = put;
+    globalThis.__failConversationDelete = deleteRecord;
+  }, { put, deleteRecord });
+}
+
 test("DeepSeek connection feedback is discarded when credentials change mid-test", async ({ page }) => {
   let releaseFirstTest;
   const firstTestBlocked = new Promise((resolve) => {
@@ -79,6 +103,70 @@ test("conversation hard delete requires confirmation, supports Escape, and resto
   await expect(toolbar.locator("summary")).toHaveText("历史会话 0");
   await expect(panel.getByText("delete confirmation question", { exact: true })).toHaveCount(0);
   await expect(panel.locator("nav.ai-conversation-list").first()).toBeFocused();
+});
+
+test("conversation mutations expose persistence failures and remain retryable", async ({ page }) => {
+  await page.route(GATEWAY_URL, async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/x-ndjson",
+      body: normalizedStream({ type: "start" }, { type: "delta", text: "saved" }, { type: "done" }),
+    });
+  });
+
+  const composer = await openAiTab(page);
+  const toolbar = page.getByLabel("AI 会话工具栏");
+  await composer.fill("mutation failure fixture");
+  await page.getByRole("button", { name: "发送" }).click();
+  await expect(toolbar.locator("summary")).toHaveText("历史会话 1");
+  await toolbar.locator("summary").click();
+  const panel = toolbar.locator(".ai-conversation-popover__panel");
+
+  await setConversationMutationFailure(page, { put: true });
+  let item = panel.locator("li").filter({ hasText: "mutation failure fixture" });
+  await item.getByRole("button", { name: "重命名" }).click();
+  const renameInput = item.getByRole("textbox", { name: "重命名会话" });
+  await renameInput.fill("renamed fixture");
+  await renameInput.press("Enter");
+  await expect(item.getByRole("alert")).toContainText("重命名失败");
+  await expect(renameInput).toHaveValue("renamed fixture");
+
+  await setConversationMutationFailure(page);
+  await renameInput.press("Enter");
+  await expect(panel.getByText("renamed fixture", { exact: true })).toBeVisible();
+
+  item = panel.locator("li").filter({ hasText: "renamed fixture" });
+  await setConversationMutationFailure(page, { put: true });
+  await item.getByRole("button", { name: "归档" }).click();
+  await expect(item.getByRole("alert")).toContainText("归档失败");
+  await expect(item.getByRole("button", { name: "归档" })).toBeVisible();
+
+  await setConversationMutationFailure(page);
+  await item.getByRole("button", { name: "归档" }).click();
+  const archivedList = panel.locator("nav.ai-conversation-list").filter({ hasText: "已归档" });
+  item = archivedList.locator("li").filter({ hasText: "renamed fixture" });
+  await expect(item).toBeVisible();
+
+  await setConversationMutationFailure(page, { put: true });
+  await item.getByRole("button", { name: "恢复" }).click();
+  await expect(item.getByRole("alert")).toContainText("恢复失败");
+  await expect(item.getByRole("button", { name: "恢复" })).toBeVisible();
+
+  await setConversationMutationFailure(page);
+  await item.getByRole("button", { name: "恢复" }).click();
+  const currentList = panel.locator("nav.ai-conversation-list").filter({ hasText: "当前学习单元" });
+  item = currentList.locator("li").filter({ hasText: "renamed fixture" });
+  await expect(item).toBeVisible();
+
+  await item.getByRole("button", { name: "删除", exact: true }).click();
+  await setConversationMutationFailure(page, { deleteRecord: true });
+  await item.getByRole("button", { name: "确认删除", exact: true }).click();
+  await expect(item.getByRole("alert")).toContainText("删除失败");
+  await expect(page.getByRole("log", { name: "AI 对话记录" })).toContainText("saved");
+
+  await setConversationMutationFailure(page);
+  await item.getByRole("button", { name: "确认删除", exact: true }).click();
+  await expect(toolbar.locator("summary")).toHaveText("历史会话 0");
 });
 
 test("failed AI turns expose one authoritative live announcement", async ({ page }) => {
