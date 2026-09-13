@@ -94,6 +94,25 @@ test("current conversation exposes copy plus Markdown and JSON export through ac
   expect((await jsonDownload).suggestedFilename()).toMatch(/\.json$/);
 });
 
+test("conversation export popover dismisses with Escape and returns focus to its trigger", async ({ page }) => {
+  const { composer } = await openAi(page);
+  await composer.fill("e2e:export-popover-keyboard");
+  await page.getByRole("button", { name: "发送", exact: true }).click();
+  await expect(page.getByRole("log", { name: "AI 对话记录" })).toContainText("第 180 段");
+
+  const trigger = page.getByLabel("会话导出与复制");
+  await trigger.focus();
+  await trigger.press("Enter");
+  const actions = page.getByRole("group", { name: "当前会话操作" });
+  await expect(actions).toBeVisible();
+  await actions.getByRole("button", { name: "复制整段会话" }).focus();
+  await page.keyboard.press("Escape");
+
+  await expect(actions).toBeHidden();
+  await expect(trigger).toHaveAttribute("aria-expanded", "false");
+  await expect(trigger).toBeFocused();
+});
+
 test("switching from AI to Assessment hides the AI panel and shows the selected tabpanel", async ({ page }) => {
   await page.goto("./?demo=props");
 
