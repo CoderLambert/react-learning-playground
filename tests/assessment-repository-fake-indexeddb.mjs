@@ -2,6 +2,21 @@ function clone(value) {
   return value == null ? value : structuredClone(value);
 }
 
+function readKeyPath(value, keyPath) {
+  if (Array.isArray(keyPath)) return keyPath.map((part) => value?.[part]);
+  return value?.[keyPath];
+}
+
+function keysEqual(left, right) {
+  if (Array.isArray(left) || Array.isArray(right)) {
+    return Array.isArray(left)
+      && Array.isArray(right)
+      && left.length === right.length
+      && left.every((value, index) => Object.is(value, right[index]));
+  }
+  return Object.is(left, right);
+}
+
 class FakeRequest {
   constructor(run) {
     this.result = undefined;
@@ -79,6 +94,26 @@ class FakeTransaction {
   }
 }
 
+class FakeIndex {
+  constructor(transaction, storeDefinition, records, indexName) {
+    this.transaction = transaction;
+    this.storeDefinition = storeDefinition;
+    this.records = records;
+    this.indexName = indexName;
+  }
+
+  getKey(key) {
+    return this.transaction.request(() => {
+      const index = this.storeDefinition.indexes.get(this.indexName);
+      if (!index) throw new Error(`Unknown index: ${this.indexName}`);
+      for (const [primaryKey, value] of this.records.entries()) {
+        if (keysEqual(readKeyPath(value, index.keyPath), key)) return primaryKey;
+      }
+      return undefined;
+    });
+  }
+}
+
 class FakeObjectStore {
   constructor(transaction, name) {
     this.transaction = transaction;
@@ -89,12 +124,21 @@ class FakeObjectStore {
     return this.transaction.views.get(this.name);
   }
 
+  get definition() {
+    return this.transaction.database.stores.get(this.name);
+  }
+
   get(key) {
     return this.transaction.request(() => clone(this.records.get(key)));
   }
 
   getAll() {
     return this.transaction.request(() => [...this.records.values()].map(clone));
+  }
+
+  index(name) {
+    if (!this.definition?.indexes.has(name)) throw new Error(`Unknown index: ${name}`);
+    return new FakeIndex(this.transaction, this.definition, this.records, name);
   }
 
   put(value) {
