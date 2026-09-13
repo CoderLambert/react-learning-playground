@@ -354,7 +354,6 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile, assessm
     setLatestCompaction(null);
     setCompactedMessageCount(0);
     setContextSelectionNotice(null);
-    setInputValue("");
     setDeepSeekSettings(saveDeepSeekBrowserSettings(nextSettings));
   }, []);
 
@@ -363,7 +362,6 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile, assessm
     abortControllerRef.current?.abort();
     abortControllerRef.current = null;
     activeRequestIdRef.current = null;
-    setInputValue("");
     clearDeepSeekBrowserApiKey();
     setDeepSeekSettings((current) => ({
       ...current,
