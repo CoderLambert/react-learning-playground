@@ -31,7 +31,16 @@ export function LearningInspector({
   } = state;
   const resizeStateRef = useRef(null);
   const animationFrameRef = useRef(null);
+  const mobileFocusFrameRef = useRef(null);
+  const inspectorRef = useRef(null);
+  const closeButtonRef = useRef(null);
+  const reopenButtonRef = useRef(null);
+  const mobileInspectorOpenerRef = useRef(null);
+  const focusModeRef = useRef(focusMode);
+  const onOpenChangeRef = useRef(onOpenChange);
   const tabRefs = useRef(new Map());
+  focusModeRef.current = focusMode;
+  onOpenChangeRef.current = onOpenChange;
   const { getPaneProps } = useInspectorScrollMemory(learningUnit?.id ?? "unknown");
   const resolvedPanels = panels ?? resolveInspectorPanels({ notes, source, ai, assessment });
 
@@ -64,9 +73,92 @@ export function LearningInspector({
   }, [focusMode, onFocusModeChange]);
 
   useEffect(() => {
+    if (!open || typeof window === "undefined") return undefined;
+
+    const mediaQuery = window.matchMedia("(max-width: 640px)");
+    let modalActive = false;
+    let backgroundState = [];
+
+    const cancelPendingFocus = () => {
+      if (mobileFocusFrameRef.current) {
+        cancelAnimationFrame(mobileFocusFrameRef.current);
+        mobileFocusFrameRef.current = null;
+      }
+    };
+
+    const restoreBackground = () => {
+      for (const { element, inert } of backgroundState) {
+        if (element?.isConnected) element.inert = inert;
+      }
+      backgroundState = [];
+    };
+
+    const deactivateMobileModal = ({ restoreFocus = false } = {}) => {
+      if (!modalActive) return;
+      modalActive = false;
+      cancelPendingFocus();
+      restoreBackground();
+      if (restoreFocus) {
+        mobileFocusFrameRef.current = requestAnimationFrame(() => {
+          const opener = mobileInspectorOpenerRef.current;
+          if (opener?.isConnected && !opener.closest("[inert]")) opener.focus();
+          else reopenButtonRef.current?.focus();
+          mobileFocusFrameRef.current = null;
+        });
+      }
+    };
+
+    const activateMobileModal = () => {
+      if (!mediaQuery.matches || modalActive) return;
+      modalActive = true;
+      const activeElement = document.activeElement;
+      if (
+        activeElement instanceof HTMLElement &&
+        activeElement !== document.body &&
+        !inspectorRef.current?.contains(activeElement)
+      ) {
+        mobileInspectorOpenerRef.current = activeElement;
+      }
+      backgroundState = [
+        document.querySelector(".workbench-navigation-slot"),
+        document.querySelector(".workbench-content-slot"),
+      ].filter(Boolean).map((element) => ({ element, inert: element.inert }));
+      for (const { element } of backgroundState) element.inert = true;
+      cancelPendingFocus();
+      mobileFocusFrameRef.current = requestAnimationFrame(() => {
+        closeButtonRef.current?.focus();
+        mobileFocusFrameRef.current = null;
+      });
+    };
+
+    const handleViewportChange = () => {
+      if (mediaQuery.matches) activateMobileModal();
+      else deactivateMobileModal();
+    };
+
+    const handleMobileEscape = (event) => {
+      if (event.key !== "Escape" || !mediaQuery.matches || focusModeRef.current) return;
+      event.preventDefault();
+      onOpenChangeRef.current?.(false);
+    };
+
+    activateMobileModal();
+    mediaQuery.addEventListener("change", handleViewportChange);
+    document.addEventListener("keydown", handleMobileEscape);
+    return () => {
+      mediaQuery.removeEventListener("change", handleViewportChange);
+      document.removeEventListener("keydown", handleMobileEscape);
+      deactivateMobileModal({ restoreFocus: mediaQuery.matches });
+    };
+  }, [open]);
+
+  useEffect(() => {
     return () => {
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
+      }
+      if (mobileFocusFrameRef.current) {
+        cancelAnimationFrame(mobileFocusFrameRef.current);
       }
     };
   }, []);
@@ -123,7 +215,7 @@ export function LearningInspector({
 
   if (!open) {
     return (
-      <button type="button" className="learning-inspector-reopen" onClick={() => onOpenChange?.(true)} aria-label="打开学习面板">
+      <button ref={reopenButtonRef} type="button" className="learning-inspector-reopen" onClick={() => onOpenChange?.(true)} aria-label="打开学习面板">
         <span aria-hidden="true">‹</span><span>学习面板</span>
       </button>
     );
@@ -135,7 +227,7 @@ export function LearningInspector({
   const title = learningUnit?.title ?? "学习面板";
 
   return (
-    <aside className={`learning-inspector ${focusMode ? "is-focus-mode" : ""} ${className}`.trim()} style={{ "--learning-inspector-width": `${resolvedWidth}px` }} aria-label={`${title} 学习面板`}>
+    <aside ref={inspectorRef} className={`learning-inspector ${focusMode ? "is-focus-mode" : ""} ${className}`.trim()} style={{ "--learning-inspector-width": `${resolvedWidth}px` }} aria-label={`${title} 学习面板`}>
       {!focusMode && (
         <div className="learning-inspector-resize-handle" role="separator" aria-label="调整学习面板宽度" aria-orientation="vertical" aria-valuemin={WORKBENCH_DIMENSIONS.inspectorMinWidth} aria-valuemax={maxWidth} aria-valuenow={resolvedWidth} tabIndex={0} onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={finishPointerResize} onPointerCancel={finishPointerResize} onKeyDown={handleResizeKeyDown} onDoubleClick={() => emitWidth(WORKBENCH_DIMENSIONS.inspectorDefaultWidth)} title="拖动调整宽度；方向键微调；双击恢复默认" />
       )}
@@ -144,7 +236,7 @@ export function LearningInspector({
           <div className="learning-inspector-heading"><strong>{title}</strong><span>Learning Inspector</span></div>
           <div className="learning-inspector-actions">
             <button type="button" className="learning-inspector-icon-button" onClick={() => onFocusModeChange?.(!focusMode)} aria-label={focusMode ? "退出专注模式" : "进入专注模式"} aria-pressed={focusMode} title={focusMode ? "退出专注模式 (Esc)" : "专注模式"}><span aria-hidden="true">{focusMode ? "↙" : "⛶"}</span></button>
-            <button type="button" className="learning-inspector-icon-button" onClick={handleClose} aria-label="关闭学习面板" title="关闭学习面板"><span aria-hidden="true">×</span></button>
+            <button ref={closeButtonRef} type="button" className="learning-inspector-icon-button" onClick={handleClose} aria-label="关闭学习面板" title="关闭学习面板"><span aria-hidden="true">×</span></button>
           </div>
         </header>
         <div className="learning-inspector-tabs" role="tablist" aria-label="学习面板内容">
