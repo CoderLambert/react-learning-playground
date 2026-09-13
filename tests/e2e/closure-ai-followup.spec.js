@@ -78,7 +78,7 @@ test("conversation hard delete requires confirmation, supports Escape, and resto
   await item.getByRole("button", { name: "确认删除", exact: true }).click();
   await expect(toolbar.locator("summary")).toHaveText("历史会话 0");
   await expect(panel.getByText("delete confirmation question", { exact: true })).toHaveCount(0);
-  await expect(panel.getByRole("button", { name: "新对话", exact: true })).toBeFocused();
+  await expect(panel.locator("nav.ai-conversation-list").first()).toBeFocused();
 });
 
 test("narrow right-edge citation preview stays inside the viewport without horizontal overflow", async ({ page }) => {
