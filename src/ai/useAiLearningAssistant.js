@@ -757,6 +757,9 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile, assessm
           },
         );
       }
+      // A provider can finish after its AbortSignal has been observed. Do not
+      // finalize or persist that late completion after ownership has changed.
+      assertCurrentRequest();
       const finishReason = outputLimitExceeded
         ? "output_limit"
         : normalizeFinishReason(terminalEvent?.finishReason);
