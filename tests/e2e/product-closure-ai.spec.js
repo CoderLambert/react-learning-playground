@@ -79,7 +79,7 @@ test("current conversation exposes copy plus Markdown and JSON export through ac
 
   await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
   await actions.getByRole("button", { name: "复制整段会话" }).click();
-  await expect(page.getByRole("status")).toContainText("已复制整段会话");
+  await expect(page.getByRole("status", { name: "会话操作状态" })).toContainText("已复制整段会话");
   const clipboard = await page.evaluate(() => navigator.clipboard.readText());
   expect(clipboard).toContain("e2e:export-current-conversation");
   expect(clipboard).toContain("第 180 段");
