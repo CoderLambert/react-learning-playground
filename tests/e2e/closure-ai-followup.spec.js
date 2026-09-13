@@ -163,7 +163,8 @@ test("conversation mutations expose persistence failures and remain retryable", 
   await setConversationMutationFailure(page, { deleteRecord: true });
   await item.getByRole("button", { name: "确认删除", exact: true }).click();
   await expect(mutationAlert).toContainText("删除失败");
-  await expect(page.getByRole("log", { name: "AI 对话记录" })).toContainText("saved");
+  await expect(item).toBeVisible();
+  await expect(item.getByRole("button", { name: "确认删除", exact: true })).toBeVisible();
 
   await setConversationMutationFailure(page);
   await item.getByRole("button", { name: "确认删除", exact: true }).click();
