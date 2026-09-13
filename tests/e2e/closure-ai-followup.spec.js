@@ -81,6 +81,27 @@ test("conversation hard delete requires confirmation, supports Escape, and resto
   await expect(panel.locator("nav.ai-conversation-list").first()).toBeFocused();
 });
 
+test("failed AI turns expose one authoritative live announcement", async ({ page }) => {
+  await page.route(GATEWAY_URL, async (route) => {
+    await route.fulfill({
+      status: 502,
+      contentType: "application/json",
+      body: JSON.stringify({ error: "simulated gateway failure" }),
+    });
+  });
+
+  const composer = await openAiTab(page);
+  await composer.fill("trigger a deterministic failure");
+  await page.getByRole("button", { name: "发送" }).click();
+
+  const assistant = page.getByRole("region", { name: "AI 学习助手" });
+  const alert = assistant.getByRole("alert");
+  await expect(alert).toBeVisible();
+  await expect(alert).not.toHaveText("");
+  await expect(assistant.locator(".ai-assistant-live-status")).toHaveText("");
+  await expect(assistant.locator('[role="alert"]')).toHaveCount(1);
+});
+
 test("narrow citation preview stays inside the viewport without horizontal overflow", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.route(GATEWAY_URL, async (route) => {
