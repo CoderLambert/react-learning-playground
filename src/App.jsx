@@ -81,12 +81,15 @@ export default function App() {
   const [assessmentAnswer, setAssessmentAnswer] = useState(null);
   const [assessmentFeedback, setAssessmentFeedback] = useState(null);
   const [assessmentSubmitError, setAssessmentSubmitError] = useState(null);
+  const [assessmentStartError, setAssessmentStartError] = useState(null);
   const [assessmentInitializationErrors, setAssessmentInitializationErrors] = useState({ load: null, recover: null });
   const [assessmentInitializationRetry, setAssessmentInitializationRetry] = useState(0);
   const [assessmentSubmitting, setAssessmentSubmitting] = useState(false);
+  const [assessmentStarting, setAssessmentStarting] = useState(false);
   const assessmentGenerationRef = useRef(0);
   const assessmentInitializationRequestRef = useRef(0);
   const assessmentStartRequestRef = useRef(0);
+  const assessmentStartingRef = useRef(false);
   const assessmentSubmitRequestRef = useRef(0);
   const assessmentContextRef = useRef({ learningUnitId: null, sessionId: null });
   assessmentContextRef.current = {
@@ -152,6 +155,9 @@ export default function App() {
     setAssessmentAnswer(null);
     setAssessmentFeedback(null);
     setAssessmentSubmitError(null);
+    setAssessmentStartError(null);
+    assessmentStartingRef.current = false;
+    setAssessmentStarting(false);
     setAssessmentInitializationErrors({ load: null, recover: null });
     setAssessmentSubmitting(false);
     assessmentRuntime.queryStore.replaceSnapshot({ learningUnitId, questions: [] });
@@ -236,9 +242,17 @@ export default function App() {
   };
 
   const handleAssessmentStart = async () => {
-    if (!assessmentRuntime || !currentLearningUnit?.id || !assessmentQuestions.length) return;
+    if (
+      !assessmentRuntime ||
+      !currentLearningUnit?.id ||
+      !assessmentQuestions.length ||
+      assessmentStartingRef.current
+    ) return;
     const learningUnitId = currentLearningUnit.id;
     const requestId = ++assessmentStartRequestRef.current;
+    assessmentStartingRef.current = true;
+    setAssessmentStarting(true);
+    setAssessmentStartError(null);
     const token = createAssessmentOperationToken({
       generation: assessmentGenerationRef.current,
       learningUnitId,
@@ -264,7 +278,17 @@ export default function App() {
         sessionId: assessmentContextRef.current.sessionId,
         requestId: assessmentStartRequestRef.current,
       })) return;
-      setAssessmentFeedback({ correct: false, explanation: error?.message || "无法开始评测" });
+      setAssessmentStartError(error?.message || "无法开始评测");
+    } finally {
+      if (isAssessmentOperationCurrent(token, {
+        generation: assessmentGenerationRef.current,
+        learningUnitId: assessmentContextRef.current.learningUnitId,
+        sessionId: assessmentContextRef.current.sessionId,
+        requestId: assessmentStartRequestRef.current,
+      })) {
+        assessmentStartingRef.current = false;
+        setAssessmentStarting(false);
+      }
     }
   };
 
@@ -588,6 +612,8 @@ export default function App() {
             currentIndex={assessmentIndex}
             answer={assessmentAnswer}
             feedback={assessmentFeedback}
+            startError={assessmentStartError}
+            starting={assessmentStarting}
             submitError={assessmentSubmitError}
             submitting={assessmentSubmitting}
             onStart={assessmentRuntime && assessmentQuestions.length ? handleAssessmentStart : undefined}

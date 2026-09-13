@@ -51,6 +51,23 @@ export class MemoryAssessmentRepository {
     this.clock = clock;
     this.state = state ?? createState();
     this.mode = "memory";
+    this.sessionMutationQueues = new Map();
+  }
+
+  async runSessionMutation(learningUnitId, operation) {
+    const previous = this.sessionMutationQueues.get(learningUnitId) ?? Promise.resolve();
+    let release;
+    const current = new Promise((resolve) => { release = resolve; });
+    this.sessionMutationQueues.set(learningUnitId, current);
+    await previous;
+    try {
+      return await operation();
+    } finally {
+      release();
+      if (this.sessionMutationQueues.get(learningUnitId) === current) {
+        this.sessionMutationQueues.delete(learningUnitId);
+      }
+    }
   }
 
   async listQuestions(input) {
@@ -192,15 +209,20 @@ export class MemoryAssessmentRepository {
 
   async createSession(input) {
     const session = normalizeSessionInput(input);
-    const existing = this.#reconcileInProgressSessions(session.learningUnitId);
-    if (existing) return existing;
-    this.state[ASSESSMENT_STORES.SESSIONS].set(session.id, cloneValue(session));
-    return cloneValue(session);
+    return this.runSessionMutation(session.learningUnitId, () => {
+      const existing = this.#reconcileInProgressSessions(session.learningUnitId);
+      if (existing) return existing;
+      this.state[ASSESSMENT_STORES.SESSIONS].set(session.id, cloneValue(session));
+      return cloneValue(session);
+    });
   }
 
   async reconcileInProgressSessions(input) {
     const query = normalizeSessionReconcileInput(input);
-    return this.#reconcileInProgressSessions(query.learningUnitId);
+    return this.runSessionMutation(
+      query.learningUnitId,
+      () => this.#reconcileInProgressSessions(query.learningUnitId),
+    );
   }
 
   async getSession(input) {

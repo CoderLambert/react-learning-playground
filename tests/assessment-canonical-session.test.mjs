@@ -110,4 +110,26 @@ for (const implementation of implementations) {
     assert.equal(await repository.getSession({ learningUnitId: "unit-1", sessionId: "session-retry" }), null);
     repository.close?.();
   });
+
+  test(`${implementation.name}: concurrent recover and start leave one canonical active session`, async () => {
+    const { repository } = await implementation.create();
+    const existing = session("session-existing", "unit-1", "2026-09-14T00:00:00.000Z");
+    implementation.seed(repository, existing);
+
+    const [recovered, started] = await Promise.all([
+      repository.reconcileInProgressSessions({ learningUnitId: "unit-1" }),
+      repository.createSession({
+        session: session("session-racing-start", "unit-1", "2026-09-14T00:00:01.000Z"),
+      }),
+    ]);
+
+    assert.equal(recovered.id, existing.id);
+    assert.equal(started.id, existing.id);
+    assert.deepEqual(
+      (await repository.listSessions({ learningUnitId: "unit-1", status: "in_progress" })).map((value) => value.id),
+      [existing.id],
+    );
+    assert.equal(await repository.getSession({ learningUnitId: "unit-1", sessionId: "session-racing-start" }), null);
+    repository.close?.();
+  });
 }
