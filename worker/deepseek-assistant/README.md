@@ -68,7 +68,7 @@ Verified against the official DeepSeek API documentation on 2026-09-11:
 - current text model IDs: `deepseek-v4-flash`, `deepseek-v4-pro`
 - Chat Completions streaming uses data-only SSE and terminates with `data: [DONE]`
 
-The default is `deepseek-v4-flash`, non-thinking mode, with a provider allowance of 16K output tokens. The browser independently enforces the product limit of 6000 Unicode characters and cancels the upstream stream on overflow. All non-secret values are configurable in `wrangler.jsonc` / environment bindings.
+The default is `deepseek-v4-flash`, non-thinking mode, with a provider allowance of 16K output tokens. The browser does not apply a separate 6000-character truncation limit; terminal state follows the provider response, user cancellation, or transport failure. All non-secret values are configurable in `wrangler.jsonc` / environment bindings.
 
 ## Required secret
 
