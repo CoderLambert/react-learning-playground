@@ -1,7 +1,11 @@
 import { ASSESSMENT_ERROR_CODES, AssessmentError } from "./assessmentErrors.js";
 import { assertQuestionRecord } from "./question.js";
 
-export const ASSESSMENT_SESSION_STATUSES = Object.freeze({ IN_PROGRESS: "in_progress", COMPLETED: "completed" });
+export const ASSESSMENT_SESSION_STATUSES = Object.freeze({
+  IN_PROGRESS: "in_progress",
+  COMPLETED: "completed",
+  SUPERSEDED: "superseded",
+});
 const STATUS_VALUES = new Set(Object.values(ASSESSMENT_SESSION_STATUSES));
 
 export function createSessionItem(question) {
@@ -30,5 +34,9 @@ export function assertAssessmentSession(session) {
   if (!STATUS_VALUES.has(session.status)) throw new TypeError(`unsupported session status: ${String(session.status)}`);
   if (typeof session.startedAt !== "string" || !session.startedAt.trim()) throw new TypeError("session.startedAt is required");
   if (session.status === ASSESSMENT_SESSION_STATUSES.COMPLETED && (typeof session.completedAt !== "string" || !session.completedAt.trim())) throw new TypeError("completed session requires completedAt");
+  if (session.status === ASSESSMENT_SESSION_STATUSES.SUPERSEDED) {
+    if (typeof session.supersededAt !== "string" || !session.supersededAt.trim()) throw new TypeError("superseded session requires supersededAt");
+    if (typeof session.supersededBySessionId !== "string" || !session.supersededBySessionId.trim()) throw new TypeError("superseded session requires supersededBySessionId");
+  }
   return session;
 }

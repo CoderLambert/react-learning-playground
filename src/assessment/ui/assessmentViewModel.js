@@ -21,3 +21,9 @@ export function deriveAssessmentView({ session, currentIndex = 0, feedback = nul
 export function formatAssessmentProgress(view) {
   return view?.kind === "session" ? `${view.position} / ${view.total}` : "0 / 0";
 }
+
+export function formatAssessmentPositionLabel(view) {
+  return view?.kind === "session"
+    ? `当前第 ${view.position} 题，共 ${view.total} 题`
+    : "当前无评测题目";
+}

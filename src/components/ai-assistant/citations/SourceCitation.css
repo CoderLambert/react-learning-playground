@@ -103,11 +103,13 @@
 .ai-source-citation-preview {
   position: absolute;
   z-index: 80;
-  inset-inline-start: 0;
+  box-sizing: border-box;
+  inset-inline-start: var(--ai-citation-preview-offset-x, 0px);
+  inset-inline-end: auto;
   inset-block-start: calc(100% + 0.48rem);
   width: max-content;
-  min-width: min(22rem, 76vw);
-  max-width: min(42rem, 86vw);
+  min-width: min(22rem, calc(100vw - 16px));
+  max-width: min(42rem, calc(100vw - 16px));
   max-height: 18rem;
   overflow: auto;
   padding: 0.72rem 0.82rem;
@@ -119,13 +121,19 @@
   font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
   font-size: 0.76rem;
   line-height: 1.55;
-  white-space: pre;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
   text-align: start;
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
   transform: translateY(-0.2rem);
   transition: opacity 120ms ease, transform 120ms ease, visibility 120ms ease;
+}
+
+.ai-source-citation-wrap[data-preview-align="end"] .ai-source-citation-preview {
+  inset-inline-start: auto;
+  inset-inline-end: calc(0px - var(--ai-citation-preview-offset-x, 0px));
 }
 
 .ai-source-citation-wrap:hover .ai-source-citation-preview,
@@ -141,8 +149,8 @@
   }
 
   .ai-source-citation-preview {
-    min-width: min(18rem, 82vw);
-    max-width: 82vw;
+    min-width: min(18rem, calc(100vw - 16px));
+    max-width: min(82vw, calc(100vw - 16px));
   }
 }
 

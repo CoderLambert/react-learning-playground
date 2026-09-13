@@ -2,13 +2,13 @@ import { useMemo, useState, useSyncExternalStore } from "react";
 import { Badge } from "../../components/ui/badge.jsx";
 import { Button } from "../../components/ui/button.jsx";
 import { Card, CardContent, CardHeader } from "../../components/ui/card.jsx";
-import { getActiveAssessmentRuntime } from "../composition/assessmentRuntime.js";
 import {
   buildQuestionPatch,
   createAssessmentManagerTrustedContext,
   describeAssessmentMutationError,
   questionToDraft,
 } from "./assessmentManagement.js";
+import { selectAssessmentQuestionsForLearningUnit } from "./assessmentScope.js";
 
 const TYPE_LABELS = { single_choice: "单选题", true_false: "判断题" };
 const STATUS_LABELS = { active: "启用中", retired: "已停用" };
@@ -106,15 +106,13 @@ function QuestionEditor({ question, onSave, onCancel, saving }) {
   );
 }
 
-export function AssessmentQuestionManager({ session = null }) {
-  const runtime = getActiveAssessmentRuntime();
+export function AssessmentQuestionManager({ session = null, runtime = null, learningUnitId = null }) {
   const snapshot = useSyncExternalStore(
     runtime?.queryStore.subscribe ?? EMPTY_SUBSCRIBE,
     runtime?.queryStore.getSnapshot ?? EMPTY_GET_SNAPSHOT,
     EMPTY_GET_SNAPSHOT,
   );
-  const learningUnitId = snapshot?.learningUnitId ?? null;
-  const questions = snapshot?.questions ?? [];
+  const questions = selectAssessmentQuestionsForLearningUnit(snapshot, learningUnitId);
   const service = runtime?.service ?? null;
   const [showRetired, setShowRetired] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -134,7 +132,7 @@ export function AssessmentQuestionManager({ session = null }) {
       const latest = await service.listQuestions({ trusted: { learningUnitId } });
       runtime.queryStore.replaceSnapshot({ learningUnitId, questions: latest });
     } catch {
-      // Keep the existing snapshot if refresh also fails.
+      // Keep the current scoped snapshot if refresh also fails.
     }
   };
 

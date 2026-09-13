@@ -318,7 +318,7 @@ export function AiAssistant({
   const noticeTimerRef = useRef(null);
   const isStreaming = status === "streaming" || status === "loading";
   const isSubmitDisabled = disabled || isStreaming || !inputValue.trim();
-  const statusText = isStreaming ? "AI 正在生成回答" : status === "error" ? "AI 回答失败" : "";
+  const statusText = isStreaming ? "AI 正在生成回答" : "";
 
   const showActionNotice = useCallback((message) => {
     setActionNotice(message);

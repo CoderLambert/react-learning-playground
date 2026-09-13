@@ -16,10 +16,13 @@ import {
   normalizeSessionGetQuery,
   normalizeSessionInput,
   normalizeSessionListQuery,
+  normalizeSessionReconcileInput,
   normalizeUpdateCommand,
   normalizeAttemptProgressInput,
+  nowIso,
   questionNotFound,
   questionRetired,
+  reconcileInProgressSessionRecords,
   requiredQuestionRecord,
   replayResult,
   revisionConflict,
@@ -49,6 +52,7 @@ export class IndexedDbAssessmentRepository {
     this.db = db;
     this.clock = clock;
     this.mode = "indexeddb";
+    this.sessionMutationQueue = Promise.resolve();
   }
 
   async readStore(storeName, operation) {
@@ -76,6 +80,31 @@ export class IndexedDbAssessmentRepository {
       await done.catch(() => {});
       throw error;
     }
+  }
+
+  async runSessionMutation(operation) {
+    const previous = this.sessionMutationQueue;
+    let release;
+    this.sessionMutationQueue = new Promise((resolve) => { release = resolve; });
+    await previous;
+    try {
+      return await operation();
+    } finally {
+      release();
+    }
+  }
+
+  async reconcileSessionsInTransaction(transaction, learningUnitId) {
+    const store = getObjectStore(transaction, ASSESSMENT_STORES.SESSIONS);
+    const sessions = await requestToPromise(store.getAll());
+    const reconciliation = reconcileInProgressSessionRecords(sessions, {
+      learningUnitId,
+      supersededAt: nowIso(this.clock),
+    });
+    for (const session of reconciliation.superseded) {
+      await requestToPromise(store.put(cloneValue(session)));
+    }
+    return cloneValue(reconciliation.winner);
   }
 
   async listQuestions(input) {
@@ -160,10 +189,7 @@ export class IndexedDbAssessmentRepository {
       }
       if (current.status !== "active") throw questionRetired(command);
       if (current.revision !== command.expectedRevision) {
-        throw revisionConflict({
-          ...command,
-          actualRevision: current.revision,
-        });
+        throw revisionConflict({ ...command, actualRevision: current.revision });
       }
       const result = {
         ...cloneValue(current),
@@ -185,10 +211,7 @@ export class IndexedDbAssessmentRepository {
       }
       if (current.status !== "active") throw questionRetired(command);
       if (current.revision !== command.expectedRevision) {
-        throw revisionConflict({
-          ...command,
-          actualRevision: current.revision,
-        });
+        throw revisionConflict({ ...command, actualRevision: current.revision });
       }
       const result = {
         ...cloneValue(current),
@@ -204,19 +227,46 @@ export class IndexedDbAssessmentRepository {
 
   async createSession(input) {
     const session = normalizeSessionInput(input);
-    await this.writeStore(
-      ASSESSMENT_STORES.SESSIONS,
-      (store) => store.put(cloneValue(session)),
-    );
-    return cloneValue(session);
+    return this.runSessionMutation(async () => {
+      const transaction = this.db.transaction(ASSESSMENT_STORES.SESSIONS, "readwrite");
+      const done = transactionDone(transaction);
+      try {
+        const existing = await this.reconcileSessionsInTransaction(transaction, session.learningUnitId);
+        if (existing) {
+          await done;
+          return existing;
+        }
+        await requestToPromise(getObjectStore(transaction, ASSESSMENT_STORES.SESSIONS).put(cloneValue(session)));
+        await done;
+        return cloneValue(session);
+      } catch (error) {
+        transaction.abort?.();
+        await done.catch(() => {});
+        throw error;
+      }
+    });
+  }
+
+  async reconcileInProgressSessions(input) {
+    const query = normalizeSessionReconcileInput(input);
+    return this.runSessionMutation(async () => {
+      const transaction = this.db.transaction(ASSESSMENT_STORES.SESSIONS, "readwrite");
+      const done = transactionDone(transaction);
+      try {
+        const winner = await this.reconcileSessionsInTransaction(transaction, query.learningUnitId);
+        await done;
+        return winner;
+      } catch (error) {
+        transaction.abort?.();
+        await done.catch(() => {});
+        throw error;
+      }
+    });
   }
 
   async getSession(input) {
     const query = normalizeSessionGetQuery(input);
-    const session = await this.readStore(
-      ASSESSMENT_STORES.SESSIONS,
-      (store) => store.get(query.sessionId),
-    );
+    const session = await this.readStore(ASSESSMENT_STORES.SESSIONS, (store) => store.get(query.sessionId));
     if (!session || session.learningUnitId !== query.learningUnitId) return null;
     return cloneRequestResult(session);
   }
@@ -233,10 +283,7 @@ export class IndexedDbAssessmentRepository {
 
   async saveAttempt(input) {
     const attempt = normalizeAttemptInput(input);
-    await this.writeStore(
-      ASSESSMENT_STORES.ATTEMPTS,
-      (store) => store.put(cloneValue(attempt)),
-    );
+    await this.writeStore(ASSESSMENT_STORES.ATTEMPTS, (store) => store.put(cloneValue(attempt)));
     return cloneValue(attempt);
   }
 
@@ -252,7 +299,7 @@ export class IndexedDbAssessmentRepository {
       const attemptStore = getObjectStore(transaction, ASSESSMENT_STORES.ATTEMPTS);
       const current = await requestToPromise(sessionStore.get(command.sessionId));
       if (!current || current.learningUnitId !== command.learningUnitId) throw sessionNotFound(command);
-      if (current.status === "completed") throw sessionCompleted(command);
+      if (current.status !== "in_progress") throw sessionCompleted(command);
 
       const existingAttemptKey = await requestToPromise(
         attemptStore.index("sessionQuestion").getKey([command.sessionId, command.attempt.questionId]),

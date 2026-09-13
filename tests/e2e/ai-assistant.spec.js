@@ -285,6 +285,9 @@ test("conversation history supports rename, archive, restore, and delete", async
 
   const restoredItem = panel.locator("li").filter({ hasText: "renamed history" });
   await restoredItem.getByRole("button", { name: "删除", exact: true }).click();
+  await expect(toolbar.locator("summary")).toHaveText("历史会话 1");
+  await expect(restoredItem.getByRole("button", { name: "确认删除", exact: true })).toBeVisible();
+  await restoredItem.getByRole("button", { name: "确认删除", exact: true }).click();
   await expect(toolbar.locator("summary")).toHaveText("历史会话 0");
   await expect(panel.getByText("renamed history", { exact: true })).toHaveCount(0);
 });
