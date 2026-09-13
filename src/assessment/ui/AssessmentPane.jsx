@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AssessmentPracticePane } from "./AssessmentPracticePane.jsx";
 import { AssessmentQuestionManager } from "./AssessmentQuestionManager.jsx";
 
@@ -9,6 +9,11 @@ export function AssessmentPane(props) {
   const startError = !session && props.feedback && typeof props.feedback.explanation === "string"
     ? props.feedback.explanation
     : null;
+
+  useEffect(() => {
+    startRequestRef.current += 1;
+    setStarting(false);
+  }, [props.learningUnitId]);
 
   const handleStart = typeof props.onStart === "function"
     ? async () => {
