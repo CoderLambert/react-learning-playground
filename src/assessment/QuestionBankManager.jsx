@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { AssessmentRunner } from "./AssessmentRunner.jsx";
 import {
   createCustomQuestion,
   createQuestionBankRepository,
@@ -30,6 +31,10 @@ export function QuestionBankManager({ chapter, checkpoint }) {
   const resolved = useMemo(
     () => resolveQuestionBank({ chapter, checkpoint, state }),
     [chapter, checkpoint, state],
+  );
+  const runnableQuestions = useMemo(
+    () => resolved.filter((item) => !item.hidden),
+    [resolved],
   );
 
   function commit(result, message, previousState) {
@@ -120,80 +125,84 @@ export function QuestionBankManager({ chapter, checkpoint }) {
     commitMutation(() => repository.setOrder(chapter, item.kind, ids), "排序已保存");
   }
 
-  const visible = showHidden ? resolved : resolved.filter((item) => !item.hidden);
+  const visible = showHidden ? resolved : runnableQuestions;
 
   return (
-    <section className="demo-alert demo-alert-info" aria-labelledby={`question-bank-${chapter}-title`}>
-      <div className="demo-alert-title" id={`question-bank-${chapter}-title`}>题库管理</div>
-      <p>内置题只做覆盖/隐藏，不会被删除；自定义题可以编辑、复制、排序和删除。所有修改保存在当前浏览器。</p>
+    <>
+      <section className="demo-alert demo-alert-info" aria-labelledby={`question-bank-${chapter}-title`}>
+        <div className="demo-alert-title" id={`question-bank-${chapter}-title`}>题库管理</div>
+        <p>内置题只做覆盖/隐藏，不会被删除；自定义题可以编辑、复制、排序和删除。所有修改保存在当前浏览器。</p>
 
-      <form onSubmit={addCustom} style={{ display: "grid", gap: 8, marginBottom: 12 }}>
-        <label>
-          类型
-          <select value={kind} onChange={(event) => setKind(event.target.value)}>
-            <option value="question">问题</option>
-            <option value="exercise">练习</option>
-          </select>
-        </label>
-        <label>
-          新内容
-          <textarea value={draft} onChange={(event) => setDraft(event.target.value)} rows={3} />
-        </label>
-        <button type="submit" disabled={!draft.trim()}>新增</button>
-      </form>
+        <form onSubmit={addCustom} style={{ display: "grid", gap: 8, marginBottom: 12 }}>
+          <label>
+            类型
+            <select value={kind} onChange={(event) => setKind(event.target.value)}>
+              <option value="question">问题</option>
+              <option value="exercise">练习</option>
+            </select>
+          </label>
+          <label>
+            新内容
+            <textarea value={draft} onChange={(event) => setDraft(event.target.value)} rows={3} />
+          </label>
+          <button type="submit" disabled={!draft.trim()}>新增</button>
+        </form>
 
-      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 12 }}>
-        <label style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
-          <input type="checkbox" checked={showHidden} onChange={(event) => setShowHidden(event.target.checked)} />
-          查看已隐藏内置题
-        </label>
-        <button type="button" onClick={undoLastMutation} disabled={!undoState}>撤销上一步</button>
-      </div>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 12 }}>
+          <label style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
+            <input type="checkbox" checked={showHidden} onChange={(event) => setShowHidden(event.target.checked)} />
+            查看已隐藏内置题
+          </label>
+          <button type="button" onClick={undoLastMutation} disabled={!undoState}>撤销上一步</button>
+        </div>
 
-      <div role="status" aria-live="polite" style={{ minHeight: 24 }}>{feedback}</div>
+        <div role="status" aria-live="polite" style={{ minHeight: 24 }}>{feedback}</div>
 
-      <ol style={{ display: "grid", gap: 10, paddingLeft: 24 }}>
-        {visible.map((item) => (
-          <li key={item.id} data-question-id={item.id}>
-            <div>
-              <strong>{itemLabel(item)}</strong>
-              <span> · {item.source === "builtin" ? "内置" : "自定义"}</span>
-              {item.hidden && <span> · 已隐藏</span>}
-            </div>
-            {editingId === item.id ? (
-              <div style={{ display: "grid", gap: 8 }}>
-                <textarea
-                  aria-label={`编辑${itemLabel(item)}`}
-                  value={editingText}
-                  onChange={(event) => setEditingText(event.target.value)}
-                  rows={3}
-                  autoFocus
-                />
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                  <button type="button" onClick={() => saveEdit(item)} disabled={!editingText.trim()}>保存</button>
-                  <button type="button" onClick={() => setEditingId(null)}>取消</button>
-                </div>
+        <ol style={{ display: "grid", gap: 10, paddingLeft: 24 }}>
+          {visible.map((item) => (
+            <li key={item.id} data-question-id={item.id}>
+              <div>
+                <strong>{itemLabel(item)}</strong>
+                <span> · {item.source === "builtin" ? "内置" : "自定义"}</span>
+                {item.hidden && <span> · 已隐藏</span>}
               </div>
-            ) : (
-              <p>{item.text}</p>
-            )}
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }} aria-label={`${itemLabel(item)}操作`}>
-              <button type="button" onClick={() => edit(item)}>编辑</button>
-              <button type="button" onClick={() => duplicate(item)}>复制</button>
-              <button type="button" onClick={() => move(item, -1)}>上移</button>
-              <button type="button" onClick={() => move(item, 1)}>下移</button>
-              {item.source === "builtin" ? (
-                <>
-                  <button type="button" onClick={() => toggleBuiltin(item)}>{item.hidden ? "恢复显示" : "隐藏"}</button>
-                  {item.overridden && <button type="button" onClick={() => restoreBuiltin(item)}>恢复默认</button>}
-                </>
+              {editingId === item.id ? (
+                <div style={{ display: "grid", gap: 8 }}>
+                  <textarea
+                    aria-label={`编辑${itemLabel(item)}`}
+                    value={editingText}
+                    onChange={(event) => setEditingText(event.target.value)}
+                    rows={3}
+                    autoFocus
+                  />
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    <button type="button" onClick={() => saveEdit(item)} disabled={!editingText.trim()}>保存</button>
+                    <button type="button" onClick={() => setEditingId(null)}>取消</button>
+                  </div>
+                </div>
               ) : (
-                <button type="button" onClick={() => remove(item)}>删除</button>
+                <p>{item.text}</p>
               )}
-            </div>
-          </li>
-        ))}
-      </ol>
-    </section>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }} aria-label={`${itemLabel(item)}操作`}>
+                <button type="button" onClick={() => edit(item)}>编辑</button>
+                <button type="button" onClick={() => duplicate(item)}>复制</button>
+                <button type="button" onClick={() => move(item, -1)}>上移</button>
+                <button type="button" onClick={() => move(item, 1)}>下移</button>
+                {item.source === "builtin" ? (
+                  <>
+                    <button type="button" onClick={() => toggleBuiltin(item)}>{item.hidden ? "恢复显示" : "隐藏"}</button>
+                    {item.overridden && <button type="button" onClick={() => restoreBuiltin(item)}>恢复默认</button>}
+                  </>
+                ) : (
+                  <button type="button" onClick={() => remove(item)}>删除</button>
+                )}
+              </div>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      <AssessmentRunner chapter={chapter} resolvedQuestions={runnableQuestions} />
+    </>
   );
 }
