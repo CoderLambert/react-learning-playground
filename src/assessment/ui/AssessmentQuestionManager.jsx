@@ -30,7 +30,9 @@ function inputClassName() {
 }
 
 function QuestionEditor({ question, onSave, onCancel, saving }) {
+  const [editBase] = useState(() => ({ question, revision: question.revision }));
   const [draft, setDraft] = useState(() => questionToDraft(question));
+  const stale = question.revision !== editBase.revision;
   const updateOption = (id, text) => {
     setDraft((current) => ({
       ...current,
@@ -40,11 +42,17 @@ function QuestionEditor({ question, onSave, onCancel, saving }) {
 
   const submit = (event) => {
     event.preventDefault();
-    onSave?.(buildQuestionPatch(question, draft));
+    if (stale) return;
+    onSave?.(buildQuestionPatch(editBase.question, draft), editBase.revision);
   };
 
   return (
     <form className="grid gap-4" onSubmit={submit} aria-label={`编辑题目 ${question.id}`}>
+      {stale && (
+        <p role="alert" className="m-0 rounded-md border border-[var(--border-color)] bg-[var(--bg-surface-secondary)] p-3 text-sm leading-5 text-[var(--text-muted)]">
+          题目已在其他操作中更新。请取消编辑并重新打开最新版本后再保存。
+        </p>
+      )}
       <Field label="题干">
         <textarea className={inputClassName()} rows={3} value={draft.prompt} onChange={(event) => setDraft((current) => ({ ...current, prompt: event.target.value }))} required />
       </Field>
@@ -91,7 +99,7 @@ function QuestionEditor({ question, onSave, onCancel, saving }) {
       )}
 
       <div className="flex gap-2">
-        <Button type="submit" disabled={saving}>{saving ? "保存中…" : "保存修改"}</Button>
+        <Button type="submit" disabled={saving || stale}>{saving ? "保存中…" : "保存修改"}</Button>
         <Button type="button" variant="outline" onClick={onCancel} disabled={saving}>取消</Button>
       </div>
     </form>
@@ -130,7 +138,7 @@ export function AssessmentQuestionManager({ session = null }) {
     }
   };
 
-  const save = async (question, patch) => {
+  const save = async (question, patch, expectedRevision = question.revision) => {
     if (!service || !learningUnitId) return;
     setBusyId(question.id);
     setNotice(null);
@@ -138,7 +146,7 @@ export function AssessmentQuestionManager({ session = null }) {
       await service.updateQuestion({
         trusted: createAssessmentManagerTrustedContext(learningUnitId),
         questionId: question.id,
-        expectedRevision: question.revision,
+        expectedRevision,
         patch,
       });
       setEditingId(null);
@@ -204,7 +212,7 @@ export function AssessmentQuestionManager({ session = null }) {
                 <div className="flex gap-2">{question.status === "active" && <><Button size="sm" variant="outline" onClick={() => setEditingId((id) => id === question.id ? null : question.id)} disabled={busyId === question.id}>{editingId === question.id ? "收起编辑" : "编辑"}</Button><Button size="sm" variant="outline" onClick={() => retire(question)} disabled={busyId === question.id}>停用</Button></>}</div>
               </div>
               {question.status === "retired" && <p className="mt-3 mb-0 text-xs leading-5 text-[var(--text-muted)]">当前 domain 只提供 retire 语义，没有恢复命令；因此这里只展示历史题目。</p>}
-              {editingId === question.id && question.status === "active" && <div className="mt-4 border-t border-[var(--border-subtle)] pt-4"><QuestionEditor question={question} saving={busyId === question.id} onSave={(patch) => save(question, patch)} onCancel={() => setEditingId(null)} /></div>}
+              {editingId === question.id && question.status === "active" && <div className="mt-4 border-t border-[var(--border-subtle)] pt-4"><QuestionEditor question={question} saving={busyId === question.id} onSave={(patch, expectedRevision) => save(question, patch, expectedRevision)} onCancel={() => setEditingId(null)} /></div>}
             </article>
           ))}
         </CardContent>
