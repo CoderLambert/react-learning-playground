@@ -1,4 +1,4 @@
-import { createElement, useId } from "react";
+import { createElement, useCallback, useId, useRef, useState } from "react";
 import {
   formatSourceCitationLines,
   normalizeSourceCitation,
@@ -78,10 +78,27 @@ export function SourceCitation({
   variant = "default",
 }) {
   const tooltipId = useId();
+  const previewRef = useRef(null);
+  const [previewAlign, setPreviewAlign] = useState("start");
   const citation = normalizeSourceCitation({ fileName, startLine, endLine, label });
+  const previewText = normalizePreview(preview);
+
+  const containPreview = useCallback(() => {
+    if (!previewText) return;
+    globalThis.requestAnimationFrame?.(() => {
+      const element = previewRef.current;
+      if (!element || typeof element.getBoundingClientRect !== "function") return;
+      const viewportWidth = globalThis.innerWidth || globalThis.document?.documentElement?.clientWidth || 0;
+      if (!viewportWidth) return;
+      const rect = element.getBoundingClientRect();
+      const edge = 8;
+      if (rect.right > viewportWidth - edge) setPreviewAlign("end");
+      else if (rect.left < edge) setPreviewAlign("start");
+    });
+  }, [previewText]);
+
   if (!citation) return null;
 
-  const previewText = normalizePreview(preview);
   const lineLabel = formatSourceCitationLines(citation.startLine, citation.endLine);
   const interactive = typeof onOpen === "function" && !disabled;
   const visibleLabel = label && !isRedundantLabel(label, citation.fileName, lineLabel)
@@ -133,12 +150,18 @@ export function SourceCitation({
 
   return createElement(
     "span",
-    { className: `ai-source-citation-wrap ${className}`.trim() },
+    {
+      className: `ai-source-citation-wrap ${className}`.trim(),
+      "data-preview-align": previewAlign,
+      onMouseEnter: containPreview,
+      onFocusCapture: containPreview,
+    },
     control,
     previewText
       ? createElement(
           "span",
           {
+            ref: previewRef,
             id: tooltipId,
             className: "ai-source-citation-preview",
             role: "tooltip",
