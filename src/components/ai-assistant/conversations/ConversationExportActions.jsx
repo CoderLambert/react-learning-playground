@@ -45,10 +45,10 @@ export function ConversationExportActions({
     if (timerRef.current) globalThis.clearTimeout?.(timerRef.current);
   }, []);
 
-  const run = async (action, successMessage) => {
+  const run = async (action, successMessage, { closeAfter = true } = {}) => {
     try {
       await action();
-      setOpen(false);
+      if (closeAfter) setOpen(false);
       showNotice(successMessage);
     } catch (error) {
       showNotice(error?.message || "会话操作失败");
@@ -73,7 +73,11 @@ export function ConversationExportActions({
             <button
               type="button"
               disabled={actionsDisabled}
-              onClick={() => void run(() => copyConversationMarkdown(options), "已复制整段会话")}
+              onClick={() => void run(
+                () => copyConversationMarkdown(options),
+                "已复制整段会话",
+                { closeAfter: false },
+              )}
             >
               复制整段会话
             </button>
