@@ -8,6 +8,7 @@ import {
 import { ASSESSMENT_ERROR_CODES, AssessmentError } from "../domain/assessmentErrors.js";
 
 export const PERSISTED_QUESTION_STATUSES = new Set(["active", "retired"]);
+export const PERSISTED_SESSION_STATUSES = new Set(["in_progress", "completed", "superseded"]);
 
 export function cloneValue(value) {
   return value == null ? value : structuredClone(value);
@@ -97,11 +98,18 @@ export function normalizeSessionListQuery(input) {
   const result = { learningUnitId: requiredText(query.learningUnitId, "listSessions.learningUnitId") };
   if (query.status !== undefined) {
     if (!PERSISTED_SESSION_STATUSES.has(query.status)) {
-      throw new TypeError("listSessions.status must be in_progress or completed");
+      throw new TypeError("listSessions.status must be in_progress, completed, or superseded");
     }
     result.status = query.status;
   }
   return result;
+}
+
+export function normalizeSessionReconcileInput(input) {
+  const value = requiredRecord(input, "reconcileInProgressSessions input");
+  return {
+    learningUnitId: requiredText(value.learningUnitId, "reconcileInProgressSessions.learningUnitId"),
+  };
 }
 
 export function normalizeAttemptInput(input) {
@@ -224,10 +232,23 @@ export function sortAttempts(left, right) {
     || sortById(left, right);
 }
 
-const PERSISTED_SESSION_STATUSES = new Set(["in_progress", "completed"]);
-
 export function sortSessionsNewestFirst(left, right) {
   return String(right.startedAt).localeCompare(String(left.startedAt)) || sortById(right, left);
+}
+
+export function reconcileInProgressSessionRecords(sessions, { learningUnitId, supersededAt }) {
+  const active = sessions
+    .filter((session) => session.learningUnitId === learningUnitId && session.status === "in_progress")
+    .sort(sortSessionsNewestFirst);
+  const winner = active[0] ?? null;
+  if (!winner) return { winner: null, superseded: [] };
+  const superseded = active.slice(1).map((session) => ({
+    ...cloneValue(session),
+    status: "superseded",
+    supersededAt,
+    supersededBySessionId: winner.id,
+  }));
+  return { winner: cloneValue(winner), superseded };
 }
 
 export function sessionNotFound({ learningUnitId, sessionId }) {
@@ -241,7 +262,7 @@ export function sessionNotFound({ learningUnitId, sessionId }) {
 export function sessionCompleted({ sessionId }) {
   return new AssessmentError(
     ASSESSMENT_ERROR_CODES.SESSION_COMPLETED,
-    `Session ${sessionId} is completed`,
+    `Session ${sessionId} is no longer active`,
     { details: { sessionId } },
   );
 }

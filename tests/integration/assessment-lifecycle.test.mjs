@@ -72,7 +72,7 @@ function toolContext(runId = "run-a7") {
   });
 }
 
-test("A7.3 PASS: session start snapshots v1 and a later session snapshots v2", async () => {
+test("A7.3 PASS: completed session keeps v1 snapshot and a later session snapshots v2", async () => {
   const repository = new MemoryAssessmentRepository({ clock: () => new Date(TIMESTAMP) });
   const service = createService(repository);
   const created = await service.createQuestions({
@@ -81,6 +81,12 @@ test("A7.3 PASS: session start snapshots v1 and a later session snapshots v2", a
   });
   const question = created.result[0];
   const oldSession = await service.startSession({ trusted: { learningUnitId: UNIT }, questionIds: [question.id] });
+  await service.submitAnswer({
+    trusted: { learningUnitId: UNIT },
+    sessionId: oldSession.id,
+    questionId: question.id,
+    answer: "a",
+  });
 
   const updated = await service.updateQuestion({
     trusted: { learningUnitId: UNIT, mutationId: "update-v2" },
@@ -92,6 +98,7 @@ test("A7.3 PASS: session start snapshots v1 and a later session snapshots v2", a
 
   assert.equal(oldSession.items[0].revision, 1);
   assert.equal(oldSession.items[0].snapshot.content.prompt, "v1 prompt");
+  assert.equal((await repository.getSession({ learningUnitId: UNIT, sessionId: oldSession.id })).status, "completed");
   assert.equal(updated.result.revision, 2);
   assert.equal(newSession.items[0].revision, 2);
   assert.equal(newSession.items[0].snapshot.content.prompt, "v2 prompt");
