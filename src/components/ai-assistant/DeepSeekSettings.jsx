@@ -50,6 +50,7 @@ export function DeepSeekSettings({
     const normalizedKey = apiKey.trim();
     if (!normalizedKey) return;
     onSave?.({ apiKey: normalizedKey, model, rememberApiKey });
+    setOpen(false);
     setFeedback({ type: "success", text: "配置已保存，可继续刚才的学习问题。" });
   };
 
@@ -113,10 +114,11 @@ export function DeepSeekSettings({
             </p>
           </div>
 
-          <label className="deepseek-settings-field">
-            <span>API Key</span>
+          <div className="deepseek-settings-field">
+            <label htmlFor="deepseek-api-key">API Key</label>
             <div className="deepseek-settings-secret-row">
               <input
+                id="deepseek-api-key"
                 ref={apiKeyRef}
                 type={showApiKey ? "text" : "password"}
                 value={apiKey}
@@ -138,7 +140,7 @@ export function DeepSeekSettings({
                 {showApiKey ? "隐藏" : "显示"}
               </button>
             </div>
-          </label>
+          </div>
 
           <p id="deepseek-key-status" className="deepseek-settings-key-status">
             {apiKey.trim() ? `当前输入：${redactSecret(apiKey)}` : "尚未输入 API Key"}
