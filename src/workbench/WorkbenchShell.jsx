@@ -55,7 +55,8 @@ export function WorkbenchShell({
         <button
           type="button"
           className="workbench-mobile-scrim"
-          aria-label="关闭侧边导航"
+          aria-label="关闭侧边导航背景"
+          tabIndex={-1}
           onClick={onMobileNavigationClose}
         />
       )}
