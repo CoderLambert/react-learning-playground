@@ -449,7 +449,7 @@ export function AiAssistant({
   };
 
   const handleStop = () => {
-    if (disabled || !isStreaming || !onStop) return;
+    if (!isStreaming || !onStop) return;
     onStop();
     showActionNotice("已请求停止生成");
     inputRef.current?.focus();
@@ -544,7 +544,7 @@ export function AiAssistant({
               <button type="button" className="ai-assistant-secondary-button" onClick={onReset} disabled={disabled || isStreaming || messages.length === 0}>新对话</button>
             ) : null}
             {isStreaming && onStop ? (
-              <button type="button" className="ai-assistant-stop-button" onClick={handleStop} disabled={disabled}>停止</button>
+              <button type="button" className="ai-assistant-stop-button" onClick={handleStop}>停止</button>
             ) : (
               <button type="submit" className="ai-assistant-send-button" disabled={isSubmitDisabled}>发送</button>
             )}
