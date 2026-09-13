@@ -19,6 +19,7 @@ import {
   normalizeUpdateCommand,
   normalizeAttemptProgressInput,
   questionNotFound,
+  questionRetired,
   requiredQuestionRecord,
   replayResult,
   revisionConflict,
@@ -157,6 +158,7 @@ export class IndexedDbAssessmentRepository {
       if (!current || current.learningUnitId !== command.learningUnitId) {
         throw questionNotFound(command);
       }
+      if (current.status !== "active") throw questionRetired(command);
       if (current.revision !== command.expectedRevision) {
         throw revisionConflict({
           ...command,
@@ -181,6 +183,7 @@ export class IndexedDbAssessmentRepository {
       if (!current || current.learningUnitId !== command.learningUnitId) {
         throw questionNotFound(command);
       }
+      if (current.status !== "active") throw questionRetired(command);
       if (current.revision !== command.expectedRevision) {
         throw revisionConflict({
           ...command,
