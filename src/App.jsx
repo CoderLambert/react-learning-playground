@@ -501,9 +501,12 @@ export default function App() {
       <header className="top-bar">
         <div className="top-bar-left">
           <button
+            type="button"
             className="mobile-menu-toggle workbench-mobile-menu-toggle"
             onClick={() => setMobileNavigationOpen((open) => !open)}
-            aria-label="打开侧边导航"
+            aria-label={mobileNavigationOpen ? "关闭侧边导航" : "打开侧边导航"}
+            aria-expanded={mobileNavigationOpen}
+            aria-controls="workbench-navigation"
           >
             ☰
           </button>
