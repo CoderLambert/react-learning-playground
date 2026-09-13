@@ -1,0 +1,16 @@
+import{v as e,w as t}from"./index-BQUrGTij.js";var n=t();function r(t){let r={code:`code`,h1:`h1`,li:`li`,p:`p`,ul:`ul`,...e(),...t.components},{AntiPattern:i,Boundary:o,DemoReference:s,Experiment:c,FurtherReading:l,MentalModel:u,Observation:d,Summary:f,Timeline:p}=r;return i||a(`AntiPattern`,!0),o||a(`Boundary`,!0),s||a(`DemoReference`,!0),c||a(`Experiment`,!0),l||a(`FurtherReading`,!0),u||a(`MentalModel`,!0),d||a(`Observation`,!0),f||a(`Summary`,!0),p||a(`Timeline`,!0),(0,n.jsxs)(n.Fragment,{children:[(0,n.jsx)(r.h1,{id:`响应式-effect按同步目标理解生命周期`,children:`响应式 Effect：按同步目标理解生命周期`}),`
+`,(0,n.jsx)(r.p,{children:`组件有 mount/update/unmount；Effect 更适合用“开始同步 / 停止同步”来思考。只要它读取的 reactive value 改变，同步过程就可能需要重新建立。`}),`
+`,(0,n.jsx)(u,{title:`依赖数组是代码的结果，不是愿望清单`,children:`props、state 和组件体内声明的值都是 reactive values。Effect 读取哪些 reactive values，依赖就应反映哪些值；不要通过删依赖来强行控制执行次数。`}),`
+`,(0,n.jsx)(p,{steps:[`commit A`,`setup(A)`,`依赖改变`,`cleanup(A)`,`setup(B)`,`再次改变`,`cleanup(B)`,`setup(C)`]}),`
+`,(0,n.jsx)(c,{title:`用真实日志区分哪些变化需要重新同步`,children:(0,n.jsxs)(r.p,{children:[`在中间 Demo 做三步：① 从房间 101 切换到 102，观察右侧日志由 Effect cleanup/setup 自身记录“关闭旧连接 → 建立新连接”；② 只切换静音，确认没有新的 cleanup/setup，因为静音不决定连接目标；③ 等待多条消息到达，确认消息列表通过 `,(0,n.jsx)(r.code,{children:`setMessages(prev => ...)`}),` 持续更新，但连接仍不重建。Source 可以看到 Effect 因而无需读取 `,(0,n.jsx)(r.code,{children:`messages`}),`，依赖仍只有真正决定同步目标的 `,(0,n.jsx)(r.code,{children:`roomId`}),`。`]})}),`
+`,(0,n.jsx)(s,{action:`切换房间、切换静音并等待实时消息`,observe:`比较真实 Effect 日志中的 cleanup/setup、消息列表更新和静音提示；确认消息与静音不会改变连接 Effect 的 roomId 依赖。`}),`
+`,(0,n.jsxs)(d,{children:[`函数式 State updater 可以让“下一个 State 由上一个 State 计算”的更新不必读取旧 State。这里消息回调把 `,(0,n.jsx)(r.code,{children:`setMessages([...messages, next])`}),` 重构为 `,(0,n.jsx)(r.code,{children:`setMessages(prev => [...])`}),` 后，连接 Effect 不再需要 `,(0,n.jsx)(r.code,{children:`messages`}),` 这个 reactive read，因此收到消息不会变成重新连接的理由。这不是“骗过 linter”，而是改变了代码的数据依赖。`]}),`
+`,(0,n.jsx)(i,{title:`禁用 exhaustive-deps`,children:`忽略依赖检查会把 Effect 固定在旧闭包上，常见结果是 stale props/state、错误订阅或无法重连。若依赖列表看起来不合理，应先改变 Effect 或周围代码，再让依赖与新代码一致。`}),`
+`,(0,n.jsx)(o,{children:`如果某段逻辑不应该因某个值变化而重新同步，先确认它是否真属于 Effect；若它需要读取最新 committed 值但不参与响应性，可评估 Effect Event。开发环境启用 Strict Mode 时，React 会额外执行一次 setup → cleanup → setup 压力测试，因此初次进入 Demo 可能出现额外生命周期日志；这不代表生产环境每次都执行两次。`}),`
+`,(0,n.jsx)(f,{children:(0,n.jsxs)(r.ul,{children:[`
+`,(0,n.jsx)(r.li,{children:`Effect 生命周期围绕同步过程。`}),`
+`,(0,n.jsx)(r.li,{children:`依赖来自实际 reactive reads。`}),`
+`,(0,n.jsx)(r.li,{children:`每次重同步先 cleanup 旧过程。`}),`
+`,(0,n.jsx)(r.li,{children:`通过重构代码而不是删除依赖解决过度重同步。`}),`
+`]})}),`
+`,(0,n.jsx)(l,{items:[{label:`React: Lifecycle of Reactive Effects`,href:`https://react.dev/learn/lifecycle-of-reactive-effects`},{label:`React: Removing Effect Dependencies`,href:`https://react.dev/learn/removing-effect-dependencies`}]})]})}function i(t={}){let{wrapper:i}={...e(),...t.components};return i?(0,n.jsx)(i,{...t,children:(0,n.jsx)(r,{...t})}):r(t)}function a(e,t){throw Error(`Expected `+(t?`component`:`object`)+" `"+e+"` to be defined: you likely forgot to import, pass, or provide it.")}export{i as default};
