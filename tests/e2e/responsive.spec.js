@@ -69,6 +69,7 @@ test.describe("narrow viewport", () => {
     const navigationSlot = page.locator(".workbench-navigation-slot");
     const contentSlot = page.locator(".workbench-content-slot");
     const inspectorClose = page.getByRole("button", { name: "关闭学习面板" }).last();
+    const topBarInspectorToggle = page.locator(".workbench-inspector-toggle");
     await expect(navigationHeading).toBeHidden();
     await expect(page.locator(".workbench-inspector-slot")).toBeVisible();
     await expect(inspectorClose).toBeFocused();
@@ -79,11 +80,8 @@ test.describe("narrow viewport", () => {
     await expect(shell).toHaveAttribute("data-inspector-open", "false");
     await expect(contentSlot).not.toHaveAttribute("inert", "");
     await expect(navigationSlot).not.toHaveAttribute("inert", "");
-    const inspectorReopen = page.getByRole("button", { name: "打开学习面板" }).last();
-    await expect(inspectorReopen).toBeFocused();
+    await expect(topBarInspectorToggle).toBeFocused();
 
-    const topBarInspectorToggle = page.locator(".workbench-inspector-toggle");
-    await topBarInspectorToggle.focus();
     await topBarInspectorToggle.click();
     await expect(shell).toHaveAttribute("data-inspector-open", "true");
     await expect(inspectorClose).toBeFocused();
