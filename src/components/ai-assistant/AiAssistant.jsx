@@ -5,6 +5,7 @@ import {
   buildSourceCitationPreview,
   extractSourceCitations,
 } from "../../ai/citations/sourceCitation.js";
+import { subscribeLearningActions } from "../../learning-actions";
 import { AiSourcePreviewProvider } from "./citations/AiSourceLink.jsx";
 import { SourceCitation } from "./citations/SourceCitation.js";
 import { AI_CODE_EXPLAIN_EVENT } from "./code/aiCodeExplainEvent.js";
@@ -331,6 +332,12 @@ export function AiAssistant({
   useEffect(() => () => {
     if (noticeTimerRef.current) globalThis.clearTimeout?.(noticeTimerRef.current);
   }, []);
+
+  useEffect(() => subscribeLearningActions((detail) => {
+    if (!detail?.prompt) return;
+    onInputChange?.(detail.prompt);
+    requestAnimationFrame(() => inputRef.current?.focus());
+  }), [onInputChange]);
 
   const fillTutorPrompt = useCallback((prompt, noticeMessage) => {
     if (!prompt || disabled || isStreaming) return false;
