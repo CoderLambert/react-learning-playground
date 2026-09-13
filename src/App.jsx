@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import "./App.css";
 import "./workbench/Integration.css";
 import { demos, CATEGORIES } from "./demos";
@@ -9,6 +9,7 @@ import { ContextMeter } from "./components/ai-assistant/context/ContextMeter.jsx
 import { ConversationHistory } from "./components/ai-assistant/conversations/ConversationHistory.jsx";
 import { LearningInspector } from "./components/learning-inspector";
 import { AssessmentPane } from "./assessment/ui/AssessmentPane.jsx";
+import { createAssessmentOperationToken, isAssessmentOperationCurrent } from "./assessment/ui/assessmentOperationOwnership.js";
 import { createAssessmentRuntime } from "./assessment/composition/assessmentRuntime.js";
 import { createLearningUnitEvidenceResolver } from "./assessment/composition/learningUnitEvidenceResolver.js";
 import { NoteToc } from "./components/notes/NoteToc";
@@ -78,7 +79,16 @@ export default function App() {
   const [assessmentIndex, setAssessmentIndex] = useState(0);
   const [assessmentAnswer, setAssessmentAnswer] = useState(null);
   const [assessmentFeedback, setAssessmentFeedback] = useState(null);
+  const [assessmentSubmitError, setAssessmentSubmitError] = useState(null);
   const [assessmentSubmitting, setAssessmentSubmitting] = useState(false);
+  const assessmentGenerationRef = useRef(0);
+  const assessmentStartRequestRef = useRef(0);
+  const assessmentSubmitRequestRef = useRef(0);
+  const assessmentContextRef = useRef({ learningUnitId: null, sessionId: null });
+  assessmentContextRef.current = {
+    learningUnitId: currentLearningUnit?.id ?? null,
+    sessionId: assessmentSession?.id ?? null,
+  };
   const assessmentSnapshot = useSyncExternalStore(
     assessmentRuntime?.queryStore.subscribe ?? EMPTY_SUBSCRIBE,
     assessmentRuntime?.queryStore.getSnapshot ?? EMPTY_GET_SNAPSHOT,
@@ -118,10 +128,15 @@ export default function App() {
 
     let cancelled = false;
     const learningUnitId = currentLearningUnit.id;
+    assessmentGenerationRef.current += 1;
+    assessmentStartRequestRef.current += 1;
+    assessmentSubmitRequestRef.current += 1;
     setAssessmentSession(null);
     setAssessmentIndex(0);
     setAssessmentAnswer(null);
     setAssessmentFeedback(null);
+    setAssessmentSubmitError(null);
+    setAssessmentSubmitting(false);
     void Promise.all([
       assessmentRuntime.service.listQuestions({ trusted: { learningUnitId } }),
       assessmentRuntime.sessionLifecycle.recover({ learningUnitId }),
@@ -193,37 +208,86 @@ export default function App() {
 
   const handleAssessmentStart = async () => {
     if (!assessmentRuntime || !currentLearningUnit?.id || !assessmentQuestions.length) return;
+    const learningUnitId = currentLearningUnit.id;
+    const requestId = ++assessmentStartRequestRef.current;
+    const token = createAssessmentOperationToken({
+      generation: assessmentGenerationRef.current,
+      learningUnitId,
+      requestId,
+    });
     try {
-      const session = await assessmentRuntime.sessionLifecycle.start({ learningUnitId: currentLearningUnit.id });
+      const session = await assessmentRuntime.sessionLifecycle.start({ learningUnitId });
+      if (!isAssessmentOperationCurrent(token, {
+        generation: assessmentGenerationRef.current,
+        learningUnitId: assessmentContextRef.current.learningUnitId,
+        sessionId: assessmentContextRef.current.sessionId,
+        requestId: assessmentStartRequestRef.current,
+      })) return;
       setAssessmentSession(session);
       setAssessmentIndex(0);
       setAssessmentAnswer(null);
       setAssessmentFeedback(null);
+      setAssessmentSubmitError(null);
     } catch (error) {
+      if (!isAssessmentOperationCurrent(token, {
+        generation: assessmentGenerationRef.current,
+        learningUnitId: assessmentContextRef.current.learningUnitId,
+        sessionId: assessmentContextRef.current.sessionId,
+        requestId: assessmentStartRequestRef.current,
+      })) return;
       setAssessmentFeedback({ correct: false, explanation: error?.message || "无法开始评测" });
     }
   };
 
   const handleAssessmentSubmit = async ({ questionId, answer }) => {
     if (!assessmentRuntime || !assessmentSession || !currentLearningUnit?.id || assessmentSubmitting) return;
+    const learningUnitId = currentLearningUnit.id;
+    const sessionId = assessmentSession.id;
+    const requestId = ++assessmentSubmitRequestRef.current;
+    const token = createAssessmentOperationToken({
+      generation: assessmentGenerationRef.current,
+      learningUnitId,
+      sessionId,
+      requestId,
+    });
     setAssessmentSubmitting(true);
+    setAssessmentSubmitError(null);
     try {
       const { attempt, session } = await assessmentRuntime.sessionLifecycle.submit({
-        learningUnitId: currentLearningUnit.id,
-        sessionId: assessmentSession.id,
+        learningUnitId,
+        sessionId,
         questionId,
         answer,
       });
+      if (!isAssessmentOperationCurrent(token, {
+        generation: assessmentGenerationRef.current,
+        learningUnitId: assessmentContextRef.current.learningUnitId,
+        sessionId: assessmentContextRef.current.sessionId,
+        requestId: assessmentSubmitRequestRef.current,
+      })) return;
       setAssessmentSession(session);
       const item = assessmentSession.items.find((candidate) => candidate.questionId === questionId);
       setAssessmentFeedback({
         correct: attempt.correct,
         explanation: item?.snapshot?.content?.explanation ?? "已记录本次作答。",
       });
+      setAssessmentSubmitError(null);
     } catch (error) {
-      setAssessmentFeedback({ correct: false, explanation: error?.message || "提交答案失败" });
+      if (!isAssessmentOperationCurrent(token, {
+        generation: assessmentGenerationRef.current,
+        learningUnitId: assessmentContextRef.current.learningUnitId,
+        sessionId: assessmentContextRef.current.sessionId,
+        requestId: assessmentSubmitRequestRef.current,
+      })) return;
+      setAssessmentFeedback(null);
+      setAssessmentSubmitError(error?.message || "提交答案失败");
     } finally {
-      setAssessmentSubmitting(false);
+      if (isAssessmentOperationCurrent(token, {
+        generation: assessmentGenerationRef.current,
+        learningUnitId: assessmentContextRef.current.learningUnitId,
+        sessionId: assessmentContextRef.current.sessionId,
+        requestId: assessmentSubmitRequestRef.current,
+      })) setAssessmentSubmitting(false);
     }
   };
 
@@ -232,6 +296,7 @@ export default function App() {
     setAssessmentIndex((index) => index + 1);
     setAssessmentAnswer(null);
     setAssessmentFeedback(null);
+    setAssessmentSubmitError(null);
   };
 
   const handleAssessmentRequestAi = () => {
@@ -483,9 +548,13 @@ export default function App() {
             currentIndex={assessmentIndex}
             answer={assessmentAnswer}
             feedback={assessmentFeedback}
+            submitError={assessmentSubmitError}
             submitting={assessmentSubmitting}
             onStart={assessmentRuntime && assessmentQuestions.length ? handleAssessmentStart : undefined}
-            onAnswerChange={setAssessmentAnswer}
+            onAnswerChange={(value) => {
+              setAssessmentAnswer(value);
+              setAssessmentSubmitError(null);
+            }}
             onSubmit={handleAssessmentSubmit}
             onNext={handleAssessmentNext}
             onOpenEvidence={handleAssessmentEvidence}
