@@ -1,33 +1,13 @@
-#learning-inspector-panel-ai {
-  overflow: hidden;
-}
-
-#learning-inspector-panel-ai > div {
-  height: 100%;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-#learning-inspector-panel-ai > div > .ai-assistant {
-  min-height: 0;
-  flex: 1 1 auto;
-  overflow: hidden;
-}
-
 .ai-assistant-transcript-shell {
   min-height: 0;
-  flex: 1 1 auto;
+  flex: 1;
   position: relative;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
 }
 
 .ai-assistant-transcript-shell .ai-assistant-transcript {
   min-height: 0;
-  flex: 1 1 auto;
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
@@ -36,6 +16,42 @@
 .ai-assistant-transcript-shell .ai-assistant-transcript:focus-visible {
   outline: 2px solid var(--color-primary);
   outline-offset: -2px;
+}
+
+/*
+ * Learning Inspector owns the outer viewport. The AI transcript is the only
+ * vertical scroller so the composer and conversation toolbar remain visible.
+ */
+#learning-inspector-panel-ai {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#learning-inspector-panel-ai > div {
+  min-height: 0;
+  height: 100%;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#learning-inspector-panel-ai .ai-assistant {
+  min-height: 0;
+  height: 100%;
+  flex: 1;
+  overflow: hidden;
+}
+
+#learning-inspector-panel-ai .ai-assistant-context,
+#learning-inspector-panel-ai .ai-assistant-conversation-navigation,
+#learning-inspector-panel-ai .ai-assistant-notice,
+#learning-inspector-panel-ai .ai-assistant-error,
+#learning-inspector-panel-ai .ai-assistant-context-meter-slot,
+#learning-inspector-panel-ai .ai-assistant-composer {
+  flex: 0 0 auto;
 }
 
 .ai-assistant-message-actions {
