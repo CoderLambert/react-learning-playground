@@ -29,17 +29,22 @@ test.describe("React Learning Workbench integration", () => {
       expect(Number(await resize.getAttribute("aria-valuenow"))).toBeGreaterThan(before);
     }
 
-    await page.getByRole("tab", { name: "源码", exact: true }).click();
+    const notesTab = page.getByRole("tab", { name: "笔记", exact: true });
+    const sourceTab = page.getByRole("tab", { name: "源码", exact: true });
+    await notesTab.focus();
+    await notesTab.press("ArrowRight");
+    await expect(sourceTab).toBeFocused();
+    await expect(sourceTab).toHaveAttribute("aria-selected", "true");
     await expect(page.locator(".source-viewer--inspector")).toBeVisible();
-    await page.getByRole("tab", { name: "笔记", exact: true }).click();
+    await sourceTab.press("Home");
+    await expect(notesTab).toBeFocused();
+    await expect(notesTab).toHaveAttribute("aria-selected", "true");
 
     await page.getByRole("button", { name: "进入专注模式" }).click();
     await expect(page.locator(".learning-inspector")).toHaveClass(/is-focus-mode/);
-    await page.keyboard.press("Escape");
-    await expect(page.locator(".learning-inspector")).not.toHaveClass(/is-focus-mode/);
-
     await page.getByRole("button", { name: "关闭学习面板" }).last().click();
     await expect(page.locator(".workbench-shell")).toHaveAttribute("data-inspector-open", "false");
+    await expect(page.locator(".workbench-shell")).not.toHaveClass(/workbench-focus-mode/);
     await page.getByRole("button", { name: "打开学习面板" }).click();
     await expect(page.locator(".workbench-shell")).toHaveAttribute("data-inspector-open", "true");
 
@@ -51,6 +56,29 @@ test.describe("React Learning Workbench integration", () => {
     await page.goto("./?demo=does-not-exist");
     await expect(page).not.toHaveURL(/does-not-exist/);
     await expect(page.locator(".demo-page h2.demo-title")).toBeVisible();
+  });
+
+  test("keeps expanded navigation semantics coherent below 1180px", async ({ page }) => {
+    await page.setViewportSize({ width: 1100, height: 800 });
+    await loadApp(page);
+    const shell = page.locator(".workbench-shell");
+    await expect(shell).toHaveAttribute("data-navigation-collapsed", "false");
+    const navigationBox = await page.locator(".workbench-navigation-slot").boundingBox();
+    expect(navigationBox?.width).toBeGreaterThan(200);
+    await expect(page.getByRole("button", { name: "收起左侧导航" })).toBeVisible();
+  });
+
+  test("does not reserve inspector grid width when inspector is overlayed", async ({ page }) => {
+    await page.setViewportSize({ width: 950, height: 800 });
+    await loadApp(page);
+    const navigationBox = await page.locator(".workbench-navigation-slot").boundingBox();
+    const contentBox = await page.locator(".workbench-content-slot").boundingBox();
+    const inspectorBox = await page.locator(".learning-inspector").boundingBox();
+    expect(navigationBox).not.toBeNull();
+    expect(contentBox).not.toBeNull();
+    expect(inspectorBox).not.toBeNull();
+    expect((contentBox?.width ?? 0) + (navigationBox?.width ?? 0)).toBeGreaterThanOrEqual(949);
+    expect(inspectorBox?.x).toBeGreaterThan(contentBox?.x ?? 0);
   });
 
   test("uses a full-screen inspector presentation on mobile", async ({ page }) => {
