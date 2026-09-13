@@ -25,11 +25,19 @@ export function DeepSeekSettings({
   const [feedback, setFeedback] = useState(null);
   const [testing, setTesting] = useState(false);
   const apiKeyRef = useRef(null);
+  const connectionTestGenerationRef = useRef(0);
+
+  const invalidateConnectionTest = () => {
+    connectionTestGenerationRef.current += 1;
+    setTesting(false);
+  };
 
   useEffect(() => {
+    invalidateConnectionTest();
     setApiKey(settings?.apiKey ?? "");
     setModel(settings?.model ?? DEEPSEEK_MODELS[0].id);
     setRememberApiKey(Boolean(settings?.rememberApiKey));
+    setFeedback(null);
   }, [settings?.apiKey, settings?.model, settings?.rememberApiKey]);
 
   useEffect(() => {
@@ -49,12 +57,14 @@ export function DeepSeekSettings({
     event.preventDefault();
     const normalizedKey = apiKey.trim();
     if (!normalizedKey) return;
+    invalidateConnectionTest();
     onSave?.({ apiKey: normalizedKey, model, rememberApiKey });
     setOpen(false);
     setFeedback({ type: "success", text: "配置已保存，可继续刚才的学习问题。" });
   };
 
   const handleClear = () => {
+    invalidateConnectionTest();
     setApiKey("");
     setRememberApiKey(false);
     setShowApiKey(false);
@@ -64,24 +74,42 @@ export function DeepSeekSettings({
   };
 
   const handleTest = async () => {
-    if (!apiKey.trim() || testing) return;
+    const normalizedKey = apiKey.trim();
+    if (!normalizedKey || testing) return;
+    const requestGeneration = connectionTestGenerationRef.current + 1;
+    connectionTestGenerationRef.current = requestGeneration;
+    const testedModel = model;
     setTesting(true);
     setFeedback({ type: "progress", text: "正在测试 DeepSeek 连接…" });
     try {
-      const result = await testDeepSeekBrowserConnection({ apiKey, model });
+      const result = await testDeepSeekBrowserConnection({ apiKey: normalizedKey, model: testedModel });
+      if (connectionTestGenerationRef.current !== requestGeneration) return;
       setFeedback({
         type: "success",
         text: `连接成功 · ${result.model}`,
       });
     } catch (error) {
+      if (connectionTestGenerationRef.current !== requestGeneration) return;
       const diagnostic = classifyDeepSeekConnectionError(error, { connectionMode: "browser" });
       setFeedback({
         type: "error",
         text: `${diagnostic.title}：${diagnostic.guidance}`,
       });
     } finally {
-      setTesting(false);
+      if (connectionTestGenerationRef.current === requestGeneration) setTesting(false);
     }
+  };
+
+  const handleApiKeyChange = (event) => {
+    invalidateConnectionTest();
+    setApiKey(event.target.value);
+    setFeedback(null);
+  };
+
+  const handleModelChange = (event) => {
+    invalidateConnectionTest();
+    setModel(event.target.value);
+    setFeedback(null);
   };
 
   return (
@@ -122,10 +150,7 @@ export function DeepSeekSettings({
                 ref={apiKeyRef}
                 type={showApiKey ? "text" : "password"}
                 value={apiKey}
-                onChange={(event) => {
-                  setApiKey(event.target.value);
-                  setFeedback(null);
-                }}
+                onChange={handleApiKeyChange}
                 placeholder="sk-..."
                 autoComplete="off"
                 spellCheck="false"
@@ -151,10 +176,7 @@ export function DeepSeekSettings({
             <select
               aria-label="DeepSeek 模型"
               value={model}
-              onChange={(event) => {
-                setModel(event.target.value);
-                setFeedback(null);
-              }}
+              onChange={handleModelChange}
             >
               {DEEPSEEK_MODELS.map((item) => (
                 <option key={item.id} value={item.id}>{item.label} · {item.id}</option>

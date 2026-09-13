@@ -100,6 +100,29 @@
   font-size: 11px;
 }
 
+.ai-conversation-list__delete-confirmation {
+  display: flex;
+  width: 100%;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  padding: 5px;
+  border-radius: 8px;
+  background: color-mix(in srgb, #b42318 7%, transparent);
+}
+
+.ai-conversation-list__delete-confirmation span {
+  flex: 1 1 100%;
+  color: var(--text-secondary, #667085);
+  font-size: 11px;
+}
+
+.ai-conversation-list__delete-confirmation .is-destructive {
+  border-color: color-mix(in srgb, #b42318 55%, var(--border-color, #d9dee7));
+  color: #b42318;
+  font-weight: 600;
+}
+
 .ai-conversation-list__rename input {
   box-sizing: border-box;
   width: 100%;
