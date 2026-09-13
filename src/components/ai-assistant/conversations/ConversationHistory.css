@@ -3,7 +3,7 @@
   z-index: 4;
   padding: 9px 12px;
   display: grid;
-  grid-template-columns: auto auto minmax(0, 1fr);
+  grid-template-columns: auto auto auto minmax(0, 1fr);
   align-items: start;
   gap: 7px;
   border-bottom: 1px solid var(--border-color);
@@ -33,7 +33,8 @@
   outline: none;
 }
 
-.ai-assistant-history-toolbar > button:disabled {
+.ai-assistant-history-toolbar > button:disabled,
+.ai-conversation-export-popover__panel button:disabled {
   cursor: not-allowed;
   opacity: 0.55;
 }
@@ -71,6 +72,63 @@
   border-radius: var(--radius-md);
   background: var(--bg-surface);
   box-shadow: var(--shadow-lg);
+}
+
+.ai-conversation-export-actions {
+  position: relative;
+  min-width: 0;
+}
+
+.ai-conversation-export-popover__panel {
+  position: absolute;
+  top: calc(100% + 7px);
+  left: 0;
+  z-index: 5;
+  width: max-content;
+  min-width: 170px;
+  padding: 8px;
+  display: grid;
+  gap: 6px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-lg);
+}
+
+.ai-conversation-export-popover__panel button {
+  min-height: 32px;
+  padding: 7px 9px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface);
+  color: var(--text-main);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 650;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ai-conversation-export-popover__panel button:hover:not(:disabled),
+.ai-conversation-export-popover__panel button:focus-visible {
+  border-color: var(--color-primary);
+  outline: none;
+  background: var(--color-primary-light);
+}
+
+.ai-conversation-export-actions__notice {
+  position: absolute;
+  left: 0;
+  top: calc(100% + 4px);
+  z-index: 6;
+  width: max-content;
+  max-width: 220px;
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.ai-conversation-export-actions__notice:empty {
+  display: none;
 }
 
 .ai-conversation-history {
@@ -116,10 +174,15 @@
 
 @media (max-width: 640px) {
   .ai-assistant-history-toolbar {
-    grid-template-columns: auto auto;
+    grid-template-columns: auto auto auto;
   }
 
   .ai-assistant-history-toolbar__model {
     grid-column: 1 / -1;
+  }
+
+  .ai-conversation-export-popover__panel {
+    left: auto;
+    right: 0;
   }
 }
