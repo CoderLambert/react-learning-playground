@@ -30,6 +30,29 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Record merge-candidate evidence
+        if: ${{ github.event_name == 'pull_request' }}
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          TESTED_SHA="$(git rev-parse HEAD)"
+
+          printf 'BASE_SHA=%s\nHEAD_SHA=%s\nTESTED_SHA=%s\nRUN_ID=%s\n' \
+            "$BASE_SHA" "$HEAD_SHA" "$TESTED_SHA" "$RUN_ID"
+
+          {
+            echo "### Merge-candidate evidence"
+            echo
+            echo "- BASE_SHA: \`$BASE_SHA\`"
+            echo "- HEAD_SHA: \`$HEAD_SHA\`"
+            echo "- TESTED_SHA: \`$TESTED_SHA\`"
+            echo "- RUN_ID: \`$RUN_ID\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -39,20 +62,5 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: AI focused tests
-        run: npm run test:ai
-
-      - name: Assessment contract tests
-        run: npm run test:assessment
-
-      - name: Content contract tests
-        run: npm run test:content
-
-      - name: TypeScript sample contract
-        run: npm run typecheck:samples
-
-      - name: Lint
-        run: npm run lint
-
-      - name: Build
-        run: npm run build
+      - name: Required repository verification
+        run: npm run verify:required
