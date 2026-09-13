@@ -14,12 +14,17 @@ import {
   updateAnswer,
 } from "./practiceAttempt.js";
 
-function promptId(chapter, index) {
-  return `chapter-${chapter}-practice-${index + 1}`;
-}
-
-export function toPracticeQuestions(chapter, prompts = []) {
-  return prompts.map((prompt, index) => ({ id: promptId(chapter, index), kind: "free-text", prompt }));
+export function toPracticeQuestions(chapter, resolvedQuestions = []) {
+  return resolvedQuestions
+    .filter((question) => !question.hidden && Number(question.chapter) === Number(chapter))
+    .map((question) => ({
+      id: question.id,
+      revision: question.revision,
+      kind: question.kind,
+      prompt: question.text,
+      source: question.source,
+      chapter: question.chapter,
+    }));
 }
 
 function createInitialAttempt(repository, chapter, questions) {
@@ -29,11 +34,11 @@ function createInitialAttempt(repository, chapter, questions) {
     : createAttempt({ chapter, questions, sessionId: `chapter-${chapter}-current` });
 }
 
-export function AssessmentRunner({ chapter, prompts, onAskAi }) {
-  const serializedPrompts = JSON.stringify(prompts ?? []);
+export function AssessmentRunner({ chapter, resolvedQuestions, onAskAi }) {
+  const serializedQuestions = JSON.stringify(resolvedQuestions ?? []);
   const questions = useMemo(
-    () => toPracticeQuestions(chapter, JSON.parse(serializedPrompts)),
-    [chapter, serializedPrompts],
+    () => toPracticeQuestions(chapter, JSON.parse(serializedQuestions)),
+    [chapter, serializedQuestions],
   );
   const repository = useMemo(() => createAttemptRepository(), []);
   const [attempt, setAttempt] = useState(() => createInitialAttempt(repository, chapter, questions));
