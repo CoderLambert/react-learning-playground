@@ -41,6 +41,9 @@ jobs:
       - name: AI focused tests
         run: npm run test:ai
 
+      - name: Assessment contract tests
+        run: npm run test:assessment
+
       - name: Content contract tests
         run: npm run test:content
 

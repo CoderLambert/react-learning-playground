@@ -21,7 +21,7 @@ async function submit(page, composer, question) {
   await expect(transcript.getByText(`answer:${question}`, { exact: true })).toBeVisible();
 }
 
-test("selecting history from another learning unit navigates and restores the exact conversation", async ({ page }) => {
+async function installGateway(page) {
   await page.route(GATEWAY_URL, async (route) => {
     const body = route.request().postDataJSON();
     await route.fulfill({
@@ -34,6 +34,10 @@ test("selecting history from another learning unit navigates and restores the ex
       ),
     });
   });
+}
+
+test("selecting history from another learning unit navigates and restores the exact conversation", async ({ page }) => {
+  await installGateway(page);
 
   let composer = await openAiTab(page, "props");
   const transcript = page.getByRole("log", { name: "AI 对话记录" });
@@ -65,4 +69,26 @@ test("selecting history from another learning unit navigates and restores the ex
   await expect(transcript.getByText("answer:props conversation two", { exact: true })).toHaveCount(0);
   await expect(transcript.locator('[data-message-role="user"]')).toHaveCount(1);
   await expect(transcript.locator('[data-message-role="assistant"]')).toHaveCount(1);
+});
+
+test("archived conversations from another learning unit are not exposed as selectable history rows", async ({ page }) => {
+  await installGateway(page);
+
+  const composer = await openAiTab(page, "props");
+  const toolbar = page.getByLabel("AI 会话工具栏");
+  await submit(page, composer, "props archived conversation");
+
+  await toolbar.locator("summary").click();
+  const historyPanel = toolbar.locator(".ai-conversation-popover__panel");
+  const currentList = historyPanel.getByRole("navigation", { name: "AI 会话" }).first();
+  await currentList.getByRole("button", { name: "归档", exact: true }).click();
+  await toolbar.locator("summary").click();
+
+  await page.getByRole("button", { name: /Children 默认插槽/ }).click();
+  await page.getByRole("tab", { name: "AI" }).click();
+  await toolbar.locator("summary").click();
+
+  await expect(historyPanel.getByText("已归档 · 1", { exact: true })).toBeVisible();
+  await expect(historyPanel.getByText("props archived conversation", { exact: true })).toBeVisible();
+  await expect(historyPanel.getByRole("button", { name: /props archived conversation/ })).toHaveCount(0);
 });

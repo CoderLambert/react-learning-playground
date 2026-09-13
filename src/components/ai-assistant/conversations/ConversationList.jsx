@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import "./ConversationList.css";
 
 function formatConversationTime(value) {
@@ -28,16 +28,32 @@ export function ConversationList({
 }) {
   const [editingId, setEditingId] = useState(null);
   const [draftTitle, setDraftTitle] = useState("");
+  const renameButtonsRef = useRef(new Map());
+
+  const restoreRenameFocus = (conversationId) => {
+    globalThis.requestAnimationFrame?.(() => {
+      renameButtonsRef.current.get(conversationId)?.focus();
+    });
+  };
+
+  const finishRename = (conversationId) => {
+    setEditingId(null);
+    setDraftTitle("");
+    restoreRenameFocus(conversationId);
+  };
 
   const startRename = (conversation) => {
     setEditingId(conversation.id);
     setDraftTitle(conversation.title ?? "");
   };
 
+  const cancelRename = (conversation) => {
+    finishRename(conversation.id);
+  };
+
   const commitRename = (conversation) => {
     const title = draftTitle.trim();
-    setEditingId(null);
-    setDraftTitle("");
+    finishRename(conversation.id);
     if (title && title !== conversation.title) onRename?.(conversation.id, title);
   };
 
@@ -75,7 +91,13 @@ export function ConversationList({
                       autoFocus
                       value={draftTitle}
                       onChange={(event) => setDraftTitle(event.target.value)}
-                      onBlur={() => commitRename(conversation)}
+                      onKeyDown={(event) => {
+                        if (event.key !== "Escape") return;
+                        event.preventDefault();
+                        event.stopPropagation();
+                        cancelRename(conversation);
+                      }}
+                      onBlur={() => cancelRename(conversation)}
                       maxLength={120}
                       disabled={disabled}
                     />
@@ -105,7 +127,17 @@ export function ConversationList({
                 )}
 
                 <div className="ai-conversation-list__actions" aria-label={`${conversation.title || "新对话"} 操作`}>
-                  <button type="button" onClick={() => startRename(conversation)} disabled={disabled || editing}>重命名</button>
+                  <button
+                    ref={(node) => {
+                      if (node) renameButtonsRef.current.set(conversation.id, node);
+                      else renameButtonsRef.current.delete(conversation.id);
+                    }}
+                    type="button"
+                    onClick={() => startRename(conversation)}
+                    disabled={disabled || editing}
+                  >
+                    重命名
+                  </button>
                   {onArchive ? (
                     <button type="button" onClick={() => onArchive(conversation.id, !conversation.archived)} disabled={disabled}>
                       {conversation.archived ? "恢复" : "归档"}

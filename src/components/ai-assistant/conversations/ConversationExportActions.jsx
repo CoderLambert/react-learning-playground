@@ -17,6 +17,8 @@ export function ConversationExportActions({
   const [notice, setNotice] = useState("");
   const [open, setOpen] = useState(false);
   const timerRef = useRef(null);
+  const rootRef = useRef(null);
+  const triggerRef = useRef(null);
   const hasMessages = messages.some((message) => (
     (message?.role === "user" || message?.role === "assistant") &&
     typeof message?.content === "string" && message.content.trim()
@@ -45,6 +47,37 @@ export function ConversationExportActions({
     if (timerRef.current) globalThis.clearTimeout?.(timerRef.current);
   }, []);
 
+  useEffect(() => {
+    if (!open) return undefined;
+    const documentImpl = globalThis.document;
+    if (!documentImpl) return undefined;
+
+    const dismiss = ({ restoreFocus = false } = {}) => {
+      setOpen(false);
+      if (restoreFocus) requestAnimationFrame(() => triggerRef.current?.focus());
+    };
+    const handleKeyDown = (event) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      dismiss({ restoreFocus: true });
+    };
+    const handlePointerDown = (event) => {
+      if (!rootRef.current?.contains(event.target)) dismiss();
+    };
+    const handleFocusIn = (event) => {
+      if (!rootRef.current?.contains(event.target)) dismiss();
+    };
+
+    documentImpl.addEventListener("keydown", handleKeyDown);
+    documentImpl.addEventListener("pointerdown", handlePointerDown);
+    documentImpl.addEventListener("focusin", handleFocusIn);
+    return () => {
+      documentImpl.removeEventListener("keydown", handleKeyDown);
+      documentImpl.removeEventListener("pointerdown", handlePointerDown);
+      documentImpl.removeEventListener("focusin", handleFocusIn);
+    };
+  }, [open]);
+
   const run = async (action, successMessage, { closeAfter = true } = {}) => {
     try {
       await action();
@@ -57,8 +90,12 @@ export function ConversationExportActions({
 
   return (
     <div className="ai-conversation-export-actions">
-      <div className={`ai-conversation-popover ai-conversation-export-popover ${open ? "is-open" : ""}`.trim()}>
+      <div
+        ref={rootRef}
+        className={`ai-conversation-popover ai-conversation-export-popover ${open ? "is-open" : ""}`.trim()}
+      >
         <button
+          ref={triggerRef}
           type="button"
           className="ai-conversation-popover__trigger"
           aria-label="会话导出与复制"
