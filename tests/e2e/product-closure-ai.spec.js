@@ -93,3 +93,23 @@ test("current conversation exposes copy plus Markdown and JSON export through ac
   await page.getByRole("group", { name: "当前会话操作" }).getByRole("button", { name: "导出 JSON" }).click();
   expect((await jsonDownload).suggestedFilename()).toMatch(/\.json$/);
 });
+
+test("switching from AI to Assessment hides the AI panel and shows the selected tabpanel", async ({ page }) => {
+  await page.goto("./?demo=props");
+
+  const aiTab = page.getByRole("tab", { name: "AI", exact: true });
+  const assessmentTab = page.getByRole("tab", { name: "评测", exact: true });
+  const aiPanel = page.locator("#learning-inspector-panel-ai");
+  const assessmentPanel = page.locator("#learning-inspector-panel-assessment");
+
+  await aiTab.click();
+  await expect(aiTab).toHaveAttribute("aria-selected", "true");
+  await expect(aiPanel).toBeVisible();
+  await expect(assessmentPanel).toBeHidden();
+
+  await assessmentTab.click();
+  await expect(assessmentTab).toHaveAttribute("aria-selected", "true");
+  await expect(aiTab).toHaveAttribute("aria-selected", "false");
+  await expect(aiPanel).toBeHidden();
+  await expect(assessmentPanel).toBeVisible();
+});

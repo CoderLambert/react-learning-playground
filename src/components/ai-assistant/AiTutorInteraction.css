@@ -29,6 +29,13 @@
   overflow: hidden;
 }
 
+/* The id selector above is more specific than .learning-inspector-pane[hidden].
+ * Preserve the tabpanel hidden contract so AI cannot remain in layout when
+ * another Inspector tab (for example Assessment) becomes active. */
+#learning-inspector-panel-ai[hidden] {
+  display: none;
+}
+
 #learning-inspector-panel-ai > div {
   min-height: 0;
   height: 100%;
