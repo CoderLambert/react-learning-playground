@@ -159,6 +159,52 @@ test("AI assistant handles normalized errors, stop and New Chat", async ({ page 
   await expect(page.getByText("late")).toHaveCount(0);
 });
 
+test("failed turn retry is invalidated by conversation and learning-unit switches", async ({ page }) => {
+  const requests = [];
+  await page.route(GATEWAY_URL, async (route) => {
+    const body = route.request().postDataJSON();
+    requests.push(body);
+
+    if (body.question.startsWith("fail")) {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/x-ndjson",
+        body: normalizedStream({ type: "start" }, { type: "error", message: "mock failure" }),
+      });
+      return;
+    }
+
+    await route.fulfill({
+      status: 200,
+      contentType: "application/x-ndjson",
+      body: normalizedStream({ type: "start" }, { type: "delta", text: `answer:${body.question}` }, { type: "done" }),
+    });
+  });
+
+  const composer = await openAiTab(page);
+  const transcript = page.getByRole("log", { name: "AI 对话记录" });
+  const toolbar = page.getByLabel("AI 会话工具栏");
+  await composer.fill("seed conversation");
+  await page.getByRole("button", { name: "发送" }).click();
+  await expect(transcript.getByText("answer:seed conversation", { exact: true })).toBeVisible();
+
+  await toolbar.getByRole("button", { name: "新对话", exact: true }).click();
+  await composer.fill("fail conversation");
+  await page.getByRole("button", { name: "发送" }).click();
+  await expect(page.getByRole("button", { name: "重试" })).toBeVisible();
+  await toolbar.locator("summary").click();
+  await toolbar.getByRole("button", { name: /seed conversation/ }).click();
+  await expect(transcript.getByText("seed conversation", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "重试" })).toHaveCount(0);
+
+  await composer.fill("fail unit");
+  await page.getByRole("button", { name: "发送" }).click();
+  await expect(page.getByRole("button", { name: "重试" })).toBeVisible();
+  await page.getByRole("button", { name: /Children 默认插槽/ }).click();
+  await page.getByRole("tab", { name: "AI" }).click();
+  await expect(page.getByRole("button", { name: "重试" })).toHaveCount(0);
+});
+
 test("source citations open the Source inspector and highlight the requested range", async ({ page }) => {
   await page.route(GATEWAY_URL, async (route) => {
     await route.fulfill({
