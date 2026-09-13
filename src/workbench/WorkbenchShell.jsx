@@ -59,7 +59,7 @@ export function WorkbenchShell({
           onClick={onMobileNavigationClose}
         />
       )}
-      <aside ref={navigationRef} className="workbench-navigation-slot" aria-label="学习导航" tabIndex={-1}>{navigation}</aside>
+      <aside id="workbench-navigation" ref={navigationRef} className="workbench-navigation-slot" aria-label="学习导航" tabIndex={-1}>{navigation}</aside>
       <section className="workbench-content-slot" inert={mobileNavigationOpen ? true : undefined}>{content}</section>
       {inspector && <aside className="workbench-inspector-slot" aria-label="学习检查器" inert={mobileNavigationOpen ? true : undefined}>{inspector}</aside>}
     </div>
