@@ -8,7 +8,10 @@ function withConversationExports(conversationNavigation, props) {
   const existingChildren = Children.toArray(conversationNavigation.props.children);
   return cloneElement(
     conversationNavigation,
-    conversationNavigation.props,
+    {
+      ...conversationNavigation.props,
+      role: conversationNavigation.props.role ?? "group",
+    },
     ...existingChildren,
     <ConversationExportActions
       key="conversation-export-actions"
