@@ -238,6 +238,21 @@
   }
 }
 
+@media (min-width: 901px) and (max-width: 1023px) {
+  .workbench-shell,
+  .workbench-shell[data-inspector-open="false"] {
+    grid-template-columns: var(--workbench-current-nav-width) minmax(0, 1fr);
+  }
+
+  .workbench-inspector-slot {
+    grid-column: 2;
+    width: 0;
+    max-width: 0;
+    overflow: visible;
+    border-left: 0;
+  }
+}
+
 @media (max-width: 900px) {
   .workbench-mobile-menu-toggle {
     display: inline-flex;
