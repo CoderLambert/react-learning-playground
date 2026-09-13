@@ -15,6 +15,7 @@ export function ConversationExportActions({
   disabled = false,
 }) {
   const [notice, setNotice] = useState("");
+  const [open, setOpen] = useState(false);
   const timerRef = useRef(null);
   const hasMessages = messages.some((message) => (
     (message?.role === "user" || message?.role === "assistant") &&
@@ -44,9 +45,10 @@ export function ConversationExportActions({
     if (timerRef.current) globalThis.clearTimeout?.(timerRef.current);
   }, []);
 
-  const run = async (action, successMessage) => {
+  const run = async (action, successMessage, { closeAfter = true } = {}) => {
     try {
       await action();
+      if (closeAfter) setOpen(false);
       showNotice(successMessage);
     } catch (error) {
       showNotice(error?.message || "会话操作失败");
@@ -55,33 +57,53 @@ export function ConversationExportActions({
 
   return (
     <div className="ai-conversation-export-actions">
-      <details className="ai-conversation-popover ai-conversation-export-popover">
-        <summary aria-label="会话导出与复制">导出</summary>
-        <div className="ai-conversation-export-popover__panel" role="group" aria-label="当前会话操作">
-          <button
-            type="button"
-            disabled={actionsDisabled}
-            onClick={() => void run(() => copyConversationMarkdown(options), "已复制整段会话")}
-          >
-            复制整段会话
-          </button>
-          <button
-            type="button"
-            disabled={actionsDisabled}
-            onClick={() => void run(() => exportConversationMarkdown(options), "已导出 Markdown")}
-          >
-            导出 Markdown
-          </button>
-          <button
-            type="button"
-            disabled={actionsDisabled}
-            onClick={() => void run(() => exportConversationJson(options), "已导出 JSON")}
-          >
-            导出 JSON
-          </button>
-        </div>
-      </details>
-      <span className="ai-conversation-export-actions__notice" role="status" aria-live="polite">
+      <div className={`ai-conversation-popover ai-conversation-export-popover ${open ? "is-open" : ""}`.trim()}>
+        <button
+          type="button"
+          className="ai-conversation-popover__trigger"
+          aria-label="会话导出与复制"
+          aria-expanded={open}
+          aria-haspopup="true"
+          onClick={() => setOpen((current) => !current)}
+        >
+          导出
+        </button>
+        {open ? (
+          <div className="ai-conversation-export-popover__panel" role="group" aria-label="当前会话操作">
+            <button
+              type="button"
+              disabled={actionsDisabled}
+              onClick={() => void run(
+                () => copyConversationMarkdown(options),
+                "已复制整段会话",
+                { closeAfter: false },
+              )}
+            >
+              复制整段会话
+            </button>
+            <button
+              type="button"
+              disabled={actionsDisabled}
+              onClick={() => void run(() => exportConversationMarkdown(options), "已导出 Markdown")}
+            >
+              导出 Markdown
+            </button>
+            <button
+              type="button"
+              disabled={actionsDisabled}
+              onClick={() => void run(() => exportConversationJson(options), "已导出 JSON")}
+            >
+              导出 JSON
+            </button>
+          </div>
+        ) : null}
+      </div>
+      <span
+        className="ai-conversation-export-actions__notice"
+        role="status"
+        aria-label="会话操作状态"
+        aria-live="polite"
+      >
         {notice}
       </span>
     </div>

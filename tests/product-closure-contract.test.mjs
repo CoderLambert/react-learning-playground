@@ -113,13 +113,13 @@ test("conversation export contract runs automatically once export helper is merg
     ],
   };
 
-  const markdown = exports.serializeConversationMarkdown(options);
-  const json = JSON.parse(exports.serializeConversationJson(options));
+  const markdown = exports.buildConversationMarkdown(options);
+  const json = JSON.parse(exports.buildConversationJson(options));
   assert.match(markdown, /Explain props/);
   assert.match(markdown, /Props are read-only/);
   assert.match(markdown, /DeepSeek/);
   assert.equal(json.messages.length, 2);
-  assert.equal(json.messages[1].metadata.finishReason, "stop");
+  assert.equal(json.messages[1].finishReason, "stop");
 });
 
 test("legacy chapter checkpoint contract activates once editable localStorage manager is removed", {

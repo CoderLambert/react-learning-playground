@@ -75,14 +75,14 @@ test("Assessment Tab edits active question and retire is a visible soft-delete",
   await editor.getByLabel("答案解释").fill("Edited explanation");
   await editor.getByLabel("难度").selectOption("medium");
   await editor.getByLabel("概念标签（逗号分隔）").fill("props, identity");
-  await editor.getByLabel("选项 1").fill("Read-only Props");
-  await editor.getByLabel("设为正确答案：选项 1").check();
+  await editor.getByRole("textbox", { name: "选项 1", exact: true }).fill("Read-only Props");
+  await editor.getByRole("radio", { name: "设为正确答案：选项 1", exact: true }).check();
   await editor.getByRole("button", { name: "保存修改" }).click();
-  await expect(panel.getByRole("status")).toContainText("题目已保存");
+  await expect(panel.locator('[data-notice-kind="success"]')).toContainText("题目已保存");
   await expect(panel.getByText("Edited props question", { exact: true })).toBeVisible();
 
   await panel.getByRole("button", { name: "停用", exact: true }).click();
-  await expect(panel.getByRole("status")).toContainText("题目已停用");
+  await expect(panel.locator('[data-notice-kind="success"]')).toContainText("题目已停用");
   await expect(panel.getByText("Edited props question", { exact: true })).toHaveCount(0);
   await panel.getByLabel("显示已停用题目").check();
   await expect(panel.getByText("Edited props question", { exact: true })).toBeVisible();
@@ -113,7 +113,7 @@ test("stale editor revision reports conflict and refreshes instead of overwritin
   }), DB_NAME);
 
   await editor.getByRole("button", { name: "保存修改" }).click();
-  await expect(panel.getByRole("status")).toContainText(/冲突|刷新|最新/);
+  await expect(panel.locator("[data-notice-kind]")).toContainText(/冲突|刷新|最新/);
   await expect(panel.getByText("Concurrent winner", { exact: true })).toBeVisible();
   expect((await readDb(page)).questions[0].content.prompt).toBe("Concurrent winner");
 });

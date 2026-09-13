@@ -11,7 +11,8 @@
 }
 
 .ai-assistant-history-toolbar > button,
-.ai-conversation-popover > summary {
+.ai-conversation-popover > summary,
+.ai-conversation-popover__trigger {
   min-height: 34px;
   box-sizing: border-box;
   padding: 7px 10px;
@@ -27,8 +28,10 @@
 
 .ai-assistant-history-toolbar > button:hover:not(:disabled),
 .ai-conversation-popover > summary:hover,
+.ai-conversation-popover__trigger:hover:not(:disabled),
 .ai-assistant-history-toolbar > button:focus-visible,
-.ai-conversation-popover > summary:focus-visible {
+.ai-conversation-popover > summary:focus-visible,
+.ai-conversation-popover__trigger:focus-visible {
   border-color: var(--color-primary);
   outline: none;
 }
@@ -43,7 +46,8 @@
   position: relative;
 }
 
-.ai-conversation-popover > summary {
+.ai-conversation-popover > summary,
+.ai-conversation-popover__trigger {
   display: flex;
   align-items: center;
   white-space: nowrap;
@@ -54,7 +58,8 @@
   display: none;
 }
 
-.ai-conversation-popover[open] > summary {
+.ai-conversation-popover[open] > summary,
+.ai-conversation-popover.is-open > .ai-conversation-popover__trigger {
   border-color: var(--color-primary);
   background: var(--color-primary-light);
   color: var(--color-primary);

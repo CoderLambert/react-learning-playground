@@ -45,6 +45,15 @@
   overflow: hidden;
 }
 
+/* Context chips already wrap. Keep them non-scrollable so they do not create
+ * an unfocusable Safari keyboard scroll region inside the Inspector. */
+#learning-inspector-panel-ai .ai-assistant-context-list {
+  overflow-x: visible;
+  overflow-y: visible;
+  flex-wrap: wrap;
+  overscroll-behavior-inline: auto;
+}
+
 #learning-inspector-panel-ai .ai-assistant-context,
 #learning-inspector-panel-ai .ai-assistant-conversation-navigation,
 #learning-inspector-panel-ai .ai-assistant-notice,
