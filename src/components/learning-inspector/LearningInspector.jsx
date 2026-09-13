@@ -101,7 +101,9 @@ export function LearningInspector({
       if (restoreFocus) {
         mobileFocusFrameRef.current = requestAnimationFrame(() => {
           const opener = mobileInspectorOpenerRef.current;
+          const externalToggle = document.querySelector(".workbench-inspector-toggle");
           if (opener?.isConnected && !opener.closest("[inert]")) opener.focus();
+          else if (externalToggle instanceof HTMLElement && externalToggle.isConnected && !externalToggle.closest("[inert]")) externalToggle.focus();
           else reopenButtonRef.current?.focus();
           mobileFocusFrameRef.current = null;
         });
