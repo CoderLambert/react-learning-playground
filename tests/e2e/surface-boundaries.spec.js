@@ -21,19 +21,21 @@ test.describe("responsive inspector surface boundaries", () => {
     const inspector = page.locator(".learning-inspector");
     const content = page.locator(".workbench-content-slot");
 
-    await expect(slot).toBeVisible();
+    await expect(slot).toHaveCount(1);
     await expect(inspector).toBeVisible();
     await expect(content).toBeVisible();
 
-    const slotBox = await slot.boundingBox();
+    const slotBox = await slot.evaluate((element) => {
+      const box = element.getBoundingClientRect();
+      return { x: box.x, y: box.y, width: box.width, height: box.height };
+    });
     const inspectorBox = await inspector.boundingBox();
     const contentBox = await content.boundingBox();
 
-    expect(slotBox).not.toBeNull();
     expect(inspectorBox).not.toBeNull();
     expect(contentBox).not.toBeNull();
-    expect(slotBox?.width ?? Infinity).toBeLessThanOrEqual(1);
-    expect(slotBox?.height ?? Infinity).toBeLessThanOrEqual(1);
+    expect(slotBox.width).toBeLessThanOrEqual(1);
+    expect(slotBox.height).toBeLessThanOrEqual(1);
     expect(inspectorBox?.top ?? 0).toBeGreaterThanOrEqual(59);
     expect(inspectorBox?.x ?? 0).toBeGreaterThan(0);
     expect((inspectorBox?.x ?? 0) + (inspectorBox?.width ?? 0)).toBeLessThanOrEqual(769);
