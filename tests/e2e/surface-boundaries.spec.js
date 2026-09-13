@@ -36,7 +36,7 @@ test.describe("responsive inspector surface boundaries", () => {
     expect(contentBox).not.toBeNull();
     expect(slotBox.width).toBeLessThanOrEqual(1);
     expect(slotBox.height).toBeLessThanOrEqual(1);
-    expect(inspectorBox?.top ?? 0).toBeGreaterThanOrEqual(59);
+    expect(inspectorBox?.y ?? 0).toBeGreaterThanOrEqual(59);
     expect(inspectorBox?.x ?? 0).toBeGreaterThan(0);
     expect((inspectorBox?.x ?? 0) + (inspectorBox?.width ?? 0)).toBeLessThanOrEqual(769);
     expect(contentBox?.width ?? 0).toBeGreaterThanOrEqual(767);
