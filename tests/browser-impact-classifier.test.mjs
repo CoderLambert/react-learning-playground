@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import {
@@ -68,4 +69,15 @@ test("empty or unavailable diff fails closed", () => {
     reason: "empty-or-unknown-change-set",
     triggeringPath: null,
   });
+});
+
+test("Workbench required workflow consumes the tested classifier", async () => {
+  const workflow = await readFile(
+    new URL("../.github/workflows/workbench-integration-verify.yml", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(workflow, /node scripts\/classify-browser-impact\.mjs/);
+  assert.match(workflow, /steps\.scope\.outputs\.run_browser == 'true'/);
+  assert.doesNotMatch(workflow, /src\/learning-actions\/\*/);
 });
