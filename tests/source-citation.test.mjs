@@ -15,6 +15,7 @@ import {
 import {
   SourceCitation,
   createSourceCitationOpenPayload,
+  resolveCitationPreviewPlacement,
 } from "../src/components/ai-assistant/citations/SourceCitation.js";
 
 test("serializes and parses a single-line source citation", () => {
@@ -164,4 +165,37 @@ test("SourceCitation open payload is stable and contains only navigation fields"
     }),
     { fileName: "Demo.jsx", startLine: 7, endLine: 9 },
   );
+});
+
+test("citation preview placement switches to end alignment when a right-edge start placement would overflow", () => {
+  assert.deepEqual(
+    resolveCitationPreviewPlacement({
+      wrapperLeft: 340,
+      wrapperRight: 380,
+      previewWidth: 300,
+      viewportWidth: 390,
+    }),
+    { align: "end", left: 80, width: 300, offsetX: 0 },
+  );
+});
+
+test("citation preview placement clamps either alignment inside the viewport safety edge", () => {
+  const leftPlacement = resolveCitationPreviewPlacement({
+    wrapperLeft: 2,
+    wrapperRight: 42,
+    previewWidth: 300,
+    viewportWidth: 390,
+  });
+  assert.deepEqual(leftPlacement, { align: "start", left: 8, width: 300, offsetX: 6 });
+
+  const oversizedRightPlacement = resolveCitationPreviewPlacement({
+    wrapperLeft: 350,
+    wrapperRight: 380,
+    previewWidth: 500,
+    viewportWidth: 390,
+  });
+  assert.equal(oversizedRightPlacement.align, "end");
+  assert.equal(oversizedRightPlacement.left, 8);
+  assert.equal(oversizedRightPlacement.width, 374);
+  assert.equal(oversizedRightPlacement.left + oversizedRightPlacement.width, 382);
 });
