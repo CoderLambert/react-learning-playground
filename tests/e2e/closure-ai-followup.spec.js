@@ -32,7 +32,7 @@ test("DeepSeek connection feedback is discarded when credentials change mid-test
 
   await openAiTab(page);
   await page.getByRole("button", { name: /配置 DeepSeek|DeepSeek 已配置/ }).click();
-  const keyInput = page.getByLabel("API Key");
+  const keyInput = page.getByRole("textbox", { name: "API Key", exact: true });
   await keyInput.fill("sk-first-credential");
   await page.getByRole("button", { name: "测试连接" }).click();
   await expect(page.getByText("正在测试 DeepSeek 连接…", { exact: true })).toBeVisible();
@@ -102,7 +102,9 @@ test("narrow right-edge citation preview stays inside the viewport without horiz
   await composer.fill("给出多个源码引用");
   await page.getByRole("button", { name: "发送" }).click();
 
-  const citations = page.locator(".ai-source-citation-wrap");
+  const transcript = page.getByRole("log", { name: "AI 对话记录" });
+  const responseMessage = transcript.locator('[data-message-role="assistant"]').last();
+  const citations = responseMessage.locator(".ai-source-citation-wrap");
   await expect(citations).toHaveCount(3);
   const lastCitation = citations.nth(2);
   await lastCitation.locator(".ai-source-citation").focus();
@@ -115,7 +117,6 @@ test("narrow right-edge citation preview stays inside the viewport without horiz
   expect(box.x).toBeGreaterThanOrEqual(0);
   expect(box.x + box.width).toBeLessThanOrEqual(390);
 
-  const transcript = page.getByRole("log", { name: "AI 对话记录" });
   const overflow = await transcript.evaluate((element) => element.scrollWidth - element.clientWidth);
   expect(overflow).toBeLessThanOrEqual(1);
 });
