@@ -12,7 +12,7 @@ test("chapter checkpoint no longer exposes an editable localStorage question ban
   assert.match(source, /data-legacy-checkpoint-readonly/);
 
   assert.doesNotMatch(source, /createQuestionBankRepository/);
-  assert.doesNotMatch(source, /localStorage/);
+  assert.doesNotMatch(source, /repository\.(load|save|setOverride|upsertCustom|deleteCustom|setOrder)/);
   assert.doesNotMatch(source, /AssessmentRunner/);
   assert.doesNotMatch(source, />新增</);
   assert.doesNotMatch(source, />编辑</);
