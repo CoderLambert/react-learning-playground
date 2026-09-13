@@ -11,6 +11,12 @@ import {
 } from "../infrastructure/index.js";
 import { createAssessmentQueryStore } from "../store/AssessmentQueryStore.js";
 
+let activeAssessmentRuntime = null;
+
+export function getActiveAssessmentRuntime() {
+  return activeAssessmentRuntime;
+}
+
 /**
  * Build the browser-side Assessment object graph. Persistence is the only
  * asynchronous part; the application, tool, and agent layers stay behind
@@ -68,7 +74,7 @@ export async function createAssessmentRuntime({
     },
   });
 
-  return Object.freeze({
+  const runtime = Object.freeze({
     mode: repository.mode,
     storageNotice,
     repository,
@@ -86,4 +92,6 @@ export async function createAssessmentRuntime({
       });
     },
   });
+  activeAssessmentRuntime = runtime;
+  return runtime;
 }
