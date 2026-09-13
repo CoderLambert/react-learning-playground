@@ -4,7 +4,11 @@ import { AssessmentQuestionManager } from "./AssessmentQuestionManager.jsx";
 export function AssessmentPane(props) {
   return (
     <div className="min-w-0">
-      <AssessmentQuestionManager session={props.session ?? null} />
+      <AssessmentQuestionManager
+        session={props.session ?? null}
+        runtime={props.runtime ?? null}
+        learningUnitId={props.learningUnitId ?? null}
+      />
       <AssessmentPracticePane {...props} />
     </div>
   );

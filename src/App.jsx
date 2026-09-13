@@ -10,6 +10,7 @@ import { ConversationHistory } from "./components/ai-assistant/conversations/Con
 import { LearningInspector } from "./components/learning-inspector";
 import { AssessmentPane } from "./assessment/ui/AssessmentPane.jsx";
 import { createAssessmentOperationToken, isAssessmentOperationCurrent } from "./assessment/ui/assessmentOperationOwnership.js";
+import { selectAssessmentQuestionsForLearningUnit } from "./assessment/ui/assessmentScope.js";
 import { createAssessmentRuntime } from "./assessment/composition/assessmentRuntime.js";
 import { createLearningUnitEvidenceResolver } from "./assessment/composition/learningUnitEvidenceResolver.js";
 import { NoteToc } from "./components/notes/NoteToc";
@@ -80,8 +81,11 @@ export default function App() {
   const [assessmentAnswer, setAssessmentAnswer] = useState(null);
   const [assessmentFeedback, setAssessmentFeedback] = useState(null);
   const [assessmentSubmitError, setAssessmentSubmitError] = useState(null);
+  const [assessmentInitializationErrors, setAssessmentInitializationErrors] = useState({ load: null, recover: null });
+  const [assessmentInitializationRetry, setAssessmentInitializationRetry] = useState(0);
   const [assessmentSubmitting, setAssessmentSubmitting] = useState(false);
   const assessmentGenerationRef = useRef(0);
+  const assessmentInitializationRequestRef = useRef(0);
   const assessmentStartRequestRef = useRef(0);
   const assessmentSubmitRequestRef = useRef(0);
   const assessmentContextRef = useRef({ learningUnitId: null, sessionId: null });
@@ -114,9 +118,13 @@ export default function App() {
     assessmentRuntime,
   });
 
-  const assessmentQuestions = assessmentSnapshot?.learningUnitId === currentLearningUnit?.id
-    ? assessmentSnapshot.questions ?? []
-    : [];
+  const assessmentQuestions = selectAssessmentQuestionsForLearningUnit(
+    assessmentSnapshot,
+    currentLearningUnit?.id ?? null,
+  );
+  const assessmentInitializationError = [assessmentInitializationErrors.load, assessmentInitializationErrors.recover]
+    .filter(Boolean)
+    .join("；") || null;
 
   useEffect(() => {
     setSourceFile(null);
@@ -126,34 +134,55 @@ export default function App() {
   useEffect(() => {
     if (!assessmentRuntime || !currentLearningUnit?.id) return undefined;
 
-    let cancelled = false;
     const learningUnitId = currentLearningUnit.id;
-    assessmentGenerationRef.current += 1;
+    const generation = ++assessmentGenerationRef.current;
+    const requestId = ++assessmentInitializationRequestRef.current;
     assessmentStartRequestRef.current += 1;
     assessmentSubmitRequestRef.current += 1;
+    const token = createAssessmentOperationToken({ generation, learningUnitId, requestId });
+    const isCurrentInitialization = () => isAssessmentOperationCurrent(token, {
+      generation: assessmentGenerationRef.current,
+      learningUnitId: assessmentContextRef.current.learningUnitId,
+      sessionId: assessmentContextRef.current.sessionId,
+      requestId: assessmentInitializationRequestRef.current,
+    });
+
     setAssessmentSession(null);
     setAssessmentIndex(0);
     setAssessmentAnswer(null);
     setAssessmentFeedback(null);
     setAssessmentSubmitError(null);
+    setAssessmentInitializationErrors({ load: null, recover: null });
     setAssessmentSubmitting(false);
-    void Promise.all([
-      assessmentRuntime.service.listQuestions({ trusted: { learningUnitId } }),
-      assessmentRuntime.sessionLifecycle.recover({ learningUnitId }),
-    ]).then(([questions, recovered]) => {
-      if (cancelled) return;
+    assessmentRuntime.queryStore.replaceSnapshot({ learningUnitId, questions: [] });
+
+    void assessmentRuntime.service.listQuestions({ trusted: { learningUnitId } }).then((questions) => {
+      if (!isCurrentInitialization()) return;
       assessmentRuntime.queryStore.replaceSnapshot({ learningUnitId, questions });
+    }).catch((error) => {
+      if (!isCurrentInitialization()) return;
+      setAssessmentInitializationErrors((current) => ({
+        ...current,
+        load: error?.message || "无法加载评测题目",
+      }));
+    });
+
+    void assessmentRuntime.sessionLifecycle.recover({ learningUnitId }).then((recovered) => {
+      if (!isCurrentInitialization()) return;
       if (recovered) {
         setAssessmentSession(recovered.session);
         setAssessmentIndex(recovered.currentIndex);
       }
     }).catch((error) => {
-      if (!cancelled) setAssessmentFeedback({ correct: false, explanation: error?.message || "无法恢复评测" });
+      if (!isCurrentInitialization()) return;
+      setAssessmentInitializationErrors((current) => ({
+        ...current,
+        recover: error?.message || "无法恢复评测进度",
+      }));
     });
-    return () => {
-      cancelled = true;
-    };
-  }, [assessmentRuntime, currentLearningUnit?.id]);
+
+    return undefined;
+  }, [assessmentRuntime, currentLearningUnit?.id, assessmentInitializationRetry]);
 
   useEffect(() => {
     if (!sourceLocatorActive) return undefined;
@@ -543,7 +572,18 @@ export default function App() {
         <div className="assessment-pane-shell">
           {assessmentRuntime?.storageNotice && <p role="status">{assessmentRuntime.storageNotice}</p>}
           {!assessmentRuntime && <p role="status">正在初始化评测存储…</p>}
+          {assessmentInitializationError && (
+            <div role="alert" className="mx-4 mt-4 rounded-lg border border-[var(--color-danger-border)] bg-[var(--color-danger-light)] p-3 text-sm text-[var(--color-danger-text)] sm:mx-5">
+              <strong>评测初始化未完全成功</strong>
+              <p className="mt-1 mb-2">{assessmentInitializationError}</p>
+              <button type="button" className="btn btn-outline btn-sm" onClick={() => setAssessmentInitializationRetry((value) => value + 1)}>
+                重试加载
+              </button>
+            </div>
+          )}
           <AssessmentPane
+            runtime={assessmentRuntime}
+            learningUnitId={currentLearningUnit.id}
             session={assessmentSession}
             currentIndex={assessmentIndex}
             answer={assessmentAnswer}
