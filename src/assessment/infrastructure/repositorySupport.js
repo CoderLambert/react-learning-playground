@@ -237,3 +237,11 @@ export function sessionCompleted({ sessionId }) {
     { details: { sessionId } },
   );
 }
+
+export function duplicateAttempt({ sessionId, questionId }) {
+  return new AssessmentError(
+    ASSESSMENT_ERROR_CODES.DUPLICATE_ATTEMPT,
+    `Question ${questionId} already has an attempt in session ${sessionId}`,
+    { details: { sessionId, questionId } },
+  );
+}
