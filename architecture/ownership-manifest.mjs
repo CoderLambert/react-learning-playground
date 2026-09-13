@@ -5,7 +5,7 @@ export const ARCHITECTURE_OWNERS = [
     id: "app-integration",
     kind: "integration",
     exactPaths: ["src/App.jsx", "src/main.jsx"],
-    prefixes: [],
+    prefixes: ["src/app/"],
     publicEntries: [],
     browserImpact: "full",
   },
@@ -71,6 +71,12 @@ export const SHARED_INTEGRATION_SURFACES = [
   {
     id: "app-composition-root",
     paths: ["src/App.jsx", "src/main.jsx"],
+    owner: "app-integration",
+    policy: "one-writer-per-wave",
+  },
+  {
+    id: "app-integration-seam",
+    paths: ["src/app/**"],
     owner: "app-integration",
     policy: "one-writer-per-wave",
   },
