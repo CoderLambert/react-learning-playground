@@ -23,10 +23,19 @@ export function getBrowserStorage() {
   }
 }
 
-export function clampInspectorWidth(value, viewportWidth) {
+export function normalizePreferredInspectorWidth(value) {
   const parsed = Number(value);
   const fallback = WORKBENCH_DIMENSIONS.inspectorDefaultWidth;
   const normalized = Number.isFinite(parsed) ? parsed : fallback;
+
+  return Math.min(
+    WORKBENCH_DIMENSIONS.inspectorMaxWidth,
+    Math.max(WORKBENCH_DIMENSIONS.inspectorMinWidth, Math.round(normalized)),
+  );
+}
+
+export function getEffectiveInspectorWidth(preferredWidth, viewportWidth) {
+  const normalized = normalizePreferredInspectorWidth(preferredWidth);
 
   const viewportMax = Number.isFinite(viewportWidth) && viewportWidth > 0
     ? Math.floor(viewportWidth * WORKBENCH_DIMENSIONS.inspectorMaxViewportRatio)
@@ -39,9 +48,13 @@ export function clampInspectorWidth(value, viewportWidth) {
 
   return Math.min(
     effectiveMax,
-    Math.max(WORKBENCH_DIMENSIONS.inspectorMinWidth, Math.round(normalized)),
+    normalized,
   );
 }
+
+// Kept as a compatibility alias for presentation code and callers that need a
+// viewport-bound value. Persisted state must use normalizePreferredInspectorWidth.
+export const clampInspectorWidth = getEffectiveInspectorWidth;
 
 function readStorageValue(storage, key) {
   if (!storage) return null;
@@ -86,7 +99,6 @@ function parseSourceFile(value) {
 
 export function readPersistedWorkbenchState({
   storage = getBrowserStorage(),
-  viewportWidth,
 } = {}) {
   return {
     navigationCollapsed: parseBoolean(
@@ -97,9 +109,8 @@ export function readPersistedWorkbenchState({
       readStorageValue(storage, WORKBENCH_STORAGE_KEYS.inspectorOpen),
       DEFAULT_PERSISTED_WORKBENCH_STATE.inspectorOpen,
     ),
-    inspectorWidth: clampInspectorWidth(
+    inspectorWidth: normalizePreferredInspectorWidth(
       readStorageValue(storage, WORKBENCH_STORAGE_KEYS.inspectorWidth),
-      viewportWidth,
     ),
     inspectorTab: parseInspectorTab(
       readStorageValue(storage, WORKBENCH_STORAGE_KEYS.inspectorTab),
@@ -112,14 +123,13 @@ export function readPersistedWorkbenchState({
 
 export function persistWorkbenchState(state, {
   storage = getBrowserStorage(),
-  viewportWidth,
 } = {}) {
   if (!state || typeof state !== "object") return false;
 
   const normalized = {
     navigationCollapsed: Boolean(state.navigationCollapsed),
     inspectorOpen: state.inspectorOpen !== false,
-    inspectorWidth: clampInspectorWidth(state.inspectorWidth, viewportWidth),
+    inspectorWidth: normalizePreferredInspectorWidth(state.inspectorWidth),
     inspectorTab: parseInspectorTab(state.inspectorTab),
     sourceFile: parseSourceFile(state.sourceFile),
   };

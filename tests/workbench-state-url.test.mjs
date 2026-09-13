@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import {
   clampInspectorWidth,
   clearPersistedWorkbenchState,
+  getEffectiveInspectorWidth,
+  normalizePreferredInspectorWidth,
   persistWorkbenchState,
   readPersistedWorkbenchState,
 } from "../src/workbench/stateStorage.js";
@@ -74,6 +76,27 @@ test("clamps inspector width to hard and viewport bounds", () => {
   assert.equal(clampInspectorWidth(2000, 1600), 900);
   assert.equal(clampInspectorWidth(900, 1000), 600);
   assert.equal(clampInspectorWidth(480, 400), 360);
+});
+
+test("keeps the preferred width through narrow viewport transitions", () => {
+  const storage = createMemoryStorage({
+    "react-learning-workbench:inspector-width": "720",
+  });
+
+  const mobileState = readPersistedWorkbenchState({ storage, viewportWidth: 390 });
+  assert.equal(mobileState.inspectorWidth, 720);
+  assert.equal(getEffectiveInspectorWidth(mobileState.inspectorWidth, 390), 360);
+
+  assert.equal(persistWorkbenchState(mobileState, { storage, viewportWidth: 390 }), true);
+  assert.equal(storage.dump()["react-learning-workbench:inspector-width"], "720");
+  assert.equal(getEffectiveInspectorWidth(readPersistedWorkbenchState({ storage }).inspectorWidth, 1440), 720);
+});
+
+test("only explicit resize updates the stored preferred width", () => {
+  const storage = createMemoryStorage();
+  assert.equal(normalizePreferredInspectorWidth(650), 650);
+  assert.equal(persistWorkbenchState({ inspectorWidth: 650 }, { storage }), true);
+  assert.equal(storage.dump()["react-learning-workbench:inspector-width"], "650");
 });
 
 test("resolves invalid demo ids to a stable fallback", () => {

@@ -19,6 +19,9 @@ test.describe("React Learning Workbench integration", () => {
     const before = Number(await resize.getAttribute("aria-valuenow"));
     await resize.press("ArrowLeft");
     await expect(resize).toHaveAttribute("aria-valuenow", String(before + 24));
+    await expect.poll(() => page.evaluate(() => (
+      window.localStorage.getItem("react-learning-workbench:inspector-width")
+    ))).toBe(String(before + 24));
 
     const box = await resize.boundingBox();
     if (box) {
@@ -27,6 +30,9 @@ test.describe("React Learning Workbench integration", () => {
       await page.mouse.move(box.x - 40, box.y + 60);
       await page.mouse.up();
       expect(Number(await resize.getAttribute("aria-valuenow"))).toBeGreaterThan(before);
+      await expect.poll(() => page.evaluate(() => (
+        window.localStorage.getItem("react-learning-workbench:inspector-width")
+      ))).toBe(await resize.getAttribute("aria-valuenow"));
     }
 
     const notesTab = page.getByRole("tab", { name: "笔记", exact: true });

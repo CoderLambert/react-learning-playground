@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { INSPECTOR_TABS } from "./constants";
 import {
-  clampInspectorWidth,
   clearPersistedWorkbenchState,
   getBrowserStorage,
+  getEffectiveInspectorWidth,
+  normalizePreferredInspectorWidth,
   persistWorkbenchState,
   readPersistedWorkbenchState,
 } from "./stateStorage";
@@ -17,23 +18,25 @@ export function usePersistedWorkbenchState({
   viewportWidth = getViewportWidth(),
 } = {}) {
   const initialState = useMemo(
-    () => readPersistedWorkbenchState({ storage, viewportWidth }),
-    [storage, viewportWidth],
+    () => readPersistedWorkbenchState({ storage }),
+    [storage],
   );
-  const [state, setState] = useState(initialState);
+  // This state is the user's durable desktop preference. Viewport changes only
+  // derive a render width below; they never write a viewport-clamped value back.
+  const [preferredState, setPreferredState] = useState(initialState);
   const resolvedState = useMemo(() => {
-    const inspectorWidth = clampInspectorWidth(state.inspectorWidth, viewportWidth);
-    return inspectorWidth === state.inspectorWidth
-      ? state
-      : { ...state, inspectorWidth };
-  }, [state, viewportWidth]);
+    const inspectorWidth = getEffectiveInspectorWidth(preferredState.inspectorWidth, viewportWidth);
+    return inspectorWidth === preferredState.inspectorWidth
+      ? preferredState
+      : { ...preferredState, inspectorWidth };
+  }, [preferredState, viewportWidth]);
 
   useEffect(() => {
-    persistWorkbenchState(resolvedState, { storage, viewportWidth });
-  }, [resolvedState, storage, viewportWidth]);
+    persistWorkbenchState(preferredState, { storage });
+  }, [preferredState, storage]);
 
   const setNavigationCollapsed = useCallback((value) => {
-    setState((current) => ({
+    setPreferredState((current) => ({
       ...current,
       navigationCollapsed: typeof value === "function"
         ? Boolean(value(current.navigationCollapsed))
@@ -42,7 +45,7 @@ export function usePersistedWorkbenchState({
   }, []);
 
   const setInspectorOpen = useCallback((value) => {
-    setState((current) => ({
+    setPreferredState((current) => ({
       ...current,
       inspectorOpen: typeof value === "function"
         ? Boolean(value(current.inspectorOpen))
@@ -51,20 +54,20 @@ export function usePersistedWorkbenchState({
   }, []);
 
   const setInspectorWidth = useCallback((value) => {
-    setState((current) => {
+    setPreferredState((current) => {
       const candidate = typeof value === "function"
         ? value(current.inspectorWidth)
         : value;
-      const inspectorWidth = clampInspectorWidth(candidate, viewportWidth);
+      const inspectorWidth = normalizePreferredInspectorWidth(candidate);
       return inspectorWidth === current.inspectorWidth
         ? current
         : { ...current, inspectorWidth };
     });
-  }, [viewportWidth]);
+  }, []);
 
   const setInspectorTab = useCallback((tab) => {
     if (!INSPECTOR_TABS.includes(tab)) return;
-    setState((current) => (
+    setPreferredState((current) => (
       current.inspectorTab === tab ? current : { ...current, inspectorTab: tab }
     ));
   }, []);
@@ -73,15 +76,15 @@ export function usePersistedWorkbenchState({
     const sourceFile = typeof fileName === "string" && fileName.trim()
       ? fileName
       : null;
-    setState((current) => (
+    setPreferredState((current) => (
       current.sourceFile === sourceFile ? current : { ...current, sourceFile }
     ));
   }, []);
 
   const resetPersistedState = useCallback(() => {
     clearPersistedWorkbenchState({ storage });
-    setState(readPersistedWorkbenchState({ storage: null, viewportWidth }));
-  }, [storage, viewportWidth]);
+    setPreferredState(readPersistedWorkbenchState({ storage: null }));
+  }, [storage]);
 
   return {
     state: resolvedState,

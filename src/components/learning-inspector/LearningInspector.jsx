@@ -4,6 +4,7 @@ import {
   WORKBENCH_DIMENSIONS,
 } from "../../workbench/constants";
 import { resolveInspectorPanels } from "../../workbench/inspectorPanels.js";
+import { normalizePreferredInspectorWidth } from "../../workbench/stateStorage.js";
 import { subscribeLearningActions } from "../../learning-actions";
 import { clampInspectorWidth } from "./inspectorDimensions";
 import { useInspectorScrollMemory } from "./useInspectorScrollMemory";
@@ -47,8 +48,7 @@ export function LearningInspector({
   const emitWidth = useCallback(
     (nextWidth) => {
       if (!onWidthChange) return;
-      const viewportWidth = typeof window === "undefined" ? 1440 : window.innerWidth;
-      onWidthChange(clampInspectorWidth(nextWidth, viewportWidth));
+      onWidthChange(normalizePreferredInspectorWidth(nextWidth));
     },
     [onWidthChange],
   );
