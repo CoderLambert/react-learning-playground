@@ -4,6 +4,7 @@ import {
   assertMutablePatch,
   cloneValue,
   committedResult,
+  duplicateAttempt,
   makeMutationReceipt,
   normalizeAttemptInput,
   normalizeAttemptListQuery,
@@ -18,6 +19,7 @@ import {
   normalizeUpdateCommand,
   normalizeAttemptProgressInput,
   questionNotFound,
+  questionRetired,
   requiredQuestionRecord,
   replayResult,
   revisionConflict,
@@ -156,6 +158,7 @@ export class IndexedDbAssessmentRepository {
       if (!current || current.learningUnitId !== command.learningUnitId) {
         throw questionNotFound(command);
       }
+      if (current.status !== "active") throw questionRetired(command);
       if (current.revision !== command.expectedRevision) {
         throw revisionConflict({
           ...command,
@@ -180,6 +183,7 @@ export class IndexedDbAssessmentRepository {
       if (!current || current.learningUnitId !== command.learningUnitId) {
         throw questionNotFound(command);
       }
+      if (current.status !== "active") throw questionRetired(command);
       if (current.revision !== command.expectedRevision) {
         throw revisionConflict({
           ...command,
@@ -249,6 +253,11 @@ export class IndexedDbAssessmentRepository {
       const current = await requestToPromise(sessionStore.get(command.sessionId));
       if (!current || current.learningUnitId !== command.learningUnitId) throw sessionNotFound(command);
       if (current.status === "completed") throw sessionCompleted(command);
+
+      const existingAttemptKey = await requestToPromise(
+        attemptStore.index("sessionQuestion").getKey([command.sessionId, command.attempt.questionId]),
+      );
+      if (existingAttemptKey !== undefined) throw duplicateAttempt(command.attempt);
 
       const attempt = cloneValue(command.attempt);
       await requestToPromise(attemptStore.put(attempt));

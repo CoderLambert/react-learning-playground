@@ -12,6 +12,7 @@ import {
 import { createAssessmentQueryStore } from "../store/AssessmentQueryStore.js";
 
 let activeAssessmentRuntime = null;
+let assessmentRuntimeGeneration = 0;
 
 export function getActiveAssessmentRuntime() {
   return activeAssessmentRuntime;
@@ -21,6 +22,11 @@ export function getActiveAssessmentRuntime() {
  * Build the browser-side Assessment object graph. Persistence is the only
  * asynchronous part; the application, tool, and agent layers stay behind
  * this composition boundary.
+ *
+ * Runtime activation follows latest-started-wins semantics. React StrictMode
+ * may start composition twice and let the cancelled first request finish
+ * after the accepted second request. A stale completion must never replace
+ * the runtime that belongs to the latest composition request.
  */
 export async function createAssessmentRuntime({
   indexedDb = globalThis.indexedDB,
@@ -29,6 +35,7 @@ export async function createAssessmentRuntime({
   evidenceValidator,
   evidenceResolver,
 } = {}) {
+  const generation = ++assessmentRuntimeGeneration;
   let repository;
   let storageNotice = null;
 
@@ -92,6 +99,8 @@ export async function createAssessmentRuntime({
       });
     },
   });
-  activeAssessmentRuntime = runtime;
+  if (generation === assessmentRuntimeGeneration) {
+    activeAssessmentRuntime = runtime;
+  }
   return runtime;
 }

@@ -167,6 +167,14 @@ export function questionNotFound({ learningUnitId, questionId }) {
   );
 }
 
+export function questionRetired({ learningUnitId, questionId }) {
+  return new AssessmentError(
+    ASSESSMENT_ERROR_CODES.QUESTION_RETIRED,
+    `Question ${questionId} is retired and cannot be mutated`,
+    { details: { learningUnitId, questionId } },
+  );
+}
+
 export function revisionConflict({ learningUnitId, questionId, expectedRevision, actualRevision }) {
   return new AssessmentError(
     ASSESSMENT_ERROR_CODES.REVISION_CONFLICT,
@@ -235,5 +243,13 @@ export function sessionCompleted({ sessionId }) {
     ASSESSMENT_ERROR_CODES.SESSION_COMPLETED,
     `Session ${sessionId} is completed`,
     { details: { sessionId } },
+  );
+}
+
+export function duplicateAttempt({ sessionId, questionId }) {
+  return new AssessmentError(
+    ASSESSMENT_ERROR_CODES.DUPLICATE_ATTEMPT,
+    `Question ${questionId} already has an attempt in session ${sessionId}`,
+    { details: { sessionId, questionId } },
   );
 }
