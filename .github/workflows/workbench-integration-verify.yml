@@ -40,17 +40,9 @@ jobs:
             exit 0
           fi
 
-          run_browser=false
-          while IFS= read -r file; do
-            case "$file" in
-              src/App.jsx|src/App.css|src/main.jsx|src/ai/*|src/assessment/*|src/components/*|src/demos/*|src/lib/*|src/workbench/*|tests/assessment-*.test.mjs|tests/product-closure-contract.test.mjs|tests/tool-schema-validation.test.mjs|tests/integration/assessment-lifecycle.test.mjs|tests/e2e/*|playwright.config.*|package.json|package-lock.json|vite.config.js|.github/workflows/workbench-integration-verify.yml)
-                run_browser=true
-                break
-                ;;
-            esac
-          done < <(git diff --name-only "$BASE_SHA" "$HEAD_SHA")
-
-          echo "run_browser=$run_browser" >> "$GITHUB_OUTPUT"
+          git diff --name-only "$BASE_SHA" "$HEAD_SHA" \
+            | node scripts/classify-browser-impact.mjs \
+            >> "$GITHUB_OUTPUT"
 
       - name: Setup Node
         if: ${{ steps.scope.outputs.run_browser == 'true' }}
