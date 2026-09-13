@@ -100,7 +100,7 @@ test.describe("narrow viewport", () => {
     await expect(navigationHeading).toBeVisible();
     await expect(navigationSlot).toBeFocused();
     await expect(contentSlot).toHaveAttribute("inert", "");
-    const closeMenu = page.getByRole("button", { name: "关闭侧边导航" });
+    const closeMenu = page.getByRole("button", { name: "关闭侧边导航", exact: true });
     await expect(closeMenu).toHaveAttribute("aria-expanded", "true");
     await expect(closeMenu).toHaveAttribute("aria-controls", "workbench-navigation");
 
