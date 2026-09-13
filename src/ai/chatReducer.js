@@ -43,6 +43,18 @@ export function chatReducer(state, action) {
       };
     }
 
+    case "retry": {
+      return {
+        ...state,
+        messages: state.messages.filter((message) => !(
+          message.role === "assistant" && message.requestId === action.previousRequestId
+        )),
+        status: CHAT_STATUS.STREAMING,
+        error: null,
+        activeRequestId: action.requestId,
+      };
+    }
+
     case "start": {
       if (state.activeRequestId !== action.requestId) return state;
       const alreadyExists = state.messages.some(

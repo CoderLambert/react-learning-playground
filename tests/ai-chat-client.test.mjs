@@ -59,6 +59,26 @@ test("chatReducer preserves previous content on error, supports cancel and reset
   });
 });
 
+test("chatReducer retries without another user message and rejects stale completion", () => {
+  const failed = reduce([
+    { type: "request", requestId: "r1", question: "retry once" },
+    { type: "start", requestId: "r1" },
+    { type: "error", requestId: "r1", message: "temporary failure" },
+  ]);
+  const retrying = chatReducer(failed, { type: "retry", requestId: "r2", previousRequestId: "r1" });
+
+  assert.equal(retrying.messages.filter((message) => message.role === "user").length, 1);
+  assert.equal(retrying.messages.filter((message) => message.role === "assistant").length, 0);
+
+  const switchedConversation = chatReducer(retrying, { type: "hydrate", messages: [] });
+  const afterStaleCompletion = chatReducer(switchedConversation, {
+    type: "delta",
+    requestId: "r2",
+    text: "must not leak",
+  });
+  assert.deepEqual(afterStaleCompletion, switchedConversation);
+});
+
 test("ChatStreamParser handles arbitrary chunk boundaries and NDJSON/SSE data lines", () => {
   const parser = new ChatStreamParser();
   const events = [
