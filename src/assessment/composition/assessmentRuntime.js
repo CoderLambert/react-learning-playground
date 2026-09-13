@@ -72,7 +72,9 @@ export async function createAssessmentRuntime({
       return { attempt, session };
     },
     async recover({ learningUnitId }) {
-      const [session] = await repository.listSessions({ learningUnitId, status: "in_progress" });
+      const session = typeof repository.reconcileInProgressSessions === "function"
+        ? await repository.reconcileInProgressSessions({ learningUnitId })
+        : (await repository.listSessions({ learningUnitId, status: "in_progress" }))[0] ?? null;
       if (!session) return null;
       const attempts = await repository.listAttempts({ sessionId: session.id });
       const answeredQuestionIds = new Set(attempts.map((attempt) => attempt.questionId));
