@@ -117,6 +117,7 @@ export function AssessmentRunner({ chapter, resolvedQuestions, onAskAi }) {
 
   function reanswerCurrent() {
     if (!current) return;
+    setFilter("all");
     setAttempt((value) => resetAnswer(value, current));
     setFeedback("当前题已重置，可以重新回答。");
     focusAnswer();
