@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
-import { loadRawNote } from "../workbench/noteRegistry.js";
+import { loadRawNote } from "../workbench/public.js";
 import { AI_LEARNING_ASSISTANT_SYSTEM_PROMPT } from "./assistantSystemPrompt.js";
 import { createCompactionOwnership } from "./compaction/compactionOwnership.js";
 import { createCompactionService } from "./compaction/compactionService.js";
@@ -686,8 +686,6 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile, assessm
         assertCurrentRequest();
       }
 
-      // Capability is explicit UI/runtime state, never inferred from natural
-      // language. Ordinary chat continues through the no-tools transport.
       if (mode === "assessment_authoring" && agentRunner) {
         const agentContext = createToolExecutionContext({
           learningUnitId,
@@ -706,9 +704,6 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile, assessm
           }),
           context: agentContext,
           signal: controller.signal,
-          // Provider wire contracts deliberately only distinguish chat and
-          // compaction. Capability selection happened above; this remains a
-          // normal tool-enabled chat turn on both direct and gateway clients.
           purpose: "chat",
           onEvent(event) {
             if (activeRequestIdRef.current !== requestId) return;
@@ -757,8 +752,6 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile, assessm
           },
         );
       }
-      // A provider can finish after its AbortSignal has been observed. Do not
-      // finalize or persist that late completion after ownership has changed.
       assertCurrentRequest();
       const finishReason = outputLimitExceeded
         ? "output_limit"
