@@ -68,10 +68,4 @@ The ownership manifest also exposes `getBrowserImpactOwnership(path)`. Unknown p
 
 ## Current temporary debt
 
-The initial debt ledger records only observed legacy crossings that are intentionally deferred to #184:
-
-- Assessment composition → generic AI implementation;
-- Assessment AI-tool definition → AI-specific agent policy contract;
-- AI application → Workbench `noteRegistry` implementation.
-
-No new crossing should be added merely to make CI green. A new debt entry is a Scope Drift/architecture decision and requires explicit review under `issue-rule.md`.
+There are currently no registered architecture debt exceptions. Peer-domain dependencies must satisfy the architecture gate directly; any future temporary exception requires an explicit Scope Drift/architecture decision under `issue-rule.md`, a concrete crossing identity, an owner, a cleanup Issue, and a removal condition.
