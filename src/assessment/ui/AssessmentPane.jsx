@@ -8,8 +8,8 @@ export function AssessmentPane(props) {
     <div className="min-w-0">
       <AssessmentQuestionManager
         session={session}
-        runtime={props.runtime ?? null}
-        learningUnitId={props.learningUnitId ?? null}
+        questions={props.questions ?? []}
+        commands={props.managementCommands ?? null}
       />
       <AssessmentPracticePane
         {...props}
