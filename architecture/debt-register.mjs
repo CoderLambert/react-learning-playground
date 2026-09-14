@@ -5,6 +5,7 @@ export const ARCHITECTURE_DEBT = [
     id: "ARCH-003",
     source: "src/ai/useAiLearningAssistant.js",
     targetOwner: "workbench",
+    targetPath: "src/workbench/noteRegistry.js",
     owner: "ai-integration",
     cleanupIssue: 193,
     removalCondition:
@@ -12,8 +13,11 @@ export const ARCHITECTURE_DEBT = [
   },
 ];
 
-export function findArchitectureDebt(source, targetOwner) {
+export function findArchitectureDebt(source, targetOwner, targetPath) {
   return ARCHITECTURE_DEBT.find(
-    (entry) => entry.source === source && entry.targetOwner === targetOwner,
+    (entry) =>
+      entry.source === source &&
+      entry.targetOwner === targetOwner &&
+      entry.targetPath === targetPath,
   ) ?? null;
 }

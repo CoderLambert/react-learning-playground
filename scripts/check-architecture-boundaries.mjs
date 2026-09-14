@@ -72,7 +72,7 @@ export function collectModuleSpecifiers(source) {
   const code = stripComments(String(source ?? ""));
   const found = [];
   const patterns = [
-    /\b(?:import|export)\s+(?:[^;\n]*?\s+from\s*)?["']([^"']+)["']/g,
+    /\b(?:import|export)\s+(?:[^;]*?\s+from\s*)?["']([^"']+)["']/g,
     /\bimport\s*\(\s*["']([^"']+)["']\s*\)/g,
   ];
   for (const pattern of patterns) {
@@ -161,7 +161,7 @@ export async function analyzeArchitecture(root = DEFAULT_ROOT) {
       const targetOwner = getArchitectureOwner(targetPath);
       if (!targetOwner || sourceOwner.id === targetOwner.id || !graph.has(targetOwner.id)) continue;
 
-      const debt = findArchitectureDebt(sourcePath, targetOwner.id);
+      const debt = findArchitectureDebt(sourcePath, targetOwner.id, targetPath);
       if (debt) {
         observedDebt.add(debt.id);
         continue;
