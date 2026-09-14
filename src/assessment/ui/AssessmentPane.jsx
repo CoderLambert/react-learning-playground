@@ -30,7 +30,7 @@ export function AssessmentPane(props) {
         review={review.review}
         loading={review.loading}
         error={review.error}
-        storageNotice={props.storageNotice}
+        storageNotice={review.storageNotice}
         onSelectSession={review.selectSession}
         onOpenEvidence={props.onOpenEvidence}
       />
