@@ -1,4 +1,4 @@
-import { getCheckpointChapter } from "../components/chapterCheckpointMap";
+import { getCheckpointChapter } from "../components/chapterCheckpointMap.js";
 
 function getUnitId(unit) {
   return typeof unit === "string" ? unit : unit?.id;
