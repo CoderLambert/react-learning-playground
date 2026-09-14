@@ -1,4 +1,3 @@
-import { TOOL_POLICIES } from "../../ai/agent/agentContracts.js";
 import {
   ASSESSMENT_AUTHORING_INSTRUCTIONS,
   assertAssessmentAuthoringQuality,
@@ -16,6 +15,11 @@ export const ASSESSMENT_TOOL_NAMES = Object.freeze({
   CREATE_QUESTIONS: "assessment_create_questions",
   UPDATE_QUESTION: "assessment_update_question",
   RETIRE_QUESTION: "assessment_retire_question",
+});
+
+export const ASSESSMENT_CAPABILITY_ACCESS = Object.freeze({
+  QUERY: "query",
+  COMMAND: "command",
 });
 
 const TRUSTED_CONTEXT_FIELDS = Object.freeze([
@@ -82,20 +86,21 @@ function assertAssessmentService(service) {
 }
 
 /**
- * Create the Assessment-specific tool definitions for the generic agent
- * runtime. The model owns only business arguments; all scope and mutation
- * identity are copied from the trusted ToolExecutionContext.
+ * Assessment-owned semantic capabilities. These describe business intent,
+ * validation schema and the authorized service handler without depending on
+ * a concrete AI registry/policy implementation. App/integration owns mapping
+ * these capabilities into an AI runtime representation.
  */
-export function createAssessmentToolDefinitions({ assessmentService } = {}) {
+export function createAssessmentCapabilities({ assessmentService } = {}) {
   const service = assertAssessmentService(assessmentService);
 
   return [
     {
       name: ASSESSMENT_TOOL_NAMES.LIST_QUESTIONS,
       description: "List full assessment question records in the current learning unit. Use this before bulk edits and after mutations to read back and verify learner-facing content; revisions alone are not content verification.",
-      policy: TOOL_POLICIES.QUERY,
+      access: ASSESSMENT_CAPABILITY_ACCESS.QUERY,
       inputSchema: assessmentListQuestionsInputSchema,
-      handler: async (argumentsValue, context, execution) => {
+      execute: async (argumentsValue, context, execution) => {
         const args = assertArguments(argumentsValue);
         const trusted = trustedServiceInput(assertTrustedContext(context), execution);
         return service.listQuestions({ trusted, ...(args.status === undefined ? {} : { status: args.status }) });
@@ -104,9 +109,9 @@ export function createAssessmentToolDefinitions({ assessmentService } = {}) {
     {
       name: ASSESSMENT_TOOL_NAMES.CREATE_QUESTIONS,
       description: `Create self-contained assessment questions in the current learning unit. The same policy applies to later updates.\n\n${ASSESSMENT_AUTHORING_INSTRUCTIONS}`,
-      policy: TOOL_POLICIES.COMMAND,
+      access: ASSESSMENT_CAPABILITY_ACCESS.COMMAND,
       inputSchema: assessmentCreateQuestionsInputSchema,
-      handler: async (argumentsValue, context, execution) => {
+      execute: async (argumentsValue, context, execution) => {
         const args = assertArguments(argumentsValue);
         args.questions.forEach((question, index) => {
           assertAssessmentAuthoringQuality(question, { field: `questions[${index}]` });
@@ -118,9 +123,9 @@ export function createAssessmentToolDefinitions({ assessmentService } = {}) {
     {
       name: ASSESSMENT_TOOL_NAMES.UPDATE_QUESTION,
       description: "Update mutable business fields on an assessment question. Follow the self-contained authoring policy documented by assessment_create_questions; re-read before editing and verify with assessment_list_questions after the mutation.",
-      policy: TOOL_POLICIES.COMMAND,
+      access: ASSESSMENT_CAPABILITY_ACCESS.COMMAND,
       inputSchema: assessmentUpdateQuestionInputSchema,
-      handler: async (argumentsValue, context, execution) => {
+      execute: async (argumentsValue, context, execution) => {
         const args = assertArguments(argumentsValue);
         assertAssessmentQuestionPatchAuthoringQuality(args.patch, { field: "patch" });
         const trusted = trustedServiceInput(assertTrustedContext(context), execution);
@@ -135,9 +140,9 @@ export function createAssessmentToolDefinitions({ assessmentService } = {}) {
     {
       name: ASSESSMENT_TOOL_NAMES.RETIRE_QUESTION,
       description: "Retire an assessment question without deleting it.",
-      policy: TOOL_POLICIES.COMMAND,
+      access: ASSESSMENT_CAPABILITY_ACCESS.COMMAND,
       inputSchema: assessmentRetireQuestionInputSchema,
-      handler: async (argumentsValue, context, execution) => {
+      execute: async (argumentsValue, context, execution) => {
         const args = assertArguments(argumentsValue);
         const trusted = trustedServiceInput(assertTrustedContext(context), execution);
         return service.retireQuestion({
@@ -148,6 +153,21 @@ export function createAssessmentToolDefinitions({ assessmentService } = {}) {
       },
     },
   ];
+}
+
+/**
+ * Backward-compatible adapter for focused Assessment tests and legacy callers.
+ * It deliberately uses Assessment-owned access strings rather than importing
+ * AI policy contracts; production AI mapping is owned by app/integration.
+ */
+export function createAssessmentToolDefinitions(options = {}) {
+  return createAssessmentCapabilities(options).map((capability) => ({
+    name: capability.name,
+    description: capability.description,
+    policy: capability.access,
+    inputSchema: capability.inputSchema,
+    handler: capability.execute,
+  }));
 }
 
 export const createAssessmentTools = createAssessmentToolDefinitions;

@@ -1,10 +1,5 @@
-import { AgentRunner } from "../../ai/agent/AgentRunner.js";
-import { ToolExecutor } from "../../ai/agent/ToolExecutor.js";
-import { ToolPolicy } from "../../ai/agent/ToolPolicy.js";
-import { ToolRegistry } from "../../ai/agent/ToolRegistry.js";
-import { assertModelClient } from "../../ai/providers/modelClient.js";
 import { AssessmentService } from "../application/AssessmentService.js";
-import { createAssessmentToolDefinitions } from "../ai/assessmentTools.js";
+import { createAssessmentCapabilities } from "../ai/assessmentTools.js";
 import {
   createIndexedDbAssessmentRepository,
   MemoryAssessmentRepository,
@@ -20,8 +15,8 @@ export function getActiveAssessmentRuntime() {
 
 /**
  * Build the browser-side Assessment object graph. Persistence is the only
- * asynchronous part; the application, tool, and agent layers stay behind
- * this composition boundary.
+ * asynchronous part. Assessment exposes domain-owned capabilities, while
+ * app/integration owns any mapping into a generic AI runtime.
  *
  * Runtime activation follows latest-started-wins semantics. React StrictMode
  * may start composition twice and let the cancelled first request finish
@@ -55,11 +50,7 @@ export async function createAssessmentRuntime({
     evidenceValidator,
     evidenceResolver,
   });
-  const registry = new ToolRegistry();
-  for (const definition of createAssessmentToolDefinitions({ assessmentService: service })) {
-    registry.register(definition);
-  }
-  const toolExecutor = new ToolExecutor({ registry, policy: new ToolPolicy() });
+  const capabilities = Object.freeze(createAssessmentCapabilities({ assessmentService: service }));
   const sessionLifecycle = Object.freeze({
     async start({ learningUnitId }) {
       return service.startSession({ trusted: { learningUnitId } });
@@ -89,17 +80,8 @@ export async function createAssessmentRuntime({
     repository,
     queryStore,
     service,
-    registry,
-    toolExecutor,
+    capabilities,
     sessionLifecycle,
-    createAgentRunner(modelClient, options = {}) {
-      return new AgentRunner({
-        modelClient: assertModelClient(modelClient),
-        toolRegistry: registry,
-        toolExecutor,
-        ...options,
-      });
-    },
   });
   if (generation === assessmentRuntimeGeneration) {
     activeAssessmentRuntime = runtime;

@@ -46,6 +46,7 @@ test("import analysis handles static, export-from, dynamic imports, comments and
 });
 
 test("ownership manifest exposes reusable owner and browser-impact taxonomy", () => {
+  assert.equal(getArchitectureOwner("src/app/aiAssessmentIntegration.js")?.id, "app-integration");
   assert.equal(getArchitectureOwner("src/ai/chatClient.js")?.id, "ai");
   assert.equal(getArchitectureOwner("src/assessment/application/AssessmentService.js")?.id, "assessment");
   assert.equal(getArchitectureOwner("src/workbench/noteRegistry.js")?.id, "workbench");
@@ -58,6 +59,7 @@ test("ownership manifest exposes reusable owner and browser-impact taxonomy", ()
   assert.ok(ARCHITECTURE_OWNERS.some((owner) => owner.id === "content-source"));
   assert.ok(ARCHITECTURE_OWNERS.some((owner) => owner.id === "ci"));
   assert.ok(SHARED_INTEGRATION_SURFACES.some((surface) => surface.paths.includes("src/App.jsx")));
+  assert.ok(SHARED_INTEGRATION_SURFACES.some((surface) => surface.paths.includes("src/app/**")));
   assert.ok(SHARED_INTEGRATION_SURFACES.some((surface) => surface.paths.includes("package.json")));
   assert.ok(SHARED_INTEGRATION_SURFACES.some((surface) => surface.paths.includes(".github/workflows/**")));
 });
@@ -73,6 +75,23 @@ test("AI, Assessment and Workbench expose curated public entries rather than meg
     assert.doesNotMatch(source, /export\s+\*\s+from/);
     assert.match(source, /export\s+\{/);
   }
+});
+
+test("AI and Assessment composition is owned by app/integration", async () => {
+  const [runtimeSource, capabilitySource, integrationSource, appSource] = await Promise.all([
+    readFile(new URL("../src/assessment/composition/assessmentRuntime.js", import.meta.url), "utf8"),
+    readFile(new URL("../src/assessment/ai/assessmentTools.js", import.meta.url), "utf8"),
+    readFile(new URL("../src/app/aiAssessmentIntegration.js", import.meta.url), "utf8"),
+    readFile(new URL("../src/App.jsx", import.meta.url), "utf8"),
+  ]);
+
+  assert.doesNotMatch(runtimeSource, /\.\.\/\.\.\/ai\//);
+  assert.doesNotMatch(capabilitySource, /\.\.\/\.\.\/ai\//);
+  assert.doesNotMatch(runtimeSource, /createAgentRunner/);
+  assert.match(integrationSource, /from "\.\.\/ai\/public\.js"/);
+  assert.match(integrationSource, /mapAssessmentCapabilityToAiTool/);
+  assert.match(appSource, /createAiAssessmentIntegration/);
+  assert.match(appSource, /assessmentCapabilities: assessmentRuntime\.capabilities/);
 });
 
 test("temporary architecture debt is reviewable and has removal ownership", () => {
