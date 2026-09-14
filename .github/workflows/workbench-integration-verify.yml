@@ -36,9 +36,7 @@ jobs:
           set -euo pipefail
 
           if [[ "${GITHUB_EVENT_NAME}" != "pull_request" ]]; then
-            echo "run_browser=true" >> "$GITHUB_OUTPUT"
-            echo "browser_tier=FULL" >> "$GITHUB_OUTPUT"
-            echo "browser_domain=" >> "$GITHUB_OUTPUT"
+            node scripts/classify-browser-impact.mjs </dev/null >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
@@ -67,39 +65,13 @@ jobs:
         if: ${{ steps.scope.outputs.run_browser == 'true' }}
         run: npx playwright install --with-deps chromium
 
-      - name: Browser E2E (FULL)
-        if: ${{ steps.scope.outputs.run_browser == 'true' && steps.scope.outputs.browser_tier == 'FULL' }}
+      - name: Browser E2E
+        if: ${{ steps.scope.outputs.run_browser == 'true' }}
         env:
           CI: "true"
-        run: npm run test:e2e
-
-      - name: Browser E2E (DOMAIN)
-        if: ${{ steps.scope.outputs.run_browser == 'true' && steps.scope.outputs.browser_tier == 'DOMAIN' }}
-        env:
-          CI: "true"
+          BROWSER_TIER: ${{ steps.scope.outputs.browser_tier }}
           BROWSER_DOMAIN: ${{ steps.scope.outputs.browser_domain }}
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          core=(tests/e2e/app-shell.spec.js)
-          case "$BROWSER_DOMAIN" in
-            ai)
-              domain=(tests/e2e/ai-*.spec.js tests/e2e/closure-ai-followup.spec.js)
-              ;;
-            assessment)
-              domain=(tests/e2e/assessment-*.spec.js)
-              ;;
-            workbench)
-              domain=(tests/e2e/workbench-*.spec.js)
-              ;;
-            *)
-              echo "Unmapped DOMAIN browser suite: $BROWSER_DOMAIN" >&2
-              exit 1
-              ;;
-          esac
-
-          npx playwright test "${core[@]}" "${domain[@]}"
+        run: node scripts/run-browser-verification.mjs
 
       - name: Preview HTTP smoke
         if: ${{ steps.scope.outputs.run_browser == 'true' }}
