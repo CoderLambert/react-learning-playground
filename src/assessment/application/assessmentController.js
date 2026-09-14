@@ -1,3 +1,5 @@
+import { createId } from "../../platform/ids.js";
+
 function createOperationToken({ generation, learningUnitId, sessionId = null, requestId }) {
   return Object.freeze({ generation, learningUnitId, sessionId, requestId });
 }
@@ -9,6 +11,15 @@ function isOperationCurrent(token, current) {
   if (token.requestId !== current.requestId) return false;
   if (token.sessionId !== null && token.sessionId !== current.sessionId) return false;
   return true;
+}
+
+function createManagerTrustedContext(learningUnitId) {
+  return {
+    learningUnitId,
+    mutationId: createId("assessment-ui"),
+    actor: { type: "application" },
+    provenance: { source: "assessment_manager" },
+  };
 }
 
 const errorMessage = (error, fallback) => error?.message || fallback;
@@ -217,7 +228,7 @@ export function createAssessmentController({ runtime, selectQuestions = () => []
       if (!state.learningUnitId) return;
       try {
         return await runtime.service.updateQuestion({
-          trusted: { learningUnitId: state.learningUnitId },
+          trusted: createManagerTrustedContext(state.learningUnitId),
           questionId,
           expectedRevision,
           patch,
@@ -232,7 +243,7 @@ export function createAssessmentController({ runtime, selectQuestions = () => []
       if (!state.learningUnitId) return;
       try {
         return await runtime.service.retireQuestion({
-          trusted: { learningUnitId: state.learningUnitId },
+          trusted: createManagerTrustedContext(state.learningUnitId),
           questionId,
           expectedRevision,
         });
