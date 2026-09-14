@@ -21,6 +21,7 @@ import { WorkbenchNavigation } from "./workbench/WorkbenchNavigation";
 import { WorkbenchShell } from "./workbench/WorkbenchShell";
 import { toLearningUnit } from "./workbench/contracts";
 import { useDemoUrlState } from "./workbench/demoUrlState";
+import { getLearningPathEntry } from "./workbench/learningPath";
 import { usePersistedWorkbenchState } from "./workbench/usePersistedWorkbenchState";
 
 const SourceViewer = lazy(() =>
@@ -69,6 +70,7 @@ export default function App() {
   );
   const currentCategory = useMemo(() => CATEGORIES.find((category) => category.id === currentDemo?.category), [currentDemo]);
   const currentCheckpointChapter = currentDemo ? getCheckpointChapter(currentDemo.id) : null;
+  const currentLearningPathEntry = currentDemo ? getLearningPathEntry(demos, currentDemo.id) : null;
 
   const assessment = useAssessmentApplication({
     learningUnitId: currentLearningUnit?.id ?? null,
@@ -488,7 +490,13 @@ export default function App() {
               >
                 <currentDemo.Component />
               </DemoSourceLocator>
-              {currentCheckpointChapter && <ChapterCheckpoint chapter={currentCheckpointChapter} />}
+              {currentCheckpointChapter && (
+                <ChapterCheckpoint
+                  chapter={currentCheckpointChapter}
+                  nextUnitId={currentLearningPathEntry?.nextChapterFirstId}
+                  onNavigate={handleSelectDemo}
+                />
+              )}
             </div>
           ) : null
         ) : (
@@ -496,6 +504,7 @@ export default function App() {
             {demos.map((demo, index) => {
               const checkpointChapter = getCheckpointChapter(demo.id);
               const learningUnit = enrichLearningUnitSourceSemantics(toLearningUnit(demo));
+              const learningPathEntry = getLearningPathEntry(demos, demo.id);
               return (
                 <div key={demo.id} id={`demo-${demo.id}`}>
                   {index > 0 && <hr className="demo-divider" />}
@@ -511,7 +520,13 @@ export default function App() {
                   >
                     <demo.Component />
                   </DemoSourceLocator>
-                  {checkpointChapter && <ChapterCheckpoint chapter={checkpointChapter} />}
+                  {checkpointChapter && (
+                    <ChapterCheckpoint
+                      chapter={checkpointChapter}
+                      nextUnitId={learningPathEntry?.nextChapterFirstId}
+                      onNavigate={handleSelectDemo}
+                    />
+                  )}
                 </div>
               );
             })}
