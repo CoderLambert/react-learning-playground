@@ -6,7 +6,7 @@ export const ARCHITECTURE_DEBT = [
     source: "src/ai/useAiLearningAssistant.js",
     targetOwner: "workbench",
     owner: "ai-integration",
-    cleanupIssue: 184,
+    cleanupIssue: 193,
     removalCondition:
       "AI application consumes learning material through an app-owned or curated Workbench capability instead of noteRegistry implementation",
   },
