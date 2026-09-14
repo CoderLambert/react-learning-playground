@@ -6,10 +6,12 @@ import {
   createLearningActionContext,
   emitLearningAction,
 } from "../../learning-actions";
+import { createLocatorExplainAction } from "./locatorLearningAction.js";
 import "./DemoSourceLocator.css";
 
 const SOURCE_ATTRIBUTE = "data-source-loc";
 const ALT_MODE_ATTRIBUTE = "data-source-locator-alt";
+const LOCATOR_ACTION_ATTRIBUTE = "data-source-locator-action";
 const INTERACTIVE_TAGS = new Set(["A", "BUTTON", "INPUT", "SELECT", "TEXTAREA", "SUMMARY", "OPTION"]);
 
 let sourceLocatorMountCount = 0;
@@ -129,7 +131,7 @@ function getOverlay(candidate) {
   };
 }
 
-function Overlay({ value, modifierOnly = false }) {
+function Overlay({ value, modifierOnly = false, explainAction, onExplain }) {
   if (!value || typeof document === "undefined") return null;
   const lineLabel = value.endLine !== value.startLine
     ? `L${value.startLine}–L${value.endLine}`
@@ -152,12 +154,26 @@ function Overlay({ value, modifierOnly = false }) {
       />
       <div
         className={`source-locator-label${modifierLabelClass}`}
-        aria-hidden="true"
         style={{ top: value.labelTop, left: value.labelLeft }}
       >
-        <span>{value.tagName}</span>
+        <span aria-hidden="true">{value.tagName}</span>
         <strong>{value.fileName}</strong>
         <span>{lineLabel}</span>
+        {explainAction && (
+          <button
+            type="button"
+            className="source-locator-ai-action"
+            {...{ [LOCATOR_ACTION_ATTRIBUTE]: "true" }}
+            aria-label={`用 AI 解释 ${value.fileName} ${lineLabel}`}
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              onExplain?.(explainAction);
+            }}
+          >
+            用 AI 解释
+          </button>
+        )}
       </div>
     </>,
     document.body,
@@ -167,6 +183,11 @@ function Overlay({ value, modifierOnly = false }) {
 export function DemoSourceLocator({ learningUnit, enabled = false, onLocate, children }) {
   const [hovered, setHovered] = useState(null);
   const overlay = useMemo(() => getOverlay(hovered), [hovered]);
+  const explainAction = useMemo(() => createLocatorExplainAction({
+    learningUnit,
+    source: hovered?.source,
+    locator: hovered?.locator,
+  }), [hovered, learningUnit]);
   const learningActionContext = useMemo(() => createLearningActionContext({
     kind: LEARNING_CONTEXT_KINDS.DEMO,
     learningUnit,
@@ -189,6 +210,12 @@ export function DemoSourceLocator({ learningUnit, enabled = false, onLocate, chi
     ));
   };
 
+  const handlePointerLeave = (event) => {
+    const nextTarget = event.relatedTarget;
+    if (nextTarget instanceof Element && nextTarget.closest?.(`[${LOCATOR_ACTION_ATTRIBUTE}="true"]`)) return;
+    setHovered(null);
+  };
+
   const handleClickCapture = (event) => {
     const shouldLocate = enabled || event.altKey || isGlobalAltModeActive();
     if (!shouldLocate) return;
@@ -208,6 +235,11 @@ export function DemoSourceLocator({ learningUnit, enabled = false, onLocate, chi
     });
   };
 
+  const handleExplain = (action) => {
+    setHovered(null);
+    emitLearningAction(action);
+  };
+
   return (
     <div
       className={`source-locator-scope ${enabled ? "source-locator-scope--active" : ""}`.trim()}
@@ -215,7 +247,7 @@ export function DemoSourceLocator({ learningUnit, enabled = false, onLocate, chi
       data-source-locator-active={enabled ? "true" : "false"}
       onPointerOverCapture={updateHover}
       onPointerMoveCapture={updateHover}
-      onPointerLeave={() => setHovered(null)}
+      onPointerLeave={handlePointerLeave}
       onClickCapture={handleClickCapture}
     >
       <LearningActionBar
@@ -224,7 +256,14 @@ export function DemoSourceLocator({ learningUnit, enabled = false, onLocate, chi
         label="针对当前 Demo 的 AI 学习动作"
       />
       {children}
-      {hovered && <Overlay value={overlay} modifierOnly={!enabled} />}
+      {hovered && (
+        <Overlay
+          value={overlay}
+          modifierOnly={!enabled}
+          explainAction={explainAction}
+          onExplain={handleExplain}
+        />
+      )}
     </div>
   );
 }
