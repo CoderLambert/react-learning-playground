@@ -1,62 +1,67 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
-import { readFile, readdir } from "node:fs/promises";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
+
 import {
   ARCHITECTURE_OWNERS,
+  SHARED_INTEGRATION_SURFACES,
   getArchitectureOwner,
   getBrowserImpactOwnership,
   isCuratedPublicEntry,
 } from "../architecture/ownership-manifest.mjs";
 import { ARCHITECTURE_DEBT } from "../architecture/debt-register.mjs";
+import {
+  analyzeArchitecture,
+  collectModuleSpecifiers,
+  normalizeModuleSpecifier,
+  resolveRepositoryImport,
+} from "../scripts/check-architecture-boundaries.mjs";
 
-const ROOT = path.resolve(fileURLToPath(new URL("../", import.meta.url)));
+test("import analysis handles static, export-from, dynamic imports, comments and query suffixes", () => {
+  const source = `
+    import thing from "./thing.js?raw";
+    import "./side-effect.js";
+    export { value } from './value.js#fragment';
+    const lazy = import("./lazy");
+    // import ignored from "./commented.js";
+    /* export { ignored } from "./blocked.js"; */
+  `;
 
-async function walk(directory) {
-  const entries = await readdir(directory, { withFileTypes: true });
-  const files = [];
-  for (const entry of entries) {
-    const absolute = path.join(directory, entry.name);
-    if (entry.isDirectory()) files.push(...await walk(absolute));
-    else if (entry.isFile()) files.push(absolute);
-  }
-  return files;
-}
+  assert.deepEqual(collectModuleSpecifiers(source).sort(), [
+    "./lazy",
+    "./side-effect.js",
+    "./thing.js?raw",
+    "./value.js#fragment",
+  ]);
+  assert.equal(normalizeModuleSpecifier("./thing.js?raw"), "./thing.js");
+  assert.equal(normalizeModuleSpecifier("./value.js#fragment"), "./value.js");
 
-function toPosix(file) {
-  return path.relative(ROOT, file).split(path.sep).join("/");
-}
-
-function parseImports(source) {
-  const imports = [];
-  const patterns = [
-    /(?:import|export)\s+(?:[^"']*?\s+from\s+)?["']([^"']+)["']/g,
-    /import\s*\(\s*["']([^"']+)["']\s*\)/g,
-  ];
-  for (const pattern of patterns) {
-    for (const match of source.matchAll(pattern)) imports.push(match[1]);
-  }
-  return imports;
-}
-
-function normalizeImport(sourceFile, specifier) {
-  if (!specifier.startsWith(".")) return null;
-  const clean = specifier.split(/[?#]/)[0];
-  return path.posix.normalize(path.posix.join(path.posix.dirname(sourceFile), clean));
-}
+  const files = new Set([
+    "src/example/thing.js",
+    "src/example/lazy.jsx",
+    "src/example/index.js",
+  ]);
+  assert.equal(resolveRepositoryImport("src/example/consumer.js", "./thing?raw", files), "src/example/thing.js");
+  assert.equal(resolveRepositoryImport("src/example/consumer.js", "./lazy", files), "src/example/lazy.jsx");
+});
 
 test("ownership manifest exposes reusable owner and browser-impact taxonomy", () => {
-  assert.ok(ARCHITECTURE_OWNERS.some((owner) => owner.id === "assessment"));
+  assert.equal(getArchitectureOwner("src/app/aiAssessmentIntegration.js")?.id, "app-integration");
+  assert.equal(getArchitectureOwner("src/ai/chatClient.js")?.id, "ai");
   assert.equal(getArchitectureOwner("src/assessment/application/AssessmentService.js")?.id, "assessment");
-  assert.deepEqual(getBrowserImpactOwnership("src/assessment/domain/question.js"), {
-    owner: "assessment",
-    browserImpact: "domain",
-  });
-  assert.deepEqual(getBrowserImpactOwnership("unknown/runtime.js"), {
+  assert.equal(getArchitectureOwner("src/workbench/noteRegistry.js")?.id, "workbench");
+  assert.equal(getArchitectureOwner("src/platform/browser.js")?.id, "platform");
+  assert.deepEqual(getBrowserImpactOwnership("src/new-unknown-domain/file.js"), {
     owner: "unknown",
     browserImpact: "full",
   });
+  assert.ok(ARCHITECTURE_OWNERS.some((owner) => owner.id === "learning-actions"));
+  assert.ok(ARCHITECTURE_OWNERS.some((owner) => owner.id === "content-source"));
+  assert.ok(ARCHITECTURE_OWNERS.some((owner) => owner.id === "ci"));
+  assert.ok(SHARED_INTEGRATION_SURFACES.some((surface) => surface.paths.includes("src/App.jsx")));
+  assert.ok(SHARED_INTEGRATION_SURFACES.some((surface) => surface.paths.includes("src/app/**")));
+  assert.ok(SHARED_INTEGRATION_SURFACES.some((surface) => surface.paths.includes("package.json")));
+  assert.ok(SHARED_INTEGRATION_SURFACES.some((surface) => surface.paths.includes(".github/workflows/**")));
 });
 
 test("AI, Assessment and Workbench expose curated public entries rather than mega-barrels", async () => {
@@ -99,56 +104,12 @@ test("temporary architecture debt is reviewable and has removal ownership", () =
     assert.ok(entry.targetOwner);
     assert.ok(entry.owner);
     assert.equal(Number.isInteger(entry.cleanupIssue), true);
-    assert.ok(entry.removalCondition);
+    assert.ok(entry.removalCondition.length >= 20);
   }
 });
 
 test("repository has no unregistered peer deep import, platform reverse dependency or unregistered domain cycle", async () => {
-  const sourceFiles = (await walk(path.join(ROOT, "src"))).filter((file) => /\.[cm]?[jt]sx?$/.test(file));
-  const registeredDebt = new Set(ARCHITECTURE_DEBT.map((entry) => `${entry.source}->${entry.targetOwner}`));
-  const graph = new Map();
-
-  for (const absolute of sourceFiles) {
-    const sourceFile = toPosix(absolute);
-    const sourceOwner = getArchitectureOwner(sourceFile);
-    if (!sourceOwner) continue;
-    const source = await readFile(absolute, "utf8");
-
-    for (const specifier of parseImports(source)) {
-      const targetFile = normalizeImport(sourceFile, specifier);
-      if (!targetFile) continue;
-      const targetOwner = getArchitectureOwner(targetFile);
-      if (!targetOwner || targetOwner.id === sourceOwner.id) continue;
-
-      const debtKey = `${sourceFile}->${targetOwner.id}`;
-      if (registeredDebt.has(debtKey)) continue;
-
-      if (sourceOwner.id === "platform") {
-        assert.fail(`platform reverse dependency: ${sourceFile} -> ${targetFile}`);
-      }
-
-      if (sourceOwner.kind === "domain" && targetOwner.kind === "domain") {
-        assert.equal(
-          isCuratedPublicEntry(targetOwner.id, targetFile),
-          true,
-          `${sourceFile} deep-imports peer ${targetOwner.id}: ${targetFile}`,
-        );
-      }
-
-      if (!graph.has(sourceOwner.id)) graph.set(sourceOwner.id, new Set());
-      graph.get(sourceOwner.id).add(targetOwner.id);
-    }
-  }
-
-  const visiting = new Set();
-  const visited = new Set();
-  function visit(owner) {
-    if (visiting.has(owner)) assert.fail(`unregistered architecture cycle through ${owner}`);
-    if (visited.has(owner)) return;
-    visiting.add(owner);
-    for (const next of graph.get(owner) ?? []) visit(next);
-    visiting.delete(owner);
-    visited.add(owner);
-  }
-  for (const owner of graph.keys()) visit(owner);
+  const result = await analyzeArchitecture();
+  assert.deepEqual(result.violations, []);
+  assert.deepEqual(result.staleDebt, []);
 });
