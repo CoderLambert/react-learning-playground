@@ -27,7 +27,7 @@ test.describe("Workbench learning path navigation", () => {
 
   test("chapter checkpoint next step enters the next chapter first unit through the existing URL contract", async ({ page }) => {
     await loadApp(page);
-    await openDemo(page, "Render & Commit");
+    await openDemo(page, "Trigger → Render → Commit");
 
     const checkpoint = page.locator('[data-chapter-checkpoint="2"]');
     await expect(checkpoint).toBeVisible();
