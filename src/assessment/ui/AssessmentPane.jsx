@@ -9,6 +9,9 @@ export function AssessmentPane(props) {
   const learningUnitId = session?.learningUnitId ?? questions[0]?.learningUnitId ?? null;
   const completedSessionId = session?.status === "completed" ? session.id : null;
   const review = useAssessmentReview({ learningUnitId, activeSessionId: completedSessionId });
+  const reviewOwnsCompletedExplanation = Boolean(
+    completedSessionId && review.review?.sessionId === completedSessionId,
+  );
 
   return (
     <div className="min-w-0">
@@ -21,6 +24,7 @@ export function AssessmentPane(props) {
         {...props}
         session={session}
         feedback={session ? props.feedback : null}
+        showFeedbackExplanation={!reviewOwnsCompletedExplanation}
         startError={session ? null : props.startError}
         starting={Boolean(props.starting)}
         onStart={props.onStart}
