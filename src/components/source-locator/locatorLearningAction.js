@@ -3,7 +3,7 @@ import {
   LEARNING_CONTEXT_KINDS,
   buildLearningActionPrompt,
   createLearningActionContext,
-} from "../../learning-actions/public.js";
+} from "../../learning-actions/promptBuilder.js";
 
 function focusedSourceText(code, locator) {
   if (typeof code !== "string" || !locator) return "";
