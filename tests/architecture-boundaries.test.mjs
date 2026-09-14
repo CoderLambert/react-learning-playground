@@ -9,7 +9,11 @@ import {
   getBrowserImpactOwnership,
   isCuratedPublicEntry,
 } from "../architecture/ownership-manifest.mjs";
-import { ARCHITECTURE_DEBT, findArchitectureDebt } from "../architecture/debt-register.mjs";
+import {
+  ARCHITECTURE_DEBT,
+  findArchitectureDebt,
+  findArchitectureDebtIn,
+} from "../architecture/debt-register.mjs";
 import {
   analyzeArchitecture,
   collectModuleSpecifiers,
@@ -121,19 +125,38 @@ test("temporary architecture debt is reviewable, exact and has removal ownership
 });
 
 test("architecture debt matches only the explicitly registered crossing", () => {
+  const entries = [
+    {
+      id: "TEST-DEBT",
+      source: "src/example/consumer.js",
+      targetOwner: "workbench",
+      targetPath: "src/workbench/noteRegistry.js",
+    },
+  ];
+
   assert.equal(
-    findArchitectureDebt(
-      "src/ai/useAiLearningAssistant.js",
+    findArchitectureDebtIn(
+      entries,
+      "src/example/consumer.js",
       "workbench",
       "src/workbench/noteRegistry.js",
     )?.id,
-    "ARCH-003",
+    "TEST-DEBT",
+  );
+  assert.equal(
+    findArchitectureDebtIn(
+      entries,
+      "src/example/consumer.js",
+      "workbench",
+      "src/workbench/workbenchState.js",
+    ),
+    null,
   );
   assert.equal(
     findArchitectureDebt(
       "src/ai/useAiLearningAssistant.js",
       "workbench",
-      "src/workbench/workbenchState.js",
+      "src/workbench/noteRegistry.js",
     ),
     null,
   );

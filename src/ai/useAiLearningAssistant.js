@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
-import { loadRawNote } from "../workbench/noteRegistry.js";
+import { loadRawNote } from "../workbench/public.js";
 import { AI_LEARNING_ASSISTANT_SYSTEM_PROMPT } from "./assistantSystemPrompt.js";
 import { createCompactionOwnership } from "./compaction/compactionOwnership.js";
 import { createCompactionService } from "./compaction/compactionService.js";
