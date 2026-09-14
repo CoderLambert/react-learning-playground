@@ -10,7 +10,10 @@ test.describe("Workbench learning path navigation", () => {
     await expect(path).toContainText("Chapter 02");
     await expect(path).toContainText("1/4");
 
-    await path.getByRole("button", { name: "下一知识点" }).click();
+    const nextButton = path.getByRole("button", { name: "下一知识点" });
+    await nextButton.focus();
+    await expect(nextButton).toBeFocused();
+    await nextButton.press("Enter");
     await expect(page).toHaveURL(/demo=state-snapshot-queue/);
     await expect(page.locator(".breadcrumb-current")).toContainText("State Snapshot");
 
@@ -20,6 +23,21 @@ test.describe("Workbench learning path navigation", () => {
     await page.locator("[data-learning-path-current]").getByRole("button", { name: /Checkpoint/ }).click();
     await expect(page).toHaveURL(/demo=render-commit/);
     await expect(page.locator('[data-chapter-checkpoint="2"]')).toBeVisible();
+  });
+
+  test("chapter checkpoint next step enters the next chapter first unit through the existing URL contract", async ({ page }) => {
+    await loadApp(page);
+    await openDemo(page, "Render & Commit");
+
+    const checkpoint = page.locator('[data-chapter-checkpoint="2"]');
+    await expect(checkpoint).toBeVisible();
+    const nextChapterButton = checkpoint.getByRole("button", { name: "前往下一章" });
+    await nextChapterButton.focus();
+    await expect(nextChapterButton).toBeFocused();
+    await nextChapterButton.press("Enter");
+
+    await expect(page).toHaveURL(/demo=state-dry/);
+    await expect(page.locator("[data-learning-path-current]")).toContainText("Chapter 03");
   });
 
   test("path navigation preserves persisted inspector state", async ({ page }) => {
