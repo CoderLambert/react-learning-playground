@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { toLearningUnit } from "./contracts";
+import { buildLearningPath } from "./learningPath";
 
 function normalizeUnits(items) {
   return items.map((item) => (item.component ? item : toLearningUnit(item)));
@@ -19,6 +20,10 @@ function getSearchText(unit, categoryName) {
     .toLowerCase();
 }
 
+function formatChapter(chapter) {
+  return String(chapter).padStart(2, "0");
+}
+
 export function WorkbenchNavigation({
   categories,
   learningUnits,
@@ -33,6 +38,8 @@ export function WorkbenchNavigation({
   className = "",
 }) {
   const units = useMemo(() => normalizeUnits(learningUnits), [learningUnits]);
+  const learningPath = useMemo(() => buildLearningPath(units), [units]);
+  const activePath = viewMode === "focused" ? learningPath.byUnitId.get(activeId) : null;
   const categoryMap = useMemo(() => new Map(categories.map((category) => [category.id, category])), [categories]);
   const filteredUnits = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -104,6 +111,44 @@ export function WorkbenchNavigation({
             </>
           )}
         </button>
+
+        {!collapsed && activePath && (
+          <section className="workbench-navigation-group" aria-label="当前学习路径" data-learning-path-current>
+            <div className="workbench-navigation-group-header">
+              <span aria-hidden="true">🧭</span>
+              <span>Chapter {formatChapter(activePath.chapter)}</span>
+              <span className="workbench-navigation-count">{activePath.position}/{activePath.chapterSize}</span>
+            </div>
+            <div className="workbench-navigation-items">
+              <button
+                type="button"
+                className="workbench-navigation-item"
+                onClick={() => onSelectUnit?.(activePath.previousId)}
+                disabled={!activePath.previousId}
+                aria-label="上一知识点"
+              >
+                <span className="workbench-navigation-item-title">← 上一知识点</span>
+              </button>
+              <button
+                type="button"
+                className={`workbench-navigation-item ${activeId === activePath.checkpointId ? "is-active" : ""}`}
+                onClick={() => onSelectUnit?.(activePath.checkpointId)}
+                aria-label={`前往 Chapter ${formatChapter(activePath.chapter)} Checkpoint`}
+              >
+                <span className="workbench-navigation-item-title">本章 Checkpoint</span>
+              </button>
+              <button
+                type="button"
+                className="workbench-navigation-item"
+                onClick={() => onSelectUnit?.(activePath.nextId)}
+                disabled={!activePath.nextId}
+                aria-label="下一知识点"
+              >
+                <span className="workbench-navigation-item-title">下一知识点 →</span>
+              </button>
+            </div>
+          </section>
+        )}
 
         {groups.map((group) => (
           <section key={group.id} className="workbench-navigation-group" aria-label={group.name}>
