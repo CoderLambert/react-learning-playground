@@ -29,6 +29,17 @@ test("raw note registry uses lazy virtual MDX text modules without replacing com
   assert.match(source, /if \(!loader\) return null;/);
 });
 
+test("AI raw-note capability crosses Workbench through the curated public entry", async () => {
+  const [workbenchPublic, aiAssistant] = await Promise.all([
+    readFile(new URL("../src/workbench/public.js", import.meta.url), "utf8"),
+    readFile(new URL("../src/ai/useAiLearningAssistant.js", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(workbenchPublic, /\bloadRawNote\b/);
+  assert.match(aiAssistant, /import \{ loadRawNote \} from "\.\.\/workbench\/public\.js";/);
+  assert.doesNotMatch(aiAssistant, /\.\.\/workbench\/noteRegistry\.js/);
+});
+
 test("Vite virtual raw-note plugin reads MDX as text and preserves per-note lazy imports", async () => {
   const source = await readFile(new URL("../vite.config.js", import.meta.url), "utf8");
 
