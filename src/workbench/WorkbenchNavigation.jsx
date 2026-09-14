@@ -113,7 +113,7 @@ export function WorkbenchNavigation({
         </button>
 
         {!collapsed && activePath && (
-          <section className="workbench-navigation-group" aria-label="当前学习路径" data-learning-path-current>
+          <section aria-label="当前学习路径" data-learning-path-current style={{ marginBottom: 14 }}>
             <div className="workbench-navigation-group-header">
               <span aria-hidden="true">🧭</span>
               <span>Chapter {formatChapter(activePath.chapter)}</span>
@@ -122,29 +122,32 @@ export function WorkbenchNavigation({
             <div className="workbench-navigation-items">
               <button
                 type="button"
-                className="workbench-navigation-item"
+                className="workbench-navigation-overview"
                 onClick={() => onSelectUnit?.(activePath.previousId)}
                 disabled={!activePath.previousId}
                 aria-label="上一知识点"
+                data-learning-path-action="previous"
               >
-                <span className="workbench-navigation-item-title">← 上一知识点</span>
+                <span>← 上一知识点</span>
               </button>
               <button
                 type="button"
-                className={`workbench-navigation-item ${activeId === activePath.checkpointId ? "is-active" : ""}`}
+                className={`workbench-navigation-overview ${activeId === activePath.checkpointId ? "is-active" : ""}`}
                 onClick={() => onSelectUnit?.(activePath.checkpointId)}
                 aria-label={`前往 Chapter ${formatChapter(activePath.chapter)} Checkpoint`}
+                data-learning-path-action="checkpoint"
               >
-                <span className="workbench-navigation-item-title">本章 Checkpoint</span>
+                <span>本章 Checkpoint</span>
               </button>
               <button
                 type="button"
-                className="workbench-navigation-item"
+                className="workbench-navigation-overview"
                 onClick={() => onSelectUnit?.(activePath.nextId)}
                 disabled={!activePath.nextId}
                 aria-label="下一知识点"
+                data-learning-path-action="next"
               >
-                <span className="workbench-navigation-item-title">下一知识点 →</span>
+                <span>下一知识点 →</span>
               </button>
             </div>
           </section>
