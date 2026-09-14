@@ -51,5 +51,5 @@ test("browser verification keeps a code-side canonical entry aligned with Workbe
   assert.match(packageJson.scripts["test:e2e:mock"], /npm run build/);
   assert.match(packageJson.scripts["test:e2e:mock"], /npm run test:e2e/);
   assert.match(workbenchWorkflow, /run: npm run build/);
-  assert.match(workbenchWorkflow, /run: npm run test:e2e/);
+  assert.match(workbenchWorkflow, /run: node scripts\/run-browser-verification\.mjs/);
 });
