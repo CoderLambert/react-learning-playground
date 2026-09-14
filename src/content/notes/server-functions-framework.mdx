@@ -16,6 +16,22 @@
 在中间 Demo 切换“服务端已授权”状态，再点击模拟请求，比较 accepted 与 rejected 结果。然后做威胁建模：假设恶意调用者绕过 UI、直接构造请求，哪些信息来自客户端，哪些必须由服务器重新确认？当前 Demo 只模拟授权决策，不会真的调用 Server Function endpoint。
 </Experiment>
 
+### Guided Debugging：先审查一个“前端已经限制，所以服务端可以信任”的方案
+
+在运行 Demo 前，先判断下面方案是否安全：**按钮只有管理员可见，TypeScript 也把 `role` 写成联合类型，因此 Server Function 可以直接相信客户端传来的 `role` 和 `orderId`。** 写下攻击者绕过 UI 后仍能伪造的内容，以及服务端必须重新建立的事实。
+
+然后切换 Demo 中的模拟服务端授权状态并发起请求，对照 accepted / rejected 结果。
+
+<details>
+<summary>验证后再展开：检查你的 trust-boundary 判断</summary>
+
+不安全。按钮可见性、客户端 TypeScript、前端 schema 都只能改善客户端体验，不能证明请求来自被授权用户。服务端必须基于自己的 session/identity 重新认证调用者，验证其对目标资源的权限，并校验所有输入。
+
+当前 Demo 只能证明“授权决策必须在服务端边界重新做”这个模型；它不运行真实 Server Function endpoint，因此不能验证 Framework 的序列化、CSRF、防重放、revalidation 或部署安全配置。真实路径应在 Chapter 12 的 Next.js App Router Real Lab / 所用 Framework runtime 中复核。
+
+**Decision boundary：**凡是 mutation，只信任服务端重新建立的 identity、authorization 与 validated input。
+</details>
+
 <DemoReference action="切换模拟服务端授权并发起一次模拟 updateOrder 请求" observe="确认 mutation 是否允许必须由请求时的服务端认证/授权/输入校验决定；不要把本地模拟结果当作真实 Framework 网络协议。" />
 
 <Observation>
