@@ -1,8 +1,11 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const ciWorkers = Number.parseInt(process.env.PLAYWRIGHT_WORKERS ?? "4", 10);
+
 export default defineConfig({
   testDir: "./tests/e2e",
   fullyParallel: true,
+  workers: process.env.CI ? ciWorkers : undefined,
   timeout: 60_000,
   expect: {
     timeout: 10_000,
