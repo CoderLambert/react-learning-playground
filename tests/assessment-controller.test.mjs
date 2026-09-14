@@ -150,14 +150,16 @@ test("App composition no longer owns Assessment runtime/query lifecycle", async 
 
   for (const forbidden of [
     "createAssessmentRuntime",
-    "assessmentRuntime",
     "queryStore",
     "sessionLifecycle",
     "createAssessmentOperationToken",
     "assessmentGenerationRef",
     "assessmentSubmitRequestRef",
+    "setAssessmentSession",
+    "setAssessmentFeedback",
   ]) {
     assert.equal(appSource.includes(forbidden), false, `App.jsx must not contain ${forbidden}`);
   }
   assert.match(appSource, /useAssessmentApplication/);
+  assert.match(appSource, /createAiAssessmentIntegration/);
 });
