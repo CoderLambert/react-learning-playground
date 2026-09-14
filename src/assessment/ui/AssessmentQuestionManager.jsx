@@ -1,20 +1,15 @@
-import { useMemo, useState, useSyncExternalStore } from "react";
+import { useMemo, useState } from "react";
 import { Badge } from "../../components/ui/badge.jsx";
 import { Button } from "../../components/ui/button.jsx";
 import { Card, CardContent, CardHeader } from "../../components/ui/card.jsx";
 import {
   buildQuestionPatch,
-  createAssessmentManagerTrustedContext,
   describeAssessmentMutationError,
   questionToDraft,
 } from "./assessmentManagement.js";
-import { selectAssessmentQuestionsForLearningUnit } from "./assessmentScope.js";
 
 const TYPE_LABELS = { single_choice: "单选题", true_false: "判断题" };
 const STATUS_LABELS = { active: "启用中", retired: "已停用" };
-const EMPTY_SNAPSHOT = null;
-const EMPTY_SUBSCRIBE = () => () => {};
-const EMPTY_GET_SNAPSHOT = () => EMPTY_SNAPSHOT;
 
 function Field({ label, children }) {
   return (
@@ -106,14 +101,7 @@ function QuestionEditor({ question, onSave, onCancel, saving }) {
   );
 }
 
-export function AssessmentQuestionManager({ session = null, runtime = null, learningUnitId = null }) {
-  const snapshot = useSyncExternalStore(
-    runtime?.queryStore.subscribe ?? EMPTY_SUBSCRIBE,
-    runtime?.queryStore.getSnapshot ?? EMPTY_GET_SNAPSHOT,
-    EMPTY_GET_SNAPSHOT,
-  );
-  const questions = selectAssessmentQuestionsForLearningUnit(snapshot, learningUnitId);
-  const service = runtime?.service ?? null;
+export function AssessmentQuestionManager({ session = null, questions = [], commands = null }) {
   const [showRetired, setShowRetired] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [busyId, setBusyId] = useState(null);
@@ -126,58 +114,37 @@ export function AssessmentQuestionManager({ session = null, runtime = null, lear
   const activeCount = questions.filter((question) => question.status === "active").length;
   const retiredCount = questions.filter((question) => question.status === "retired").length;
 
-  const refreshAfterError = async () => {
-    if (!service || !learningUnitId || !runtime?.queryStore) return;
-    try {
-      const latest = await service.listQuestions({ trusted: { learningUnitId } });
-      runtime.queryStore.replaceSnapshot({ learningUnitId, questions: latest });
-    } catch {
-      // Keep the current scoped snapshot if refresh also fails.
-    }
-  };
-
   const save = async (question, patch, expectedRevision = question.revision) => {
-    if (!service || !learningUnitId) return;
+    if (!commands?.updateQuestion) return;
     setBusyId(question.id);
     setNotice(null);
     try {
-      await service.updateQuestion({
-        trusted: createAssessmentManagerTrustedContext(learningUnitId),
-        questionId: question.id,
-        expectedRevision,
-        patch,
-      });
+      await commands.updateQuestion({ questionId: question.id, expectedRevision, patch });
       setEditingId(null);
       setNotice({ kind: "success", message: "题目已保存。正在进行的评测仍使用开始时的题目快照。" });
     } catch (error) {
       setNotice(describeAssessmentMutationError(error));
-      await refreshAfterError();
     } finally {
       setBusyId(null);
     }
   };
 
   const retire = async (question) => {
-    if (!service || !learningUnitId || question.status !== "active") return;
+    if (!commands?.retireQuestion || question.status !== "active") return;
     setBusyId(question.id);
     setNotice(null);
     try {
-      await service.retireQuestion({
-        trusted: createAssessmentManagerTrustedContext(learningUnitId),
-        questionId: question.id,
-        expectedRevision: question.revision,
-      });
+      await commands.retireQuestion({ questionId: question.id, expectedRevision: question.revision });
       if (editingId === question.id) setEditingId(null);
       setNotice({ kind: "success", message: "题目已停用。已有评测会话仍保留创建时的快照。" });
     } catch (error) {
       setNotice(describeAssessmentMutationError(error));
-      await refreshAfterError();
     } finally {
       setBusyId(null);
     }
   };
 
-  if (!runtime || !learningUnitId) return null;
+  if (!commands) return null;
 
   return (
     <section className="min-w-0 p-4 pb-0 sm:p-5 sm:pb-0" aria-labelledby="assessment-manager-title">
