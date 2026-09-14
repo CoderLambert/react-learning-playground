@@ -9,7 +9,7 @@ import {
   getBrowserImpactOwnership,
   isCuratedPublicEntry,
 } from "../architecture/ownership-manifest.mjs";
-import { ARCHITECTURE_DEBT } from "../architecture/debt-register.mjs";
+import { ARCHITECTURE_DEBT, findArchitectureDebt } from "../architecture/debt-register.mjs";
 import {
   analyzeArchitecture,
   collectModuleSpecifiers,
@@ -17,10 +17,18 @@ import {
   resolveRepositoryImport,
 } from "../scripts/check-architecture-boundaries.mjs";
 
-test("import analysis handles static, export-from, dynamic imports, comments and query suffixes", () => {
+test("import analysis handles multiline static, export-from, dynamic imports, comments and query suffixes", () => {
   const source = `
     import thing from "./thing.js?raw";
     import "./side-effect.js";
+    import {
+      alpha,
+      beta,
+    } from "./multiline-import.js";
+    export {
+      gamma,
+      delta,
+    } from './multiline-export.js';
     export { value } from './value.js#fragment';
     const lazy = import("./lazy");
     // import ignored from "./commented.js";
@@ -29,6 +37,8 @@ test("import analysis handles static, export-from, dynamic imports, comments and
 
   assert.deepEqual(collectModuleSpecifiers(source).sort(), [
     "./lazy",
+    "./multiline-export.js",
+    "./multiline-import.js",
     "./side-effect.js",
     "./thing.js?raw",
     "./value.js#fragment",
@@ -95,17 +105,38 @@ test("AI and Assessment composition is owned by app/integration", async () => {
   assert.doesNotMatch(appSource, /assessmentCapabilities: assessmentRuntime\.capabilities/);
 });
 
-test("temporary architecture debt is reviewable and has removal ownership", () => {
+test("temporary architecture debt is reviewable, exact and has removal ownership", () => {
   const ids = new Set();
   for (const entry of ARCHITECTURE_DEBT) {
     assert.ok(entry.id && !ids.has(entry.id));
     ids.add(entry.id);
     assert.match(entry.source, /^src\//);
     assert.ok(entry.targetOwner);
+    assert.match(entry.targetPath, /^src\//);
+    assert.equal(getArchitectureOwner(entry.targetPath)?.id, entry.targetOwner);
     assert.ok(entry.owner);
     assert.equal(Number.isInteger(entry.cleanupIssue), true);
     assert.ok(entry.removalCondition.length >= 20);
   }
+});
+
+test("architecture debt matches only the explicitly registered crossing", () => {
+  assert.equal(
+    findArchitectureDebt(
+      "src/ai/useAiLearningAssistant.js",
+      "workbench",
+      "src/workbench/noteRegistry.js",
+    )?.id,
+    "ARCH-003",
+  );
+  assert.equal(
+    findArchitectureDebt(
+      "src/ai/useAiLearningAssistant.js",
+      "workbench",
+      "src/workbench/workbenchState.js",
+    ),
+    null,
+  );
 });
 
 test("repository has no unregistered peer deep import, platform reverse dependency or unregistered domain cycle", async () => {
