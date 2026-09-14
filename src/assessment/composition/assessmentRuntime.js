@@ -1,4 +1,5 @@
 import { AssessmentService } from "../application/AssessmentService.js";
+import { createAssessmentSessionReview } from "../application/assessmentReview.js";
 import { createAssessmentCapabilities } from "../ai/assessmentTools.js";
 import {
   createIndexedDbAssessmentRepository,
@@ -71,6 +72,19 @@ export async function createAssessmentRuntime({
       const answeredQuestionIds = new Set(attempts.map((attempt) => attempt.questionId));
       const currentIndex = Math.max(0, session.items.findIndex((item) => !answeredQuestionIds.has(item.questionId)));
       return { session, attempts, currentIndex };
+    },
+    async review({ learningUnitId, sessionId }) {
+      const session = await repository.getSession({ learningUnitId, sessionId });
+      if (!session || session.status !== "completed") return null;
+      const attempts = await repository.listAttempts({ sessionId: session.id });
+      return createAssessmentSessionReview({ session, attempts });
+    },
+    async listCompletedReviews({ learningUnitId }) {
+      const sessions = await repository.listSessions({ learningUnitId, status: "completed" });
+      return Promise.all(sessions.map(async (session) => {
+        const attempts = await repository.listAttempts({ sessionId: session.id });
+        return createAssessmentSessionReview({ session, attempts });
+      }));
     },
   });
 
