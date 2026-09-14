@@ -192,11 +192,12 @@ const CHECKPOINTS = {
   },
 };
 
-export function ChapterCheckpoint({ chapter }) {
+export function ChapterCheckpoint({ chapter, nextUnitId = null, onNavigate }) {
   const checkpoint = CHECKPOINTS[chapter];
   if (!checkpoint) return null;
   const nextStep = getChapterNextStep(chapter);
   const integrationLab = getIntegrationLab(chapter);
+  const canNavigate = Boolean(nextUnitId && typeof onNavigate === "function");
 
   return (
     <section className="demo-section" data-chapter-checkpoint={chapter} aria-labelledby={`chapter-${chapter}-checkpoint-title`}>
@@ -249,6 +250,17 @@ export function ChapterCheckpoint({ chapter }) {
           <div className="demo-alert-title">➡️ 下一步</div>
           <p>{nextStep.understood} {nextStep.next}</p>
           <strong>{nextStep.target}</strong>
+          {canNavigate && (
+            <div style={{ marginTop: 12 }}>
+              <button
+                type="button"
+                className="btn btn-primary btn-sm"
+                onClick={() => onNavigate(nextUnitId)}
+              >
+                前往下一章
+              </button>
+            </div>
+          )}
         </div>
       )}
     </section>
