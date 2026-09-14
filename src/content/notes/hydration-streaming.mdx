@@ -16,6 +16,20 @@ SSR 可以先把 HTML 发给浏览器；hydration 让客户端 React 在已有 D
 在中间 Demo 逐步 reveal shell / Suspense fallback / replacement content，并修改 client first render 价格制造 MATCH / MISMATCH。把这些状态对应到上面的真实 SSR/hydration 时间线；同时注意当前页面本身已经是一个运行中的客户端 React Demo，因此“模拟 hydrateRoot”不会真的对一份服务器 DOM 执行 hydration，也不能测量真实的可交互时间。
 </Experiment>
 
+### Guided Prediction：先区分“已经看见”与“已经可交互”
+
+在推进任何阶段前，先写下预测：**当 shell HTML 已经到达浏览器，但客户端 JavaScript 还没有完成 hydration 时，用户能看到什么、又不能可靠做什么？** 然后再预测：如果 server HTML 与 client first render 不一致，当前 Demo 能证明 mismatch 的哪一部分，又不能证明哪一部分？
+
+完成预测后再操作阶段模拟和 MATCH / MISMATCH 对照。
+
+<details>
+<summary>验证后再展开：检查你的 hydration 时间线</summary>
+
+HTML 已经到达时，用户可能已经看到服务器输出，但相关客户端事件处理能力还没有完成连接；“可见”不等于“已 hydration”。当前 Demo 能帮助你观察首屏契约是否一致以及 streaming/reveal 的阶段关系，但它没有真实执行 server render + hydrateRoot，因此不能证明真实浏览器中的 hydration 时长、恢复策略或交互就绪指标。
+
+**Decision boundary：**用真实 SSR/Framework runtime 测量 hydration 与可交互指标；用这个 Demo 训练阶段与 mismatch 契约的判断。
+</details>
+
 <DemoReference action="推进 streaming 阶段，并对比 server HTML 与 client first render" observe="解释 server render、HTML arrival、boundary reveal 与 hydration 各自负责什么；把 MATCH/MISMATCH 当作契约模拟，不当作真实 hydrateRoot instrumentation。" />
 
 <Observation>

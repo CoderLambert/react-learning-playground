@@ -16,6 +16,22 @@ React Server Components 允许一部分组件只在服务端环境执行，把�
 观察中间 Demo 的 Server/Client 分界。逐项判断：读取数据库/文件、使用 secret、`useState`、事件 handler、`window` 分别应该在哪一侧。尝试把 Client boundary 向叶子移动，理解为什么这能减少进入客户端模块图的代码。
 </Experiment>
 
+### Guided Debugging：先找出“use client 越多越安全”的错误模型
+
+在查看下方解释前，先判断下面这个修复方案哪里有问题：**“遇到 Server/Client boundary 报错时，给父组件和整棵子树都加 `"use client"`，这样最省事。”** 写出至少两个代价，并指出哪些能力因此被错误推入客户端模块图。
+
+随后再用 Demo 的能力矩阵逐项核对你的判断。
+
+<details>
+<summary>验证后再展开：检查你的边界模型</summary>
+
+把整个子树标成客户端模块会扩大客户端 bundle 与序列化边界，并让本来只应在服务端使用的数据/依赖无法继续停留在服务端环境。正确做法通常是定位真正需要 state、事件或浏览器 API 的交互叶子，让 `use client` 边界尽量靠近这些叶子。
+
+同时要记住：Client Component 在支持预渲染的 RSC 框架中仍可能参与服务器生成初始 HTML，`use client` 不是 `ssr: false`。
+
+**Decision boundary：**按运行时能力切边界，不按“哪里报错就整棵树客户端化”处理。
+</details>
+
 <DemoReference action="检查 RSC Demo 中的 Server/Client 能力矩阵" observe="不要按页面切分，而要按模块需要的运行时能力切分。" />
 
 <Observation>
