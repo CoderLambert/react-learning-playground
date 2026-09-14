@@ -1,11 +1,14 @@
 import { pathToFileURL } from "node:url";
 
+import { getBrowserImpactOwnership } from "../architecture/ownership-manifest.mjs";
+
 const DOC_ONLY_PREFIXES = ["docs/", ".codex/"];
 const DOC_ONLY_ROOT_FILES = new Set([
   "AGENTS.md",
   "README.md",
   "issue-rule.md",
 ]);
+const DOMAIN_BROWSER_SUITES = new Set(["ai", "assessment", "workbench"]);
 
 function normalizePath(file) {
   return String(file ?? "")
@@ -22,30 +25,64 @@ export function isDocumentationOnlyPath(file) {
   return normalized.endsWith(".md") && !normalized.startsWith("src/");
 }
 
+function fullResult({ reason, triggeringPath = null }) {
+  return {
+    runBrowser: true,
+    tier: "FULL",
+    domain: null,
+    reason,
+    triggeringPath,
+  };
+}
+
 export function classifyBrowserImpact(files) {
   const normalized = files.map(normalizePath).filter(Boolean);
 
   if (normalized.length === 0) {
+    return fullResult({ reason: "empty-or-unknown-change-set" });
+  }
+
+  const runtimePaths = normalized.filter((file) => !isDocumentationOnlyPath(file));
+  if (runtimePaths.length === 0) {
     return {
-      runBrowser: true,
-      reason: "empty-or-unknown-change-set",
+      runBrowser: false,
+      tier: "NONE",
+      domain: null,
+      reason: "documentation-only",
       triggeringPath: null,
     };
   }
 
-  const triggeringPath = normalized.find((file) => !isDocumentationOnlyPath(file));
-  if (triggeringPath) {
-    return {
-      runBrowser: true,
-      reason: "browser-or-unknown-impact",
-      triggeringPath,
-    };
+  const ownership = runtimePaths.map((file) => ({
+    file,
+    ...getBrowserImpactOwnership(file),
+  }));
+
+  const fullFallback = ownership.find(({ owner, browserImpact }) => (
+    browserImpact !== "domain" || !DOMAIN_BROWSER_SUITES.has(owner)
+  ));
+  if (fullFallback) {
+    return fullResult({
+      reason: `full-fallback:${fullFallback.owner}:${fullFallback.browserImpact}`,
+      triggeringPath: fullFallback.file,
+    });
   }
 
+  const domains = new Set(ownership.map(({ owner }) => owner));
+  if (domains.size !== 1) {
+    return fullResult({
+      reason: "cross-domain-change-set",
+      triggeringPath: runtimePaths[0],
+    });
+  }
+
+  const [domain] = domains;
   return {
-    runBrowser: false,
-    reason: "documentation-only",
-    triggeringPath: null,
+    runBrowser: true,
+    tier: "DOMAIN",
+    domain,
+    reason: `domain-local:${domain}`,
+    triggeringPath: runtimePaths[0],
   };
 }
 
@@ -59,8 +96,10 @@ async function main() {
   const files = await readChangedFilesFromStdin();
   const result = classifyBrowserImpact(files);
   process.stdout.write(`run_browser=${result.runBrowser}\n`);
+  process.stdout.write(`browser_tier=${result.tier}\n`);
+  process.stdout.write(`browser_domain=${result.domain ?? ""}\n`);
   process.stderr.write(
-    `[browser-impact] ${result.reason}${result.triggeringPath ? `: ${result.triggeringPath}` : ""}\n`,
+    `[browser-impact] ${result.tier} ${result.reason}${result.triggeringPath ? `: ${result.triggeringPath}` : ""}\n`,
   );
 }
 
