@@ -1,125 +1,277 @@
-import { createAssessmentOperationToken, isAssessmentOperationCurrent } from "../ui/assessmentOperationOwnership.js";
+function createOperationToken({ generation, learningUnitId, sessionId = null, requestId }) {
+  return Object.freeze({ generation, learningUnitId, sessionId, requestId });
+}
+
+function isOperationCurrent(token, current) {
+  if (!token || !current) return false;
+  if (token.generation !== current.generation) return false;
+  if (token.learningUnitId !== current.learningUnitId) return false;
+  if (token.requestId !== current.requestId) return false;
+  if (token.sessionId !== null && token.sessionId !== current.sessionId) return false;
+  return true;
+}
+
+const errorMessage = (error, fallback) => error?.message || fallback;
 
 /**
- * Assessment application boundary.
+ * Assessment-owned application boundary.
  *
- * Keeps lifecycle orchestration outside composition roots. UI callers should
- * consume view state and commands rather than runtime/query-store internals.
+ * Runtime, service, repository and query-store internals stay behind this
+ * controller. Composition consumers receive only snapshot state, semantic
+ * capabilities and commands.
  */
-export function createAssessmentController({ runtime, selectQuestions }) {
+export function createAssessmentController({ runtime, selectQuestions = () => [] }) {
+  if (!runtime) throw new Error("Assessment runtime is required");
+
+  let generation = 0;
+  let initializationRequestId = 0;
+  let startRequestId = 0;
+  let submitRequestId = 0;
+  let disposed = false;
+  const listeners = new Set();
+
   let state = {
     learningUnitId: null,
     session: null,
-    index: 0,
+    currentIndex: 0,
     answer: null,
     feedback: null,
-    loading: false,
-    error: null,
+    questions: [],
+    initializationErrors: { load: null, recover: null },
+    startError: null,
+    submitError: null,
+    initializing: false,
     starting: false,
     submitting: false,
-    snapshot: null,
+    storageNotice: runtime.storageNotice ?? null,
+    integrationCapabilities: runtime.capabilities ?? null,
   };
 
-  let generation = 0;
-  let requestId = 0;
-  const listeners = new Set();
-
-  const emit = () => listeners.forEach((listener) => listener());
+  const emit = () => {
+    if (disposed) return;
+    listeners.forEach((listener) => listener());
+  };
   const update = (patch) => {
+    if (disposed) return;
     state = { ...state, ...patch };
     emit();
   };
+  const refreshQuestionsFromSnapshot = () => {
+    const snapshot = runtime.queryStore.getSnapshot();
+    update({ questions: selectQuestions(snapshot, state.learningUnitId) });
+  };
 
-  const isCurrent = (token) => isAssessmentOperationCurrent(token, {
+  const unsubscribeQueryStore = runtime.queryStore.subscribe(refreshQuestionsFromSnapshot);
+
+  const currentContext = (requestId) => ({
     generation,
     learningUnitId: state.learningUnitId,
     sessionId: state.session?.id ?? null,
     requestId,
   });
 
-  return {
-    subscribe(listener) {
-      listeners.add(listener);
-      return () => listeners.delete(listener);
-    },
+  const refreshQuestions = async (learningUnitId, token, requestKind = "initialize") => {
+    try {
+      const questions = await runtime.service.listQuestions({ trusted: { learningUnitId } });
+      const requestId = requestKind === "initialize" ? initializationRequestId : token.requestId;
+      if (!isOperationCurrent(token, currentContext(requestId))) return false;
+      runtime.queryStore.replaceSnapshot({ learningUnitId, questions });
+      refreshQuestionsFromSnapshot();
+      return true;
+    } catch (error) {
+      if (requestKind === "initialize" && isOperationCurrent(token, currentContext(initializationRequestId))) {
+        update({
+          initializationErrors: {
+            ...state.initializationErrors,
+            load: errorMessage(error, "无法加载评测题目"),
+          },
+        });
+      }
+      return false;
+    }
+  };
 
-    getViewModel() {
-      return {
-        ...state,
-        questions: selectQuestions?.(state.snapshot, state.learningUnitId) ?? [],
-        commands: {
-          initialize: this.initialize,
-          start: this.start,
-          submit: this.submit,
-          next: this.next,
-        },
-      };
-    },
-
+  const commands = Object.freeze({
     async initialize(learningUnitId) {
       const currentGeneration = ++generation;
-      const currentRequest = ++requestId;
-      const token = createAssessmentOperationToken({
-        generation: currentGeneration,
-        learningUnitId,
-        requestId: currentRequest,
-      });
+      const requestId = ++initializationRequestId;
+      startRequestId += 1;
+      submitRequestId += 1;
+      const token = createOperationToken({ generation: currentGeneration, learningUnitId, requestId });
 
-      update({ learningUnitId, loading: true, error: null });
-      try {
-        const questions = await runtime.service.listQuestions({ trusted: { learningUnitId } });
-        if (!isCurrent(token)) return;
-        runtime.queryStore.replaceSnapshot({ learningUnitId, questions });
-        const recovered = await runtime.sessionLifecycle.recover({ learningUnitId });
-        if (!isCurrent(token)) return;
-        update({
-          snapshot: runtime.queryStore.getSnapshot(),
-          session: recovered?.session ?? null,
-          index: recovered?.currentIndex ?? 0,
+      state = {
+        ...state,
+        learningUnitId,
+        session: null,
+        currentIndex: 0,
+        answer: null,
+        feedback: null,
+        questions: [],
+        initializationErrors: { load: null, recover: null },
+        startError: null,
+        submitError: null,
+        initializing: true,
+        starting: false,
+        submitting: false,
+      };
+      runtime.queryStore.replaceSnapshot({ learningUnitId, questions: [] });
+      emit();
+
+      const loadPromise = refreshQuestions(learningUnitId, token);
+      const recoverPromise = runtime.sessionLifecycle.recover({ learningUnitId })
+        .then((recovered) => {
+          if (!isOperationCurrent(token, currentContext(initializationRequestId))) return;
+          update({
+            session: recovered?.session ?? null,
+            currentIndex: recovered?.currentIndex ?? 0,
+          });
+        })
+        .catch((error) => {
+          if (!isOperationCurrent(token, currentContext(initializationRequestId))) return;
+          update({
+            initializationErrors: {
+              ...state.initializationErrors,
+              recover: errorMessage(error, "无法恢复评测进度"),
+            },
+          });
         });
-      } catch (error) {
-        if (isCurrent(token)) update({ error: error?.message ?? "Assessment initialization failed" });
-      } finally {
-        if (isCurrent(token)) update({ loading: false });
+
+      await Promise.allSettled([loadPromise, recoverPromise]);
+      if (isOperationCurrent(token, currentContext(initializationRequestId))) {
+        update({ initializing: false });
       }
     },
 
-    async start() {
+    async retryInitialization() {
       if (!state.learningUnitId) return;
-      update({ starting: true, error: null });
+      await commands.initialize(state.learningUnitId);
+    },
+
+    setAnswer(answer) {
+      update({ answer, submitError: null });
+    },
+
+    async start() {
+      if (!state.learningUnitId || state.questions.length === 0 || state.starting) return;
+      const learningUnitId = state.learningUnitId;
+      const requestId = ++startRequestId;
+      const token = createOperationToken({ generation, learningUnitId, requestId });
+      update({ starting: true, startError: null });
       try {
-        const session = await runtime.sessionLifecycle.start({ learningUnitId: state.learningUnitId });
-        update({ session, index: 0, answer: null, feedback: null });
+        const session = await runtime.sessionLifecycle.start({ learningUnitId });
+        if (!isOperationCurrent(token, currentContext(startRequestId))) return;
+        update({
+          session,
+          currentIndex: 0,
+          answer: null,
+          feedback: null,
+          submitError: null,
+        });
       } catch (error) {
-        update({ error: error?.message ?? "Assessment start failed" });
+        if (isOperationCurrent(token, currentContext(startRequestId))) {
+          update({ startError: errorMessage(error, "无法开始评测") });
+        }
       } finally {
-        update({ starting: false });
+        if (isOperationCurrent(token, currentContext(startRequestId))) update({ starting: false });
       }
     },
 
     async submit({ questionId, answer }) {
-      if (!state.session) return;
-      update({ submitting: true, error: null });
+      if (!state.learningUnitId || !state.session || state.submitting) return;
+      const learningUnitId = state.learningUnitId;
+      const sessionId = state.session.id;
+      const requestId = ++submitRequestId;
+      const token = createOperationToken({ generation, learningUnitId, sessionId, requestId });
+      const item = state.session.items.find((candidate) => candidate.questionId === questionId);
+      update({ submitting: true, submitError: null });
       try {
         const result = await runtime.sessionLifecycle.submit({
-          learningUnitId: state.learningUnitId,
-          sessionId: state.session.id,
+          learningUnitId,
+          sessionId,
           questionId,
           answer,
         });
+        if (!isOperationCurrent(token, currentContext(submitRequestId))) return;
         update({
           session: result.session,
-          feedback: { correct: result.attempt.correct },
+          feedback: {
+            correct: result.attempt.correct,
+            explanation: item?.snapshot?.content?.explanation ?? "已记录本次作答。",
+          },
         });
       } catch (error) {
-        update({ error: error?.message ?? "Assessment submit failed" });
+        if (isOperationCurrent(token, currentContext(submitRequestId))) {
+          update({ feedback: null, submitError: errorMessage(error, "提交答案失败") });
+        }
       } finally {
-        update({ submitting: false });
+        if (isOperationCurrent(token, currentContext(submitRequestId))) update({ submitting: false });
       }
     },
 
     next() {
-      update({ index: state.index + 1, answer: null, feedback: null });
+      if (!state.session || state.currentIndex >= state.session.items.length - 1) return;
+      update({ currentIndex: state.currentIndex + 1, answer: null, feedback: null, submitError: null });
     },
-  };
+
+    async updateQuestion({ questionId, expectedRevision, patch }) {
+      if (!state.learningUnitId) return;
+      try {
+        return await runtime.service.updateQuestion({
+          trusted: { learningUnitId: state.learningUnitId },
+          questionId,
+          expectedRevision,
+          patch,
+        });
+      } catch (error) {
+        await refreshQuestionsAfterMutationFailure();
+        throw error;
+      }
+    },
+
+    async retireQuestion({ questionId, expectedRevision }) {
+      if (!state.learningUnitId) return;
+      try {
+        return await runtime.service.retireQuestion({
+          trusted: { learningUnitId: state.learningUnitId },
+          questionId,
+          expectedRevision,
+        });
+      } catch (error) {
+        await refreshQuestionsAfterMutationFailure();
+        throw error;
+      }
+    },
+  });
+
+  async function refreshQuestionsAfterMutationFailure() {
+    if (!state.learningUnitId) return;
+    try {
+      const questions = await runtime.service.listQuestions({ trusted: { learningUnitId: state.learningUnitId } });
+      runtime.queryStore.replaceSnapshot({ learningUnitId: state.learningUnitId, questions });
+      refreshQuestionsFromSnapshot();
+    } catch {
+      // Preserve the last scoped snapshot if refresh also fails.
+    }
+  }
+
+  return Object.freeze({
+    subscribe(listener) {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+    getSnapshot() {
+      return state;
+    },
+    commands,
+    dispose() {
+      if (disposed) return;
+      disposed = true;
+      generation += 1;
+      initializationRequestId += 1;
+      startRequestId += 1;
+      submitRequestId += 1;
+      unsubscribeQueryStore?.();
+      listeners.clear();
+    },
+  });
 }
