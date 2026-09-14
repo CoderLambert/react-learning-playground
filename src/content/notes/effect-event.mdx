@@ -21,6 +21,20 @@
 中间 Demo 同时运行两个真实连接 Effect。先只切换 theme：左侧 Effect 把 `roomId + theme` 都作为依赖，因此会 cleanup 并重新 setup；右侧只让 `roomId` 决定连接生命周期，把通知里的 theme 读取放进 Effect Event，因此不会因为 theme 重连。再切换 roomId，观察两侧都重新 setup。
 </Experiment>
 
+### Guided Prediction：先决定“theme 是同步条件还是读取条件”
+
+在操作 Demo 前，先写下你的预测：**只切换 theme 时，左侧和右侧各会不会发生 cleanup → setup？为什么？** 不要先看下面的解释。预测必须明确指出 theme 对连接生命周期到底是“同步条件”，还是只是在连接成功时需要读取的最新值。
+
+完成预测后，再执行上面的 Demo 操作并比较 setup 增量。
+
+<details>
+<summary>验证后再展开：对照你的判断</summary>
+
+如果 theme 决定 Effect 的连接目标，它就必须参与依赖并触发重新同步；但这个 Demo 的右侧把 theme 仅用于“连接成功时显示当前主题”的通知，因此它不是连接生命周期条件。右侧只切 theme 不应重连，而切 roomId 时两侧都必须重连。
+
+**Decision boundary：**不要先问“怎样少跑一次 Effect”，先问“哪个响应式值真正改变外部同步关系”。
+</details>
+
 <DemoReference action="记录两侧当前 setup 次数；只切换 theme，再切换 roomId" observe="比较同一次操作前后的真实 Effect setup 增量，而不是依赖初始绝对计数。" />
 
 <Flow items={[
