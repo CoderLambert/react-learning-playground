@@ -91,7 +91,8 @@ test("AI and Assessment composition is owned by app/integration", async () => {
   assert.match(integrationSource, /from "\.\.\/ai\/public\.js"/);
   assert.match(integrationSource, /mapAssessmentCapabilityToAiTool/);
   assert.match(appSource, /createAiAssessmentIntegration/);
-  assert.match(appSource, /assessmentCapabilities: assessmentRuntime\.capabilities/);
+  assert.match(appSource, /assessmentCapabilities: assessmentView\.integrationCapabilities/);
+  assert.doesNotMatch(appSource, /assessmentCapabilities: assessmentRuntime\.capabilities/);
 });
 
 test("temporary architecture debt is reviewable and has removal ownership", () => {
