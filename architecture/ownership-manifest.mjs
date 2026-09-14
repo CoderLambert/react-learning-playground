@@ -38,7 +38,7 @@ export const ARCHITECTURE_OWNERS = [
     kind: "domain",
     exactPaths: [],
     prefixes: ["src/learning-actions/"],
-    publicEntries: [],
+    publicEntries: ["src/learning-actions/public.js"],
     browserImpact: "domain",
   },
   {
