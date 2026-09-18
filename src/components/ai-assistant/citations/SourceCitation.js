@@ -1,4 +1,4 @@
-import { createElement, useCallback, useId, useRef, useState } from "react";
+import { createElement, useCallback, useId, useState } from "react";
 import {
   formatSourceCitationLines,
   normalizeSourceCitation,
@@ -118,8 +118,8 @@ export function SourceCitation({
   variant = "default",
 }) {
   const tooltipId = useId();
-  const wrapperRef = useRef(null);
-  const previewRef = useRef(null);
+  const [wrapperElement, setWrapperElement] = useState(null);
+  const [previewElement, setPreviewElement] = useState(null);
   const [previewAlign, setPreviewAlign] = useState("start");
   const [previewOffsetX, setPreviewOffsetX] = useState(0);
   const citation = normalizeSourceCitation({ fileName, startLine, endLine, label });
@@ -128,8 +128,8 @@ export function SourceCitation({
   const containPreview = useCallback(() => {
     if (!previewText) return;
     globalThis.requestAnimationFrame?.(() => {
-      const wrapper = wrapperRef.current;
-      const element = previewRef.current;
+      const wrapper = wrapperElement;
+      const element = previewElement;
       if (
         !wrapper
         || !element
@@ -152,7 +152,7 @@ export function SourceCitation({
       setPreviewAlign((current) => current === placement.align ? current : placement.align);
       setPreviewOffsetX((current) => Math.abs(current - placement.offsetX) < 0.5 ? current : placement.offsetX);
     });
-  }, [previewText]);
+  }, [previewElement, previewText, wrapperElement]);
 
   if (!citation) return null;
 
@@ -208,7 +208,7 @@ export function SourceCitation({
   return createElement(
     "span",
     {
-      ref: wrapperRef,
+      ref: setWrapperElement,
       className: `ai-source-citation-wrap ${className}`.trim(),
       "data-preview-align": previewAlign,
       style: { "--ai-citation-preview-offset-x": `${previewOffsetX}px` },
@@ -220,7 +220,7 @@ export function SourceCitation({
       ? createElement(
           "span",
           {
-            ref: previewRef,
+            ref: setPreviewElement,
             id: tooltipId,
             className: "ai-source-citation-preview",
             role: "tooltip",

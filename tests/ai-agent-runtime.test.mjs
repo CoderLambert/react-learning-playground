@@ -218,7 +218,7 @@ test("agent runner records provider failure and abort as terminal audit states",
   const registry = registryWithEcho();
   const failedStore = new MemoryAgentRunStore();
   const failedRunner = new AgentRunner({
-    modelClient: { async *streamTurn() { throw new Error("provider down"); } },
+    modelClient: { streamTurn() { throw new Error("provider down"); } },
     toolRegistry: registry,
     toolExecutor: new ToolExecutor({ registry, policy: new ToolPolicy() }),
     auditStore: failedStore,
