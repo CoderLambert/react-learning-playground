@@ -50,7 +50,31 @@ test("Guided flow stores the first prediction before the experiment and reaches 
   assert.equal(state.observation, "next render state 为 1");
   assert.equal(state.explanation, "三个 replace 使用同一份 render snapshot。");
   assert.equal(state.practiceResponse, "same-result-different-semantics");
+  assert.equal(state.needsReview, false);
   assert.equal(getGuidedFlowUnlockedStep(state), GUIDED_FLOW_STEP_INDEX.REVIEW);
+});
+
+test("Needs Review is an explicit reversible state only at completed review", () => {
+  let state = startState();
+  state = reduce(state, { type: GUIDED_FLOW_ACTIONS.SET_PREDICTION_DRAFT, value: "count-3" });
+  state = reduce(state, { type: GUIDED_FLOW_ACTIONS.SUBMIT_PREDICTION });
+  state = reduce(state, {
+    type: GUIDED_FLOW_ACTIONS.ACKNOWLEDGE_EXPERIMENT,
+    observation: "next render state 为 1",
+  });
+  state = reduce(state, { type: GUIDED_FLOW_ACTIONS.SET_EXPLANATION, value: "我的原始解释" });
+  state = reduce(state, { type: GUIDED_FLOW_ACTIONS.SUBMIT_EXPLANATION });
+  state = reduce(state, { type: GUIDED_FLOW_ACTIONS.SET_PRACTICE_DRAFT, value: "same-result-different-semantics" });
+  state = reduce(state, { type: GUIDED_FLOW_ACTIONS.SUBMIT_PRACTICE });
+
+  state = reduce(state, { type: GUIDED_FLOW_ACTIONS.TOGGLE_NEEDS_REVIEW });
+  assert.equal(state.needsReview, true);
+  state = reduce(state, { type: GUIDED_FLOW_ACTIONS.TOGGLE_NEEDS_REVIEW });
+  assert.equal(state.needsReview, false);
+
+  state = reduce(state, { type: GUIDED_FLOW_ACTIONS.NAVIGATE, stepIndex: GUIDED_FLOW_STEP_INDEX.PREDICT });
+  const unchanged = reduce(state, { type: GUIDED_FLOW_ACTIONS.TOGGLE_NEEDS_REVIEW });
+  assert.equal(unchanged.needsReview, false);
 });
 
 test("first prediction is frozen across ordinary navigation and only reset starts a new run", () => {

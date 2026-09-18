@@ -4,6 +4,7 @@ import {
   GUIDED_FLOW_STEP_INDEX,
   getGuidedFlowUnlockedStep,
 } from "./guidedFlow.js";
+import { getGuidedReviewModel } from "./guidedReview.js";
 import { useGuidedFlow } from "./useGuidedFlow.js";
 import "./GuidedLearningFlow.css";
 
@@ -222,10 +223,18 @@ function GuidedPracticeStep({ definition, state, dispatch, inputName }) {
   );
 }
 
-function GuidedReviewStep({ definition, state, dispatch, onReviewResource, onAskAi }) {
-  const predictionStep = definition.steps[GUIDED_FLOW_STEP_INDEX.PREDICT];
-  const practiceStep = definition.steps[GUIDED_FLOW_STEP_INDEX.PRACTICE];
+function GuidedReviewStep({
+  definition,
+  state,
+  dispatch,
+  onReviewResource,
+  onAskAi,
+  onRetry,
+  onContinue,
+  canContinue,
+}) {
   const step = definition.steps[GUIDED_FLOW_STEP_INDEX.REVIEW];
+  const review = getGuidedReviewModel(state, definition);
 
   const handleResource = (resource) => {
     if (resource === "demo") {
@@ -242,24 +251,25 @@ function GuidedReviewStep({ definition, state, dispatch, onReviewResource, onAsk
       <div className="guided-flow-evidence" aria-label="本次 Guided 学习记录">
         <div>
           <strong>Your first prediction</strong>
-          <p>{getChoiceLabel(predictionStep, state.firstPrediction)}</p>
+          <p>{review?.firstPrediction.label}</p>
         </div>
         <div>
           <strong>Actual observation</strong>
-          <p>{state.observation || "尚未记录"}</p>
+          <p>{review?.actualObservation || "尚未记录"}</p>
         </div>
         <div>
           <strong>Your explanation</strong>
-          <p>{state.explanation || "尚未记录"}</p>
+          <p>{review?.explanation || "尚未记录"}</p>
         </div>
         <div>
           <strong>Practice outcome</strong>
-          <p>{getChoiceLabel(practiceStep, state.practiceResponse)}</p>
+          <p>{review?.practiceOutcome.response.label}</p>
+          {review?.practiceOutcome.observation && <p>{review.practiceOutcome.observation}</p>}
         </div>
       </div>
       <p className="guided-flow-hint">这些是本次 session 的原始学习记录；Explanation 不在这里自动评分。</p>
       <div className="guided-flow-review-actions" aria-label="Review 资源">
-        {step.resources.map((resource) => (
+        {review?.resources.map((resource) => (
           <button
             key={resource}
             type="button"
@@ -278,7 +288,34 @@ function GuidedReviewStep({ definition, state, dispatch, onReviewResource, onAsk
           learnerResponse={state.explanation}
           onAskAi={onAskAi}
         />
+        <button
+          type="button"
+          className="btn btn-outline"
+          data-guided-action="needs-review"
+          aria-pressed={review?.needsReview === true}
+          onClick={() => dispatch({ type: GUIDED_FLOW_ACTIONS.TOGGLE_NEEDS_REVIEW })}
+        >
+          {review?.needsReview ? "取消 Needs Review" : "标记 Needs Review"}
+        </button>
+        <button
+          type="button"
+          className="btn btn-outline"
+          data-guided-action="retry"
+          onClick={onRetry}
+        >
+          Retry Guided Lesson
+        </button>
+        <button
+          type="button"
+          className="btn btn-primary"
+          data-guided-action="continue"
+          disabled={!canContinue || typeof onContinue !== "function"}
+          onClick={onContinue}
+        >
+          Continue to next lesson
+        </button>
       </div>
+      {!canContinue && <p className="guided-flow-hint" data-guided-continue-status>已到当前学习路径末尾。</p>}
     </div>
   );
 }
@@ -289,6 +326,8 @@ export function GuidedLearningFlow({
   renderDemo,
   onReviewResource,
   onAskAi,
+  onContinue,
+  canContinue = false,
 }) {
   const predictionInputId = useId();
   const practiceInputId = useId();
@@ -409,6 +448,9 @@ export function GuidedLearningFlow({
             dispatch={dispatch}
             onReviewResource={onReviewResource}
             onAskAi={onAskAi}
+            onRetry={startOver}
+            onContinue={onContinue}
+            canContinue={canContinue}
           />
         )}
       </div>

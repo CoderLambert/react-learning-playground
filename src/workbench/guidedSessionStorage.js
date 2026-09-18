@@ -103,6 +103,7 @@ export function serializeGuidedSessionSnapshot(
     explanationSubmitted: Boolean(state.explanationSubmitted),
     practiceDraft: state.practiceDraft ?? null,
     practiceResponse: state.practiceResponse ?? null,
+    needsReview: Boolean(state.needsReview),
     completedSteps: getCompletedGuidedStepIds(state, definition),
     sessionStarted: state.completionState !== "not-started",
     sessionCompleted: state.completionState === "completed",
@@ -152,6 +153,9 @@ export function validateGuidedSessionSnapshot(snapshot, { definition } = {}) {
   if (typeof snapshot.explanation !== "string") errors.push("explanation must be a string");
   if (!isValidChoice(snapshot.practiceDraft, practiceIds)) errors.push("practiceDraft is invalid");
   if (!isValidChoice(snapshot.practiceResponse, practiceIds)) errors.push("practiceResponse is invalid");
+  if (snapshot.needsReview !== undefined && typeof snapshot.needsReview !== "boolean") {
+    errors.push("needsReview must be boolean when present");
+  }
   if (typeof snapshot.experimentAcknowledged !== "boolean") errors.push("experimentAcknowledged must be boolean");
   if (typeof snapshot.explanationSubmitted !== "boolean") errors.push("explanationSubmitted must be boolean");
   if (typeof snapshot.sessionStarted !== "boolean") errors.push("sessionStarted must be boolean");
@@ -283,6 +287,7 @@ export function restoreGuidedFlowState(snapshot, { definition } = {}) {
     explanationSubmitted: snapshot.explanationSubmitted,
     practiceDraft: snapshot.practiceDraft,
     practiceResponse: snapshot.practiceResponse,
+    needsReview: snapshot.needsReview === true,
     completionState: snapshot.sessionCompleted
       ? "completed"
       : snapshot.sessionStarted

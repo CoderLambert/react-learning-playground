@@ -229,6 +229,13 @@ export default function App() {
     navigateToDemo(id);
   };
 
+  const handleGuidedContinue = () => {
+    const nextUnitId = currentLearningPathEntry?.nextId;
+    if (!nextUnitId) return false;
+    handleSelectDemo(nextUnitId);
+    return true;
+  };
+
   const handleSelectAll = () => {
     setPendingSourceTarget(null);
     setPendingConversationTarget(null);
@@ -526,6 +533,8 @@ export default function App() {
                   )}
                   onReviewResource={handleGuidedReviewResource}
                   onAskAi={handleGuidedAskAi}
+                  onContinue={handleGuidedContinue}
+                  canContinue={Boolean(currentLearningPathEntry?.nextId)}
                 />
               ) : (
                 <DemoSourceLocator
