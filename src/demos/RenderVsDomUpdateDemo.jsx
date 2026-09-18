@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 
+// Intentional teaching exception: this render-phase counter is the experiment's direct
+// observation of component execution, contrasted with MutationObserver DOM mutations.
+/* oxlint-disable react/refs -- render-count instrumentation deliberately observes render-phase execution. */
 function RenderedPreview({ label }) {
   const observedNodeRef = useRef(null);
   const renderCountRef = useRef(0);
@@ -70,6 +73,7 @@ function RenderedPreview({ label }) {
     </div>
   );
 }
+/* oxlint-enable react/refs */
 
 export function RenderVsDomUpdateDemo() {
   const [label, setLabel] = useState("稳定的 DOM 内容");

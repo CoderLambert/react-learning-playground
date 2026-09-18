@@ -10,6 +10,9 @@ function RenderBadge({ label, count }) {
   );
 }
 
+// Intentional teaching exception: the render counter is incremented at the component
+// execution point so the Context propagation experiment shows actual render activity.
+/* oxlint-disable react/refs -- render-count instrumentation deliberately observes render-phase execution. */
 function ContextConsumer() {
   const theme = useContext(ThemeContext);
   const renderCountRef = useRef(0);
@@ -24,7 +27,11 @@ function ContextConsumer() {
     </div>
   );
 }
+/* oxlint-enable react/refs */
 
+// Intentional teaching exception: the render counter is incremented at the component
+// execution point so memo + Context behavior remains directly observable.
+/* oxlint-disable react/refs -- render-count instrumentation deliberately observes render-phase execution. */
 const MemoConsumer = memo(function MemoConsumer() {
   const theme = useContext(ThemeContext);
   const renderCountRef = useRef(0);
@@ -39,7 +46,11 @@ const MemoConsumer = memo(function MemoConsumer() {
     </div>
   );
 });
+/* oxlint-enable react/refs */
 
+// Intentional teaching exception: the render counter is incremented at the component
+// execution point so the non-consumer memo comparison remains directly observable.
+/* oxlint-disable react/refs -- render-count instrumentation deliberately observes render-phase execution. */
 const MemoNonConsumer = memo(function MemoNonConsumer() {
   const renderCountRef = useRef(0);
   renderCountRef.current += 1;
@@ -51,6 +62,7 @@ const MemoNonConsumer = memo(function MemoNonConsumer() {
     </div>
   );
 });
+/* oxlint-enable react/refs */
 
 export function ContextPropagationDemo() {
   const [theme, setTheme] = useState("light");

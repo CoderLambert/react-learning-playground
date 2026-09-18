@@ -55,6 +55,9 @@ type LoadState<T> =
   | { status: "success"; data: T }
   | { status: "error"; error: Error };
 
+// Intentional teaching exception: this raw TSX sample keeps its discriminated-union
+// helper beside the component contracts that use it for CodeViewer and typecheck lessons.
+/* oxlint-disable react/only-export-components -- raw teaching samples intentionally colocate exported helpers and components. */
 export function renderLoadState<T>(state: LoadState<T>, renderData: (data: T) => ReactNode) {
   switch (state.status) {
     case "idle":
@@ -67,6 +70,7 @@ export function renderLoadState<T>(state: LoadState<T>, renderData: (data: T) =>
       return `失败：${state.error.message}`;
   }
 }
+/* oxlint-enable react/only-export-components */
 
 type TabValue = "overview" | "activity" | "settings";
 

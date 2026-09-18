@@ -21,6 +21,9 @@ export function SelectList<T>({ items, getKey, renderItem, onSelect }: SelectLis
   );
 }
 
+// Intentional teaching exception: this raw TSX sample keeps its generic Hook beside
+// the generic component contract it demonstrates for CodeViewer and typecheck lessons.
+/* oxlint-disable react/only-export-components -- raw teaching samples intentionally colocate exported helpers and components. */
 export function useHistory<T>(initialValue: T) {
   const [current, setCurrent] = useState<T>(initialValue);
   const [history, setHistory] = useState<T[]>([initialValue]);
@@ -32,6 +35,7 @@ export function useHistory<T>(initialValue: T) {
 
   return { current, history, update } as const;
 }
+/* oxlint-enable react/only-export-components */
 
 type User = { id: string; name: string };
 type Product = { sku: string; label: string };
