@@ -19,8 +19,8 @@ function ReactiveThemeConnection({ roomId, theme }) {
 
   // Intentional teaching exception: the visible counter records each real Effect setup
   // so learners can compare the dependency-driven reconnection behavior.
-  /* oxlint-disable react/set-state-in-effect -- the setup counter is the observable lesson output. */
   useEffect(() => {
+    // oxlint-disable-next-line react/set-state-in-effect -- the setup counter is the observable lesson output.
     setSetupCount((count) => count + 1);
     const connection = createConnection(roomId, () => {
       setNotice(`已连接 ${roomId}，当前主题 ${theme}`);
@@ -28,7 +28,6 @@ function ReactiveThemeConnection({ roomId, theme }) {
     connection.connect();
     return () => connection.disconnect();
   }, [roomId, theme]);
-  /* oxlint-enable react/set-state-in-effect */
 
   return (
     <div className="demo-alert demo-alert-warning">
@@ -50,14 +49,13 @@ function EffectEventConnection({ roomId, theme }) {
 
   // Intentional teaching exception: the visible counter records each real Effect setup
   // so learners can compare the Effect Event dependency boundary.
-  /* oxlint-disable react/set-state-in-effect -- the setup counter is the observable lesson output. */
   useEffect(() => {
+    // oxlint-disable-next-line react/set-state-in-effect -- the setup counter is the observable lesson output.
     setSetupCount((count) => count + 1);
     const connection = createConnection(roomId, onConnected);
     connection.connect();
     return () => connection.disconnect();
   }, [roomId]);
-  /* oxlint-enable react/set-state-in-effect */
 
   return (
     <div className="demo-alert demo-alert-tip">
