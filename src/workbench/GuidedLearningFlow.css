@@ -34,6 +34,11 @@
   line-height: 1.6;
 }
 
+.guided-flow-persistence-notice {
+  color: var(--color-primary) !important;
+  font-size: 12px;
+}
+
 .guided-flow-header {
   display: flex;
   align-items: flex-start;
