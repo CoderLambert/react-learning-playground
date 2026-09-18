@@ -159,7 +159,7 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile, assessm
     return () => { cancelled = true; };
   }, []);
 
-  const hydrateConversation = useCallback(async (conversationId) => {
+  const hydrateConversation = useCallback(async (conversationId, { preserveInput = false } = {}) => {
     invalidateCompactionContext();
     clearRetryDescriptor();
     const hydrationRequest = ++hydrationRequestRef.current;
@@ -195,7 +195,7 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile, assessm
     setCompactedMessageCount(coveredMessageIndex + 1);
     setLatestCompaction(latest);
     dispatch({ type: "hydrate", messages });
-    setInputValue("");
+    if (!preserveInput) setInputValue("");
   }, [clearRetryDescriptor, invalidateCompactionContext, learningUnitId, repository]);
 
   useEffect(() => {
@@ -233,20 +233,27 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile, assessm
         }
       });
 
-    if (repository) {
-      void repository.listConversations({ includeArchived: true }).then((items) => {
-        if (cancelled) return;
-        setConversations(items);
-        const latest = items.find((item) => item.learningUnitId === learningUnitId && !item.archived);
-        if (latest) void hydrateConversation(latest.id);
-        else setActiveConversationId(null);
-      });
-    }
+    return () => {
+      cancelled = true;
+    };
+  }, [clearRetryDescriptor, invalidateCompactionContext, learningUnitId]);
+
+  useEffect(() => {
+    if (!repository || !learningUnitId) return undefined;
+
+    let cancelled = false;
+    void repository.listConversations({ includeArchived: true }).then((items) => {
+      if (cancelled) return;
+      setConversations(items);
+      const latest = items.find((item) => item.learningUnitId === learningUnitId && !item.archived);
+      if (latest) void hydrateConversation(latest.id, { preserveInput: true });
+      else setActiveConversationId(null);
+    });
 
     return () => {
       cancelled = true;
     };
-  }, [clearRetryDescriptor, hydrateConversation, invalidateCompactionContext, learningUnitId, repository]);
+  }, [hydrateConversation, learningUnitId, repository]);
 
   const contextReady = Boolean(
     learningUnit &&
