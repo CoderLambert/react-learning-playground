@@ -26,6 +26,7 @@ export const DOMAIN_BROWSER_SUITES = Object.freeze({
     "tests/e2e/chapter-checkpoints.spec.js",
     "tests/e2e/code-viewer.spec.js",
     "tests/e2e/effects-cleanup.spec.js",
+    "tests/e2e/guided-session-persistence.spec.js",
     "tests/e2e/learning-path-navigation.spec.js",
     "tests/e2e/responsive.spec.js",
     "tests/e2e/source-locator-ai.spec.js",

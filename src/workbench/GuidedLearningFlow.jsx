@@ -254,9 +254,18 @@ export function GuidedLearningFlow({
 }) {
   const predictionInputId = useId();
   const practiceInputId = useId();
-  const { state, isCurrentActivity, start, exit, startOver, dispatch } = useGuidedFlow({
+  const {
+    state,
+    isCurrentActivity,
+    persistenceNotice,
+    start,
+    exit,
+    startOver,
+    dispatch,
+  } = useGuidedFlow({
     learningUnitId: learningUnit?.id,
     activityRevision: definition?.revision,
+    definition,
   });
 
   if (!definition || !learningUnit || definition.learningUnitId !== learningUnit.id || !isCurrentActivity) {
@@ -271,9 +280,14 @@ export function GuidedLearningFlow({
             <p className="guided-flow-eyebrow">可选学习路径</p>
             <h2 id="guided-learning-entry-title">Guided Learning</h2>
             <p>先暴露 prediction，再操作真实 Demo、写下 explanation，最后完成一个 practice 迁移题。</p>
+            {persistenceNotice && (
+              <p className="guided-flow-persistence-notice" role="status" data-guided-persistence-status>
+                {persistenceNotice}
+              </p>
+            )}
           </div>
           <button type="button" className="btn btn-primary" data-guided-action="start" onClick={start}>
-            {state.completionState === "completed" ? "继续 Guided Learning" : "开始 Guided Learning"}
+            {state.completionState === "not-started" ? "开始 Guided Learning" : "继续 Guided Learning"}
           </button>
         </section>
         <div className="guided-flow-free-explore" data-guided-free-explore>
@@ -297,6 +311,11 @@ export function GuidedLearningFlow({
         <div>
           <p className="guided-flow-eyebrow">Guided Learning · {learningUnit.title}</p>
           <h2 id="guided-learning-title">{definition.goal}</h2>
+          {persistenceNotice && (
+            <p className="guided-flow-persistence-notice" role="status" data-guided-persistence-status>
+              {persistenceNotice}
+            </p>
+          )}
         </div>
         <div className="guided-flow-header-actions">
           <button type="button" className="btn btn-outline" data-guided-action="start-over" onClick={startOver}>
