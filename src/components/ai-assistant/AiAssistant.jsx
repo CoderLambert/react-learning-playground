@@ -127,6 +127,7 @@ function AssistantMarkdown({ content, isStreaming, sources }) {
     <div className="ai-assistant-markdown">
       <AiSourcePreviewProvider sources={sources}>
         <MarkdownRender
+          key={isStreaming ? "streaming" : "final"}
           customId={AI_MARKDOWN_CUSTOM_ID}
           mode="chat"
           content={content}
