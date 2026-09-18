@@ -40,10 +40,13 @@ export function LearningInspector({
   const focusModeRef = useRef(focusMode);
   const onOpenChangeRef = useRef(onOpenChange);
   const tabRefs = useRef(new Map());
-  focusModeRef.current = focusMode;
-  onOpenChangeRef.current = onOpenChange;
   const { getPaneProps } = useInspectorScrollMemory(learningUnit?.id ?? "unknown");
   const resolvedPanels = panels ?? resolveInspectorPanels({ notes, source, ai, assessment });
+
+  useEffect(() => {
+    focusModeRef.current = focusMode;
+    onOpenChangeRef.current = onOpenChange;
+  }, [focusMode, onOpenChange]);
 
   const emitWidth = useCallback(
     (nextWidth) => {
