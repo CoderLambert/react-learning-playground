@@ -140,3 +140,4 @@ test.describe("React Learning Workbench integration", () => {
     expect(box?.height).toBeGreaterThanOrEqual(843);
   });
 });
+// @browser-owner workbench

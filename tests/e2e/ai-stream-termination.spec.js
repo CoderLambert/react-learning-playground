@@ -241,3 +241,4 @@ test("user abort and stream error expose distinct terminal UI states", async ({ 
   await expect(page.getByRole("alert")).toHaveText(/mock upstream failure/);
   await expect(assistantMessage).toHaveCount(1);
 });
+// @browser-owner ai

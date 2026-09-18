@@ -33,3 +33,4 @@ test.describe("React Learning Workbench final acceptance", () => {
     await expect(page.locator(".note-runtime-content")).toBeVisible();
   });
 });
+// @browser-owner workbench

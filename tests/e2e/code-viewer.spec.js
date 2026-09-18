@@ -132,3 +132,4 @@ test.describe("SourceViewer", () => {
     await expect(inspectorViewer.locator('[data-highlighted="true"]').filter({ hasText: selectedSymbol }).first()).toBeVisible();
   });
 });
+// @browser-owner workbench

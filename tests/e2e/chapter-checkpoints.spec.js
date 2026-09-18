@@ -90,3 +90,4 @@ test.describe("chapter review checkpoints", () => {
     await expect(page.locator("[data-chapter-next-step]")).toHaveCount(12);
   });
 });
+// @browser-owner workbench

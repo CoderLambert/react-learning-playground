@@ -142,3 +142,4 @@ test("completed session review is scoped, snapshot-correct, reloadable, and wron
   await expect(reviewedQuestions.first().getByText("错误", { exact: true })).toBeVisible();
   await expect(reviewedQuestions.first().getByText("HISTORICAL snapshot prompt B", { exact: true })).toBeVisible();
 });
+// @browser-owner assessment

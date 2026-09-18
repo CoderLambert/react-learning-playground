@@ -150,3 +150,4 @@ test("chapter checkpoint no longer exposes the legacy editable localStorage ques
   await page.getByRole("tab", { name: "评测", exact: true }).click();
   await expect(page.locator("#learning-inspector-panel-assessment")).toBeVisible();
 });
+// @browser-owner assessment

@@ -1,11 +1,15 @@
 import assert from "node:assert/strict";
-import { readFile, readdir } from "node:fs/promises";
+import { mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import test from "node:test";
 
 import {
   ALL_BROWSER_SUITES,
+  BROWSER_SUITE_OWNERSHIP,
   CORE_BROWSER_SUITES,
   DOMAIN_BROWSER_SUITES,
+  discoverBrowserSuiteOwnership,
   getBrowserSuiteSelection,
 } from "../scripts/browser-verification-plan.mjs";
 import {
@@ -192,6 +196,32 @@ test("every browser spec has exactly one explicit core or domain suite owner", a
   assert.equal(new Set(declaredSuites).size, declaredSuites.length, "suite ownership must be unique");
   assert.deepEqual([...declaredSuites].sort(), discoveredSuites);
   assert.deepEqual(ALL_BROWSER_SUITES, discoveredSuites);
+});
+
+test("browser ownership discovery rejects orphan and duplicate metadata", async () => {
+  assert.equal(BROWSER_SUITE_OWNERSHIP.length, ALL_BROWSER_SUITES.length);
+  assert.equal(new Set(BROWSER_SUITE_OWNERSHIP.map(({ suite }) => suite)).size, ALL_BROWSER_SUITES.length);
+
+  const directory = await mkdtemp(join(tmpdir(), "react-learning-browser-ownership-"));
+  try {
+    await writeFile(join(directory, "orphan.spec.js"), "test(\"orphan\", () => {});\n");
+    await assert.rejects(
+      discoverBrowserSuiteOwnership(directory),
+      /must declare exactly one @browser-owner metadata entry; found 0/,
+    );
+
+    await writeFile(
+      join(directory, "duplicate.spec.js"),
+      "// @browser-owner ai\n// @browser-owner ai\n",
+    );
+    await rm(join(directory, "orphan.spec.js"));
+    await assert.rejects(
+      discoverBrowserSuiteOwnership(directory),
+      /must declare exactly one @browser-owner metadata entry; found 2/,
+    );
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
 });
 
 test("classifier CLI emits complete machine and human-readable decision evidence", () => {

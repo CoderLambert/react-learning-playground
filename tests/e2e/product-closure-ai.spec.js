@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import { expect } from "@playwright/test";
 import { test } from "./test-fixtures.js";
 
@@ -12,7 +13,10 @@ async function installLongAnswerGateway(page) {
       if (!url || !new URL(url, window.location.href).pathname.endsWith(gatewayPath)) {
         return originalFetch(input, init);
       }
-      const longText = Array.from({ length: 180 }, (_, index) => `第 ${index + 1} 段：用于验证长回答滚动区域。`).join("\n\n");
+      const longText = Array.from(
+        { length: 180 },
+        (_, index) => `### 第 ${index + 1} 段\n\n用于验证长回答滚动区域。`,
+      ).join("\n\n");
       return new Response(new ReadableStream({
         start(controller) {
           controller.enqueue(encoder.encode(`${JSON.stringify({ type: "start" })}\n`));
@@ -57,13 +61,14 @@ test("long AI answer scrolls inside transcript while composer remains visible an
     const composerRect = textarea?.getBoundingClientRect();
     return {
       transcriptScrollable: Boolean(transcriptNode && transcriptNode.scrollHeight > transcriptNode.clientHeight),
+      transcriptOverflowY: transcriptNode ? getComputedStyle(transcriptNode).overflowY : "",
       panelOverflowY: getComputedStyle(panelNode).overflowY,
       composerInsidePanel: Boolean(composerRect && composerRect.top >= panelRect.top && composerRect.bottom <= panelRect.bottom),
     };
   });
   expect(metrics.transcriptScrollable).toBe(true);
-  expect(metrics.panelOverflowY).not.toBe("auto");
-  expect(metrics.panelOverflowY).not.toBe("scroll");
+  expect(metrics.panelOverflowY).toBe("hidden");
+  expect(metrics.transcriptOverflowY).toBe("auto");
   expect(metrics.composerInsidePanel).toBe(true);
 
   await transcript.evaluate((node) => { node.scrollTop = node.scrollHeight; });
@@ -93,12 +98,23 @@ test("current conversation exposes copy plus Markdown and JSON export through ac
 
   const markdownDownload = page.waitForEvent("download");
   await actions.getByRole("button", { name: "导出 Markdown" }).click();
-  expect((await markdownDownload).suggestedFilename()).toMatch(/\.md$/);
+  const markdown = await markdownDownload;
+  expect(markdown.suggestedFilename()).toMatch(/\.md$/);
+  const markdownPath = await markdown.path();
+  const markdownContent = await readFile(markdownPath, "utf8");
+  expect(markdownContent).toContain("## 你\n\ne2e:export-current-conversation");
+  expect(markdownContent).toContain("## AI 学习助手");
+  expect(markdownContent).toContain("第 180 段");
 
   await page.getByLabel("会话导出与复制").click();
   const jsonDownload = page.waitForEvent("download");
   await page.getByRole("group", { name: "当前会话操作" }).getByRole("button", { name: "导出 JSON" }).click();
-  expect((await jsonDownload).suggestedFilename()).toMatch(/\.json$/);
+  const json = await jsonDownload;
+  expect(json.suggestedFilename()).toMatch(/\.json$/);
+  const jsonPath = await json.path();
+  const payload = JSON.parse(await readFile(jsonPath, "utf8"));
+  expect(payload.messages.some((message) => message.role === "user" && message.content === "e2e:export-current-conversation")).toBe(true);
+  expect(payload.messages.some((message) => message.role === "assistant" && message.content.includes("第 180 段"))).toBe(true);
 });
 
 test("conversation export popover dismisses with Escape and returns focus to its trigger", async ({ page }) => {
@@ -139,3 +155,4 @@ test("switching from AI to Assessment hides the AI panel and shows the selected 
   await expect(aiPanel).toBeHidden();
   await expect(assessmentPanel).toBeVisible();
 });
+// @browser-owner ai

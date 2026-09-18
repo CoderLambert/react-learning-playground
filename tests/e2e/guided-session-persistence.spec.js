@@ -88,3 +88,4 @@ test("corrupt Guided storage resets safely without blocking free explore", async
   await page.getByRole("button", { name: "开始 Guided Learning" }).click();
   await expect(page.locator("[data-guided-flow]")).toHaveAttribute("data-guided-current-step", "predict");
 });
+// @browser-owner workbench

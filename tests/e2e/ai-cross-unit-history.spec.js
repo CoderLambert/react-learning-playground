@@ -92,3 +92,4 @@ test("archived conversations from another learning unit are not exposed as selec
   await expect(historyPanel.getByText("props archived conversation", { exact: true })).toBeVisible();
   await expect(historyPanel.getByRole("button", { name: /props archived conversation/ })).toHaveCount(0);
 });
+// @browser-owner ai
