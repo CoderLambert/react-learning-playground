@@ -64,6 +64,49 @@ test.describe("React Learning Workbench integration", () => {
     await expect(page.locator(".demo-page h2.demo-title")).toBeVisible();
   });
 
+  test("completes the state-snapshot-queue Guided flow without blocking free explore", async ({ page }) => {
+    await loadApp(page);
+    await openDemo(page, "State Snapshot、Batching 与 Update Queue");
+
+    const entry = page.locator("[data-guided-entry]");
+    await expect(entry).toBeVisible();
+    await expect(entry.getByRole("button", { name: "开始 Guided Learning" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Replace × 3" })).toBeVisible();
+
+    await entry.getByRole("button", { name: "开始 Guided Learning" }).click();
+    await expect(page.locator("[data-guided-flow]")).toHaveAttribute("data-guided-current-step", "predict");
+    await expect(page.getByRole("button", { name: "Replace × 3" })).toHaveCount(0);
+    await expect(page.getByText("提交前不会显示正确结果。")).toBeVisible();
+
+    await page.getByRole("radio", { name: "3" }).check();
+    await page.getByRole("button", { name: "提交 prediction" }).click();
+    await expect(page.locator("[data-guided-flow]")).toHaveAttribute("data-guided-current-step", "experiment");
+    await expect(page.getByRole("button", { name: "Replace × 3" })).toBeVisible();
+
+    await page.locator("[data-guided-step='predict']").click();
+    await expect(page.getByRole("radio", { name: "3" })).toBeChecked();
+    await expect(page.getByRole("radio", { name: "3" })).toBeDisabled();
+    await page.locator("[data-guided-step='experiment']").click();
+    await page.getByRole("button", { name: "Replace × 3" }).click();
+    await page.getByRole("button", { name: "我已运行并观察结果" }).click();
+
+    await page.getByRole("textbox", { name: "你的 explanation" }).fill("三个 replace 都读取同一份 render snapshot。");
+    await page.getByRole("button", { name: "保存 explanation，继续 practice" }).click();
+    await page.getByRole("radio", { name: /结果可以相同，但 queue 处理语义不同/ }).check();
+    await page.getByRole("button", { name: "提交 practice，查看 review" }).click();
+
+    await expect(page.locator("[data-guided-flow]")).toHaveAttribute("data-guided-current-step", "review");
+    await expect(page.locator("[data-guided-flow]")).toContainText("Your first prediction");
+    await expect(page.locator("[data-guided-flow]")).toContainText("Actual observation");
+    await expect(page.locator("[data-guided-flow]")).toContainText("三个 replace 都读取同一份 render snapshot");
+    await expect(page.getByRole("button", { name: "回顾 Notes" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "回顾 Source" })).toBeVisible();
+
+    await page.getByRole("button", { name: "退出 Guided Mode" }).click();
+    await expect(page.locator("[data-guided-flow]")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Replace × 3" })).toBeVisible();
+  });
+
   test("keeps expanded navigation semantics coherent below 1180px", async ({ page }) => {
     await page.setViewportSize({ width: 1100, height: 800 });
     await loadApp(page);
