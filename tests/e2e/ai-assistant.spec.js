@@ -65,6 +65,30 @@ async function seedDelayedConversationRecovery(page, count = 1200) {
   }, count);
 }
 
+async function setConversationMutationFailure(page, { put = false, deleteRecord = false } = {}) {
+  await page.evaluate(({ put: shouldFailPut, deleteRecord: shouldFailDelete }) => {
+    const proto = IDBObjectStore.prototype;
+    if (!globalThis.__conversationStoreOriginalPut) {
+      globalThis.__conversationStoreOriginalPut = proto.put;
+      globalThis.__conversationStoreOriginalDelete = proto.delete;
+      proto.put = function patchedPut(...args) {
+        if (this.name === "conversations" && globalThis.__failConversationPut) {
+          throw new DOMException("simulated conversation put failure", "UnknownError");
+        }
+        return globalThis.__conversationStoreOriginalPut.apply(this, args);
+      };
+      proto.delete = function patchedDelete(...args) {
+        if (this.name === "conversations" && globalThis.__failConversationDelete) {
+          throw new DOMException("simulated conversation delete failure", "UnknownError");
+        }
+        return globalThis.__conversationStoreOriginalDelete.apply(this, args);
+      };
+    }
+    globalThis.__failConversationPut = shouldFailPut;
+    globalThis.__failConversationDelete = shouldFailDelete;
+  }, { put, deleteRecord });
+}
+
 test("late conversation storage hydration preserves an entered composer draft", async ({ page }) => {
   await seedDelayedConversationRecovery(page);
 
@@ -204,7 +228,10 @@ test("AI assistant handles normalized errors, stop and New Chat", async ({ page 
   const transcript = page.getByRole("log", { name: "AI 对话记录" });
   await composer.fill("触发错误");
   await page.getByRole("button", { name: "发送" }).click();
-  await expect(page.getByRole("alert")).toContainText("mock quota");
+  const assistant = page.getByRole("region", { name: "AI 学习助手" });
+  await expect(assistant.getByRole("alert")).toContainText("mock quota");
+  await expect(assistant.locator(".ai-assistant-live-status")).toHaveText("");
+  await expect(assistant.locator('[role="alert"]')).toHaveCount(1);
   await expect(page.getByRole("button", { name: "重试" })).toBeVisible();
 
   await page.getByRole("button", { name: "重试" }).click();
@@ -405,12 +432,85 @@ test("conversation history supports rename, archive, restore, and delete", async
   await expect(toolbar.locator("summary")).toHaveText("历史会话 1");
 
   const restoredItem = panel.locator("li").filter({ hasText: "renamed history" });
-  await restoredItem.getByRole("button", { name: "删除", exact: true }).click();
+  const deleteButton = restoredItem.getByRole("button", { name: "删除", exact: true });
+  await deleteButton.click();
   await expect(toolbar.locator("summary")).toHaveText("历史会话 1");
   await expect(restoredItem.getByRole("button", { name: "确认删除", exact: true })).toBeVisible();
+  await expect(restoredItem.getByRole("button", { name: "确认删除", exact: true })).toBeFocused();
+  await restoredItem.getByRole("button", { name: "确认删除", exact: true }).press("Escape");
+  await expect(toolbar.locator("summary")).toHaveText("历史会话 1");
+  await expect(deleteButton).toBeFocused();
+  await deleteButton.click();
   await restoredItem.getByRole("button", { name: "确认删除", exact: true }).click();
   await expect(toolbar.locator("summary")).toHaveText("历史会话 0");
   await expect(panel.getByText("renamed history", { exact: true })).toHaveCount(0);
+  await expect(panel.locator("nav.ai-conversation-list").first()).toBeFocused();
+});
+
+test("conversation mutations expose persistence failures and remain retryable", async ({ page }) => {
+  await page.route(GATEWAY_URL, async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/x-ndjson",
+      body: normalizedStream({ type: "start" }, { type: "delta", text: "saved" }, { type: "done" }),
+    });
+  });
+
+  const composer = await openAiTab(page);
+  const toolbar = page.getByLabel("AI 会话工具栏");
+  await composer.fill("mutation failure fixture");
+  await page.getByRole("button", { name: "发送" }).click();
+  await expect(toolbar.locator("summary")).toHaveText("历史会话 1");
+  await toolbar.locator("summary").click();
+  const panel = toolbar.locator(".ai-conversation-popover__panel");
+  const mutationAlert = panel.getByRole("alert");
+
+  await setConversationMutationFailure(page, { put: true });
+  let item = panel.getByLabel("mutation failure fixture 操作").locator("..");
+  await item.getByRole("button", { name: "重命名" }).click();
+  const renameInput = item.getByRole("textbox", { name: "重命名会话" });
+  await renameInput.fill("renamed fixture");
+  await renameInput.press("Enter");
+  await expect(mutationAlert).toContainText("重命名失败");
+  await expect(renameInput).toHaveValue("renamed fixture");
+
+  await setConversationMutationFailure(page);
+  await renameInput.press("Enter");
+  await expect(panel.getByText("renamed fixture", { exact: true })).toBeVisible();
+
+  item = panel.getByLabel("renamed fixture 操作").locator("..");
+  await setConversationMutationFailure(page, { put: true });
+  await item.getByRole("button", { name: "归档" }).click();
+  await expect(mutationAlert).toContainText("归档失败");
+  await expect(item.getByRole("button", { name: "归档" })).toBeVisible();
+
+  await setConversationMutationFailure(page);
+  await item.getByRole("button", { name: "归档" }).click();
+  const archivedList = panel.locator("nav.ai-conversation-list").filter({ hasText: "已归档" });
+  item = archivedList.getByLabel("renamed fixture 操作").locator("..");
+  await expect(item).toBeVisible();
+
+  await setConversationMutationFailure(page, { put: true });
+  await item.getByRole("button", { name: "恢复" }).click();
+  await expect(mutationAlert).toContainText("恢复失败");
+  await expect(item.getByRole("button", { name: "恢复" })).toBeVisible();
+
+  await setConversationMutationFailure(page);
+  await item.getByRole("button", { name: "恢复" }).click();
+  const currentList = panel.locator("nav.ai-conversation-list").filter({ hasText: "当前学习单元" });
+  item = currentList.getByLabel("renamed fixture 操作").locator("..");
+  await expect(item).toBeVisible();
+
+  await item.getByRole("button", { name: "删除", exact: true }).click();
+  await setConversationMutationFailure(page, { deleteRecord: true });
+  await item.getByRole("button", { name: "确认删除", exact: true }).click();
+  await expect(mutationAlert).toContainText("删除失败");
+  await expect(item).toBeVisible();
+  await expect(item.getByRole("button", { name: "确认删除", exact: true })).toBeVisible();
+
+  await setConversationMutationFailure(page);
+  await item.getByRole("button", { name: "确认删除", exact: true }).click();
+  await expect(toolbar.locator("summary")).toHaveText("历史会话 0");
 });
 
 test("IndexedDB unavailable mode shows an explicit memory-only warning", async ({ page }) => {
@@ -421,3 +521,42 @@ test("IndexedDB unavailable mode shows an explicit memory-only warning", async (
   await openAiTab(page);
   await expect(page.locator(".ai-assistant-notice")).toContainText("浏览器本地持久化不可用，本次会话仅保存在内存中。");
 });
+
+test("narrow citation preview stays inside the viewport without horizontal overflow", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.route(GATEWAY_URL, async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/x-ndjson",
+      body: normalizedStream(
+        { type: "start" },
+        { type: "delta", text: "引用 A [PropsBasicsDemo.jsx:L1-L2](source://PropsBasicsDemo.jsx#L1-L2) 引用 B [PropsBasicsDemo.jsx:L3-L4](source://PropsBasicsDemo.jsx#L3-L4) 引用 C [PropsBasicsDemo.jsx:L5-L6](source://PropsBasicsDemo.jsx#L5-L6)" },
+        { type: "done" },
+      ),
+    });
+  });
+
+  const composer = await openAiTab(page);
+  await composer.fill("给出多个源码引用");
+  await page.getByRole("button", { name: "发送" }).click();
+
+  const transcript = page.getByRole("log", { name: "AI 对话记录" });
+  const responseMessage = transcript.locator('[data-message-role="assistant"]').last();
+  const citation = responseMessage.locator(
+    '.ai-source-citation.is-preview-only[aria-label="PropsBasicsDemo.jsx，源码片段 PropsBasicsDemo.jsx L1–L2"]',
+  );
+  await expect(citation).toHaveCount(1);
+  const citationWrap = citation.locator("..");
+  await citation.focus();
+  const preview = citationWrap.getByRole("tooltip");
+  await expect(preview).toBeVisible();
+
+  const box = await preview.boundingBox();
+  expect(box).not.toBeNull();
+  expect(box.x).toBeGreaterThanOrEqual(8);
+  expect(box.x + box.width).toBeLessThanOrEqual(382);
+
+  const overflow = await transcript.evaluate((element) => element.scrollWidth - element.clientWidth);
+  expect(overflow).toBeLessThanOrEqual(1);
+});
+// @browser-owner ai

@@ -57,3 +57,4 @@ test.describe("Workbench learning path navigation", () => {
     await expect.poll(async () => page.evaluate(() => localStorage.getItem("react-learning-workbench:inspector-width"))).toBe("640");
   });
 });
+// @browser-owner workbench

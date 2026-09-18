@@ -152,3 +152,4 @@ test("provider actual usage stays telemetry and does not trigger stale automatic
   expect(stored.compactions).toHaveLength(0);
   expect(stored.messages).toHaveLength(6);
 });
+// @browser-owner ai

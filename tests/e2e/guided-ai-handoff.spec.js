@@ -94,3 +94,4 @@ test("Guided Ask AI protects an existing composer draft and supports Review", as
   await expect(composer).toHaveValue(/\[入口\] review/);
   expect(requests).toHaveLength(0);
 });
+// @browser-owner workbench

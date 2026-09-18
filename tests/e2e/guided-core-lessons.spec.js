@@ -104,3 +104,4 @@ test("Guided responses stay isolated when switching to another lesson", async ({
   await expect(page.locator("[data-guided-first-prediction]")).toHaveCount(0);
   await expect(page.getByRole("radio", { checked: true })).toHaveCount(0);
 });
+// @browser-owner workbench

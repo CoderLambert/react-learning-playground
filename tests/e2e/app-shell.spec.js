@@ -53,3 +53,4 @@ test.describe("application shell", () => {
     await expect(navItems).toHaveCount(fullCount);
   });
 });
+// @browser-owner app-integration

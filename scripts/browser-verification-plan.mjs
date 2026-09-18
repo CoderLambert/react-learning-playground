@@ -1,42 +1,100 @@
-export const CORE_BROWSER_SUITES = Object.freeze([
-  "tests/e2e/app-shell.spec.js",
-]);
+import { readdir, readFile } from "node:fs/promises";
+import { fileURLToPath } from "node:url";
+import { join, relative } from "node:path";
 
-export const DOMAIN_BROWSER_SUITES = Object.freeze({
-  ai: Object.freeze([
-    "tests/e2e/ai-assistant.spec.js",
-    "tests/e2e/ai-compaction.spec.js",
-    "tests/e2e/ai-cross-unit-history.spec.js",
-    "tests/e2e/ai-gateway-compaction.spec.js",
-    "tests/e2e/ai-markdown-rendering.spec.js",
-    "tests/e2e/ai-product-closure.spec.js",
-    "tests/e2e/ai-stream-termination.spec.js",
-    "tests/e2e/closure-ai-followup.spec.js",
-    "tests/e2e/conversation-rename-accessibility.spec.js",
-    "tests/e2e/deepseek-browser-settings.spec.js",
-    "tests/e2e/product-closure-ai.spec.js",
-  ]),
-  assessment: Object.freeze([
-    "tests/e2e/assessment-lifecycle.spec.js",
-    "tests/e2e/assessment-management.spec.js",
-    "tests/e2e/product-closure-assessment.spec.js",
-  ]),
-  workbench: Object.freeze([
-    "tests/e2e/accessibility.spec.js",
-    "tests/e2e/chapter-checkpoints.spec.js",
-    "tests/e2e/code-viewer.spec.js",
-    "tests/e2e/effects-cleanup.spec.js",
-    "tests/e2e/guided-ai-handoff.spec.js",
-    "tests/e2e/guided-core-lessons.spec.js",
-    "tests/e2e/guided-session-persistence.spec.js",
-    "tests/e2e/learning-path-navigation.spec.js",
-    "tests/e2e/responsive.spec.js",
-    "tests/e2e/source-locator-ai.spec.js",
-    "tests/e2e/surface-boundaries.spec.js",
-    "tests/e2e/workbench-final-acceptance.spec.js",
-    "tests/e2e/workbench-integration.spec.js",
-  ]),
-});
+import { ARCHITECTURE_OWNERS } from "../architecture/ownership-manifest.mjs";
+
+const REPOSITORY_ROOT = fileURLToPath(new URL("../", import.meta.url));
+const DEFAULT_BROWSER_SPEC_DIRECTORY = fileURLToPath(new URL("../tests/e2e/", import.meta.url));
+const BROWSER_OWNER_METADATA = /@browser-owner\s+([a-z][a-z0-9-]*)/g;
+const ARCHITECTURE_OWNER_BY_ID = new Map(
+  ARCHITECTURE_OWNERS.map((owner) => [owner.id, owner]),
+);
+
+function normalizeRepositoryPath(value) {
+  return String(value ?? "").replaceAll("\\", "/").replace(/^\.\//, "");
+}
+
+function suitePath(directory, file) {
+  return normalizeRepositoryPath(relative(REPOSITORY_ROOT, join(directory, file)));
+}
+
+function assertValidBrowserOwner(suite, ownerId) {
+  const owner = ARCHITECTURE_OWNER_BY_ID.get(ownerId);
+  if (!owner || !["domain", "integration"].includes(owner.kind)) {
+    throw new Error(
+      `Browser suite ${suite} has unknown or unsupported ARCH1 owner ${ownerId}`,
+    );
+  }
+  if (!["domain", "full"].includes(owner.browserImpact)) {
+    throw new Error(
+      `Browser suite ${suite} has owner ${ownerId} without a browser-impact classification`,
+    );
+  }
+  return owner;
+}
+
+export async function discoverBrowserSuiteOwnership(
+  directory = DEFAULT_BROWSER_SPEC_DIRECTORY,
+) {
+  const files = (await readdir(directory, { withFileTypes: true }))
+    .filter((entry) => entry.isFile() && entry.name.endsWith(".spec.js"))
+    .map((entry) => entry.name)
+    .sort();
+
+  const ownership = [];
+  for (const file of files) {
+    const suite = suitePath(directory, file);
+    const source = await readFile(join(directory, file), "utf8");
+    const owners = [...source.matchAll(BROWSER_OWNER_METADATA)].map((match) => match[1]);
+    if (owners.length !== 1) {
+      throw new Error(
+        `Browser suite ${suite} must declare exactly one @browser-owner metadata entry; found ${owners.length}`,
+      );
+    }
+    const [owner] = owners;
+    assertValidBrowserOwner(suite, owner);
+    ownership.push(Object.freeze({ suite, owner }));
+  }
+
+  const suites = ownership.map(({ suite }) => suite);
+  if (new Set(suites).size !== suites.length) {
+    throw new Error("Browser suite ownership contains duplicate suite paths");
+  }
+  if (ownership.length === 0) {
+    throw new Error("Browser suite ownership contains no browser specs");
+  }
+  return Object.freeze(ownership);
+}
+
+export const BROWSER_SUITE_OWNERSHIP = await discoverBrowserSuiteOwnership();
+
+const coreOwnership = BROWSER_SUITE_OWNERSHIP.filter(({ owner }) => (
+  ARCHITECTURE_OWNER_BY_ID.get(owner)?.kind === "integration"
+));
+const domainOwnership = BROWSER_SUITE_OWNERSHIP.filter(({ owner }) => (
+  ARCHITECTURE_OWNER_BY_ID.get(owner)?.kind === "domain"
+));
+
+export const CORE_BROWSER_SUITES = Object.freeze(
+  coreOwnership.map(({ suite }) => suite).sort(),
+);
+
+export const DOMAIN_BROWSER_SUITES = Object.freeze(
+  Object.fromEntries(
+    [...new Set(domainOwnership.map(({ owner }) => owner))]
+      .sort()
+      .map((domain) => [
+        domain,
+        Object.freeze(
+          domainOwnership
+            .filter(({ owner }) => owner === domain)
+            .map(({ suite }) => suite)
+            .sort(),
+        ),
+      ]),
+  ),
+);
 
 export const SUPPORTED_BROWSER_DOMAINS = Object.freeze(
   Object.keys(DOMAIN_BROWSER_SUITES).sort(),

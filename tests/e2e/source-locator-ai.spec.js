@@ -30,3 +30,4 @@ test("Visual Source Locator prefills exact source context in AI without auto-sub
   await expect(page.getByRole("button", { name: "发送", exact: true })).toBeVisible();
   expect(requests).toHaveLength(0);
 });
+// @browser-owner workbench
