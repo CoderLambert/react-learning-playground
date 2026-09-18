@@ -30,6 +30,11 @@ const SourceViewer = lazy(() =>
   import("./components/source-viewer/SourceViewer").then((module) => ({ default: module.SourceViewer })),
 );
 
+// The demos registry is authoritative. Normalize it once at the composition
+// boundary so every Workbench, AI, Assessment, Source and Guided consumer gets
+// the same canonical LearningUnit shape and object identity.
+const learningUnits = demos.map((demo) => enrichLearningUnitSourceSemantics(toLearningUnit(demo)));
+
 function NotesPane({ learningUnitId }) {
   const [toc, setToc] = useState([]);
   return (
@@ -57,22 +62,20 @@ export default function App() {
     setInspectorTab,
     setSourceFile,
   } = usePersistedWorkbenchState();
-  const { demoId, selectDemo } = useDemoUrlState({ learningUnits: demos, defaultDemoId: demos[0]?.id });
-  const currentDemo = useMemo(() => demos.find((demo) => demo.id === demoId) || demos[0], [demoId]);
-  const currentLearningUnit = useMemo(
-    () => (currentDemo ? enrichLearningUnitSourceSemantics(toLearningUnit(currentDemo)) : null),
-    [currentDemo],
-  );
+  const { demoId, selectDemo } = useDemoUrlState({ learningUnits, defaultDemoId: learningUnits[0]?.id });
+  const currentLearningUnit = learningUnits.find((unit) => unit.id === demoId) || learningUnits[0] || null;
   const learningUnitsById = useMemo(
-    () => new Map(demos.map((demo) => {
-      const unit = enrichLearningUnitSourceSemantics(toLearningUnit(demo));
-      return [unit.id, unit];
-    })),
+    () => new Map(learningUnits.map((unit) => [unit.id, unit])),
     [],
   );
-  const currentCategory = useMemo(() => CATEGORIES.find((category) => category.id === currentDemo?.category), [currentDemo]);
-  const currentCheckpointChapter = currentDemo ? getCheckpointChapter(currentDemo.id) : null;
-  const currentLearningPathEntry = currentDemo ? getLearningPathEntry(demos, currentDemo.id) : null;
+  const currentCategory = useMemo(
+    () => CATEGORIES.find((category) => category.id === currentLearningUnit?.categoryId),
+    [currentLearningUnit],
+  );
+  const currentCheckpointChapter = currentLearningUnit ? getCheckpointChapter(currentLearningUnit.id) : null;
+  const currentLearningPathEntry = currentLearningUnit
+    ? getLearningPathEntry(learningUnits, currentLearningUnit.id)
+    : null;
   const guidedActivity = useMemo(
     () => (currentLearningUnit ? getGuidedActivityDefinition(currentLearningUnit.id) : null),
     [currentLearningUnit],
@@ -109,7 +112,7 @@ export default function App() {
   useEffect(() => {
     setSourceFile(null);
     setSourceFocus(null);
-  }, [currentDemo?.id, setSourceFile]);
+  }, [currentLearningUnit?.id, setSourceFile]);
   /* oxlint-enable react/set-state-in-effect */
 
   useEffect(() => {
@@ -205,7 +208,7 @@ export default function App() {
 
   const handleVisualSourceLocate = (target) => {
     if (!target?.learningUnitId || !target?.fileName) return;
-    const learningUnitExists = demos.some((demo) => demo.id === target.learningUnitId);
+    const learningUnitExists = learningUnitsById.has(target.learningUnitId);
     if (!learningUnitExists) return;
 
     setSourceLocatorActive(false);
@@ -267,7 +270,7 @@ export default function App() {
       return;
     }
 
-    const targetExists = demos.some((demo) => demo.id === conversation.learningUnitId);
+    const targetExists = learningUnitsById.has(conversation.learningUnitId);
     if (!targetExists) return;
 
     setPendingSourceTarget(null);
@@ -315,8 +318,8 @@ export default function App() {
   const navigation = (
     <WorkbenchNavigation
       categories={CATEGORIES}
-      learningUnits={demos}
-      activeId={currentDemo?.id}
+      learningUnits={learningUnits}
+      activeId={currentLearningUnit?.id}
       viewMode={viewMode}
       searchQuery={searchQuery}
       onSearchChange={setSearchQuery}
@@ -328,7 +331,7 @@ export default function App() {
     />
   );
 
-  const learningUnitLabels = Object.fromEntries(demos.map((demo) => [demo.id, demo.label]));
+  const learningUnitLabels = Object.fromEntries(learningUnits.map((unit) => [unit.id, unit.title]));
   const conversationHistoryCount = aiAssistant.conversationHistory.filter(
     (conversation) => !conversation.archived,
   ).length;
@@ -491,7 +494,7 @@ export default function App() {
           <div className="breadcrumb-nav">
             <span className="breadcrumb-category">{viewMode === "all" ? "总览模式" : currentCategory?.name || "核心实验"}</span>
             <span className="breadcrumb-sep">/</span>
-            <span className="breadcrumb-current">{viewMode === "all" ? "全部知识点看板" : currentDemo?.label}</span>
+            <span className="breadcrumb-current">{viewMode === "all" ? "全部知识点看板" : currentLearningUnit?.title}</span>
           </div>
         </div>
         <div className="top-bar-right">
@@ -530,8 +533,8 @@ export default function App() {
       </header>
       <main className="app-content workbench-app-content">
         {viewMode === "focused" ? (
-          currentDemo ? (
-            <div key={currentDemo.id} className="demo-page">
+          currentLearningUnit ? (
+            <div key={currentLearningUnit.id} className="demo-page">
               {guidedActivity ? (
                 <GuidedLearningFlow
                   key={`${guidedActivity.learningUnitId}:${guidedActivity.revision}`}
@@ -543,7 +546,7 @@ export default function App() {
                       enabled={sourceLocatorActive}
                       onLocate={handleVisualSourceLocate}
                     >
-                      <currentDemo.Component />
+                      <currentLearningUnit.component />
                     </DemoSourceLocator>
                   )}
                   onReviewResource={handleGuidedReviewResource}
@@ -557,7 +560,7 @@ export default function App() {
                   enabled={sourceLocatorActive}
                   onLocate={handleVisualSourceLocate}
                 >
-                  <currentDemo.Component />
+                  <currentLearningUnit.component />
                 </DemoSourceLocator>
               )}
               {currentCheckpointChapter && (
@@ -571,24 +574,23 @@ export default function App() {
           ) : null
         ) : (
           <div className="demo-all-container">
-            {demos.map((demo, index) => {
-              const checkpointChapter = getCheckpointChapter(demo.id);
-              const learningUnit = enrichLearningUnitSourceSemantics(toLearningUnit(demo));
-              const learningPathEntry = getLearningPathEntry(demos, demo.id);
+            {learningUnits.map((learningUnit, index) => {
+              const checkpointChapter = getCheckpointChapter(learningUnit.id);
+              const learningPathEntry = getLearningPathEntry(learningUnits, learningUnit.id);
               return (
-                <div key={demo.id} id={`demo-${demo.id}`}>
+                <div key={learningUnit.id} id={`demo-${learningUnit.id}`}>
                   {index > 0 && <hr className="demo-divider" />}
                   <div className="workbench-all-demo-heading">
                     <span className="badge badge-blue">案例 {index + 1}</span>
-                    <h3>{demo.label}</h3>
-                    <span>#{demo.id}</span>
+                    <h3>{learningUnit.title}</h3>
+                    <span>#{learningUnit.id}</span>
                   </div>
                   <DemoSourceLocator
                     learningUnit={learningUnit}
                     enabled={sourceLocatorActive}
                     onLocate={handleVisualSourceLocate}
                   >
-                    <demo.Component />
+                    <learningUnit.component />
                   </DemoSourceLocator>
                   {checkpointChapter && (
                     <ChapterCheckpoint
