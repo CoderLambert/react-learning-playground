@@ -60,8 +60,13 @@ test.describe("responsive inspector surface boundaries", () => {
 
     const slotBox = await slot.boundingBox();
     const inspectorBox = await inspector.boundingBox();
+    const slotStyles = await slot.evaluate((element) => {
+      const styles = getComputedStyle(element);
+      return { borderLeftWidth: styles.borderLeftWidth };
+    });
     expect(slotBox?.width).toBeGreaterThanOrEqual(389);
     expect(slotBox?.height).toBeGreaterThanOrEqual(843);
+    expect(slotStyles.borderLeftWidth).toBe("0px");
     expect(inspectorBox?.width).toBeGreaterThanOrEqual(389);
     expect(inspectorBox?.height).toBeGreaterThanOrEqual(843);
     await expect(content).toHaveAttribute("inert", "");
