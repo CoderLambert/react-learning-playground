@@ -85,7 +85,11 @@ export function useGuidedFlow({
     if (state.completionState === "not-started") return;
 
     const result = persistence.write(state);
-    if (!result.ok) setPersistenceStatus(GUIDED_SESSION_PERSISTENCE_STATUS.UNAVAILABLE);
+    if (!result.ok) {
+      // Storage failure is an external-system result that must be surfaced after the write attempt.
+      // oxlint-disable-next-line react/set-state-in-effect
+      setPersistenceStatus(GUIDED_SESSION_PERSISTENCE_STATUS.UNAVAILABLE);
+    }
   }, [isCurrentActivity, persistence, state]);
 
   const startOver = useCallback(() => {

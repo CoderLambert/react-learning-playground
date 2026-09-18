@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import CodeViewer from "../CodeViewer";
 import {
   LEARNING_CONTEXT_KINDS,
@@ -131,7 +131,7 @@ export function SourceViewer({
 }) {
   const fileList = sources ?? learningUnit?.sources ?? [];
   const [internalActiveFileName, setInternalActiveFileName] = useState(null);
-  const [semanticSelection, setSemanticSelection] = useState(null);
+  const [semanticSelectionState, setSemanticSelectionState] = useState({ contextKey: null, selection: null });
   const firstFileName = fileList[0]?.name ?? null;
   const controlledFileExists = activeFileName && fileList.some((file) => file.name === activeFileName);
   const internalFileExists = internalActiveFileName && fileList.some((file) => file.name === internalActiveFileName);
@@ -143,14 +143,22 @@ export function SourceViewer({
   const inline = mode === "inline";
   const currentFile = fileList.find((file) => file.name === resolvedActiveFileName) ?? fileList[0] ?? null;
   const semantics = currentFile?.semantics ?? null;
-
-  useEffect(() => {
-    if (focusRange?.fileName === resolvedActiveFileName) {
-      setSemanticSelection(null);
-      return;
-    }
-    setSemanticSelection(inline && semantics?.primaryRegion ? "primary" : null);
-  }, [focusRange?.endLine, focusRange?.fileName, focusRange?.startLine, inline, resolvedActiveFileName, semantics?.primaryRegionId]);
+  const semanticContextKey = [
+    inline ? "inline" : "inspector",
+    resolvedActiveFileName ?? "",
+    focusRange?.fileName ?? "",
+    focusRange?.startLine ?? "",
+    focusRange?.endLine ?? "",
+    semantics?.primaryRegionId ?? "",
+  ].join("|");
+  const defaultSemanticSelection = focusRange?.fileName === resolvedActiveFileName
+    ? null
+    : inline && semantics?.primaryRegion
+      ? "primary"
+      : null;
+  const semanticSelection = semanticSelectionState.contextKey === semanticContextKey
+    ? semanticSelectionState.selection
+    : defaultSemanticSelection;
 
   const selectedRegion = useMemo(() => {
     if (!semantics) return null;
@@ -180,14 +188,13 @@ export function SourceViewer({
 
   const handleActiveFileChange = (fileName) => {
     setInternalActiveFileName(fileName);
-    setSemanticSelection(null);
     onFocusRangeChange?.(null);
     onActiveFileChange?.(fileName);
   };
 
   const handleSemanticSelect = (selection) => {
     onFocusRangeChange?.(null);
-    setSemanticSelection(selection);
+    setSemanticSelectionState({ contextKey: semanticContextKey, selection });
   };
 
   const openInInspectorAction = inline && onOpenInInspector ? (
