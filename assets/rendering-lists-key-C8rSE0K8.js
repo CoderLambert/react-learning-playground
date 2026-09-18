@@ -1,0 +1,40 @@
+var e=`# 列表渲染与 key 身份
+
+<MentalModel title="key 告诉 React：这个兄弟节点是谁">
+列表 render 时，React 需要把前后两棵树中的兄弟元素对应起来。\`key\` 是同一父节点下的稳定身份线索；它不只是消除 warning，还直接影响组件 state 能否跟随正确的数据实体保留。
+</MentalModel>
+
+<Experiment title="排序后检查编辑状态跟谁走">
+在中间 Demo 中编辑某一行，再反转或删除列表，对比 stable id key 与 index key。操作前先预测输入 State 会跟随“数据项”还是“当前位置”。
+</Experiment>
+
+<DemoReference action="编辑一行后重排列表，并切换 key 策略" observe="观察局部 state 是否跟随正确实体；检查 DOM 顺序变化与组件身份变化的差异。" />
+
+<Flow items={["map 产生兄弟元素", "key 为同级元素提供稳定身份线索", "下一次 render 时，React 根据树中位置、组件类型和显式 key 判断身份是否延续", "身份延续时对应 State 保留", "身份变化时子树重新创建"]} />
+
+<Boundary title="key 只需在兄弟范围内唯一">
+key 不需要全局唯一，但必须在同一列表中稳定。不要在 render 时用 \`Math.random()\` 生成 key；那会让每次 render 都变成新身份。
+</Boundary>
+
+<Boundary title="key 不会作为普通 prop 传给组件">
+key 只用于 React 判断元素身份。
+
+如果 Row 自己也需要业务 ID，必须显式传入一个普通 prop，例如代码示例：
+\`<Row key={item.id} itemId={item.id} />\`
+
+不要在 Row 内期待 props.key。
+</Boundary>
+
+<AntiPattern title="可重排列表默认使用 index key">
+只有列表顺序和成员永远不变化、元素也没有需要保持的局部身份时，index 才可能无害。真实可编辑列表通常应使用数据层稳定 id。
+</AntiPattern>
+
+<Summary>
+- key 是 reconciliation 的身份线索。
+- 稳定 key 让 state 跟随数据实体而不是数组位置。
+- key 变化可被有意用于重置子树。
+- 不要用随机 key 或可变展示字段冒充稳定 id。
+</Summary>
+
+<FurtherReading items={[{ label: "React: Rendering Lists", href: "https://react.dev/learn/rendering-lists" }, { label: "React: Preserving and Resetting State", href: "https://react.dev/learn/preserving-and-resetting-state" }]} />
+`;export{e as default};
