@@ -38,8 +38,9 @@ export function NoteViewer({
   className = "",
 }) {
   const contentRef = useRef(null);
-  const [selectedText, setSelectedText] = useState("");
+  const [selection, setSelection] = useState({ learningUnitId: null, text: "" });
   const [loaded, setLoaded] = useState({ learningUnitId: null, Component: null, error: null });
+  const selectedText = selection.learningUnitId === learningUnitId ? selection.text : "";
 
   const resolution = useMemo(() => {
     if (!learningUnitId) return { loader: null, error: null };
@@ -60,10 +61,6 @@ export function NoteViewer({
     learningUnit: { id: learningUnitId },
     selectedText,
   }), [learningUnitId, selectedText]);
-
-  useEffect(() => {
-    setSelectedText("");
-  }, [learningUnitId]);
 
   useEffect(() => {
     if (!resolution.loader || !learningUnitId) return;
@@ -126,7 +123,10 @@ export function NoteViewer({
     );
   }
 
-  const updateSelection = () => setSelectedText(readContainedSelection(contentRef.current));
+  const updateSelection = () => setSelection({
+    learningUnitId,
+    text: readContainedSelection(contentRef.current),
+  });
   const NoteComponent = loaded.Component;
   return (
     <MDXProvider components={mergedComponents}>
