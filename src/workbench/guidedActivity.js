@@ -335,7 +335,7 @@ const RENDERING_LISTS_KEY_DEFINITION = {
       response: {
         kind: GUIDED_RESPONSE_KINDS.CHOICE,
         options: [
-          { id: "stays-first-position", label: "仍留在第一行，因此看起来跟到了「发布生产版本 / Carol」" },
+          { id: "stays-first-position", label: "仍留在第一行，因此看起来跟到了「发布生产版本 / Carol」 },
           { id: "follows-task-a", label: "跟着「修复登录页 / Alice」移动到最后一行" },
           { id: "clears-after-reorder", label: "反转后备注会被清空" },
         ],
