@@ -4,6 +4,7 @@ import test from "node:test";
 
 import {
   assertGuidedActivityDefinition,
+  GUIDED_ACTIVITY_DEFINITIONS,
   getGuidedActivity,
   getGuidedActivityDefinition,
   GUIDED_RESPONSE_KINDS,
@@ -12,6 +13,30 @@ import {
   STATE_SNAPSHOT_QUEUE_GUIDED_ACTIVITY,
   validateGuidedActivityDefinition,
 } from "../src/workbench/guidedActivity.js";
+
+const TARGET_LEARNING_UNIT_IDS = [
+  "state-snapshot-queue",
+  "rendering-lists-key",
+  "preserving-resetting-state",
+  "not-need-effect",
+  "lifecycle-of-reactive-effects",
+];
+
+const FROZEN_EXPECTED_OPTIONS = {
+  "state-snapshot-queue": { predict: "count-1", practice: "same-result-different-semantics" },
+  "rendering-lists-key": { predict: "stays-first-position", practice: "stable-task-id" },
+  "preserving-resetting-state": { predict: "draft-preserved", practice: "stable-product-key" },
+  "not-need-effect": { predict: "derive-during-render", practice: "render-event-effect" },
+  "lifecycle-of-reactive-effects": { predict: "cleanup-then-setup", practice: "connection-target-only" },
+};
+
+const FROZEN_EXPERIMENT_ACTIONS = {
+  "state-snapshot-queue": "replace-three-times",
+  "rendering-lists-key": "compare-index-and-stable-key",
+  "preserving-resetting-state": "compare-preserved-and-keyed-chat",
+  "not-need-effect": "exercise-render-event-identity-boundaries",
+  "lifecycle-of-reactive-effects": "observe-room-resynchronization",
+};
 
 function createValidDefinition(overrides = {}) {
   return {
@@ -82,13 +107,47 @@ test("state-snapshot-queue is a sparse, frozen Guided Activity fixture", () => {
   assert.deepEqual(validateGuidedActivityDefinition(definition), { valid: true, errors: [] });
 });
 
+test("the first five Guided definitions are available, frozen, and follow the contract", async () => {
+  const registrySource = await readFile(new URL("../src/demos/index.js", import.meta.url), "utf8");
+  const demosStart = registrySource.indexOf("export const demos = [");
+  assert.notEqual(demosStart, -1);
+  const demoIds = [...registrySource.slice(demosStart).matchAll(/\bid:\s*"([a-z0-9-]+)"/g)].map((match) => match[1]);
+
+  assert.deepEqual(Object.keys(GUIDED_ACTIVITY_DEFINITIONS).sort(), [...TARGET_LEARNING_UNIT_IDS].sort());
+  for (const learningUnitId of TARGET_LEARNING_UNIT_IDS) {
+    assert.ok(demoIds.includes(learningUnitId), `${learningUnitId} must exist in the authoritative demo registry`);
+    const definition = getGuidedActivityDefinition(learningUnitId);
+    assert.ok(definition);
+    assert.equal(definition, GUIDED_ACTIVITY_DEFINITIONS[learningUnitId]);
+    assert.ok(Object.isFrozen(definition));
+    assert.ok(Object.isFrozen(definition.steps));
+    assert.deepEqual(validateGuidedActivityDefinition(definition), { valid: true, errors: [] });
+    assert.deepEqual(
+      definition.steps.map(({ type }) => type),
+      ["predict", "experiment", "explain", "practice", "review"],
+    );
+    assert.equal(new Set(definition.steps.map(({ id }) => id)).size, definition.steps.length);
+    for (const step of definition.steps) {
+      if (step.response?.kind === GUIDED_RESPONSE_KINDS.CHOICE) {
+        assert.equal(new Set(step.response.options.map(({ id }) => id)).size, step.response.options.length);
+      }
+    }
+    assert.deepEqual(definition.steps.at(-1).resources, ["notes", "source", "demo"]);
+    assert.equal(definition.steps[0].reveal.expectedOptionId, FROZEN_EXPECTED_OPTIONS[learningUnitId].predict);
+    assert.equal(definition.steps[1].demoActionId, FROZEN_EXPERIMENT_ACTIONS[learningUnitId]);
+    assert.equal(definition.steps[3].reveal.expectedOptionId, FROZEN_EXPECTED_OPTIONS[learningUnitId].practice);
+  }
+});
+
 test("lookup returns an explicit no-guided state for an unconfigured unit", () => {
-  assert.equal(hasGuidedActivity("not-configured"), false);
-  assert.equal(getGuidedActivityDefinition("not-configured"), null);
-  assert.deepEqual(getGuidedActivity("not-configured"), {
-    kind: "none",
-    learningUnitId: "not-configured",
-  });
+  for (const learningUnitId of ["not-configured", "immutable-state", "render-vs-dom-update"]) {
+    assert.equal(hasGuidedActivity(learningUnitId), false);
+    assert.equal(getGuidedActivityDefinition(learningUnitId), null);
+    assert.deepEqual(getGuidedActivity(learningUnitId), {
+      kind: "none",
+      learningUnitId,
+    });
+  }
   assert.deepEqual(getGuidedActivity("state-snapshot-queue"), {
     kind: "definition",
     definition: STATE_SNAPSHOT_QUEUE_GUIDED_ACTIVITY,

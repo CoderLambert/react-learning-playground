@@ -318,11 +318,416 @@ const STATE_SNAPSHOT_QUEUE_DEFINITION = {
 
 assertGuidedActivityDefinition(STATE_SNAPSHOT_QUEUE_DEFINITION);
 
+const RENDERING_LISTS_KEY_DEFINITION = {
+  learningUnitId: "rendering-lists-key",
+  revision: 1,
+  goal: "理解 key 如何让列表项的局部 State 跟随数据身份，而不是数组位置。",
+  steps: [
+    {
+      id: "predict-index-key-reorder",
+      type: GUIDED_STEP_TYPES.PREDICT,
+      prompt: `当前使用 index key。
+
+给第一行「修复登录页 / Alice」输入备注 A-note，
+然后点击「反转顺序」。
+
+反转后，A-note 最可能出现在哪里？`,
+      response: {
+        kind: GUIDED_RESPONSE_KINDS.CHOICE,
+        options: [
+          { id: "stays-first-position", label: "仍留在第一行，因此看起来跟到了「发布生产版本 / Carol」" },
+          { id: "follows-task-a", label: "跟着「修复登录页 / Alice」移动到最后一行" },
+          { id: "clears-after-reorder", label: "反转后备注会被清空" },
+        ],
+      },
+      reveal: {
+        expectedOptionId: "stays-first-position",
+        observation: `使用 index key 时，React 仍用当前数组位置作为身份线索。
+反转后 index 0 对应的数据从 task-a 变成 task-c，但原先 index 0
+组件里的输入 State 仍留在这个位置，所以备注看起来跟错了任务。`,
+      },
+    },
+    {
+      id: "experiment-compare-list-identity",
+      type: GUIDED_STEP_TYPES.EXPERIMENT,
+      prompt: `在真实 Demo 中完成两轮实验：
+
+1. 点击「恢复数据」，选择「使用 index key」。
+2. 给第一行输入 A-note，再点击「反转顺序」。
+3. 观察备注现在属于哪一个任务。
+
+然后：
+
+4. 选择「使用 stable id」并再次恢复数据。
+5. 给第一行输入 A-note，再反转顺序。
+6. 对比备注这次跟着“位置”还是“任务身份”移动。`,
+      demoActionId: "compare-index-and-stable-key",
+      expectedObservation: "index key 时，备注留在原数组位置并可能显示在另一个任务旁；stable task.id 时，备注会跟随 task-a / Alice 对应的业务实体移动。",
+    },
+    {
+      id: "explain-list-identity",
+      type: GUIDED_STEP_TYPES.EXPLAIN,
+      prompt: `用自己的话解释：
+
+为什么数据只是改变了顺序，index key 却可能让输入框的局部 State
+“跟错任务”？
+
+而 task.id 为什么能让 State 更稳定地跟随业务实体？`,
+      response: {
+        kind: GUIDED_RESPONSE_KINDS.TEXT,
+        placeholder: "重点解释“数组位置”和“业务身份”的差别…",
+      },
+    },
+    {
+      id: "practice-stable-key-transfer",
+      type: GUIDED_STEP_TYPES.PRACTICE,
+      prompt: `一个可编辑待办列表允许：
+
+- 在列表顶部插入新任务；
+- 修改任务标题；
+- 每一行都有自己的输入草稿。
+
+哪一个值最适合作为 key，让已有行的草稿继续属于原来的待办？`,
+      response: {
+        kind: GUIDED_RESPONSE_KINDS.CHOICE,
+        options: [
+          { id: "stable-task-id", label: "数据模型中的稳定 todo.id" },
+          { id: "array-index", label: "当前数组 index" },
+          { id: "editable-title", label: "当前可编辑的 todo.title" },
+        ],
+      },
+      reveal: {
+        expectedOptionId: "stable-task-id",
+        observation: `key 应来自稳定的数据身份。
+
+顶部插入会改变 index；
+可编辑 title 也可能变化；
+稳定 id 才能在列表结构变化后继续标识同一个业务实体。`,
+      },
+    },
+    {
+      id: "review-list-key-identity",
+      type: GUIDED_STEP_TYPES.REVIEW,
+      prompt: `回到 Notes、Source 或 Demo，核对你的判断：
+
+key 的核心作用是提供稳定身份线索，让 React 在列表结构变化后仍能识别
+“这是哪个业务实体”，而不只是消除 warning。`,
+      resources: ["notes", "source", "demo"],
+    },
+  ],
+};
+
+const PRESERVING_RESETTING_STATE_DEFINITION = {
+  learningUnitId: "preserving-resetting-state",
+  revision: 1,
+  goal: "理解局部 State 与组件身份关联，并用稳定业务 key 明确表达何时保留或重置。",
+  steps: [
+    {
+      id: "predict-contact-draft-preservation",
+      type: GUIDED_STEP_TYPES.PREDICT,
+      prompt: `在 Demo 上半区：
+
+Taylor 的 Chat 中已经输入草稿「明天开会」。
+
+现在点击 Alice。
+
+联系人已经变成 Alice 后，textarea 中的草稿会怎样？`,
+      response: {
+        kind: GUIDED_RESPONSE_KINDS.CHOICE,
+        options: [
+          { id: "draft-preserved", label: "原草稿仍然保留，现在显示在 Alice 的 Chat 中" },
+          { id: "draft-cleared", label: "切换 contact prop 后 React 会自动清空草稿" },
+          { id: "separate-draft-created", label: "React 会自动为 Alice 恢复一份独立草稿" },
+        ],
+      },
+      reveal: {
+        expectedOptionId: "draft-preserved",
+        observation: "这里只改变了 contact prop。\n\n父级仍在同一位置渲染同一个 Chat 组件身份，因此内部 draft State 默认会继续保留。",
+      },
+    },
+    {
+      id: "experiment-compare-contact-identity",
+      type: GUIDED_STEP_TYPES.EXPERIMENT,
+      prompt: `在真实 Demo 中比较上下两组 Chat：
+
+上半区：
+1. 给 Taylor 输入一段草稿。
+2. 切换到 Alice。
+3. 观察草稿。
+
+下半区：
+4. 给 Taylor 输入一段草稿。
+5. 切换到 Alice。
+6. 观察带 key={contact.id} 的 Chat 是否仍保留旧草稿。`,
+      demoActionId: "compare-preserved-and-keyed-chat",
+      expectedObservation: "上半区相同位置、相同组件类型且没有业务 key 变化，因此 draft 被保留；下半区 contact.id 改变了 Chat 的身份，新 Chat 从空的初始 draft 开始。",
+    },
+    {
+      id: "explain-state-identity",
+      type: GUIDED_STEP_TYPES.EXPLAIN,
+      prompt: `为什么 contact prop 从 Taylor 变成 Alice，并不会自动让 React 丢弃 Chat 的局部 draft？
+
+什么时候 key={contact.id} 表达的是合理的产品身份边界？`,
+      response: {
+        kind: GUIDED_RESPONSE_KINDS.TEXT,
+        placeholder: "从“这是同一个组件实例，还是另一个业务实例”来解释…",
+      },
+    },
+    {
+      id: "practice-reset-form-by-entity",
+      type: GUIDED_STEP_TYPES.PRACTICE,
+      prompt: `一个 ProductForm 用局部 State 保存多个未提交字段。
+
+产品从 product-A 切换到 product-B 时，产品要求：
+
+“旧产品的所有未提交字段都应该丢弃，
+新产品必须从空表单开始。”
+
+哪种写法最直接表达“这是另一个表单实例”？`,
+      response: {
+        kind: GUIDED_RESPONSE_KINDS.CHOICE,
+        options: [
+          { id: "stable-product-key", label: "<ProductForm key={product.id} product={product} />" },
+          { id: "same-component-no-key", label: "<ProductForm product={product} />" },
+          { id: "random-key", label: "<ProductForm key={Math.random()} product={product} />" },
+        ],
+      },
+      reveal: {
+        expectedOptionId: "stable-product-key",
+        observation: `当整个表单子树都应该随业务实体切换而重新开始时，
+稳定 product.id 可以明确表达新的组件身份。
+
+在同一位置继续渲染同一组件类型且没有 key 变化时，会继续沿用原身份；
+随机 key 则会在无关 render 中也不断重建组件。`,
+      },
+    },
+    {
+      id: "review-preserve-reset-identity",
+      type: GUIDED_STEP_TYPES.REVIEW,
+      prompt: `回到 Notes、Source 或 Demo，核对：
+
+你真正要决定的不是“怎么强制刷新”，而是业务上当前 UI
+应该继续代表同一个实例，还是一个新的实例。`,
+      resources: ["notes", "source", "demo"],
+    },
+  ],
+};
+
+const NOT_NEED_EFFECT_DEFINITION = {
+  learningUnitId: "not-need-effect",
+  revision: 1,
+  goal: "学会先判断逻辑的因果来源，再决定它属于 render、Event Handler 还是 Effect。",
+  steps: [
+    {
+      id: "predict-derived-list-without-effect",
+      type: GUIDED_STEP_TYPES.PREDICT,
+      prompt: `商品列表当前由 query 和 category 决定。
+
+当用户修改搜索词时，setQuery 已经触发一次新的 render。
+
+为了得到最新 filteredProducts，还必须再做什么？`,
+      response: {
+        kind: GUIDED_RESPONSE_KINDS.CHOICE,
+        options: [
+          { id: "derive-during-render", label: "直接在这次 render 中根据新的 query / category 重新计算" },
+          { id: "sync-with-effect", label: "等 render 完成后，再由 Effect 把过滤结果写入另一份 State" },
+          { id: "store-in-ref", label: "把过滤结果写进 ref，等待下一次交互读取" },
+        ],
+      },
+      reveal: {
+        expectedOptionId: "derive-during-render",
+        observation: `filteredProducts 完全可以由当前 query、category 和 products 计算得到。
+
+React 因 State 变化重新 render 时，直接重新计算即可；
+再复制一份 filtered State 会增加第二份事实来源和额外同步链。`,
+      },
+    },
+    {
+      id: "experiment-no-effect-boundaries",
+      type: GUIDED_STEP_TYPES.EXPERIMENT,
+      prompt: `在真实 Demo 中完成三组操作：
+
+1. 修改搜索词和分类，观察商品列表立即由当前输入重新派生。
+2. 点击某个商品的「购买」，观察日志由这次点击直接产生。
+3. 在留言板输入草稿，再切换 User_A / User_B，观察 key 切换身份后的草稿重置。
+
+思考这三组行为分别为什么不需要一个额外 Effect 来“监听变化”。`,
+      demoActionId: "exercise-render-event-identity-boundaries",
+      expectedObservation: "过滤结果在 render 中由当前 State 派生；购买日志由明确的 click Event Handler 直接产生；用户身份切换通过 key 创建新的 CommentForm 身份并重置局部 State。",
+    },
+    {
+      id: "explain-effect-boundary",
+      type: GUIDED_STEP_TYPES.EXPLAIN,
+      prompt: `用“为什么这段代码需要运行？”来解释 Demo 的三种情况：
+
+- filteredProducts 为什么属于 render？
+- 购买日志为什么属于 Event Handler？
+- 什么样的需求才真正需要 Effect？`,
+      response: {
+        kind: GUIDED_RESPONSE_KINDS.TEXT,
+        placeholder: "从“派生计算 / 用户事件 / 外部同步”的因果边界解释…",
+      },
+    },
+    {
+      id: "practice-place-logic-by-cause",
+      type: GUIDED_STEP_TYPES.PRACTICE,
+      prompt: `ProfileEditor 同时有三项需求：
+
+1. 根据 firstName 和 lastName 显示 fullName；
+2. 用户点击「保存」时发送 POST 请求；
+3. 组件显示期间监听 window.resize，并在卸载时移除监听。
+
+哪组职责划分最合适？`,
+      response: {
+        kind: GUIDED_RESPONSE_KINDS.CHOICE,
+        options: [
+          { id: "render-event-effect", label: "fullName：render；POST：Save Event Handler；resize listener：Effect" },
+          { id: "all-effects", label: "三项全部放进 Effect" },
+          { id: "state-effect-handler", label: "fullName：State + Effect；POST：Effect；resize listener：普通 render / click handler" },
+        ],
+      },
+      reveal: {
+        expectedOptionId: "render-event-effect",
+        observation: `能从当前 props/state 推导的值留在 render；
+
+明确由用户点击产生的业务因果留在对应 Event Handler；
+
+需要在组件存在期间与浏览器外部 API 保持同步并 cleanup 的 listener
+才属于 Effect。`,
+      },
+    },
+    {
+      id: "review-effect-decision-boundary",
+      type: GUIDED_STEP_TYPES.REVIEW,
+      prompt: `回到 Notes、Source 或 Demo，重新检查每段逻辑：
+
+它是在计算 UI、
+响应一个明确事件，
+还是在与 React 外部系统保持同步？`,
+      resources: ["notes", "source", "demo"],
+    },
+  ],
+};
+
+const LIFECYCLE_OF_REACTIVE_EFFECTS_DEFINITION = {
+  learningUnitId: "lifecycle-of-reactive-effects",
+  revision: 1,
+  goal: "理解 Effect 是一段独立同步过程：同步目标变化时，先停止旧同步，再建立新同步。",
+  steps: [
+    {
+      id: "predict-room-resync-order",
+      type: GUIDED_STEP_TYPES.PREDICT,
+      prompt: `先清空生命周期日志。
+
+当前已经连接某个房间。
+现在切换到另一个房间。
+
+连接 Effect 最合理的生命周期顺序是什么？`,
+      response: {
+        kind: GUIDED_RESPONSE_KINDS.CHOICE,
+        options: [
+          { id: "cleanup-then-setup", label: "先 cleanup 旧房间连接，再 setup 新房间连接" },
+          { id: "setup-then-cleanup", label: "先 setup 新房间，再 cleanup 旧房间" },
+          { id: "setup-only", label: "只 setup 新房间，旧连接由 React 自动忽略" },
+        ],
+      },
+      reveal: {
+        expectedOptionId: "cleanup-then-setup",
+        observation: `当决定同步目标的 roomId 改变时，
+React 会先运行上一次 Effect 的 cleanup，
+再用新的 roomId 建立下一次同步。`,
+      },
+    },
+    {
+      id: "experiment-room-effect-lifecycle",
+      type: GUIDED_STEP_TYPES.EXPERIMENT,
+      prompt: `在真实 Demo 中：
+
+1. 点击「清空日志」。
+2. 从当前房间切换到另一个不同房间。
+3. 观察 cleanup / setup 的实际顺序。
+4. 再只切换静音状态，观察是否发生重新连接。
+5. 等待至少一条新消息，观察消息列表更新时是否发生重新连接。`,
+      demoActionId: "observe-room-resynchronization",
+      expectedObservation: `roomId 改变时会先 cleanup 旧房间，再 setup 新房间；
+
+只改变静音状态不会重新连接；
+
+消息通过函数式 updater 更新时，也不会因为 messages 改变而重建连接。`,
+    },
+    {
+      id: "explain-reactive-effect-dependencies",
+      type: GUIDED_STEP_TYPES.EXPLAIN,
+      prompt: `为什么 roomId 必须决定连接 Effect 是否重新同步，
+
+而 isMuted 和 messages 的变化不应该导致重新连接？
+
+函数式 State updater 和 Effect Event 分别帮助移除了哪一种不必要的 reactive read？`,
+      response: {
+        kind: GUIDED_RESPONSE_KINDS.TEXT,
+        placeholder: "先定义“这个 Effect 到底在同步什么外部系统”，再分析依赖…",
+      },
+    },
+    {
+      id: "practice-connection-target-dependencies",
+      type: GUIDED_STEP_TYPES.PRACTICE,
+      prompt: `另一个 ChatConnection Effect：
+
+- serverUrl 是组件内可编辑的 State，roomId 是当前房间的 prop/state；两者都会随 render 变化；
+- Effect 使用 serverUrl 和 roomId 建立连接；
+- 每次收到消息时读取最新 theme，只决定通知颜色；
+- theme 改变不应该重新连接服务器。
+
+哪些 reactive values 应该决定连接重新同步？`,
+      response: {
+        kind: GUIDED_RESPONSE_KINDS.CHOICE,
+        options: [
+          { id: "connection-target-only", label: "serverUrl + roomId；theme 作为非响应式消息处理逻辑读取" },
+          { id: "all-values", label: "serverUrl + roomId + theme 全部触发重新连接" },
+          { id: "theme-only", label: "只有 theme 改变时重新连接" },
+        ],
+      },
+      reveal: {
+        expectedOptionId: "connection-target-only",
+        observation: `serverUrl 和 roomId 决定“连接到哪里”，因此决定同步关系；
+
+theme 只影响“收到消息后怎么表现”，并不改变连接目标。
+
+如果需要在 Effect 内读取最新 theme 而不让它触发重同步，
+可以把这部分非响应式逻辑拆到 Effect Event。`,
+      },
+    },
+    {
+      id: "review-reactive-effect-lifecycle",
+      type: GUIDED_STEP_TYPES.REVIEW,
+      prompt: `回到 Notes、Source 或 Demo，核对：
+
+这个 Effect 究竟在同步什么外部系统？
+哪些值真正决定同步目标？
+cleanup 是否准确撤销了上一轮 setup？`,
+      resources: ["notes", "source", "demo"],
+    },
+  ],
+};
+
+assertGuidedActivityDefinition(RENDERING_LISTS_KEY_DEFINITION);
+assertGuidedActivityDefinition(PRESERVING_RESETTING_STATE_DEFINITION);
+assertGuidedActivityDefinition(NOT_NEED_EFFECT_DEFINITION);
+assertGuidedActivityDefinition(LIFECYCLE_OF_REACTIVE_EFFECTS_DEFINITION);
+
 export const GUIDED_ACTIVITY_DEFINITIONS = deepFreeze({
   [STATE_SNAPSHOT_QUEUE_DEFINITION.learningUnitId]: STATE_SNAPSHOT_QUEUE_DEFINITION,
+  [RENDERING_LISTS_KEY_DEFINITION.learningUnitId]: RENDERING_LISTS_KEY_DEFINITION,
+  [PRESERVING_RESETTING_STATE_DEFINITION.learningUnitId]: PRESERVING_RESETTING_STATE_DEFINITION,
+  [NOT_NEED_EFFECT_DEFINITION.learningUnitId]: NOT_NEED_EFFECT_DEFINITION,
+  [LIFECYCLE_OF_REACTIVE_EFFECTS_DEFINITION.learningUnitId]: LIFECYCLE_OF_REACTIVE_EFFECTS_DEFINITION,
 });
 
 export const STATE_SNAPSHOT_QUEUE_GUIDED_ACTIVITY = GUIDED_ACTIVITY_DEFINITIONS["state-snapshot-queue"];
+export const RENDERING_LISTS_KEY_GUIDED_ACTIVITY = GUIDED_ACTIVITY_DEFINITIONS["rendering-lists-key"];
+export const PRESERVING_RESETTING_STATE_GUIDED_ACTIVITY = GUIDED_ACTIVITY_DEFINITIONS["preserving-resetting-state"];
+export const NOT_NEED_EFFECT_GUIDED_ACTIVITY = GUIDED_ACTIVITY_DEFINITIONS["not-need-effect"];
+export const LIFECYCLE_OF_REACTIVE_EFFECTS_GUIDED_ACTIVITY = GUIDED_ACTIVITY_DEFINITIONS["lifecycle-of-reactive-effects"];
 
 function isLookupId(value) {
   return isStableId(value);
