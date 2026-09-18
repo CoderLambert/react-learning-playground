@@ -20,6 +20,7 @@ function ContextConsumer() {
 
   return (
     <div style={{ padding: 12, border: "1px solid var(--border-color)", borderRadius: "var(--radius-sm)" }}>
+      {/* oxlint-disable-next-line react/refs -- render-count instrumentation deliberately observes render-phase execution. */}
       <RenderBadge label="Consumer" count={renderCountRef.current} />
       <div style={{ marginTop: 8 }}>
         useContext(ThemeContext) = <strong>{theme}</strong>
@@ -38,6 +39,7 @@ const MemoConsumer = memo(function MemoConsumer() {
 
   return (
     <div style={{ padding: 12, border: "1px solid var(--border-color)", borderRadius: "var(--radius-sm)" }}>
+      {/* oxlint-disable-next-line react/refs -- render-count instrumentation deliberately observes render-phase execution. */}
       <RenderBadge label="memo Consumer" count={renderCountRef.current} />
       <div style={{ marginTop: 8 }}>
         context = <strong>{theme}</strong>
@@ -55,6 +57,7 @@ const MemoNonConsumer = memo(function MemoNonConsumer() {
 
   return (
     <div style={{ padding: 12, border: "1px solid var(--border-color)", borderRadius: "var(--radius-sm)" }}>
+      {/* oxlint-disable-next-line react/refs -- render-count instrumentation deliberately observes render-phase execution. */}
       <RenderBadge label="memo Non-consumer" count={renderCountRef.current} />
       <div style={{ marginTop: 8 }}>这个组件没有读取 ThemeContext。</div>
     </div>
