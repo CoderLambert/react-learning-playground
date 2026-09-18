@@ -110,6 +110,7 @@ test("serializes and restores the original Guided responses and current step", (
     explanationSubmitted: true,
     practiceDraft: "same-result-different-semantics",
     practiceResponse: "same-result-different-semantics",
+    needsReview: false,
     completedSteps: [
       "predict-replace-triple",
       "experiment-replace-triple",
@@ -130,7 +131,21 @@ test("serializes and restores the original Guided responses and current step", (
   assert.equal(restored.firstPrediction, "count-3");
   assert.equal(restored.explanation, "三个更新读取同一份 render snapshot。");
   assert.equal(restored.practiceResponse, "same-result-different-semantics");
+  assert.equal(restored.needsReview, false);
   assert.equal(restored.completionState, "completed");
+});
+
+test("Needs Review persists without making older v1 snapshots incompatible", () => {
+  const state = reduce(createReviewState(), { type: GUIDED_FLOW_ACTIONS.TOGGLE_NEEDS_REVIEW });
+  const snapshot = serializeGuidedSessionSnapshot(state, { definition, updatedAt: fixedTimestamp });
+  assert.equal(snapshot.needsReview, true);
+  assert.equal(restoreGuidedFlowState(snapshot, { definition }).needsReview, true);
+
+  const legacySnapshot = { ...snapshot };
+  delete legacySnapshot.needsReview;
+  const legacyDecoded = deserializeGuidedSessionSnapshot(JSON.stringify(legacySnapshot), { definition });
+  assert.equal(legacyDecoded.status, GUIDED_SESSION_PERSISTENCE_STATUS.RESTORED);
+  assert.equal(restoreGuidedFlowState(legacyDecoded.snapshot, { definition }).needsReview, false);
 });
 
 test("in-progress draft and first prediction survive restore without changing identity", () => {
@@ -215,6 +230,13 @@ test("activity revision mismatch invalidates old responses instead of migrating 
   const persistence = createGuidedSessionPersistence({ definition: changedDefinition, storage });
   assert.equal(persistence.read().status, GUIDED_SESSION_PERSISTENCE_STATUS.INCOMPATIBLE);
   assert.equal(storage.getItem(persistence.key), null);
+});
+
+test("invalid Needs Review data fails closed", () => {
+  const snapshot = serializeGuidedSessionSnapshot(createReviewState(), { definition, updatedAt: fixedTimestamp });
+  const validation = validateGuidedSessionSnapshot({ ...snapshot, needsReview: "yes" }, { definition });
+  assert.equal(validation.valid, false);
+  assert.match(validation.errors.join("; "), /needsReview must be boolean/);
 });
 
 test("explicit clear removes the persisted session and unavailable storage stays session-local", () => {

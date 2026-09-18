@@ -10,6 +10,7 @@ export const GUIDED_FLOW_ACTIONS = Object.freeze({
   SUBMIT_EXPLANATION: "submit-explanation",
   SET_PRACTICE_DRAFT: "set-practice-draft",
   SUBMIT_PRACTICE: "submit-practice",
+  TOGGLE_NEEDS_REVIEW: "toggle-needs-review",
   NAVIGATE: "navigate",
 });
 
@@ -45,6 +46,7 @@ export function createGuidedFlowState({ learningUnitId, activityRevision }) {
     explanationSubmitted: false,
     practiceDraft: null,
     practiceResponse: null,
+    needsReview: false,
     completionState: "not-started",
   };
 }
@@ -163,6 +165,14 @@ export function guidedFlowReducer(state, action) {
         completionState: "completed",
       };
     }
+
+    case GUIDED_FLOW_ACTIONS.TOGGLE_NEEDS_REVIEW:
+      if (
+        !state.active
+        || state.stepIndex !== GUIDED_FLOW_STEP_INDEX.REVIEW
+        || state.completionState !== "completed"
+      ) return state;
+      return { ...state, needsReview: !state.needsReview };
 
     case GUIDED_FLOW_ACTIONS.NAVIGATE: {
       const target = action.stepIndex;

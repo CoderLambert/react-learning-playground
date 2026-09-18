@@ -37,12 +37,20 @@ test("restores Guided responses and current step after reload", async ({ page })
   await expect(flow).toContainText("3");
   await expect(flow).toContainText("三个更新读取同一份 render snapshot。");
   await expect(flow).toContainText("结果可以相同，但 queue 处理语义不同");
+  const needsReview = page.getByRole("button", { name: "标记 Needs Review" });
+  await needsReview.click();
+  await expect(page.getByRole("button", { name: "取消 Needs Review" })).toHaveAttribute("aria-pressed", "true");
+
+  await page.getByRole("button", { name: "退出 Guided Mode" }).click();
+  await page.reload();
+  await page.getByRole("button", { name: "继续 Guided Learning" }).click();
+  await expect(page.getByRole("button", { name: "取消 Needs Review" })).toHaveAttribute("aria-pressed", "true");
 });
 
-test("Start over clears the previous Guided session before a later reload", async ({ page }) => {
+test("Retry Guided Lesson clears the previous Guided session before a later reload", async ({ page }) => {
   await openGuidedLesson(page);
   await completeGuidedSession(page);
-  await page.getByRole("button", { name: "重新开始" }).click();
+  await page.getByRole("button", { name: "Retry Guided Lesson" }).click();
 
   await expect(page.locator("[data-guided-flow]")).toHaveAttribute("data-guided-current-step", "predict");
   await expect(page.getByRole("radio", { name: "1" })).not.toBeChecked();
@@ -54,6 +62,16 @@ test("Start over clears the previous Guided session before a later reload", asyn
   await expect(page.locator("[data-guided-flow]")).toHaveAttribute("data-guided-current-step", "predict");
   await expect(page.locator("[data-guided-first-prediction]")).toHaveCount(0);
   await expect(page.getByRole("textbox", { name: "你的 explanation" })).toHaveCount(0);
+});
+
+test("completed Guided review continues through the existing learning path", async ({ page }) => {
+  await openGuidedLesson(page);
+  await completeGuidedSession(page);
+
+  await page.getByRole("button", { name: "Continue to next lesson" }).click();
+  await expect(page).toHaveURL(/demo=immutable-state/);
+  await expect(page.locator(".demo-page h2.demo-title")).toContainText("Object / Array State");
+  await expect(page.locator("[data-guided-entry]")).toHaveCount(0);
 });
 
 test("corrupt Guided storage resets safely without blocking free explore", async ({ page }) => {
