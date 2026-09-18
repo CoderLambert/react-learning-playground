@@ -2,7 +2,7 @@ import {
   buildLearningActionPrompt,
   createGuidedReasoningReviewContext,
   LEARNING_ACTION_KINDS,
-} from "../learning-actions/promptBuilder.js";
+} from "../learning-actions/public.js";
 
 const GUIDED_AI_DRAFT_REPLACEMENT_MESSAGE = "AI composer 中已有草稿。是否替换为这次 Guided reasoning review prompt？";
 

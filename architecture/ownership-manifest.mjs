@@ -38,7 +38,7 @@ export const ARCHITECTURE_OWNERS = [
     kind: "domain",
     exactPaths: [],
     prefixes: ["src/learning-actions/"],
-    publicEntries: [],
+    publicEntries: ["src/learning-actions/index.js", "src/learning-actions/public.js"],
     browserImpact: "domain",
   },
   {
@@ -66,6 +66,21 @@ export const ARCHITECTURE_OWNERS = [
     browserImpact: "shared",
   },
 ];
+
+// `src/components/**` is intentionally mixed. Only feature directories and
+// files with a stable domain identity belong in this matrix; every other
+// component path remains shared/unknown and therefore fails closed.
+export const FEATURE_COMPONENT_OWNERSHIP = Object.freeze([
+  Object.freeze({ path: "src/components/ai-assistant/**", owner: "ai" }),
+  Object.freeze({ path: "src/components/learning-inspector/**", owner: "workbench" }),
+  Object.freeze({ path: "src/components/notes/**", owner: "workbench" }),
+  Object.freeze({ path: "src/components/source-viewer/**", owner: "content-source" }),
+  Object.freeze({ path: "src/components/source-locator/**", owner: "content-source" }),
+  Object.freeze({ path: "src/components/mdx/**", owner: "content-source" }),
+  Object.freeze({ path: "src/components/ChapterCheckpoint.jsx", owner: "workbench" }),
+  Object.freeze({ path: "src/components/chapterCheckpointMap.js", owner: "workbench" }),
+  Object.freeze({ path: "src/components/CodeViewer.jsx", owner: "content-source" }),
+]);
 
 export const SHARED_INTEGRATION_SURFACES = [
   {
@@ -119,8 +134,25 @@ export function normalizeRepositoryPath(value) {
     .replace(/\/+/g, "/");
 }
 
+function matchesOwnershipPath(pattern, normalizedPath) {
+  if (pattern.endsWith("/**")) {
+    return normalizedPath.startsWith(pattern.slice(0, -2));
+  }
+  return normalizedPath === pattern;
+}
+
+export function getFeatureComponentOwnership(filePath) {
+  const normalized = normalizeRepositoryPath(filePath);
+  return FEATURE_COMPONENT_OWNERSHIP.find(({ path: pattern }) => matchesOwnershipPath(pattern, normalized)) ?? null;
+}
+
 export function getArchitectureOwner(filePath) {
   const normalized = normalizeRepositoryPath(filePath);
+
+  const featureComponent = getFeatureComponentOwnership(normalized);
+  if (featureComponent) {
+    return ARCHITECTURE_OWNERS.find((owner) => owner.id === featureComponent.owner) ?? null;
+  }
 
   for (const owner of ARCHITECTURE_OWNERS) {
     if (owner.exactPaths.includes(normalized)) return owner;
