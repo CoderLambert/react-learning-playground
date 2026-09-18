@@ -57,5 +57,7 @@ test("conversation rename Escape cancels without persisting and Enter commits wi
   const renamedItem = panel.locator("li").filter({ hasText: "committed rename" });
   await expect(renamedItem).toHaveCount(1);
   await expect(panel.getByText(originalTitle, { exact: true })).toHaveCount(0);
-  await expect(renamedItem.getByRole("button", { name: "重命名", exact: true })).toBeFocused();
+  const committedRenameButton = renamedItem.getByRole("button", { name: "重命名", exact: true });
+  await expect(committedRenameButton).toBeEnabled();
+  await expect(committedRenameButton).toBeFocused();
 });

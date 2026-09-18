@@ -14,6 +14,73 @@ async function openAiTab(page, demoId = "props") {
   return composer;
 }
 
+async function seedDelayedConversationRecovery(page, count = 1200) {
+  await page.goto("?demo=props");
+  await page.getByRole("tab", { name: "AI" }).click();
+  await expect(page.getByRole("textbox", { name: "向 AI 助手提问" })).toBeEnabled();
+
+  await page.evaluate(async (messageCount) => {
+    const request = indexedDB.open("react-learning-ai", 2);
+    const db = await new Promise((resolve, reject) => {
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+
+    const transaction = db.transaction(["conversations", "messages"], "readwrite");
+    const now = new Date().toISOString();
+    transaction.objectStore("conversations").put({
+      id: "late-storage-history",
+      title: "late storage history",
+      learningUnitId: "props",
+      model: "test",
+      metadata: null,
+      archived: false,
+      createdAt: now,
+      updatedAt: now,
+      lastMessageAt: now,
+    });
+
+    const messages = transaction.objectStore("messages");
+    for (let index = 0; index < messageCount; index += 1) {
+      messages.put({
+        id: `recovery-message-${index}`,
+        conversationId: "recovery-only",
+        role: "assistant",
+        content: "interrupted",
+        status: "loading",
+        usage: null,
+        contextSnapshotId: null,
+        metadata: null,
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+
+    await new Promise((resolve, reject) => {
+      transaction.oncomplete = resolve;
+      transaction.onerror = () => reject(transaction.error);
+      transaction.onabort = () => reject(transaction.error);
+    });
+    db.close();
+  }, count);
+}
+
+test("late conversation storage hydration preserves an entered composer draft", async ({ page }) => {
+  await seedDelayedConversationRecovery(page);
+
+  await page.reload();
+  await page.getByRole("tab", { name: "AI" }).click();
+
+  const composer = page.getByRole("textbox", { name: "向 AI 助手提问" });
+  await expect(composer).toBeEnabled();
+  await composer.fill("draft survives late storage hydration");
+
+  const toolbar = page.getByLabel("AI 会话工具栏");
+  await expect(toolbar.locator("summary")).toHaveText("历史会话 1", { timeout: 30_000 });
+  await expect(composer).toHaveValue("draft survives late storage hydration");
+  await expect(page.getByRole("button", { name: "发送", exact: true })).toBeEnabled();
+});
+
 test("AI assistant sends current note, numbered source and active source context", async ({ page }) => {
   const requests = [];
   await page.route(GATEWAY_URL, async (route) => {

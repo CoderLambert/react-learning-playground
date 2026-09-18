@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import "./ConversationList.css";
 
 function formatConversationTime(value) {
@@ -41,16 +41,25 @@ export function ConversationList({
   const [pendingDeleteId, setPendingDeleteId] = useState(null);
   const [mutationState, setMutationState] = useState({ pending: null, error: null });
   const renameButtonsRef = useRef(new Map());
+  const pendingRenameFocusRef = useRef(null);
   const deleteButtonsRef = useRef(new Map());
   const confirmDeleteButtonsRef = useRef(new Map());
   const newButtonRef = useRef(null);
   const listRef = useRef(null);
 
-  const restoreRenameFocus = (conversationId) => {
-    globalThis.requestAnimationFrame?.(() => {
-      renameButtonsRef.current.get(conversationId)?.focus();
-    });
-  };
+  useLayoutEffect(() => {
+    const conversationId = pendingRenameFocusRef.current;
+    if (!conversationId || editingId === conversationId) return;
+
+    const pendingForConversation = mutationState.pending?.conversationId === conversationId;
+    if (pendingForConversation) return;
+
+    const button = renameButtonsRef.current.get(conversationId);
+    if (!button?.isConnected || button.disabled) return;
+
+    button.focus();
+    pendingRenameFocusRef.current = null;
+  }, [conversations, disabled, editingId, mutationState.pending]);
 
   const restoreDeleteFocus = (conversationId) => {
     globalThis.requestAnimationFrame?.(() => {
@@ -83,9 +92,9 @@ export function ConversationList({
   };
 
   const finishRename = (conversationId) => {
+    pendingRenameFocusRef.current = conversationId;
     setEditingId(null);
     setDraftTitle("");
-    restoreRenameFocus(conversationId);
   };
 
   const startRename = (conversation) => {
