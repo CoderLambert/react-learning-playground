@@ -97,11 +97,20 @@ export default function App() {
     activeSourceFile: workbenchState.sourceFile,
     assessmentRuntime: aiAssessmentIntegration,
   });
+  const {
+    activeConversationId,
+    conversationHistory,
+    selectConversation,
+  } = aiAssistant;
 
+  // This synchronizes persisted source selection with URL/deep-link navigation.
+  // It is intentionally an effect because the navigation can originate outside App.
+  /* oxlint-disable react/set-state-in-effect -- synchronize persisted state after external navigation. */
   useEffect(() => {
     setSourceFile(null);
     setSourceFocus(null);
   }, [currentDemo?.id, setSourceFile]);
+  /* oxlint-enable react/set-state-in-effect */
 
   useEffect(() => {
     if (!sourceLocatorActive) return undefined;
@@ -112,6 +121,8 @@ export default function App() {
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [sourceLocatorActive]);
 
+  // This completes a source-locator handoff after the selected learning unit renders.
+  /* oxlint-disable react/set-state-in-effect -- finish the deferred source handoff after navigation. */
   useEffect(() => {
     if (!pendingSourceTarget) return;
     if (currentLearningUnit?.id !== pendingSourceTarget.learningUnitId) return;
@@ -139,6 +150,7 @@ export default function App() {
     setInspectorTab,
     setSourceFile,
   ]);
+  /* oxlint-enable react/set-state-in-effect */
 
   const handleCitationOpen = (citation) => {
     const fileName = citation?.fileName;
@@ -269,11 +281,13 @@ export default function App() {
     setInspectorTab("ai");
   };
 
+  // This completes a conversation handoff after URL-driven demo navigation renders.
+  /* oxlint-disable react/set-state-in-effect -- finish the deferred conversation handoff after navigation. */
   useEffect(() => {
     if (!pendingConversationTarget) return;
     if (currentLearningUnit?.id !== pendingConversationTarget.learningUnitId) return;
 
-    const targetStillExists = aiAssistant.conversationHistory.some((conversation) => (
+    const targetStillExists = conversationHistory.some((conversation) => (
       conversation.id === pendingConversationTarget.conversationId &&
       conversation.learningUnitId === pendingConversationTarget.learningUnitId &&
       !conversation.archived
@@ -283,19 +297,20 @@ export default function App() {
       return;
     }
 
-    if (aiAssistant.activeConversationId === pendingConversationTarget.conversationId) {
+    if (activeConversationId === pendingConversationTarget.conversationId) {
       setPendingConversationTarget(null);
       return;
     }
 
-    void aiAssistant.selectConversation(pendingConversationTarget.conversationId);
+    void selectConversation(pendingConversationTarget.conversationId);
   }, [
-    aiAssistant.activeConversationId,
-    aiAssistant.conversationHistory,
-    aiAssistant.selectConversation,
+    activeConversationId,
+    conversationHistory,
+    selectConversation,
     currentLearningUnit?.id,
     pendingConversationTarget,
   ]);
+  /* oxlint-enable react/set-state-in-effect */
 
   const navigation = (
     <WorkbenchNavigation
