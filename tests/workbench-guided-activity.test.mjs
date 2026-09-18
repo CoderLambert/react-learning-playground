@@ -134,6 +134,12 @@ test("the first five Guided definitions are available, frozen, and follow the co
     }
     assert.deepEqual(definition.steps.at(-1).resources, ["notes", "source", "demo"]);
     assert.equal(definition.steps[0].reveal.expectedOptionId, FROZEN_EXPECTED_OPTIONS[learningUnitId].predict);
+    if (learningUnitId === "rendering-lists-key") {
+      assert.equal(
+        definition.steps[0].response.options.find(({ id }) => id === "stays-first-position")?.label,
+        "仍留在第一行，因此看起来跟到了「发布生产版本 / Carol」",
+      );
+    }
     assert.equal(definition.steps[1].demoActionId, FROZEN_EXPERIMENT_ACTIONS[learningUnitId]);
     assert.equal(definition.steps[3].reveal.expectedOptionId, FROZEN_EXPECTED_OPTIONS[learningUnitId].practice);
   }
