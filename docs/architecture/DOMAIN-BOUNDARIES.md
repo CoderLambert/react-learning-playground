@@ -52,6 +52,27 @@ Rules:
 
 These follow the repository's one-writer-per-hotspot rule during a wave.
 
+### Feature-owned component matrix
+
+The following entries are the complete logical ownership matrix for the
+currently feature-owned portion of `src/components/**`:
+
+| Repository path | Logical owner | Browser impact |
+| --- | --- | --- |
+| `src/components/ai-assistant/**` | `ai` | `domain` |
+| `src/components/learning-inspector/**` | `workbench` | `domain` |
+| `src/components/notes/**` | `workbench` | `domain` |
+| `src/components/source-viewer/**` | `content-source` | `domain` |
+| `src/components/source-locator/**` | `content-source` | `domain` |
+| `src/components/mdx/**` | `content-source` | `domain` |
+| `src/components/ChapterCheckpoint.jsx` | `workbench` | `domain` |
+| `src/components/chapterCheckpointMap.js` | `workbench` | `domain` |
+| `src/components/CodeViewer.jsx` | `content-source` | `domain` |
+
+Unlisted `src/components/**` paths, including generic `ui/**` and legacy flat
+components, remain shared/unknown. They are not inferred from directory names
+and therefore retain the browser classifier's FULL fallback.
+
 ## Architecture gate
 
 `tests/architecture-boundaries.test.mjs` is automatically included by the canonical required-test inventory. It verifies:
@@ -63,6 +84,11 @@ These follow the repository's one-writer-per-hotspot rule during a wave.
 - domain dependency cycles after registered legacy debt is excluded;
 - debt-ledger freshness and required cleanup metadata;
 - curated AI / Assessment / Workbench public entries without `export *` mega-barrels.
+- feature-owned component paths from the exact matrix above, including peer
+  deep-import rejection and curated public-entry acceptance fixtures;
+- the `learning-actions/index.js` public façade used by cross-feature callers.
+- the JS-only `learning-actions/public.js` façade used where cross-feature
+  protocol consumers must also load in Node-side contract tests.
 
 The ownership manifest also exposes `getBrowserImpactOwnership(path)`. Unknown paths deliberately resolve to `browserImpact: "full"`; #182 can reuse this taxonomy instead of maintaining an independent path-ownership model.
 

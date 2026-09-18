@@ -4,7 +4,9 @@ import test from "node:test";
 
 import {
   ARCHITECTURE_OWNERS,
+  FEATURE_COMPONENT_OWNERSHIP,
   SHARED_INTEGRATION_SURFACES,
+  getFeatureComponentOwnership,
   getArchitectureOwner,
   getBrowserImpactOwnership,
   isCuratedPublicEntry,
@@ -65,6 +67,10 @@ test("ownership manifest exposes reusable owner and browser-impact taxonomy", ()
   assert.equal(getArchitectureOwner("src/assessment/application/AssessmentService.js")?.id, "assessment");
   assert.equal(getArchitectureOwner("src/workbench/noteRegistry.js")?.id, "workbench");
   assert.equal(getArchitectureOwner("src/platform/browser.js")?.id, "platform");
+  assert.equal(getArchitectureOwner("src/components/ai-assistant/AiAssistant.jsx")?.id, "ai");
+  assert.equal(getArchitectureOwner("src/components/learning-inspector/LearningInspector.jsx")?.id, "workbench");
+  assert.equal(getArchitectureOwner("src/components/source-viewer/SourceViewer.jsx")?.id, "content-source");
+  assert.equal(getArchitectureOwner("src/components/ui/button.jsx"), null);
   assert.deepEqual(getBrowserImpactOwnership("src/new-unknown-domain/file.js"), {
     owner: "unknown",
     browserImpact: "full",
@@ -76,6 +82,41 @@ test("ownership manifest exposes reusable owner and browser-impact taxonomy", ()
   assert.ok(SHARED_INTEGRATION_SURFACES.some((surface) => surface.paths.includes("src/app/**")));
   assert.ok(SHARED_INTEGRATION_SURFACES.some((surface) => surface.paths.includes("package.json")));
   assert.ok(SHARED_INTEGRATION_SURFACES.some((surface) => surface.paths.includes(".github/workflows/**")));
+});
+
+test("feature component ownership is an exact, deterministic repository matrix", () => {
+  assert.deepEqual(
+    FEATURE_COMPONENT_OWNERSHIP.map(({ path, owner }) => [path, owner]),
+    [
+      ["src/components/ai-assistant/**", "ai"],
+      ["src/components/learning-inspector/**", "workbench"],
+      ["src/components/notes/**", "workbench"],
+      ["src/components/source-viewer/**", "content-source"],
+      ["src/components/source-locator/**", "content-source"],
+      ["src/components/mdx/**", "content-source"],
+      ["src/components/ChapterCheckpoint.jsx", "workbench"],
+      ["src/components/chapterCheckpointMap.js", "workbench"],
+      ["src/components/CodeViewer.jsx", "content-source"],
+    ],
+  );
+  assert.deepEqual(getFeatureComponentOwnership("./src/components/ai-assistant/AiAssistant.jsx"), {
+    path: "src/components/ai-assistant/**",
+    owner: "ai",
+  });
+  assert.equal(getFeatureComponentOwnership("src/components/UserCard.jsx"), null);
+  assert.equal(getFeatureComponentOwnership("src/components/ui/button.jsx"), null);
+});
+
+test("Learning Actions exposes the confirmed cross-feature public seam", async () => {
+  assert.equal(isCuratedPublicEntry("learning-actions", "src/learning-actions/index.js"), true);
+  assert.equal(isCuratedPublicEntry("learning-actions", "src/learning-actions/public.js"), true);
+  const source = await readFile(new URL("../src/learning-actions/index.js", import.meta.url), "utf8");
+  const runtimeSource = await readFile(new URL("../src/learning-actions/public.js", import.meta.url), "utf8");
+  assert.match(source, /subscribeLearningActions/);
+  assert.match(source, /buildLearningActionPrompt/);
+  assert.doesNotMatch(source, /export\s+\*\s+from/);
+  assert.match(runtimeSource, /subscribeLearningActions/);
+  assert.doesNotMatch(runtimeSource, /\.jsx/);
 });
 
 test("AI, Assessment and Workbench expose curated public entries rather than mega-barrels", async () => {
@@ -160,6 +201,23 @@ test("architecture debt matches only the explicitly registered crossing", () => 
     ),
     null,
   );
+});
+
+test("owned component fixtures reject peer internals but accept curated public entries", async () => {
+  const result = await analyzeArchitecture(
+    new URL("./fixtures/architecture-boundaries", import.meta.url).pathname,
+  );
+
+  assert.deepEqual(result.violations, [
+    {
+      type: "peer-domain-deep-import",
+      sourcePath: "src/components/ai-assistant/peer-deep-import.js",
+      targetPath: "src/assessment/application/AssessmentService.js",
+      sourceOwner: "ai",
+      targetOwner: "assessment",
+    },
+  ]);
+  assert.deepEqual(result.staleDebt, []);
 });
 
 test("repository has no unregistered peer deep import, platform reverse dependency or unregistered domain cycle", async () => {

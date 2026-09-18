@@ -46,11 +46,36 @@ test("AI, Assessment and Workbench owner-local changes select DOMAIN tier", () =
   }
 });
 
+test("feature-owned components reuse their logical domain ownership", () => {
+  for (const [file, owner] of [
+    ["src/components/ai-assistant/AiAssistant.jsx", "ai"],
+    ["src/components/learning-inspector/LearningInspector.jsx", "workbench"],
+    ["src/components/notes/NoteViewer.jsx", "workbench"],
+    ["src/components/ChapterCheckpoint.jsx", "workbench"],
+    ["src/components/source-viewer/SourceViewer.jsx", "content-source"],
+    ["src/components/source-locator/DemoSourceLocator.jsx", "content-source"],
+    ["src/components/CodeViewer.jsx", "content-source"],
+  ]) {
+    const result = classifyBrowserImpact([file]);
+    assert.deepEqual(result.detectedDomains, [owner]);
+    assert.equal(result.runBrowser, true);
+    if (owner === "content-source") {
+      assert.equal(result.tier, "FULL");
+      assert.equal(result.fallbackReason, "full-fallback:content-source:domain");
+    } else {
+      assert.equal(result.tier, "DOMAIN");
+      assert.equal(result.domain, owner);
+    }
+  }
+});
+
 test("shared, high-risk, unmapped domain and unknown runtime surfaces fail closed to FULL", () => {
   for (const file of [
     "src/App.jsx",
     "src/platform/storage.js",
     "src/learning-actions/promptBuilder.js",
+    "src/components/ui/button.jsx",
+    "src/components/UserCard.jsx",
     "src/source/sourceLocator.js",
     "src/new-runtime-domain/example.js",
     "build/source-locator-manifest.mjs",
