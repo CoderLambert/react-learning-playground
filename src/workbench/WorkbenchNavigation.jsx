@@ -1,10 +1,5 @@
 import { useMemo } from "react";
-import { toLearningUnit } from "./contracts";
 import { buildLearningPath } from "./learningPath";
-
-function normalizeUnits(items) {
-  return items.map((item) => (item.component ? item : toLearningUnit(item)));
-}
 
 function getSearchText(unit, categoryName) {
   return [
@@ -37,7 +32,9 @@ export function WorkbenchNavigation({
   onCollapsedChange,
   className = "",
 }) {
-  const units = useMemo(() => normalizeUnits(learningUnits), [learningUnits]);
+  // App composition supplies the canonical LearningUnit collection. Navigation
+  // must not infer or normalize registry entries at render time.
+  const units = learningUnits;
   const learningPath = useMemo(() => buildLearningPath(units), [units]);
   const activePath = viewMode === "focused" ? learningPath.byUnitId.get(activeId) : null;
   const categoryMap = useMemo(() => new Map(categories.map((category) => [category.id, category])), [categories]);
