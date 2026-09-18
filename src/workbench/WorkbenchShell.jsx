@@ -1,7 +1,6 @@
 import { useEffect, useRef } from "react";
 import "./tokens.css";
 import "./WorkbenchShell.css";
-import "./ClosureSurfaceFixes.css";
 
 export function WorkbenchShell({
   navigation,
