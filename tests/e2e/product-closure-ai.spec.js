@@ -36,12 +36,19 @@ async function openAi(page) {
   };
 }
 
+async function expectLongAnswerFinalized(transcript) {
+  const assistant = transcript.locator('[data-message-role="assistant"]');
+  await expect(assistant).toHaveAttribute("data-finish-reason", "stop");
+  await expect(assistant).not.toHaveAttribute("aria-busy", "true");
+  await expect(assistant).toContainText("第 180 段");
+  return assistant;
+}
+
 test("long AI answer scrolls inside transcript while composer remains visible and actions are reachable", async ({ page }) => {
   const { panel, composer, transcript } = await openAi(page);
   await composer.fill("e2e:product-closure-long-answer");
   await page.getByRole("button", { name: "发送", exact: true }).click();
-  const assistant = transcript.locator('[data-message-role="assistant"]');
-  await expect(assistant).toContainText("第 180 段");
+  const assistant = await expectLongAnswerFinalized(transcript);
 
   const metrics = await panel.evaluate((panelNode) => {
     const transcriptNode = panelNode.querySelector('[role="log"][aria-label="AI 对话记录"]');
@@ -69,7 +76,7 @@ test("current conversation exposes copy plus Markdown and JSON export through ac
   const { composer } = await openAi(page);
   await composer.fill("e2e:export-current-conversation");
   await page.getByRole("button", { name: "发送", exact: true }).click();
-  await expect(page.getByRole("log", { name: "AI 对话记录" })).toContainText("第 180 段");
+  await expectLongAnswerFinalized(page.getByRole("log", { name: "AI 对话记录" }));
 
   await page.getByLabel("会话导出与复制").click();
   const actions = page.getByRole("group", { name: "当前会话操作" });
@@ -98,7 +105,7 @@ test("conversation export popover dismisses with Escape and returns focus to its
   const { composer } = await openAi(page);
   await composer.fill("e2e:export-popover-keyboard");
   await page.getByRole("button", { name: "发送", exact: true }).click();
-  await expect(page.getByRole("log", { name: "AI 对话记录" })).toContainText("第 180 段");
+  await expectLongAnswerFinalized(page.getByRole("log", { name: "AI 对话记录" }));
 
   const trigger = page.getByLabel("会话导出与复制");
   await trigger.focus();
