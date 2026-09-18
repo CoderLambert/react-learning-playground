@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
@@ -19,6 +20,13 @@ test("chapter checkpoint no longer exposes an editable localStorage question ban
   assert.doesNotMatch(source, />删除</);
 });
 
+const RETIRED_ASSESSMENT_MODULES = [
+  "src/assessment/AssessmentRunner.jsx",
+  "src/assessment/practiceAttempt.js",
+  "src/assessment/attemptRepository.js",
+  "src/assessment/questionBank.js",
+];
+
 test("legacy chapter checkpoint content remains available as read-only study prompts", async () => {
   const source = await readSource("src/components/ChapterCheckpoint.jsx");
   const compatibilityRenderer = await readSource("src/assessment/QuestionBankManager.jsx");
@@ -30,16 +38,10 @@ test("legacy chapter checkpoint content remains available as read-only study pro
   assert.match(compatibilityRenderer, /checkpoint\?\.exercises/);
 });
 
-test("legacy storage and runner modules remain in source only for compatibility", async () => {
-  const questionBank = await readSource("src/assessment/questionBank.js");
-  const practiceAttempt = await readSource("src/assessment/practiceAttempt.js");
-
-  assert.match(questionBank, /createQuestionBankRepository/);
-  assert.match(practiceAttempt, /createAttempt/);
-
-  const productEntry = await readSource("src/assessment/QuestionBankManager.jsx");
-  assert.doesNotMatch(productEntry, /questionBank\.js/);
-  assert.doesNotMatch(productEntry, /practiceAttempt\.js/);
+test("retired runner, question-bank, and attempt-persistence modules stay absent", () => {
+  for (const modulePath of RETIRED_ASSESSMENT_MODULES) {
+    assert.equal(existsSync(new URL(`../${modulePath}`, import.meta.url)), false, modulePath);
+  }
 });
 
 test("worker documentation no longer claims a browser 6000-character output cap", async () => {
