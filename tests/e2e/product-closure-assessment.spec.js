@@ -121,19 +121,24 @@ test("stale editor revision reports conflict and refreshes instead of overwritin
 test("editing or retiring the bank never mutates an in-progress session snapshot", async ({ page }) => {
   const panel = await createQuestionViaAi(page);
   await panel.getByRole("button", { name: "开始测试" }).click();
+  await expect(panel.locator("legend")).toBeVisible();
   const before = await readDb(page);
   expect(before.sessions).toHaveLength(1);
   expect(before.sessions[0].status).toBe("in_progress");
   const frozenItems = before.sessions[0].items;
+  const questionId = frozenItems[0].questionId;
 
   await panel.getByRole("button", { name: "编辑", exact: true }).click();
   const editor = panel.getByRole("form", { name: /编辑题目/ });
   await editor.getByLabel("题干").fill("Changed after session start");
   await editor.getByRole("button", { name: "保存修改" }).click();
+  await expect(panel.locator('[data-notice-kind="success"]')).toContainText("题目已保存");
   await panel.getByRole("button", { name: "停用", exact: true }).click();
+  await expect(panel.locator('[data-notice-kind="success"]')).toContainText("题目已停用");
 
   const after = await readDb(page);
-  expect(after.questions[0].status).toBe("retired");
+  const retiredQuestion = after.questions.find((question) => question.id === questionId);
+  expect(retiredQuestion?.status).toBe("retired");
   expect(after.sessions[0].items).toEqual(frozenItems);
 });
 
