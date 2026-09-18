@@ -19,6 +19,27 @@ function getChoiceLabel(step, optionId) {
   return step?.response?.options?.find((option) => option.id === optionId)?.label ?? optionId ?? "未选择";
 }
 
+function GuidedAskAiButton({ source, step, learnerResponse, onAskAi }) {
+  if (typeof onAskAi !== "function" || !learnerResponse?.trim()) return null;
+
+  return (
+    <button
+      type="button"
+      className="btn btn-outline"
+      data-guided-action="ask-ai"
+      data-guided-ask-ai-source={source}
+      onClick={() => onAskAi({
+        source,
+        stepId: step.id,
+        stepPrompt: step.prompt,
+        learnerResponse,
+      })}
+    >
+      Ask AI 检查我的推理
+    </button>
+  );
+}
+
 function GuidedStepProgress({ definition, state, onNavigate }) {
   const unlockedStep = getGuidedFlowUnlockedStep(state);
   return (
@@ -114,7 +135,7 @@ function GuidedExperimentStep({ definition, state, dispatch, renderDemo }) {
   );
 }
 
-function GuidedExplainStep({ definition, state, dispatch }) {
+function GuidedExplainStep({ definition, state, dispatch, onAskAi }) {
   const step = definition.steps[GUIDED_FLOW_STEP_INDEX.EXPLAIN];
   return (
     <div className="guided-flow-step" data-guided-step-panel="explain">
@@ -144,6 +165,16 @@ function GuidedExplainStep({ definition, state, dispatch }) {
       >
         {state.explanationSubmitted ? "已保存 explanation" : "保存 explanation，继续 practice"}
       </button>
+      {state.explanationSubmitted && (
+        <div className="guided-flow-review-actions" aria-label="Explain AI actions">
+          <GuidedAskAiButton
+            source="explain"
+            step={step}
+            learnerResponse={state.explanation}
+            onAskAi={onAskAi}
+          />
+        </div>
+      )}
     </div>
   );
 }
@@ -191,7 +222,7 @@ function GuidedPracticeStep({ definition, state, dispatch, inputName }) {
   );
 }
 
-function GuidedReviewStep({ definition, state, dispatch, onReviewResource }) {
+function GuidedReviewStep({ definition, state, dispatch, onReviewResource, onAskAi }) {
   const predictionStep = definition.steps[GUIDED_FLOW_STEP_INDEX.PREDICT];
   const practiceStep = definition.steps[GUIDED_FLOW_STEP_INDEX.PRACTICE];
   const step = definition.steps[GUIDED_FLOW_STEP_INDEX.REVIEW];
@@ -241,6 +272,12 @@ function GuidedReviewStep({ definition, state, dispatch, onReviewResource }) {
             {resource === "demo" && "回到 Demo"}
           </button>
         ))}
+        <GuidedAskAiButton
+          source="review"
+          step={step}
+          learnerResponse={state.explanation}
+          onAskAi={onAskAi}
+        />
       </div>
     </div>
   );
@@ -251,6 +288,7 @@ export function GuidedLearningFlow({
   definition,
   renderDemo,
   onReviewResource,
+  onAskAi,
 }) {
   const predictionInputId = useId();
   const practiceInputId = useId();
@@ -349,7 +387,12 @@ export function GuidedLearningFlow({
           />
         )}
         {currentStep.type === "explain" && (
-          <GuidedExplainStep definition={definition} state={state} dispatch={dispatch} />
+          <GuidedExplainStep
+            definition={definition}
+            state={state}
+            dispatch={dispatch}
+            onAskAi={onAskAi}
+          />
         )}
         {currentStep.type === "practice" && (
           <GuidedPracticeStep
@@ -365,6 +408,7 @@ export function GuidedLearningFlow({
             state={state}
             dispatch={dispatch}
             onReviewResource={onReviewResource}
+            onAskAi={onAskAi}
           />
         )}
       </div>

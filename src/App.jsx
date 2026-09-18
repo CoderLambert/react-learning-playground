@@ -16,6 +16,7 @@ import { MDX_TEACHING_COMPONENTS } from "./components/mdx";
 import { DemoSourceLocator } from "./components/source-locator/DemoSourceLocator";
 import { useAiLearningAssistant } from "./ai/useAiLearningAssistant.js";
 import { createAiAssessmentIntegration } from "./app/aiAssessmentIntegration.js";
+import { prepareGuidedAiHandoff } from "./app/guidedAiHandoff.js";
 import { enrichLearningUnitSourceSemantics } from "./source/semanticSources";
 import { WorkbenchNavigation } from "./workbench/WorkbenchNavigation";
 import { WorkbenchShell } from "./workbench/WorkbenchShell";
@@ -173,6 +174,21 @@ export default function App() {
     if (resource !== "notes" && resource !== "source") return;
     setInspectorOpen(true);
     setInspectorTab(resource);
+  };
+
+  const handleGuidedAskAi = (payload) => {
+    const handoff = prepareGuidedAiHandoff({
+      learningUnit: currentLearningUnit,
+      payload,
+      currentDraft: aiAssistant.inputValue,
+    });
+    if (!handoff.accepted) return false;
+
+    aiAssistant.exitAssessmentAuthoring();
+    aiAssistant.setInputValue(handoff.prompt);
+    setInspectorOpen(handoff.inspectorOpen);
+    setInspectorTab(handoff.inspectorTab);
+    return true;
   };
 
   const handleVisualSourceLocate = (target) => {
@@ -509,6 +525,7 @@ export default function App() {
                     </DemoSourceLocator>
                   )}
                   onReviewResource={handleGuidedReviewResource}
+                  onAskAi={handleGuidedAskAi}
                 />
               ) : (
                 <DemoSourceLocator

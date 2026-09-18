@@ -9,6 +9,7 @@ export {
   LEARNING_CONTEXT_KINDS,
   buildLearningActionPrompt,
   clampLearningSelection,
+  createGuidedReasoningReviewContext,
   createLearningActionContext,
   getLearningActionsForContext,
 } from "./promptBuilder.js";

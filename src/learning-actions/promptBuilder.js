@@ -6,12 +6,14 @@ export const LEARNING_ACTION_KINDS = Object.freeze({
   WHY: "why",
   WALKTHROUGH: "walkthrough",
   VERIFY: "verify",
+  REVIEW_REASONING: "review-reasoning",
 });
 
 export const LEARNING_CONTEXT_KINDS = Object.freeze({
   NOTE: "note",
   SOURCE: "source",
   DEMO: "demo",
+  GUIDED: "guided",
 });
 
 const ACTION_INSTRUCTIONS = Object.freeze({
@@ -22,7 +24,9 @@ const ACTION_INSTRUCTIONS = Object.freeze({
   [LEARNING_ACTION_KINDS.WHY]: "解释这里为什么这样设计或这样写，并说明至少一种替代方案及 trade-off。",
   [LEARNING_ACTION_KINDS.WALKTHROUGH]: "按执行顺序带我读这部分实现，串起关键状态、事件和数据流。",
   [LEARNING_ACTION_KINDS.VERIFY]: "说明这个 Demo/片段在验证什么心智模型，以及我应该观察哪些现象。",
+  [LEARNING_ACTION_KINDS.REVIEW_REASONING]: "先检查我的推理。\n\n优先指出一个最值得验证、最可能有偏差的推理点。\n\n如果我的解释不完整，先给最小提示或追问。\n\n默认不要直接给出完整标准答案，除非我明确要求。",
 });
+const GUIDED_REVIEW_SOURCES = Object.freeze(["explain", "review"]);
 
 function clean(value) {
   return typeof value === "string" ? value.trim() : "";
@@ -75,11 +79,89 @@ export function createLearningActionContext({
   });
 }
 
+export function createGuidedReasoningReviewContext({
+  learningUnit,
+  source,
+  stepId,
+  stepPrompt,
+  learnerResponse,
+} = {}) {
+  if (!GUIDED_REVIEW_SOURCES.includes(source)) {
+    throw new TypeError("Guided reasoning review source is required");
+  }
+
+  const learningUnitId = clean(learningUnit?.id);
+  const learningUnitTitle = clean(learningUnit?.label ?? learningUnit?.title);
+  const normalizedStepId = clean(stepId);
+  const normalizedStepPrompt = clean(stepPrompt);
+  const response = clampLearningSelection(learnerResponse);
+
+  if (!learningUnitId) throw new TypeError("Guided reasoning review requires a learning unit");
+  if (!normalizedStepId) throw new TypeError("Guided reasoning review requires a step id");
+  if (!normalizedStepPrompt) throw new TypeError("Guided reasoning review requires a step prompt");
+  if (!response.text) throw new TypeError("Guided reasoning review requires a learner response");
+
+  return Object.freeze({
+    kind: LEARNING_CONTEXT_KINDS.GUIDED,
+    learningUnitId,
+    learningUnitTitle,
+    guidedSource: source,
+    stepId: normalizedStepId,
+    stepPrompt: normalizedStepPrompt,
+    learnerResponse: response.text,
+    learnerResponseTruncated: response.truncated,
+  });
+}
+
+function buildGuidedReasoningReviewPrompt(context) {
+  if (context?.kind !== LEARNING_CONTEXT_KINDS.GUIDED) {
+    throw new TypeError("Guided reasoning review requires a guided context");
+  }
+  if (!GUIDED_REVIEW_SOURCES.includes(context.guidedSource)) {
+    throw new TypeError("Guided reasoning review requires a valid source");
+  }
+  if (!clean(context.learningUnitId) || !clean(context.stepId) || !clean(context.stepPrompt)) {
+    throw new TypeError("Guided reasoning review requires unit and step metadata");
+  }
+  if (!clean(context.learnerResponse)) {
+    throw new TypeError("Guided reasoning review requires a learner response");
+  }
+
+  const truncationNotice = context.learnerResponseTruncated
+    ? "\n[我的回答已按安全长度截断]"
+    : "";
+  const delimitedLearnerResponse = context.learnerResponse.replaceAll(
+    "</learner_reasoning>",
+    "<\\/learner_reasoning>",
+  );
+
+  return [
+    ACTION_INSTRUCTIONS[LEARNING_ACTION_KINDS.REVIEW_REASONING],
+    "",
+    `[学习单元] ${context.learningUnitTitle || context.learningUnitId}`,
+    `[Guided step] ${context.stepId}`,
+    `[入口] ${context.guidedSource}`,
+    "[问题]",
+    "<guided_step_prompt>",
+    context.stepPrompt,
+    "</guided_step_prompt>",
+    "[我的回答]",
+    "<learner_reasoning>",
+    delimitedLearnerResponse,
+    "</learner_reasoning>",
+    truncationNotice,
+  ].join("\n");
+}
+
 export function buildLearningActionPrompt({ action, context } = {}) {
   const instruction = ACTION_INSTRUCTIONS[action];
   if (!instruction) throw new TypeError("Unsupported learning action");
   if (!context || !Object.values(LEARNING_CONTEXT_KINDS).includes(context.kind)) {
     throw new TypeError("Learning action context is required");
+  }
+
+  if (action === LEARNING_ACTION_KINDS.REVIEW_REASONING) {
+    return buildGuidedReasoningReviewPrompt(context);
   }
 
   const metadata = [
@@ -119,6 +201,8 @@ export function getLearningActionsForContext(kind) {
         LEARNING_ACTION_KINDS.VERIFY,
         LEARNING_ACTION_KINDS.QUIZ,
       ];
+    case LEARNING_CONTEXT_KINDS.GUIDED:
+      return [LEARNING_ACTION_KINDS.REVIEW_REASONING];
     default:
       return [];
   }
