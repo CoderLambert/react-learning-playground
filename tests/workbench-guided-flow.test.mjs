@@ -8,6 +8,7 @@ import {
   getGuidedFlowUnlockedStep,
   guidedFlowReducer,
 } from "../src/workbench/guidedFlow.js";
+import { getGuidedActivityDefinition } from "../src/workbench/guidedActivity.js";
 
 function reduce(state, action) {
   return guidedFlowReducer(state, action);
@@ -52,6 +53,44 @@ test("Guided flow stores the first prediction before the experiment and reaches 
   assert.equal(state.practiceResponse, "same-result-different-semantics");
   assert.equal(state.needsReview, false);
   assert.equal(getGuidedFlowUnlockedStep(state), GUIDED_FLOW_STEP_INDEX.REVIEW);
+});
+
+test("the same reducer completes several new Guided definitions without lesson-specific state", () => {
+  for (const learningUnitId of [
+    "rendering-lists-key",
+    "preserving-resetting-state",
+    "not-need-effect",
+    "lifecycle-of-reactive-effects",
+  ]) {
+    const definition = getGuidedActivityDefinition(learningUnitId);
+    let state = startState(learningUnitId);
+    state = reduce(state, {
+      type: GUIDED_FLOW_ACTIONS.SET_PREDICTION_DRAFT,
+      value: definition.steps[0].reveal.expectedOptionId,
+    });
+    state = reduce(state, { type: GUIDED_FLOW_ACTIONS.SUBMIT_PREDICTION });
+    state = reduce(state, {
+      type: GUIDED_FLOW_ACTIONS.ACKNOWLEDGE_EXPERIMENT,
+      observation: definition.steps[1].expectedObservation,
+    });
+    state = reduce(state, {
+      type: GUIDED_FLOW_ACTIONS.SET_EXPLANATION,
+      value: `explanation for ${learningUnitId}`,
+    });
+    state = reduce(state, { type: GUIDED_FLOW_ACTIONS.SUBMIT_EXPLANATION });
+    state = reduce(state, {
+      type: GUIDED_FLOW_ACTIONS.SET_PRACTICE_DRAFT,
+      value: definition.steps[3].reveal.expectedOptionId,
+    });
+    state = reduce(state, { type: GUIDED_FLOW_ACTIONS.SUBMIT_PRACTICE });
+
+    assert.equal(state.learningUnitId, learningUnitId);
+    assert.equal(state.firstPrediction, definition.steps[0].reveal.expectedOptionId);
+    assert.equal(state.observation, definition.steps[1].expectedObservation);
+    assert.equal(state.practiceResponse, definition.steps[3].reveal.expectedOptionId);
+    assert.equal(state.completionState, "completed");
+    assert.equal(state.stepIndex, GUIDED_FLOW_STEP_INDEX.REVIEW);
+  }
 });
 
 test("Needs Review is an explicit reversible state only at completed review", () => {

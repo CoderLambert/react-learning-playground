@@ -268,6 +268,18 @@ test("audit-sensitive lesson claims stay aligned with their demos", () => {
   assert.match(stateReducerDemo, /这里仅记录 INCREMENT、DECREMENT、RESET 产生的 count 转换/);
 });
 
+test("#217 rendering-lists-key note stays within the frozen Demo and key boundaries", () => {
+  const note = readRepoFile("src/content/notes/rendering-lists-key.mdx");
+
+  assert.match(note, /再反转或删除列表，对比 stable id key 与 index key/);
+  assert.doesNotMatch(note, /排序\/插入\/删除列表/);
+  assert.match(note, /树中位置、组件类型和显式 key 判断身份是否延续/);
+  assert.match(note, /身份延续时对应 State 保留/);
+  assert.match(note, /<Boundary title="key 不会作为普通 prop 传给组件">/);
+  assert.match(note, /`<Row key=\{item\.id\} itemId=\{item\.id\} \/>`/);
+  assert.doesNotMatch(note, /(?<!`)<Row key=/);
+});
+
 test("second-round notes preserve production boundary semantics", () => {
   const rscNote = readRepoFile("src/content/notes/rsc-boundary.mdx");
   assert.match(rscNote, /\.server|\.client/);
