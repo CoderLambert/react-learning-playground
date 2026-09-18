@@ -13,6 +13,9 @@ export function EventVsEffectDemo() {
   const [effectCount, setEffectCount] = useState(0);
   const [online, setOnline] = useState(true);
 
+  // Intentional teaching exception: this deliberately demonstrates the State + Effect
+  // indirection that the lesson contrasts with the direct event-handler command.
+  /* oxlint-disable react/set-state-in-effect -- this warning is the anti-pattern being demonstrated. */
   useEffect(() => {
     if (!requested) return;
 
@@ -32,6 +35,7 @@ export function EventVsEffectDemo() {
       ignoreResult = true;
     };
   }, [requested, product]);
+  /* oxlint-enable react/set-state-in-effect */
 
   useEffect(() => {
     console.log(`Effect sync: online=${online}`);
