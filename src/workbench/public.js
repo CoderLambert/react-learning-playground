@@ -17,3 +17,4 @@ export {
   hasGuidedActivity,
   validateGuidedActivityDefinition,
 } from "./guidedActivity.js";
+export { GuidedLearningFlow } from "./GuidedLearningFlow.jsx";

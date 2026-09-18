@@ -21,6 +21,7 @@ import { WorkbenchNavigation } from "./workbench/WorkbenchNavigation";
 import { WorkbenchShell } from "./workbench/WorkbenchShell";
 import { toLearningUnit } from "./workbench/contracts";
 import { useDemoUrlState } from "./workbench/demoUrlState";
+import { getGuidedActivityDefinition, GuidedLearningFlow } from "./workbench/public";
 import { getLearningPathEntry } from "./workbench/learningPath";
 import { usePersistedWorkbenchState } from "./workbench/usePersistedWorkbenchState";
 
@@ -71,6 +72,10 @@ export default function App() {
   const currentCategory = useMemo(() => CATEGORIES.find((category) => category.id === currentDemo?.category), [currentDemo]);
   const currentCheckpointChapter = currentDemo ? getCheckpointChapter(currentDemo.id) : null;
   const currentLearningPathEntry = currentDemo ? getLearningPathEntry(demos, currentDemo.id) : null;
+  const guidedActivity = useMemo(
+    () => (currentLearningUnit ? getGuidedActivityDefinition(currentLearningUnit.id) : null),
+    [currentLearningUnit],
+  );
 
   const assessment = useAssessmentApplication({
     learningUnitId: currentLearningUnit?.id ?? null,
@@ -162,6 +167,12 @@ export default function App() {
       startLine: evidence.startLine,
       endLine: evidence.endLine,
     });
+  };
+
+  const handleGuidedReviewResource = (resource) => {
+    if (resource !== "notes" && resource !== "source") return;
+    setInspectorOpen(true);
+    setInspectorTab(resource);
   };
 
   const handleVisualSourceLocate = (target) => {
@@ -483,13 +494,31 @@ export default function App() {
         {viewMode === "focused" ? (
           currentDemo ? (
             <div key={currentDemo.id} className="demo-page">
-              <DemoSourceLocator
-                learningUnit={currentLearningUnit}
-                enabled={sourceLocatorActive}
-                onLocate={handleVisualSourceLocate}
-              >
-                <currentDemo.Component />
-              </DemoSourceLocator>
+              {guidedActivity ? (
+                <GuidedLearningFlow
+                  key={`${guidedActivity.learningUnitId}:${guidedActivity.revision}`}
+                  learningUnit={currentLearningUnit}
+                  definition={guidedActivity}
+                  renderDemo={() => (
+                    <DemoSourceLocator
+                      learningUnit={currentLearningUnit}
+                      enabled={sourceLocatorActive}
+                      onLocate={handleVisualSourceLocate}
+                    >
+                      <currentDemo.Component />
+                    </DemoSourceLocator>
+                  )}
+                  onReviewResource={handleGuidedReviewResource}
+                />
+              ) : (
+                <DemoSourceLocator
+                  learningUnit={currentLearningUnit}
+                  enabled={sourceLocatorActive}
+                  onLocate={handleVisualSourceLocate}
+                >
+                  <currentDemo.Component />
+                </DemoSourceLocator>
+              )}
               {currentCheckpointChapter && (
                 <ChapterCheckpoint
                   chapter={currentCheckpointChapter}
