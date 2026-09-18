@@ -29,7 +29,7 @@ test.describe("chapter review checkpoints", () => {
     for (const [demoLabel, chapter] of CHAPTER_END_DEMOS) {
       await openDemo(page, demoLabel);
       const checkpoint = page.locator(`[data-chapter-checkpoint="${chapter}"]`);
-      const readonly = checkpoint.locator(`[data-legacy-checkpoint-readonly="${chapter}"]`);
+      const readonly = checkpoint.locator(`[data-readonly-checkpoint="${chapter}"]`);
 
       await expect(checkpoint).toBeVisible();
       await expect(readonly).toBeVisible();
@@ -54,7 +54,7 @@ test.describe("chapter review checkpoints", () => {
     await openDemo(page, CHAPTER_END_DEMOS[0][0]);
 
     const checkpoint = page.locator('[data-chapter-checkpoint="1"]');
-    await expect(checkpoint.locator('[data-legacy-checkpoint-readonly="1"]')).toBeVisible();
+    await expect(checkpoint.locator('[data-readonly-checkpoint="1"]')).toBeVisible();
     await expect(checkpoint.getByText("legacy editable question", { exact: true })).toHaveCount(0);
     await expect(checkpoint.getByText("题库管理", { exact: true })).toHaveCount(0);
     await expect(checkpoint.locator("[data-assessment-runner]")).toHaveCount(0);
@@ -84,7 +84,7 @@ test.describe("chapter review checkpoints", () => {
     await loadApp(page);
     await page.getByRole("button", { name: /全部功能完整总览/ }).click();
     await expect(page.locator("[data-chapter-checkpoint]")).toHaveCount(12);
-    await expect(page.locator("[data-legacy-checkpoint-readonly]")).toHaveCount(12);
+    await expect(page.locator("[data-readonly-checkpoint]")).toHaveCount(12);
     await expect(page.locator("[data-assessment-runner]")).toHaveCount(0);
     await expect(page.locator("[data-integration-lab]")).toHaveCount(3);
     await expect(page.locator("[data-chapter-next-step]")).toHaveCount(12);
