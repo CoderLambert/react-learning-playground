@@ -87,7 +87,7 @@ export function useGuidedFlow({
     const result = persistence.write(state);
     if (!result.ok) {
       // Storage failure is an external-system result that must be surfaced after the write attempt.
-      // oxlint-disable-next-line react/set-state-in-effect
+      // oxlint-disable-next-line react/set-state-in-effect -- report an external storage failure to the UI.
       setPersistenceStatus(GUIDED_SESSION_PERSISTENCE_STATUS.UNAVAILABLE);
     }
   }, [isCurrentActivity, persistence, state]);

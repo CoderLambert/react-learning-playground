@@ -52,6 +52,17 @@ function focusedSourceText(code, range) {
   return lines.slice(range.startLine - 1, range.endLine).join("\n");
 }
 
+function createSemanticContextKey({ mode, fileName, focusRange, primaryRegionId }) {
+  return [
+    mode,
+    fileName ?? "",
+    focusRange?.fileName ?? "",
+    focusRange?.startLine ?? "",
+    focusRange?.endLine ?? "",
+    primaryRegionId ?? "",
+  ].join("|");
+}
+
 function SourceSemanticNavigator({
   semantics,
   mode,
@@ -143,14 +154,12 @@ export function SourceViewer({
   const inline = mode === "inline";
   const currentFile = fileList.find((file) => file.name === resolvedActiveFileName) ?? fileList[0] ?? null;
   const semantics = currentFile?.semantics ?? null;
-  const semanticContextKey = [
-    inline ? "inline" : "inspector",
-    resolvedActiveFileName ?? "",
-    focusRange?.fileName ?? "",
-    focusRange?.startLine ?? "",
-    focusRange?.endLine ?? "",
-    semantics?.primaryRegionId ?? "",
-  ].join("|");
+  const semanticContextKey = createSemanticContextKey({
+    mode: inline ? "inline" : "inspector",
+    fileName: resolvedActiveFileName,
+    focusRange,
+    primaryRegionId: semantics?.primaryRegionId,
+  });
   const defaultSemanticSelection = focusRange?.fileName === resolvedActiveFileName
     ? null
     : inline && semantics?.primaryRegion
@@ -193,8 +202,17 @@ export function SourceViewer({
   };
 
   const handleSemanticSelect = (selection) => {
+    const nextFocusRange = onFocusRangeChange ? null : focusRange;
     onFocusRangeChange?.(null);
-    setSemanticSelectionState({ contextKey: semanticContextKey, selection });
+    setSemanticSelectionState({
+      contextKey: createSemanticContextKey({
+        mode: inline ? "inline" : "inspector",
+        fileName: resolvedActiveFileName,
+        focusRange: nextFocusRange,
+        primaryRegionId: semantics?.primaryRegionId,
+      }),
+      selection,
+    });
   };
 
   const openInInspectorAction = inline && onOpenInInspector ? (
