@@ -33,13 +33,20 @@ export function useAssessmentApplication({ learningUnitId, learningUnitsById }) 
       getLearningUnit: (id) => learningUnitsById.get(id) ?? null,
     });
 
-    setRuntimeError(null);
     void createAssessmentRuntime({ evidenceResolver })
       .then((nextRuntime) => {
-        if (!cancelled) setRuntime(nextRuntime);
+        if (!cancelled) {
+          setRuntime(nextRuntime);
+          setRuntimeError(null);
+        }
       })
       .catch((error) => {
-        if (!cancelled) setRuntimeError(error?.message || "无法初始化评测存储");
+        if (!cancelled) {
+          setRuntimeError({
+            source: learningUnitsById,
+            message: error?.message || "无法初始化评测存储",
+          });
+        }
       });
 
     return () => {
@@ -71,7 +78,7 @@ export function useAssessmentApplication({ learningUnitId, learningUnitsById }) 
   );
 
   const initializationError = [
-    runtimeError,
+    runtimeError?.source === learningUnitsById ? runtimeError.message : null,
     view.initializationErrors?.load,
     view.initializationErrors?.recover,
   ].filter(Boolean).join("；") || null;

@@ -44,6 +44,9 @@ export function useAssessmentReview({ learningUnitId, activeSessionId = null }) 
   }, [activeSessionId, learningUnitId]);
 
   useEffect(() => {
+    // Review loading synchronizes UI state with an external persistence read.
+    // Keep the loading state visible before the asynchronous read begins.
+    // oxlint-disable-next-line react/set-state-in-effect -- load starts the external review read and tracks its lifecycle.
     void load(activeSessionId);
     return () => {
       requestRef.current += 1;
