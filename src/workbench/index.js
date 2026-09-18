@@ -9,6 +9,18 @@ export {
   NOTE_PATH_PATTERN,
 } from "./noteRegistry";
 export { toLearningUnit } from "./contracts";
+export {
+  assertGuidedActivityDefinition,
+  getGuidedActivity,
+  getGuidedActivityDefinition,
+  GUIDED_ACTIVITY_DEFINITIONS,
+  GUIDED_RESPONSE_KINDS,
+  GUIDED_REVIEW_RESOURCES,
+  GUIDED_STEP_TYPES,
+  hasGuidedActivity,
+  STATE_SNAPSHOT_QUEUE_GUIDED_ACTIVITY,
+  validateGuidedActivityDefinition,
+} from "./guidedActivity";
 export { WorkbenchShell } from "./WorkbenchShell";
 export { WorkbenchNavigation } from "./WorkbenchNavigation";
 export {
