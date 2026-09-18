@@ -93,11 +93,8 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile, assessm
   const [agentAuditStore, setAgentAuditStore] = useState(null);
   const abortControllerRef = useRef(null);
   const activeRequestIdRef = useRef(null);
-  const compactionOwnershipRef = useRef(null);
+  const [compactionOwnership] = useState(createCompactionOwnership);
   const hydrationRequestRef = useRef(0);
-  if (!compactionOwnershipRef.current) {
-    compactionOwnershipRef.current = createCompactionOwnership();
-  }
   const gatewayClient = useMemo(() => createAiChatClient(), []);
   const directClient = useMemo(() => createDeepSeekDirectClient({
     apiKey: deepSeekSettings.apiKey,
@@ -119,9 +116,9 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile, assessm
   const learningUnitId = learningUnit?.id ?? null;
 
   const invalidateCompactionContext = useCallback(() => {
-    compactionOwnershipRef.current.invalidate();
+    compactionOwnership.invalidate();
     setCompacting(false);
-  }, []);
+  }, [compactionOwnership]);
 
   const clearRetryDescriptor = useCallback(() => setRetryDescriptor(null), []);
 
@@ -199,6 +196,9 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile, assessm
   }, [clearRetryDescriptor, invalidateCompactionContext, learningUnitId, repository]);
 
   useEffect(() => {
+    // This effect intentionally resets AI runtime state when its learning unit changes.
+    // The state is local to the hook and must not leak the previous unit's request.
+    // oxlint-disable-next-line react/set-state-in-effect
     invalidateCompactionContext();
     clearRetryDescriptor();
     hydrationRequestRef.current += 1;
@@ -432,7 +432,7 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile, assessm
   }, [client, learningUnit, requestContext]);
 
   const compactContext = useCallback(async (reason = "manual") => {
-    const ownership = compactionOwnershipRef.current;
+    const ownership = compactionOwnership;
     const activePromise = ownership.getActivePromise();
     if (activePromise) return activePromise;
     if (!messagesSinceCompaction.length || !client.configured || !requestContext) {
@@ -509,7 +509,7 @@ export function useAiLearningAssistant({ learningUnit, activeSourceFile, assessm
 
     if (!ownership.activate(ownershipToken, promise)) return null;
     return promise;
-  }, [activeSourceFile, aiContext, chatState.messages, client.configured, contextModelId, ensureConversation, latestCompaction, messagesSinceCompaction, repository, requestContext, summarizeMessages]);
+  }, [activeSourceFile, aiContext, chatState.messages, client.configured, compactionOwnership, contextModelId, ensureConversation, latestCompaction, messagesSinceCompaction, repository, requestContext, summarizeMessages]);
 
   const submit = useCallback(async (question, retry = null) => {
     const normalizedQuestion = typeof question === "string" ? question.trim() : "";

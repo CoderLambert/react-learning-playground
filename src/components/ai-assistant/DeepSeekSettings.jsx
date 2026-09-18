@@ -33,6 +33,8 @@ export function DeepSeekSettings({
   };
 
   useEffect(() => {
+    // Settings changes invalidate any in-flight test and must clear its progress state.
+    // oxlint-disable-next-line react/set-state-in-effect
     invalidateConnectionTest();
     setApiKey(settings?.apiKey ?? "");
     setModel(settings?.model ?? DEEPSEEK_MODELS[0].id);

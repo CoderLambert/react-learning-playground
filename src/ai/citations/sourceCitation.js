@@ -1,7 +1,7 @@
 const SOURCE_PROTOCOL_PREFIX = "source://";
 const SOURCE_URL_RE = /^source:\/\/([^#?\s]+)#L([1-9]\d*)(?:-(?:L)?([1-9]\d*))?\/?$/i;
 const MARKDOWN_SOURCE_LINK_RE = /\[([^\]\r\n]{0,256})\]\((source:\/\/[^)\s]+)\)/gi;
-const BRACKET_SOURCE_RE = /\[([^\[\]\r\n]+):L([1-9]\d*)(?:-(?:L)?([1-9]\d*))?\]/g;
+const BRACKET_SOURCE_RE = /\[([^\x5B\x5D\r\n]+):L([1-9]\d*)(?:-(?:L)?([1-9]\d*))?\]/g;
 const FALLBACK_SOURCE_FILE_RE = /(?:^|[/\\])[^/\\\s][^/\\]*\.(?:[cm]?[jt]sx?|css|scss|sass|less|mdx?|json|html?|vue|svelte|py|go|rs|java|kt|kts|sql|ya?ml|toml)$/i;
 
 function toPositiveLine(value) {
@@ -13,7 +13,10 @@ function hasUnsafeFileName(fileName) {
   return (
     !fileName ||
     fileName.length > 512 ||
-    /[\u0000-\u001F\u007F]/.test(fileName) ||
+    [...fileName].some((character) => {
+      const codePoint = character.codePointAt(0);
+      return codePoint <= 0x1F || codePoint === 0x7F;
+    }) ||
     /^[a-z][a-z0-9+.-]*:\/\//i.test(fileName)
   );
 }
