@@ -6,11 +6,11 @@ import test from "node:test";
 const readSource = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
 test("chapter checkpoint no longer exposes an editable localStorage question bank", async () => {
-  const source = await readSource("src/assessment/QuestionBankManager.jsx");
+  const source = await readSource("src/workbench/components/ReadOnlyChapterCheckpoint.jsx");
 
   assert.match(source, /章节学习检查（只读）/);
   assert.match(source, /Assessment 面板/);
-  assert.match(source, /data-legacy-checkpoint-readonly/);
+  assert.match(source, /data-readonly-checkpoint/);
 
   assert.doesNotMatch(source, /createQuestionBankRepository/);
   assert.doesNotMatch(source, /repository\.(load|save|setOverride|upsertCustom|deleteCustom|setOrder)/);
@@ -29,13 +29,19 @@ const RETIRED_ASSESSMENT_MODULES = [
 
 test("legacy chapter checkpoint content remains available as read-only study prompts", async () => {
   const source = await readSource("src/components/ChapterCheckpoint.jsx");
-  const compatibilityRenderer = await readSource("src/assessment/QuestionBankManager.jsx");
+  const renderer = await readSource("src/workbench/components/ReadOnlyChapterCheckpoint.jsx");
 
   assert.match(source, /学习检查/);
   assert.match(source, /questions:/);
   assert.match(source, /exercises:/);
-  assert.match(compatibilityRenderer, /checkpoint\?\.questions/);
-  assert.match(compatibilityRenderer, /checkpoint\?\.exercises/);
+  assert.match(source, /ReadOnlyChapterCheckpoint/);
+  assert.match(renderer, /checkpoint\?\.questions/);
+  assert.match(renderer, /checkpoint\?\.exercises/);
+  assert.doesNotMatch(source, /from ["']\.\.\/assessment\//);
+});
+
+test("deprecated Assessment checkpoint compatibility seam is removed", () => {
+  assert.equal(existsSync(new URL("../src/assessment/QuestionBankManager.jsx", import.meta.url)), false);
 });
 
 test("retired runner, question-bank, and attempt-persistence modules stay absent", () => {

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import { resolve } from "node:path";
 
@@ -11,7 +11,7 @@ import { createFixedClock } from "../src/platform/clock.js";
 
 const ROOT = process.cwd();
 const EXPORT_MODULE = resolve(ROOT, "src/ai/conversations/exportConversation.js");
-const QUESTION_BANK_MANAGER = resolve(ROOT, "src/assessment/QuestionBankManager.jsx");
+const READ_ONLY_CHECKPOINT_RENDERER = resolve(ROOT, "src/workbench/components/ReadOnlyChapterCheckpoint.jsx");
 const TIMESTAMP = "2026-09-13T00:00:00.000Z";
 const UNIT = "props";
 
@@ -122,10 +122,7 @@ test("conversation export contract runs automatically once export helper is merg
   assert.equal(json.messages[1].finishReason, "stop");
 });
 
-test("legacy chapter checkpoint contract activates once editable localStorage manager is removed", {
-  skip: readFileSync(QUESTION_BANK_MANAGER, "utf8").includes("createQuestionBankRepository"),
-}, () => {
-  const source = readFileSync(QUESTION_BANK_MANAGER, "utf8");
-  assert.doesNotMatch(source, /createQuestionBankRepository|repository\.save|repository\.upsertCustom|repository\.deleteCustom/);
-  assert.doesNotMatch(source, /<AssessmentRunner/);
+test("chapter checkpoint compatibility seam is replaced by workbench-owned renderer", () => {
+  assert.equal(existsSync(resolve(ROOT, "src/assessment/QuestionBankManager.jsx")), false);
+  assert.equal(existsSync(READ_ONLY_CHECKPOINT_RENDERER), true);
 });

@@ -79,3 +79,4 @@ test("an incomplete streaming code fence stays renderable", async ({ page }) => 
   await expect(assistantMessage.locator('[data-ai-code-block="true"]')).toHaveCount(1);
   await expect(assistantMessage).toContainText("const partial = <Demo");
 });
+// @browser-owner ai

@@ -84,3 +84,38 @@ test("API key defaults to session storage and can be cleared", async ({ page }) 
   }));
   expect(cleared).toEqual({ local: null, session: null });
 });
+
+test("stale DeepSeek connection feedback is discarded when credentials change", async ({ page }) => {
+  let releaseFirstTest;
+  const firstTestBlocked = new Promise((resolve) => {
+    releaseFirstTest = resolve;
+  });
+  let requestCount = 0;
+
+  await page.route(DEEPSEEK_URL, async (route) => {
+    requestCount += 1;
+    if (requestCount === 1) await firstTestBlocked;
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ id: `test-${requestCount}`, choices: [] }),
+    });
+  });
+
+  await openAiTab(page);
+  await page.getByRole("button", { name: /配置 DeepSeek|DeepSeek 已配置/ }).click();
+  const keyInput = page.getByRole("textbox", { name: "API Key", exact: true });
+  await keyInput.fill("sk-first-credential");
+  await page.getByRole("button", { name: "测试连接" }).click();
+  await expect(page.getByText("正在测试 DeepSeek 连接…", { exact: true })).toBeVisible();
+
+  await keyInput.fill("sk-second-credential");
+  releaseFirstTest();
+  await expect(page.getByText(/连接成功/)).toHaveCount(0);
+  await expect(page.getByText("正在测试 DeepSeek 连接…", { exact: true })).toHaveCount(0);
+
+  await page.getByRole("button", { name: "测试连接" }).click();
+  await expect(page.getByText(/连接成功/)).toBeVisible();
+  expect(requestCount).toBe(2);
+});
+// @browser-owner ai

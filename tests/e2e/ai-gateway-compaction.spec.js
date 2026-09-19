@@ -99,3 +99,4 @@ test("a ~6000-char answer compacts through gateway without using the 4K question
   await expect(transcript.locator('[data-message-role="user"]')).toHaveCount(1);
   await expect(transcript.locator('[data-message-role="assistant"]')).toHaveCount(1);
 });
+// @browser-owner ai

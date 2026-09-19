@@ -28,8 +28,9 @@
  */
 
 /**
- * Future normalized learning-unit shape used by Workbench consumers.
- * The existing demo registry remains authoritative during the migration.
+ * Canonical normalized learning-unit shape used by Workbench consumers.
+ * The existing demo registry remains authoritative; normalization happens once
+ * at the application composition boundary.
  *
  * Current registry mapping:
  * - id -> id
@@ -48,13 +49,12 @@
  * @property {LearningSourceFile[]} sources
  * @property {string | undefined} description
  * @property {string | undefined} badge
- * @property {object} registryEntry Original registry entry for compatibility during migration.
  */
 
 /**
  * Create a stable Workbench-facing descriptor without mutating or rewriting the
- * existing demo registry. This compatibility adapter is intentionally small so
- * feature branches can consume a LearningUnit contract before App wiring moves.
+ * authoritative demo registry. App composition calls this once for each
+ * registry entry; downstream consumers receive only the normalized shape.
  *
  * @param {object} demo Existing entry from src/demos/index.js.
  * @returns {LearningUnit}
@@ -75,7 +75,6 @@ export function toLearningUnit(demo) {
     sources: demo.files ?? [],
     description: demo.description,
     badge: demo.badge,
-    registryEntry: demo,
   };
 }
 

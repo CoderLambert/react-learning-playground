@@ -79,3 +79,4 @@ test.describe("effects and cleanup", () => {
     await expect(page.locator(".demo-alert-info")).toContainText("counterStore 当前订阅者：2");
   });
 });
+// @browser-owner workbench

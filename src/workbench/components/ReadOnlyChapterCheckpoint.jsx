@@ -16,19 +16,15 @@ function CheckpointList({ title, items, kind }) {
 }
 
 /**
- * @deprecated Compatibility renderer for chapter checkpoint content.
+ * Render chapter review prompts as read-only learning content.
  *
- * The former implementation was an editable localStorage-backed question bank
- * with its own practice runner. That created a second assessment source of
- * truth beside the Assessment Runtime (IndexedDB + AssessmentService).
- *
- * Keep this export temporarily because ChapterCheckpoint imports it, but make
- * the legacy checkpoint strictly read-only. New assessment authoring and
- * practice must go through the Assessment tab/runtime.
+ * Chapter checkpoints are study prompts, not Assessment authoring or practice.
+ * Formal assessment data and answer persistence remain owned by the Assessment
+ * Runtime; this renderer deliberately has no state or storage dependency.
  */
-export function QuestionBankManager({ chapter, checkpoint }) {
+export function ReadOnlyChapterCheckpoint({ chapter, checkpoint }) {
   return (
-    <div data-legacy-checkpoint-readonly={chapter}>
+    <div data-readonly-checkpoint={chapter}>
       <div className="demo-alert demo-alert-info" role="note">
         <div className="demo-alert-title">章节学习检查（只读）</div>
         <p>

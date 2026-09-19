@@ -1,5 +1,5 @@
-import { QuestionBankManager } from "../assessment/QuestionBankManager.jsx";
 import { getChapterNextStep, getIntegrationLab } from "./chapterCheckpointMap";
+import { ReadOnlyChapterCheckpoint } from "../workbench/components/ReadOnlyChapterCheckpoint.jsx";
 
 const q = (id, text) => Object.freeze({ id, text });
 const e = (id, text) => Object.freeze({ id, text });
@@ -208,7 +208,7 @@ export function ChapterCheckpoint({ chapter, nextUnitId = null, onNavigate }) {
         <p className="demo-section-desc">先独立回答，再回到对应 Demo 验证。这里刻意不提供答案。</p>
       </div>
 
-      <QuestionBankManager chapter={chapter} checkpoint={checkpoint} />
+      <ReadOnlyChapterCheckpoint chapter={chapter} checkpoint={checkpoint} />
 
       {integrationLab && (
         <div

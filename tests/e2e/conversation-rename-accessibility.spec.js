@@ -61,3 +61,4 @@ test("conversation rename Escape cancels without persisting and Enter commits wi
   await expect(committedRenameButton).toBeEnabled();
   await expect(committedRenameButton).toBeFocused();
 });
+// @browser-owner ai

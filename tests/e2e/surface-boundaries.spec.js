@@ -89,3 +89,4 @@ test.describe("responsive inspector surface boundaries", () => {
     await expectNoPageOverflow(page);
   });
 });
+// @browser-owner workbench
