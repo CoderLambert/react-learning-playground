@@ -30,7 +30,11 @@ export function ImmutableStateDemo() {
   }
 
   function mutateSameReference() {
+    // Intentional teaching exception: this is the deliberately broken mutation path
+    // used to show why React state snapshots must be treated as immutable.
+    /* oxlint-disable react/immutability -- the lesson intentionally demonstrates mutating a state object. */
     mutationProbe.city = mutationProbe.city === "London" ? "Tokyo" : "London";
+    /* oxlint-enable react/immutability */
     setMutationProbe(mutationProbe);
   }
 

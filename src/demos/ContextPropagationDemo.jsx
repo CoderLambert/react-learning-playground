@@ -10,13 +10,17 @@ function RenderBadge({ label, count }) {
   );
 }
 
+// Intentional teaching exception: the render counter is incremented at the component
+// execution point so the Context propagation experiment shows actual render activity.
 function ContextConsumer() {
   const theme = useContext(ThemeContext);
   const renderCountRef = useRef(0);
+  // oxlint-disable-next-line react/refs -- render-count instrumentation deliberately observes render-phase execution.
   renderCountRef.current += 1;
 
   return (
     <div style={{ padding: 12, border: "1px solid var(--border-color)", borderRadius: "var(--radius-sm)" }}>
+      {/* oxlint-disable-next-line react/refs -- render-count instrumentation deliberately observes render-phase execution. */}
       <RenderBadge label="Consumer" count={renderCountRef.current} />
       <div style={{ marginTop: 8 }}>
         useContext(ThemeContext) = <strong>{theme}</strong>
@@ -25,13 +29,17 @@ function ContextConsumer() {
   );
 }
 
+// Intentional teaching exception: the render counter is incremented at the component
+// execution point so memo + Context behavior remains directly observable.
 const MemoConsumer = memo(function MemoConsumer() {
   const theme = useContext(ThemeContext);
   const renderCountRef = useRef(0);
+  // oxlint-disable-next-line react/refs -- render-count instrumentation deliberately observes render-phase execution.
   renderCountRef.current += 1;
 
   return (
     <div style={{ padding: 12, border: "1px solid var(--border-color)", borderRadius: "var(--radius-sm)" }}>
+      {/* oxlint-disable-next-line react/refs -- render-count instrumentation deliberately observes render-phase execution. */}
       <RenderBadge label="memo Consumer" count={renderCountRef.current} />
       <div style={{ marginTop: 8 }}>
         context = <strong>{theme}</strong>
@@ -40,12 +48,16 @@ const MemoConsumer = memo(function MemoConsumer() {
   );
 });
 
+// Intentional teaching exception: the render counter is incremented at the component
+// execution point so the non-consumer memo comparison remains directly observable.
 const MemoNonConsumer = memo(function MemoNonConsumer() {
   const renderCountRef = useRef(0);
+  // oxlint-disable-next-line react/refs -- render-count instrumentation deliberately observes render-phase execution.
   renderCountRef.current += 1;
 
   return (
     <div style={{ padding: 12, border: "1px solid var(--border-color)", borderRadius: "var(--radius-sm)" }}>
+      {/* oxlint-disable-next-line react/refs -- render-count instrumentation deliberately observes render-phase execution. */}
       <RenderBadge label="memo Non-consumer" count={renderCountRef.current} />
       <div style={{ marginTop: 8 }}>这个组件没有读取 ThemeContext。</div>
     </div>

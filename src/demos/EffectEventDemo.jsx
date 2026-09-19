@@ -17,7 +17,10 @@ function ReactiveThemeConnection({ roomId, theme }) {
   const [setupCount, setSetupCount] = useState(0);
   const [notice, setNotice] = useState("等待连接");
 
+  // Intentional teaching exception: the visible counter records each real Effect setup
+  // so learners can compare the dependency-driven reconnection behavior.
   useEffect(() => {
+    // oxlint-disable-next-line react/set-state-in-effect -- the setup counter is the observable lesson output.
     setSetupCount((count) => count + 1);
     const connection = createConnection(roomId, () => {
       setNotice(`已连接 ${roomId}，当前主题 ${theme}`);
@@ -44,7 +47,10 @@ function EffectEventConnection({ roomId, theme }) {
     setNotice(`已连接 ${connectedRoomId}，当前主题 ${theme}`);
   });
 
+  // Intentional teaching exception: the visible counter records each real Effect setup
+  // so learners can compare the Effect Event dependency boundary.
   useEffect(() => {
+    // oxlint-disable-next-line react/set-state-in-effect -- the setup counter is the observable lesson output.
     setSetupCount((count) => count + 1);
     const connection = createConnection(roomId, onConnected);
     connection.connect();

@@ -13,12 +13,16 @@ export function EventVsEffectDemo() {
   const [effectCount, setEffectCount] = useState(0);
   const [online, setOnline] = useState(true);
 
+  // Intentional teaching exception: this deliberately demonstrates the State + Effect
+  // indirection that the lesson contrasts with the direct event-handler command.
   useEffect(() => {
     if (!requested) return;
 
     let ignoreResult = false;
     const purchaseProduct = product;
+    // oxlint-disable-next-line react/set-state-in-effect -- this warning is the anti-pattern being demonstrated.
     setEffectCount((count) => count + 1);
+    // oxlint-disable-next-line react/set-state-in-effect -- this warning is the anti-pattern being demonstrated.
     setEffectMessage(`Effect 正在为 ${purchaseProduct} 发起命令…`);
 
     fakePurchase(purchaseProduct, 1200).then((message) => {
