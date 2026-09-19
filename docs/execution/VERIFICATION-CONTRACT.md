@@ -18,6 +18,14 @@ The command runs the complete deterministic `tests/**/*.test.mjs` inventory plus
 
 Focused scripts such as `test:ai`, `test:assessment`, and `test:content` remain useful for fast feedback, but they are not the complete required deterministic inventory.
 
+### Lint warning policy
+
+`npm run lint` uses the repository Oxlint configuration with warnings denied. Any unsuppressed warning in product code, tests, or Teaching Demos therefore produces a non-zero exit code and fails `verify:required`.
+
+Intentional Teaching Demo exceptions remain local source directives rather than a growing warning-count baseline. Each Demo suppression must name concrete rule(s), include an inline rationale, and restore block suppressions with the matching `oxlint-enable`. Unused suppressions are errors, so stale exceptions cannot silently accumulate.
+
+This policy preserves warning-level rules such as `react/only-export-components` for editor/local diagnostics while making required verification fail closed.
+
 ## Canonical browser verification
 
 Use:

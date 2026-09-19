@@ -22,7 +22,6 @@ export function EventVsEffectDemo() {
     const purchaseProduct = product;
     // oxlint-disable-next-line react/set-state-in-effect -- this warning is the anti-pattern being demonstrated.
     setEffectCount((count) => count + 1);
-    // oxlint-disable-next-line react/set-state-in-effect -- this warning is the anti-pattern being demonstrated.
     setEffectMessage(`Effect 正在为 ${purchaseProduct} 发起命令…`);
 
     fakePurchase(purchaseProduct, 1200).then((message) => {
