@@ -113,7 +113,7 @@ test("assessment tab exposes the new runtime-backed question manager", async ({ 
 });
 
 test("assessment manager keeps practice UI in the same tab", async ({ page }) => {
-  await page.goto("?demo=state-snapshot-queue");
+  await page.goto("?demo=props");
   await page.getByRole("tab", { name: "评测" }).click();
 
   const panel = page.getByRole("tabpanel", { name: "评测" });
