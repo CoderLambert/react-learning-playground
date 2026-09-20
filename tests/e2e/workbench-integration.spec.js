@@ -95,7 +95,7 @@ test.describe("React Learning Workbench integration", () => {
 
     await page.getByRole("textbox", { name: "你的 explanation" }).fill("三个 replace 都读取同一份 render snapshot。");
     await page.getByRole("button", { name: "保存 explanation，继续 practice" }).click();
-    await page.getByRole("radio", { name: /结果可以相同，但 queue 处理语义不同/ }).check();
+    await page.locator("[data-guided-practice-kind='patch-choice'] input[value='functional-updaters']").check();
     await page.getByRole("button", { name: "提交 practice，查看 review" }).click();
 
     await expect(page.locator("[data-guided-flow]")).toHaveAttribute("data-guided-current-step", "review");
