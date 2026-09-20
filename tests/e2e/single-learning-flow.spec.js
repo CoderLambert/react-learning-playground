@@ -217,7 +217,7 @@ test("You Might Not Need an Effect uses causal-source diagnostics and preserves 
   await flow.locator(".single-learning-flow__stages button").filter({ hasText: "验证" }).click();
   await page.getByRole("button", { name: "开始测试" }).click();
 
-  await page.getByRole("radio", { name: /直接在当前 render 中根据最新 props/state 派生/ }).check();
+  await page.getByRole("radio", { name: "直接在当前 render 中根据最新 props/state 派生 filteredProducts" }).check();
   await page.getByRole("button", { name: "提交答案" }).click();
   await page.getByRole("button", { name: /下一题/ }).click();
 
