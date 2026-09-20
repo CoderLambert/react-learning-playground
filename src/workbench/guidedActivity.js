@@ -348,7 +348,7 @@ function deepFreeze(value, visited = new WeakSet()) {
 
 const STATE_SNAPSHOT_QUEUE_DEFINITION = {
   learningUnitId: "state-snapshot-queue",
-  revision: 1,
+  revision: 2,
   goal: "理解当前 render snapshot 如何决定 update queue 的下一次 render。",
   steps: [
     {
@@ -385,20 +385,60 @@ const STATE_SNAPSHOT_QUEUE_DEFINITION = {
       },
     },
     {
-      id: "practice-updater-replace-semantics",
+      id: "practice-compose-three-increments",
       type: GUIDED_STEP_TYPES.PRACTICE,
-      prompt: "setCount(count + 3) 与连续三个 updater function 的结果可能相同；它们的更新语义是否也相同？",
+      prompt: `现在把问题迁移到真实修复场景。
+
+一个 “+3” handler 可能和同一次事件中更早入队的 updater 一起执行：
+
+\`\`\`js
+setCount((n) => n + 10);
+handlePlusThree();
+\`\`\`
+
+产品要求 \`handlePlusThree()\` 的三个 “+1” 都继续基于 queue 中前一项结果计算，
+不能用当前 render snapshot 覆盖掉前面已经排队的更新。
+
+选择最小且语义正确的修复。`,
       response: {
-        kind: GUIDED_RESPONSE_KINDS.CHOICE,
+        kind: GUIDED_RESPONSE_KINDS.PATCH_CHOICE,
         options: [
-          { id: "same-result-different-semantics", label: "结果可以相同，但 queue 处理语义不同" },
-          { id: "same-result-same-semantics", label: "结果相同，所以更新语义完全相同" },
-          { id: "different-result", label: "两种写法必然得到不同结果" },
+          {
+            id: "functional-updaters",
+            label: "Patch A",
+            patch: `- setCount(count + 1);
+- setCount(count + 1);
+- setCount(count + 1);
++ setCount((n) => n + 1);
++ setCount((n) => n + 1);
++ setCount((n) => n + 1);`,
+          },
+          {
+            id: "single-replace-plus-three",
+            label: "Patch B",
+            patch: `- setCount(count + 1);
+- setCount(count + 1);
+- setCount(count + 1);
++ setCount(count + 3);`,
+          },
+          {
+            id: "three-snapshot-replacements",
+            label: "Patch C",
+            patch: `- setCount(count + 1);
+- setCount(count + 1);
+- setCount(count + 1);
++ setCount(count + 1);
++ setCount(count + 2);
++ setCount(count + 3);`,
+          },
         ],
       },
       reveal: {
-        expectedOptionId: "same-result-different-semantics",
-        observation: "两种写法在这个起点可以得到相同输出，但 updater 会按 queue 中的前一项结果继续计算。",
+        expectedOptionId: "functional-updaters",
+        observation: `functional updater 会接收 queue 中前一个待处理结果。
+
+如果前面已经有 \`n => n + 10\`，三个 updater 会继续从那个结果依次 +1；
+直接读取 \`count\` 的 replace 更新只看到当前 render snapshot，可能覆盖先前排队结果。`,
       },
     },
     {
@@ -414,7 +454,7 @@ assertGuidedActivityDefinition(STATE_SNAPSHOT_QUEUE_DEFINITION);
 
 const RENDERING_LISTS_KEY_DEFINITION = {
   learningUnitId: "rendering-lists-key",
-  revision: 1,
+  revision: 2,
   goal: "理解 key 如何让列表项的局部 State 跟随数据身份，而不是数组位置。",
   steps: [
     {
@@ -473,30 +513,50 @@ const RENDERING_LISTS_KEY_DEFINITION = {
       },
     },
     {
-      id: "practice-stable-key-transfer",
+      id: "practice-repair-list-identity",
       type: GUIDED_STEP_TYPES.PRACTICE,
-      prompt: `一个可编辑待办列表允许：
+      prompt: `另一个可编辑 Todo 列表支持顶部插入、拖动排序和修改标题。
+每个 \`TodoRow\` 内部都有尚未保存的 input draft。
 
-- 在列表顶部插入新任务；
-- 修改任务标题；
-- 每一行都有自己的输入草稿。
+当前实现：
 
-哪一个值最适合作为 key，让已有行的草稿继续属于原来的待办？`,
+\`\`\`jsx
+{todos.map((todo, index) => (
+  <TodoRow key={index} todo={todo} />
+))}
+\`\`\`
+
+要求：列表结构变化后，已有 draft 必须继续属于同一个 todo 实体。
+选择最小正确修复。`,
       response: {
-        kind: GUIDED_RESPONSE_KINDS.CHOICE,
+        kind: GUIDED_RESPONSE_KINDS.PATCH_CHOICE,
         options: [
-          { id: "stable-task-id", label: "数据模型中的稳定 todo.id" },
-          { id: "array-index", label: "当前数组 index" },
-          { id: "editable-title", label: "当前可编辑的 todo.title" },
+          {
+            id: "stable-todo-id-key",
+            label: "Patch A",
+            patch: `- <TodoRow key={index} todo={todo} />
++ <TodoRow key={todo.id} todo={todo} />`,
+          },
+          {
+            id: "editable-title-key",
+            label: "Patch B",
+            patch: `- <TodoRow key={index} todo={todo} />
++ <TodoRow key={todo.title} todo={todo} />`,
+          },
+          {
+            id: "position-plus-id-key",
+            label: "Patch C",
+            patch: `- <TodoRow key={index} todo={todo} />
++ <TodoRow key={\`\${index}-\${todo.id}\`} todo={todo} />`,
+          },
         ],
       },
       reveal: {
-        expectedOptionId: "stable-task-id",
-        observation: `key 应来自稳定的数据身份。
+        expectedOptionId: "stable-todo-id-key",
+        observation: `key 必须稳定表达业务实体身份。
 
-顶部插入会改变 index；
-可编辑 title 也可能变化；
-稳定 id 才能在列表结构变化后继续标识同一个业务实体。`,
+\`todo.id\` 在插入、重排和标题编辑时仍代表同一个 todo；
+title 可编辑会变化；把 index 混进 key 会让同一个 todo 在移动后获得新身份，从而丢失原行 State。`,
       },
     },
     {
@@ -513,7 +573,7 @@ key 的核心作用是提供稳定身份线索，让 React 在列表结构变化
 
 const PRESERVING_RESETTING_STATE_DEFINITION = {
   learningUnitId: "preserving-resetting-state",
-  revision: 1,
+  revision: 2,
   goal: "理解局部 State 与组件身份关联，并用稳定业务 key 明确表达何时保留或重置。",
   steps: [
     {
@@ -568,31 +628,54 @@ Taylor 的 Chat 中已经输入草稿「明天开会」。
       },
     },
     {
-      id: "practice-reset-form-by-entity",
+      id: "practice-place-reset-boundary",
       type: GUIDED_STEP_TYPES.PRACTICE,
-      prompt: `一个 ProductForm 用局部 State 保存多个未提交字段。
+      prompt: `CustomerWorkspace 中，\`WorkspaceShell\` 保存展开面板、滚动位置等 UI State；
+\`InvoiceEditor\` 保存当前客户尚未提交的发票草稿。
 
-产品从 product-A 切换到 product-B 时，产品要求：
+需求：
+- customer 从 A 切到 B 时，只丢弃 InvoiceEditor 草稿；
+- WorkspaceShell 的 UI State 必须保留；
+- 普通 re-render 不能重置草稿。
 
-“旧产品的所有未提交字段都应该丢弃，
-新产品必须从空表单开始。”
+当前结构：
 
-哪种写法最直接表达“这是另一个表单实例”？`,
+\`\`\`jsx
+<WorkspaceShell>
+  <InvoiceEditor customer={customer} />
+</WorkspaceShell>
+\`\`\`
+
+选择最小且准确的 identity 修复。`,
       response: {
-        kind: GUIDED_RESPONSE_KINDS.CHOICE,
+        kind: GUIDED_RESPONSE_KINDS.PATCH_CHOICE,
         options: [
-          { id: "stable-product-key", label: "<ProductForm key={product.id} product={product} />" },
-          { id: "same-component-no-key", label: "<ProductForm product={product} />" },
-          { id: "random-key", label: "<ProductForm key={Math.random()} product={product} />" },
+          {
+            id: "key-editor-by-customer",
+            label: "Patch A",
+            patch: `- <InvoiceEditor customer={customer} />
++ <InvoiceEditor key={customer.id} customer={customer} />`,
+          },
+          {
+            id: "key-shell-by-customer",
+            label: "Patch B",
+            patch: `- <WorkspaceShell>
++ <WorkspaceShell key={customer.id}>`,
+          },
+          {
+            id: "random-editor-key",
+            label: "Patch C",
+            patch: `- <InvoiceEditor customer={customer} />
++ <InvoiceEditor key={Date.now()} customer={customer} />`,
+          },
         ],
       },
       reveal: {
-        expectedOptionId: "stable-product-key",
-        observation: `当整个表单子树都应该随业务实体切换而重新开始时，
-稳定 product.id 可以明确表达新的组件身份。
+        expectedOptionId: "key-editor-by-customer",
+        observation: `identity boundary 应放在真正需要随业务实体重置的子树上。
 
-在同一位置继续渲染同一组件类型且没有 key 变化时，会继续沿用原身份；
-随机 key 则会在无关 render 中也不断重建组件。`,
+给 InvoiceEditor 使用稳定 customer.id，只在客户身份变化时重建编辑器；
+给更外层 WorkspaceShell 加 key 会扩大重置范围；随机 key 会让无关 render 也不断重建编辑器。`,
       },
     },
     {
@@ -609,7 +692,7 @@ Taylor 的 Chat 中已经输入草稿「明天开会」。
 
 const NOT_NEED_EFFECT_DEFINITION = {
   learningUnitId: "not-need-effect",
-  revision: 1,
+  revision: 2,
   goal: "学会先判断逻辑的因果来源，再决定它属于 render、Event Handler 还是 Effect。",
   steps: [
     {
@@ -663,31 +746,61 @@ React 因 State 变化重新 render 时，直接重新计算即可；
       },
     },
     {
-      id: "practice-place-logic-by-cause",
+      id: "practice-remove-derived-state-effect",
       type: GUIDED_STEP_TYPES.PRACTICE,
-      prompt: `ProfileEditor 同时有三项需求：
+      prompt: `ProductSearch 把完全可由 \`products + query\` 得到的列表复制进 State：
 
-1. 根据 firstName 和 lastName 显示 fullName；
-2. 用户点击「保存」时发送 POST 请求；
-3. 组件显示期间监听 window.resize，并在卸载时移除监听。
+\`\`\`jsx
+const [visibleProducts, setVisibleProducts] = useState([]);
 
-哪组职责划分最合适？`,
+useEffect(() => {
+  setVisibleProducts(filterProducts(products, query));
+}, [products, query]);
+\`\`\`
+
+\`visibleProducts\` 不需要和任何外部系统同步，而且当 products prop 或 query 改变时都必须立即反映最新输入。
+
+选择能移除额外同步链、同时保持行为正确的最小修复。`,
       response: {
-        kind: GUIDED_RESPONSE_KINDS.CHOICE,
+        kind: GUIDED_RESPONSE_KINDS.PATCH_CHOICE,
         options: [
-          { id: "render-event-effect", label: "fullName：render；POST：Save Event Handler；resize listener：Effect" },
-          { id: "all-effects", label: "三项全部放进 Effect" },
-          { id: "state-effect-handler", label: "fullName：State + Effect；POST：Effect；resize listener：普通 render / click handler" },
+          {
+            id: "derive-visible-products",
+            label: "Patch A",
+            patch: `- const [visibleProducts, setVisibleProducts] = useState([]);
+-
+- useEffect(() => {
+-   setVisibleProducts(filterProducts(products, query));
+- }, [products, query]);
++ const visibleProducts = filterProducts(products, query);`,
+          },
+          {
+            id: "sync-only-in-input-handler",
+            label: "Patch B",
+            patch: `- useEffect(() => {
+-   setVisibleProducts(filterProducts(products, query));
+- }, [products, query]);
++ function handleQueryChange(nextQuery) {
++   setQuery(nextQuery);
++   setVisibleProducts(filterProducts(products, nextQuery));
++ }`,
+          },
+          {
+            id: "replace-with-layout-effect",
+            label: "Patch C",
+            patch: `- useEffect(() => {
++ useLayoutEffect(() => {
+    setVisibleProducts(filterProducts(products, query));
+  }, [products, query]);`,
+          },
         ],
       },
       reveal: {
-        expectedOptionId: "render-event-effect",
-        observation: `能从当前 props/state 推导的值留在 render；
+        expectedOptionId: "derive-visible-products",
+        observation: `visibleProducts 是当前 render 输入的纯派生值，直接计算即可。
 
-明确由用户点击产生的业务因果留在对应 Event Handler；
-
-需要在组件存在期间与浏览器外部 API 保持同步并 cleanup 的 listener
-才属于 Effect。`,
+只在输入事件里同步会漏掉 products prop 的变化；
+换成 useLayoutEffect 仍然保留了重复 State、额外 render 和不必要的同步关系。`,
       },
     },
     {
@@ -705,7 +818,7 @@ React 因 State 变化重新 render 时，直接重新计算即可；
 
 const LIFECYCLE_OF_REACTIVE_EFFECTS_DEFINITION = {
   learningUnitId: "lifecycle-of-reactive-effects",
-  revision: 1,
+  revision: 2,
   goal: "理解 Effect 是一段独立同步过程：同步目标变化时，先停止旧同步，再建立新同步。",
   steps: [
     {
@@ -763,32 +876,41 @@ React 会先运行上一次 Effect 的 cleanup，
       },
     },
     {
-      id: "practice-connection-target-dependencies",
+      id: "practice-subscription-update-order",
       type: GUIDED_STEP_TYPES.PRACTICE,
-      prompt: `另一个 ChatConnection Effect：
+      prompt: `把同一个 mental model 迁移到另一个订阅组件：
 
-- serverUrl 是组件内可编辑的 State，roomId 是当前房间的 prop/state；两者都会随 render 变化；
-- Effect 使用 serverUrl 和 roomId 建立连接；
-- 每次收到消息时读取最新 theme，只决定通知颜色；
-- theme 改变不应该重新连接服务器。
+\`\`\`jsx
+useEffect(() => {
+  const subscription = subscribe(topicId);
+  return () => subscription.unsubscribe();
+}, [topicId]);
+\`\`\`
 
-哪些 reactive values 应该决定连接重新同步？`,
+组件已经订阅 \`news\`。一次用户操作把 topicId 改成 \`sports\`。
+请按这次更新的真实顺序排列下面事件。`,
       response: {
-        kind: GUIDED_RESPONSE_KINDS.CHOICE,
-        options: [
-          { id: "connection-target-only", label: "serverUrl + roomId；theme 作为非响应式消息处理逻辑读取" },
-          { id: "all-values", label: "serverUrl + roomId + theme 全部触发重新连接" },
-          { id: "theme-only", label: "只有 theme 改变时重新连接" },
+        kind: GUIDED_RESPONSE_KINDS.ORDERED_SEQUENCE,
+        items: [
+          { id: "setup-new-subscription", label: "Effect setup：建立 sports 订阅" },
+          { id: "render-new-topic", label: "React render：本次 render 读取 topicId = sports" },
+          { id: "change-topic", label: "用户操作触发更新：topicId 从 news 变为 sports" },
+          { id: "cleanup-old-subscription", label: "Effect cleanup：取消上一轮 news 订阅" },
+          { id: "commit-new-render", label: "React commit：提交这次使用 sports 的 render" },
         ],
       },
       reveal: {
-        expectedOptionId: "connection-target-only",
-        observation: `serverUrl 和 roomId 决定“连接到哪里”，因此决定同步关系；
+        expectedOrder: [
+          "change-topic",
+          "render-new-topic",
+          "commit-new-render",
+          "cleanup-old-subscription",
+          "setup-new-subscription",
+        ],
+        observation: `State/prop 更新先触发新的 render，并完成 commit。
 
-theme 只影响“收到消息后怎么表现”，并不改变连接目标。
-
-如果需要在 Effect 内读取最新 theme 而不让它触发重同步，
-可以把这部分非响应式逻辑拆到 Effect Event。`,
+随后这次 Effect 重新同步：先用旧值执行上一轮 cleanup，
+再用新 topicId 执行 setup。这里比较的是一次依赖变化的更新流程，不包含 Strict Mode 的开发期额外检查周期。`,
       },
     },
     {
