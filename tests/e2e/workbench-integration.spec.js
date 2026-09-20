@@ -10,9 +10,9 @@ test.describe("React Learning Workbench integration", () => {
     await expect(page.locator(".workbench-shell")).toHaveAttribute("data-navigation-collapsed", "true");
     await page.getByRole("button", { name: "展开左侧导航" }).click();
 
-    await openDemo(page, "State Snapshot、Batching 与 Update Queue");
-    await expect(page).toHaveURL(/demo=state-snapshot-queue/);
-    await expect(page.getByRole("heading", { name: "State Snapshot、Batching 与 Update Queue", exact: true })).toBeVisible();
+    await openDemo(page, "Props 基础");
+    await expect(page).toHaveURL(/demo=props/);
+    await expect(page.locator(".demo-page h2.demo-title")).toContainText("Props 基础");
     await expect(page.locator(".note-toc")).toBeVisible();
 
     const resize = page.getByRole("separator", { name: "调整学习面板宽度" });
@@ -55,7 +55,7 @@ test.describe("React Learning Workbench integration", () => {
     await expect(page.locator(".workbench-shell")).toHaveAttribute("data-inspector-open", "true");
 
     await page.reload();
-    await expect(page.locator(".demo-page h2.demo-title")).toContainText("State Snapshot");
+    await expect(page.locator(".demo-page h2.demo-title")).toContainText("Props 基础");
   });
 
   test("canonicalizes an invalid demo URL", async ({ page }) => {
@@ -64,16 +64,19 @@ test.describe("React Learning Workbench integration", () => {
     await expect(page.locator(".demo-page h2.demo-title")).toBeVisible();
   });
 
-  test("completes the state-snapshot-queue Guided flow without blocking free explore", async ({ page }) => {
+  test("completes the state-snapshot-queue Guided practice inside the single learning flow", async ({ page }) => {
     await loadApp(page);
     await openDemo(page, "State Snapshot、Batching 与 Update Queue");
 
+    const learningFlow = page.locator("[data-learning-flow='single']");
+    await learningFlow.locator(".single-learning-flow__stages button").filter({ hasText: "实践" }).click();
+
     const entry = page.locator("[data-guided-entry]");
     await expect(entry).toBeVisible();
-    await expect(entry.getByRole("button", { name: "开始 Guided Learning" })).toBeVisible();
+    await expect(entry.getByRole("button", { name: "开始实践" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Replace × 3" })).toBeVisible();
 
-    await entry.getByRole("button", { name: "开始 Guided Learning" }).click();
+    await entry.getByRole("button", { name: "开始实践" }).click();
     await expect(page.locator("[data-guided-flow]")).toHaveAttribute("data-guided-current-step", "predict");
     await expect(page.getByRole("button", { name: "Replace × 3" })).toHaveCount(0);
     await expect(page.getByText("提交前不会显示正确结果。")).toBeVisible();
@@ -96,14 +99,15 @@ test.describe("React Learning Workbench integration", () => {
     await page.getByRole("button", { name: "提交 practice，查看 review" }).click();
 
     await expect(page.locator("[data-guided-flow]")).toHaveAttribute("data-guided-current-step", "review");
-    await expect(page.locator("[data-guided-flow]")).toContainText("Your first prediction");
-    await expect(page.locator("[data-guided-flow]")).toContainText("Actual observation");
+    await expect(page.locator("[data-guided-flow]")).toContainText("第一次预测");
+    await expect(page.locator("[data-guided-flow]")).toContainText("实际观察");
     await expect(page.locator("[data-guided-flow]")).toContainText("三个 replace 都读取同一份 render snapshot");
-    await expect(page.getByRole("button", { name: "回顾 Notes" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "回顾 Source" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "回顾笔记" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "查看源码" })).toBeVisible();
 
-    await page.getByRole("button", { name: "退出 Guided Mode" }).click();
+    await page.getByRole("button", { name: "退出实践" }).click();
     await expect(page.locator("[data-guided-flow]")).toHaveCount(0);
+    await expect(entry).toBeVisible();
     await expect(page.getByRole("button", { name: "Replace × 3" })).toBeVisible();
   });
 
