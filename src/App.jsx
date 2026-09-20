@@ -20,11 +20,11 @@ import { DemoSourceLocator } from "./components/source-locator/DemoSourceLocator
 import { useAiLearningAssistant } from "./ai/useAiLearningAssistant.js";
 import { createAiAssessmentIntegration } from "./app/aiAssessmentIntegration.js";
 import { getOfficialDocsForLearningUnit } from "./content/officialDocs.js";
-import { getSingleLearningFlowDefinition } from "./learning-flow/learningFlowRegistry.js";
 import {
+  getSingleLearningFlowDefinition,
   LEARNING_FLOW_STAGES,
-  SingleLearningFlow,
-} from "./learning-flow/SingleLearningFlow.jsx";
+} from "./learning-flow/learningFlowRegistry.js";
+import { SingleLearningFlow } from "./learning-flow/SingleLearningFlow.jsx";
 import { prepareGuidedAiHandoff } from "./app/guidedAiHandoff.js";
 import { enrichLearningUnitSourceSemantics } from "./source/semanticSources";
 import { WorkbenchNavigation } from "./workbench/WorkbenchNavigation";
