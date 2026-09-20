@@ -9,6 +9,7 @@ import { ContextMeter } from "./components/ai-assistant/context/ContextMeter.jsx
 import { ConversationHistory } from "./components/ai-assistant/conversations/ConversationHistory.jsx";
 import { LearningInspector } from "./components/learning-inspector";
 import { AssessmentPane } from "./assessment/ui/AssessmentPane.jsx";
+import { AssessmentPracticePane } from "./assessment/ui/AssessmentPracticePane.jsx";
 import { useAssessmentApplication } from "./assessment/application/useAssessmentApplication.js";
 import { NoteToc } from "./components/notes/NoteToc";
 import { NoteViewer } from "./components/notes/NoteViewer";
@@ -18,6 +19,11 @@ import { DemoSourceLocator } from "./components/source-locator/DemoSourceLocator
 import { useAiLearningAssistant } from "./ai/useAiLearningAssistant.js";
 import { createAiAssessmentIntegration } from "./app/aiAssessmentIntegration.js";
 import { getOfficialDocsForLearningUnit } from "./content/officialDocs.js";
+import { getSingleLearningFlowDefinition } from "./learning-flow/learningFlowRegistry.js";
+import {
+  LEARNING_FLOW_STAGES,
+  SingleLearningFlow,
+} from "./learning-flow/SingleLearningFlow.jsx";
 import { prepareGuidedAiHandoff } from "./app/guidedAiHandoff.js";
 import { enrichLearningUnitSourceSemantics } from "./source/semanticSources";
 import { WorkbenchNavigation } from "./workbench/WorkbenchNavigation";
@@ -53,6 +59,7 @@ export default function App() {
   const [mobileNavigationOpen, setMobileNavigationOpen] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
   const [centerView, setCenterView] = useState("lesson");
+  const [learningFlowStage, setLearningFlowStage] = useState(LEARNING_FLOW_STAGES.UNDERSTAND);
   const [officialDocsFullscreen, setOfficialDocsFullscreen] = useState(false);
   const [sourceFocus, setSourceFocus] = useState(null);
   const [sourceLocatorActive, setSourceLocatorActive] = useState(false);
@@ -69,6 +76,9 @@ export default function App() {
   const { demoId, selectDemo } = useDemoUrlState({ learningUnits, defaultDemoId: learningUnits[0]?.id });
   const currentLearningUnit = learningUnits.find((unit) => unit.id === demoId) || learningUnits[0] || null;
   const currentOfficialDoc = currentLearningUnit ? getOfficialDocsForLearningUnit(currentLearningUnit.id) : null;
+  const currentLearningFlow = currentLearningUnit
+    ? getSingleLearningFlowDefinition(currentLearningUnit.id)
+    : null;
   const showingOfficialDocs = centerView === "official" && Boolean(currentOfficialDoc);
   const learningUnitsById = useMemo(
     () => new Map(learningUnits.map((unit) => [unit.id, unit])),
@@ -127,6 +137,7 @@ export default function App() {
   /* oxlint-disable react/set-state-in-effect -- synchronize transient center-view state after URL navigation. */
   useEffect(() => {
     setCenterView("lesson");
+    setLearningFlowStage(LEARNING_FLOW_STAGES.UNDERSTAND);
     setOfficialDocsFullscreen(false);
   }, [currentLearningUnit?.id]);
   /* oxlint-enable react/set-state-in-effect */
@@ -250,6 +261,7 @@ export default function App() {
     selectDemo(id);
     setViewMode("focused");
     setCenterView("lesson");
+    setLearningFlowStage(LEARNING_FLOW_STAGES.UNDERSTAND);
     setOfficialDocsFullscreen(false);
     setMobileNavigationOpen(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -274,6 +286,7 @@ export default function App() {
     setPendingConversationTarget(null);
     setSourceLocatorActive(false);
     setCenterView("lesson");
+    setLearningFlowStage(LEARNING_FLOW_STAGES.UNDERSTAND);
     setOfficialDocsFullscreen(false);
     setViewMode("all");
     setMobileNavigationOpen(false);
