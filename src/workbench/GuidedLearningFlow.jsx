@@ -5,6 +5,10 @@ import {
   getGuidedFlowUnlockedStep,
 } from "./guidedFlow.js";
 import { getGuidedReviewModel } from "./guidedReview.js";
+import {
+  GuidedPracticeActivity,
+  GuidedPracticeOutcomeSummary,
+} from "./GuidedPracticeActivity.jsx";
 import { useGuidedFlow } from "./useGuidedFlow.js";
 import "./GuidedLearningFlow.css";
 
@@ -196,47 +200,15 @@ function GuidedExplainStep({ definition, state, dispatch, onAskAi }) {
 
 function GuidedPracticeStep({ definition, state, dispatch, inputName }) {
   const step = definition.steps[GUIDED_FLOW_STEP_INDEX.PRACTICE];
-  const committed = Boolean(state.practiceResponse);
   return (
-    <div className="guided-flow-step" data-guided-step-panel="practice">
-      <p className="guided-flow-eyebrow">迁移到新情境</p>
-      <h3>{step.prompt}</h3>
-      <div className="guided-flow-options" role="radiogroup" aria-label="你的 practice 回答">
-        {step.response.options.map((option) => (
-          <label key={option.id} className="guided-flow-option">
-            <input
-              type="radio"
-              name={inputName}
-              value={option.id}
-              checked={state.practiceDraft === option.id}
-              disabled={committed}
-              onChange={() => dispatch({
-                type: GUIDED_FLOW_ACTIONS.SET_PRACTICE_DRAFT,
-                value: option.id,
-              })}
-            />
-            <span>{option.label}</span>
-          </label>
-        ))}
-      </div>
-      {committed && (
-        <div className="guided-flow-observation" role="status">
-          <strong>已记录 practice 回答</strong>
-          <p>{step.reveal.observation}</p>
-        </div>
-      )}
-      <button
-        type="button"
-        className="btn btn-primary"
-        disabled={committed || !state.practiceDraft}
-        onClick={() => dispatch({ type: GUIDED_FLOW_ACTIONS.SUBMIT_PRACTICE })}
-      >
-        {committed ? "已完成 practice" : "提交 practice，查看 review"}
-      </button>
-    </div>
+    <GuidedPracticeActivity
+      step={step}
+      state={state}
+      dispatch={dispatch}
+      inputName={inputName}
+    />
   );
 }
-
 function GuidedReviewStep({
   definition,
   state,
@@ -277,10 +249,9 @@ function GuidedReviewStep({
           <strong>{practicePresentation ? "你的解释" : "Your explanation"}</strong>
           <p>{review?.explanation || "尚未记录"}</p>
         </div>
-        <div>
+        <div data-guided-review-practice>
           <strong>{practicePresentation ? "迁移练习结果" : "Practice outcome"}</strong>
-          <p>{review?.practiceOutcome.response.label}</p>
-          {review?.practiceOutcome.observation && <p>{review.practiceOutcome.observation}</p>}
+          <GuidedPracticeOutcomeSummary outcome={review?.practiceOutcome} />
         </div>
       </div>
       <p className="guided-flow-hint">
