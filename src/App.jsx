@@ -266,6 +266,23 @@ export default function App() {
     return true;
   };
 
+  const handleAssessmentTeachBackAi = ({ question, learnerResponse }) => {
+    if (!question?.id || typeof learnerResponse !== "string" || !learnerResponse.trim()) {
+      return false;
+    }
+
+    return handleGuidedAskAi({
+      source: "review",
+      stepId: `assessment-correction:${question.id}`,
+      stepPrompt: [
+        "这是一次评测纠错后的复述。请检查我是否真正修正了心智模型，而不是只改对了选项。",
+        `原题：${question.content?.prompt ?? question.id}`,
+        "优先检查我是否正确区分 component identity、Props、local State 与 DOM；如果仍有偏差，先指出一个最值得验证的点，不要直接重写成标准答案。",
+      ].join("\n"),
+      learnerResponse: learnerResponse.trim(),
+    });
+  };
+
   const handleVisualSourceLocate = (target) => {
     if (!target?.learningUnitId || !target?.fileName) return;
     const learningUnitExists = learningUnitsById.has(target.learningUnitId);
@@ -598,6 +615,7 @@ export default function App() {
         onSubmit={assessmentCommands?.submit}
         onNext={assessmentCommands?.next}
         onOpenEvidence={handleAssessmentEvidence}
+        onRequestExplanationReview={handleAssessmentTeachBackAi}
       />
     </div>
   ) : null;
