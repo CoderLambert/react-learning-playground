@@ -52,6 +52,8 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState("");
   const [mobileNavigationOpen, setMobileNavigationOpen] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
+  const [centerView, setCenterView] = useState("lesson");
+  const [officialDocsFullscreen, setOfficialDocsFullscreen] = useState(false);
   const [sourceFocus, setSourceFocus] = useState(null);
   const [sourceLocatorActive, setSourceLocatorActive] = useState(false);
   const [pendingSourceTarget, setPendingSourceTarget] = useState(null);
@@ -66,6 +68,8 @@ export default function App() {
   } = usePersistedWorkbenchState();
   const { demoId, selectDemo } = useDemoUrlState({ learningUnits, defaultDemoId: learningUnits[0]?.id });
   const currentLearningUnit = learningUnits.find((unit) => unit.id === demoId) || learningUnits[0] || null;
+  const currentOfficialDoc = currentLearningUnit ? getOfficialDocsForLearningUnit(currentLearningUnit.id) : null;
+  const showingOfficialDocs = centerView === "official" && Boolean(currentOfficialDoc);
   const learningUnitsById = useMemo(
     () => new Map(learningUnits.map((unit) => [unit.id, unit])),
     [],
@@ -235,6 +239,8 @@ export default function App() {
   const navigateToDemo = (id) => {
     selectDemo(id);
     setViewMode("focused");
+    setCenterView("lesson");
+    setOfficialDocsFullscreen(false);
     setMobileNavigationOpen(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -257,6 +263,8 @@ export default function App() {
     setPendingSourceTarget(null);
     setPendingConversationTarget(null);
     setSourceLocatorActive(false);
+    setCenterView("lesson");
+    setOfficialDocsFullscreen(false);
     setViewMode("all");
     setMobileNavigationOpen(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -392,12 +400,6 @@ export default function App() {
       onFocusModeChange={setFocusMode}
       onWidthChange={setInspectorWidth}
       notes={<NotesPane learningUnitId={currentLearningUnit.id} />}
-      official={(
-        <OfficialDocsPane
-          learningUnit={currentLearningUnit}
-          doc={getOfficialDocsForLearningUnit(currentLearningUnit.id)}
-        />
-      )}
       source={(
         <Suspense fallback={<div className="note-runtime-state">正在加载源码查看器…</div>}>
           <SourceViewer
@@ -506,15 +508,17 @@ export default function App() {
           </div>
         </div>
         <div className="top-bar-right">
-          <button
-            type="button"
-            className="btn btn-outline btn-sm workbench-source-locator-toggle"
-            onClick={() => setSourceLocatorActive((active) => !active)}
-            aria-pressed={sourceLocatorActive}
-            title="开启后悬停并点击 Demo 元素定位源码；Alt / Option + 点击可快速定位"
-          >
-            {sourceLocatorActive ? "退出源码定位" : "⌖ 定位源码"}
-          </button>
+          {!showingOfficialDocs && (
+            <button
+              type="button"
+              className="btn btn-outline btn-sm workbench-source-locator-toggle"
+              onClick={() => setSourceLocatorActive((active) => !active)}
+              aria-pressed={sourceLocatorActive}
+              title="开启后悬停并点击 Demo 元素定位源码；Alt / Option + 点击可快速定位"
+            >
+              {sourceLocatorActive ? "退出源码定位" : "⌖ 定位源码"}
+            </button>
+          )}
           <button
             type="button"
             className="btn btn-outline btn-sm workbench-inspector-toggle"
@@ -526,13 +530,21 @@ export default function App() {
           <div className="view-mode-pill">
             <button
               className={`view-mode-btn ${viewMode === "focused" ? "active" : ""}`}
-              onClick={() => setViewMode("focused")}
+              onClick={() => {
+                setViewMode("focused");
+                setCenterView("lesson");
+                setOfficialDocsFullscreen(false);
+              }}
             >
               单篇聚焦
             </button>
             <button
               className={`view-mode-btn ${viewMode === "all" ? "active" : ""}`}
-              onClick={() => setViewMode("all")}
+              onClick={() => {
+                setViewMode("all");
+                setCenterView("lesson");
+                setOfficialDocsFullscreen(false);
+              }}
             >
               连续阅读
             </button>
@@ -540,45 +552,87 @@ export default function App() {
         </div>
       </header>
       <main className="app-content workbench-app-content">
+        {viewMode === "focused" && currentLearningUnit && currentOfficialDoc && (
+          <div className="workbench-center-view-switcher" role="tablist" aria-label="中心学习内容">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={centerView === "lesson"}
+              className={centerView === "lesson" ? "is-active" : ""}
+              onClick={() => {
+                setCenterView("lesson");
+                setOfficialDocsFullscreen(false);
+              }}
+            >
+              实验内容
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={centerView === "official"}
+              className={centerView === "official" ? "is-active" : ""}
+              onClick={() => {
+                setCenterView("official");
+                setSourceLocatorActive(false);
+              }}
+            >
+              React 官方文档
+            </button>
+          </div>
+        )}
+
         {viewMode === "focused" ? (
           currentLearningUnit ? (
-            <div key={currentLearningUnit.id} className="demo-page">
-              {guidedActivity ? (
-                <GuidedLearningFlow
-                  key={`${guidedActivity.learningUnitId}:${guidedActivity.revision}`}
-                  learningUnit={currentLearningUnit}
-                  definition={guidedActivity}
-                  renderDemo={() => (
-                    <DemoSourceLocator
-                      learningUnit={currentLearningUnit}
-                      enabled={sourceLocatorActive}
-                      onLocate={handleVisualSourceLocate}
-                    >
-                      <currentLearningUnit.component />
-                    </DemoSourceLocator>
-                  )}
-                  onReviewResource={handleGuidedReviewResource}
-                  onAskAi={handleGuidedAskAi}
-                  onContinue={handleGuidedContinue}
-                  canContinue={Boolean(currentLearningPathEntry?.nextId)}
-                />
-              ) : (
-                <DemoSourceLocator
-                  learningUnit={currentLearningUnit}
-                  enabled={sourceLocatorActive}
-                  onLocate={handleVisualSourceLocate}
-                >
-                  <currentLearningUnit.component />
-                </DemoSourceLocator>
-              )}
-              {currentCheckpointChapter && (
-                <ChapterCheckpoint
-                  chapter={currentCheckpointChapter}
-                  nextUnitId={currentLearningPathEntry?.nextChapterFirstId}
-                  onNavigate={handleSelectDemo}
-                />
-              )}
-            </div>
+            showingOfficialDocs ? (
+              <OfficialDocsPane
+                learningUnit={currentLearningUnit}
+                doc={currentOfficialDoc}
+                fullscreen={officialDocsFullscreen}
+                onFullscreenChange={setOfficialDocsFullscreen}
+                onBackToLesson={() => {
+                  setCenterView("lesson");
+                  setOfficialDocsFullscreen(false);
+                }}
+              />
+            ) : (
+              <div key={currentLearningUnit.id} className="demo-page">
+                {guidedActivity ? (
+                  <GuidedLearningFlow
+                    key={`${guidedActivity.learningUnitId}:${guidedActivity.revision}`}
+                    learningUnit={currentLearningUnit}
+                    definition={guidedActivity}
+                    renderDemo={() => (
+                      <DemoSourceLocator
+                        learningUnit={currentLearningUnit}
+                        enabled={sourceLocatorActive}
+                        onLocate={handleVisualSourceLocate}
+                      >
+                        <currentLearningUnit.component />
+                      </DemoSourceLocator>
+                    )}
+                    onReviewResource={handleGuidedReviewResource}
+                    onAskAi={handleGuidedAskAi}
+                    onContinue={handleGuidedContinue}
+                    canContinue={Boolean(currentLearningPathEntry?.nextId)}
+                  />
+                ) : (
+                  <DemoSourceLocator
+                    learningUnit={currentLearningUnit}
+                    enabled={sourceLocatorActive}
+                    onLocate={handleVisualSourceLocate}
+                  >
+                    <currentLearningUnit.component />
+                  </DemoSourceLocator>
+                )}
+                {currentCheckpointChapter && (
+                  <ChapterCheckpoint
+                    chapter={currentCheckpointChapter}
+                    nextUnitId={currentLearningPathEntry?.nextChapterFirstId}
+                    onNavigate={handleSelectDemo}
+                  />
+                )}
+              </div>
+            )
           ) : null
         ) : (
           <div className="demo-all-container">

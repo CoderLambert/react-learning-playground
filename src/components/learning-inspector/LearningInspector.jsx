@@ -18,7 +18,6 @@ export function LearningInspector({
   onFocusModeChange,
   onWidthChange,
   notes,
-  official,
   source,
   ai,
   assessment,
@@ -42,7 +41,7 @@ export function LearningInspector({
   const onOpenChangeRef = useRef(onOpenChange);
   const tabRefs = useRef(new Map());
   const { getPaneProps } = useInspectorScrollMemory(learningUnit?.id ?? "unknown");
-  const resolvedPanels = panels ?? resolveInspectorPanels({ notes, official, source, ai, assessment });
+  const resolvedPanels = panels ?? resolveInspectorPanels({ notes, source, ai, assessment });
 
   useEffect(() => {
     focusModeRef.current = focusMode;

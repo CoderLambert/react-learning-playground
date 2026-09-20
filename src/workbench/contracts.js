@@ -94,7 +94,7 @@ export function toLearningUnit(demo) {
  *
  * @typedef {Object} LearningInspectorState
  * @property {boolean} open
- * @property {"notes" | "official" | "source" | "ai" | "assessment"} activeTab
+ * @property {"notes" | "source" | "ai" | "assessment"} activeTab
  * @property {boolean} focusMode
  * @property {number} width
  * @property {string | null} sourceFile
@@ -104,7 +104,7 @@ export function toLearningUnit(demo) {
  * @typedef {Object} LearningInspectorProps
  * @property {LearningUnit} learningUnit
  * @property {LearningInspectorState} state
- * @property {(tab: "notes" | "official" | "source" | "ai" | "assessment") => void} onTabChange
+ * @property {(tab: "notes" | "source" | "ai" | "assessment") => void} onTabChange
  * @property {(open: boolean) => void} onOpenChange
  * @property {(focusMode: boolean) => void} onFocusModeChange
  * @property {(width: number) => void} onWidthChange
