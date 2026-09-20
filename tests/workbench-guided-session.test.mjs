@@ -90,6 +90,39 @@ function createReviewState() {
 const definition = STATE_SNAPSHOT_QUEUE_GUIDED_ACTIVITY;
 const fixedTimestamp = "2026-09-18T15:00:00.000Z";
 
+function createDefinitionWithPractice(practiceStep) {
+  return {
+    ...definition,
+    revision: 2,
+    steps: definition.steps.map((step, index) => (index === 3 ? practiceStep : step)),
+  };
+}
+
+function createCompletedStateForDefinition(customDefinition, practiceResponse) {
+  let state = reduce(createGuidedFlowState({
+    learningUnitId: customDefinition.learningUnitId,
+    activityRevision: customDefinition.revision,
+  }), { type: GUIDED_FLOW_ACTIONS.START });
+  state = reduce(state, { type: GUIDED_FLOW_ACTIONS.SET_PREDICTION_DRAFT, value: "count-3" });
+  state = reduce(state, { type: GUIDED_FLOW_ACTIONS.SUBMIT_PREDICTION });
+  state = reduce(state, {
+    type: GUIDED_FLOW_ACTIONS.ACKNOWLEDGE_EXPERIMENT,
+    observation: "next render state 为 1；三个 replace 都读取同一份 render snapshot。",
+  });
+  state = reduce(state, {
+    type: GUIDED_FLOW_ACTIONS.SET_EXPLANATION,
+    value: "三个更新读取同一份 render snapshot。",
+  });
+  state = reduce(state, { type: GUIDED_FLOW_ACTIONS.SUBMIT_EXPLANATION });
+  state = reduce(state, {
+    type: GUIDED_FLOW_ACTIONS.SET_PRACTICE_DRAFT,
+    value: practiceResponse,
+  });
+  return reduce(state, {
+    type: GUIDED_FLOW_ACTIONS.SUBMIT_PRACTICE,
+  });
+}
+
 test("serializes and restores the original Guided responses and current step", () => {
   const state = createReviewState();
   const snapshot = serializeGuidedSessionSnapshot(state, {
@@ -98,7 +131,7 @@ test("serializes and restores the original Guided responses and current step", (
   });
 
   assert.deepEqual(snapshot, {
-    schemaVersion: 1,
+    schemaVersion: 2,
     learningUnitId: "state-snapshot-queue",
     activityRevision: 1,
     currentStepId: "review-snapshot-queue",
@@ -108,8 +141,14 @@ test("serializes and restores the original Guided responses and current step", (
     observation: "next render state 为 1；三个 replace 都读取同一份 render snapshot。",
     explanation: "三个更新读取同一份 render snapshot。",
     explanationSubmitted: true,
-    practiceDraft: "same-result-different-semantics",
-    practiceResponse: "same-result-different-semantics",
+    practiceDraft: {
+      kind: "choice",
+      optionId: "same-result-different-semantics",
+    },
+    practiceResponse: {
+      kind: "choice",
+      optionId: "same-result-different-semantics",
+    },
     needsReview: false,
     completedSteps: [
       "predict-replace-triple",
@@ -130,7 +169,10 @@ test("serializes and restores the original Guided responses and current step", (
   assert.equal(restored.stepIndex, 4);
   assert.equal(restored.firstPrediction, "count-3");
   assert.equal(restored.explanation, "三个更新读取同一份 render snapshot。");
-  assert.equal(restored.practiceResponse, "same-result-different-semantics");
+  assert.deepEqual(restored.practiceResponse, {
+    kind: "choice",
+    optionId: "same-result-different-semantics",
+  });
   assert.equal(restored.needsReview, false);
   assert.equal(restored.completionState, "completed");
 });
@@ -141,10 +183,20 @@ test("Needs Review persists without making older v1 snapshots incompatible", () 
   assert.equal(snapshot.needsReview, true);
   assert.equal(restoreGuidedFlowState(snapshot, { definition }).needsReview, true);
 
-  const legacySnapshot = { ...snapshot };
+  const legacySnapshot = {
+    ...snapshot,
+    schemaVersion: 1,
+    practiceDraft: "same-result-different-semantics",
+    practiceResponse: "same-result-different-semantics",
+  };
   delete legacySnapshot.needsReview;
   const legacyDecoded = deserializeGuidedSessionSnapshot(JSON.stringify(legacySnapshot), { definition });
   assert.equal(legacyDecoded.status, GUIDED_SESSION_PERSISTENCE_STATUS.RESTORED);
+  assert.equal(legacyDecoded.snapshot.schemaVersion, 2);
+  assert.deepEqual(legacyDecoded.snapshot.practiceResponse, {
+    kind: "choice",
+    optionId: "same-result-different-semantics",
+  });
   assert.equal(restoreGuidedFlowState(legacyDecoded.snapshot, { definition }).needsReview, false);
 });
 
@@ -255,4 +307,82 @@ test("explicit clear removes the persisted session and unavailable storage stays
   assert.equal(unavailable.write(createReviewState()).ok, false);
   assert.equal(unavailable.clear().ok, false);
   assert.equal(createStartedState().learningUnitId, definition.learningUnitId);
+});
+
+
+test("patch-choice Practice responses persist and restore without collapsing into strings", () => {
+  const patchDefinition = createDefinitionWithPractice({
+    id: "practice-patch",
+    type: "practice",
+    prompt: "选择最小正确修复。",
+    response: {
+      kind: "patch-choice",
+      options: [
+        { id: "patch-good", label: "正确 patch", patch: "- bad()\n+ good()" },
+        { id: "patch-wrong", label: "错误 patch", patch: "- bad()\n+ alsoBad()" },
+      ],
+    },
+    reveal: {
+      expectedOptionId: "patch-good",
+      observation: "使用最小正确修复。",
+    },
+  });
+  const response = { kind: "patch-choice", optionId: "patch-wrong" };
+  const state = createCompletedStateForDefinition(patchDefinition, response);
+  const snapshot = serializeGuidedSessionSnapshot(state, {
+    definition: patchDefinition,
+    updatedAt: fixedTimestamp,
+  });
+
+  assert.deepEqual(snapshot.practiceResponse, response);
+  const decoded = deserializeGuidedSessionSnapshot(JSON.stringify(snapshot), {
+    definition: patchDefinition,
+  });
+  assert.equal(decoded.status, GUIDED_SESSION_PERSISTENCE_STATUS.RESTORED);
+  assert.deepEqual(
+    restoreGuidedFlowState(decoded.snapshot, { definition: patchDefinition }).practiceResponse,
+    response,
+  );
+});
+
+test("ordered-sequence Practice responses persist their committed stable-id order", () => {
+  const sequenceDefinition = createDefinitionWithPractice({
+    id: "practice-sequence",
+    type: "practice",
+    prompt: "按执行顺序排列。",
+    response: {
+      kind: "ordered-sequence",
+      items: [
+        { id: "commit", label: "commit" },
+        { id: "event", label: "event" },
+        { id: "render", label: "render" },
+        { id: "update", label: "update" },
+      ],
+    },
+    reveal: {
+      expectedOrder: ["event", "update", "render", "commit"],
+      observation: "event → update → render → commit。",
+    },
+  });
+  const response = {
+    kind: "ordered-sequence",
+    itemIds: ["event", "update", "render", "commit"],
+  };
+  const state = createCompletedStateForDefinition(sequenceDefinition, response);
+  const snapshot = serializeGuidedSessionSnapshot(state, {
+    definition: sequenceDefinition,
+    updatedAt: fixedTimestamp,
+  });
+
+  assert.deepEqual(snapshot.practiceResponse, response);
+  assert.equal(
+    validateGuidedSessionSnapshot({
+      ...snapshot,
+      practiceResponse: {
+        kind: "ordered-sequence",
+        itemIds: ["event", "render", "render", "commit"],
+      },
+    }, { definition: sequenceDefinition }).valid,
+    false,
+  );
 });

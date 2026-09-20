@@ -1,3 +1,5 @@
+import { GUIDED_PRACTICE_KINDS } from "./guidedPractice.js";
+
 const STABLE_ID_PATTERN = /^[a-z0-9][a-z0-9-]*$/;
 const FORBIDDEN_FIELD_NAMES = new Set([
   "mastery",
@@ -17,7 +19,9 @@ export const GUIDED_STEP_TYPES = Object.freeze({
 });
 
 export const GUIDED_RESPONSE_KINDS = Object.freeze({
-  CHOICE: "choice",
+  CHOICE: GUIDED_PRACTICE_KINDS.CHOICE,
+  PATCH_CHOICE: GUIDED_PRACTICE_KINDS.PATCH_CHOICE,
+  ORDERED_SEQUENCE: GUIDED_PRACTICE_KINDS.ORDERED_SEQUENCE,
   TEXT: "text",
 });
 
@@ -54,13 +58,13 @@ function collectForbiddenFields(value, path, errors, visited = new WeakSet()) {
   });
 }
 
-function validateChoiceResponse(response, path, errors) {
+function validateOptionResponse(response, path, errors, { kind, requirePatch = false } = {}) {
   if (!isRecord(response)) {
     errors.push(`${path} must be an object`);
     return [];
   }
-  if (response.kind !== GUIDED_RESPONSE_KINDS.CHOICE) {
-    errors.push(`${path}.kind must be "${GUIDED_RESPONSE_KINDS.CHOICE}"`);
+  if (response.kind !== kind) {
+    errors.push(`${path}.kind must be "${kind}"`);
   }
   if (!Array.isArray(response.options) || response.options.length === 0) {
     errors.push(`${path}.options must contain at least one option`);
@@ -84,9 +88,60 @@ function validateChoiceResponse(response, path, errors) {
     if (!isNonBlankString(option.label)) {
       errors.push(`${optionPath}.label must be a non-blank string`);
     }
+    if (requirePatch && !isNonBlankString(option.patch)) {
+      errors.push(`${optionPath}.patch must be a non-blank string`);
+    }
   });
 
   return [...optionIds];
+}
+
+function validateChoiceResponse(response, path, errors) {
+  return validateOptionResponse(response, path, errors, {
+    kind: GUIDED_RESPONSE_KINDS.CHOICE,
+  });
+}
+
+function validatePatchChoiceResponse(response, path, errors) {
+  return validateOptionResponse(response, path, errors, {
+    kind: GUIDED_RESPONSE_KINDS.PATCH_CHOICE,
+    requirePatch: true,
+  });
+}
+
+function validateOrderedSequenceResponse(response, path, errors) {
+  if (!isRecord(response)) {
+    errors.push(`${path} must be an object`);
+    return [];
+  }
+  if (response.kind !== GUIDED_RESPONSE_KINDS.ORDERED_SEQUENCE) {
+    errors.push(`${path}.kind must be "${GUIDED_RESPONSE_KINDS.ORDERED_SEQUENCE}"`);
+  }
+  if (!Array.isArray(response.items) || response.items.length < 2) {
+    errors.push(`${path}.items must contain at least two items`);
+    return [];
+  }
+
+  const itemIds = new Set();
+  response.items.forEach((item, index) => {
+    const itemPath = `${path}.items[${index}]`;
+    if (!isRecord(item)) {
+      errors.push(`${itemPath} must be an object`);
+      return;
+    }
+    if (!isStableId(item.id)) {
+      errors.push(`${itemPath}.id must be a stable kebab-case id`);
+    } else if (itemIds.has(item.id)) {
+      errors.push(`${path}.items contains duplicate id "${item.id}"`);
+    } else {
+      itemIds.add(item.id);
+    }
+    if (!isNonBlankString(item.label)) {
+      errors.push(`${itemPath}.label must be a non-blank string`);
+    }
+  });
+
+  return [...itemIds];
 }
 
 function validateStep(step, index, errors) {
@@ -108,26 +163,65 @@ function validateStep(step, index, errors) {
   }
 
   let optionIds = [];
-  if (step.type === GUIDED_STEP_TYPES.PREDICT || step.type === GUIDED_STEP_TYPES.PRACTICE) {
+  let sequenceItemIds = [];
+
+  if (step.type === GUIDED_STEP_TYPES.PREDICT) {
     if (!isRecord(step.response) || step.response.kind !== GUIDED_RESPONSE_KINDS.CHOICE) {
       errors.push(`${path}.response must be a choice response`);
     } else {
       optionIds = validateChoiceResponse(step.response, `${path}.response`, errors);
     }
+  }
 
+  if (step.type === GUIDED_STEP_TYPES.PRACTICE) {
+    if (!isRecord(step.response)) {
+      errors.push(`${path}.response must be a deterministic practice response`);
+    } else if (step.response.kind === GUIDED_RESPONSE_KINDS.CHOICE) {
+      optionIds = validateChoiceResponse(step.response, `${path}.response`, errors);
+    } else if (step.response.kind === GUIDED_RESPONSE_KINDS.PATCH_CHOICE) {
+      optionIds = validatePatchChoiceResponse(step.response, `${path}.response`, errors);
+    } else if (step.response.kind === GUIDED_RESPONSE_KINDS.ORDERED_SEQUENCE) {
+      sequenceItemIds = validateOrderedSequenceResponse(step.response, `${path}.response`, errors);
+    } else {
+      errors.push(`${path}.response.kind "${String(step.response.kind)}" is unsupported for practice`);
+    }
+  }
+
+  if (step.type === GUIDED_STEP_TYPES.PREDICT || step.type === GUIDED_STEP_TYPES.PRACTICE) {
     if (!isRecord(step.reveal)) {
       errors.push(`${path}.reveal must be an object`);
     } else {
-      const hasExpectedOption = step.reveal.expectedOptionId !== undefined;
       const hasObservation = isNonBlankString(step.reveal.observation);
-      if (!hasExpectedOption && !hasObservation) {
-        errors.push(`${path}.reveal must declare expectedOptionId or observation`);
+      if (!hasObservation) {
+        errors.push(`${path}.reveal.observation must be a non-blank string`);
       }
-      if (hasExpectedOption && !optionIds.includes(step.reveal.expectedOptionId)) {
-        errors.push(`${path}.reveal.expectedOptionId must reference a response option`);
-      }
-      if (step.reveal.expectedOptionId !== undefined && !isStableId(step.reveal.expectedOptionId)) {
-        errors.push(`${path}.reveal.expectedOptionId must be a stable option id`);
+
+      if (step.response?.kind === GUIDED_RESPONSE_KINDS.ORDERED_SEQUENCE) {
+        if (!Array.isArray(step.reveal.expectedOrder)) {
+          errors.push(`${path}.reveal.expectedOrder must be an array of stable item ids`);
+        } else {
+          const expectedOrder = step.reveal.expectedOrder;
+          const expectedSet = new Set(expectedOrder);
+          if (
+            expectedOrder.length !== sequenceItemIds.length
+            || expectedSet.size !== expectedOrder.length
+            || expectedOrder.some((itemId) => !isStableId(itemId) || !sequenceItemIds.includes(itemId))
+          ) {
+            errors.push(`${path}.reveal.expectedOrder must contain every response item id exactly once`);
+          }
+        }
+        if (step.reveal.expectedOptionId !== undefined) {
+          errors.push(`${path}.reveal.expectedOptionId is not supported for ordered-sequence`);
+        }
+      } else {
+        if (!isStableId(step.reveal.expectedOptionId)) {
+          errors.push(`${path}.reveal.expectedOptionId must be a stable option id`);
+        } else if (!optionIds.includes(step.reveal.expectedOptionId)) {
+          errors.push(`${path}.reveal.expectedOptionId must reference a response option`);
+        }
+        if (step.reveal.expectedOrder !== undefined) {
+          errors.push(`${path}.reveal.expectedOrder is only supported for ordered-sequence`);
+        }
       }
     }
   }

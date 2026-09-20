@@ -1,3 +1,5 @@
+import { cloneGuidedPracticeResponse } from "./guidedPractice.js";
+
 export const GUIDED_FLOW_ACTIONS = Object.freeze({
   START: "start",
   EXIT: "exit",
@@ -145,9 +147,12 @@ export function guidedFlowReducer(state, action) {
         stepIndex: GUIDED_FLOW_STEP_INDEX.PRACTICE,
       };
 
-    case GUIDED_FLOW_ACTIONS.SET_PRACTICE_DRAFT:
+    case GUIDED_FLOW_ACTIONS.SET_PRACTICE_DRAFT: {
       if (!state.active || state.stepIndex !== GUIDED_FLOW_STEP_INDEX.PRACTICE || state.practiceResponse) return state;
-      return { ...state, practiceDraft: normalizeIdentity(action.value) };
+      const value = cloneGuidedPracticeResponse(action.value);
+      if (!value) return state;
+      return { ...state, practiceDraft: value };
+    }
 
     case GUIDED_FLOW_ACTIONS.SUBMIT_PRACTICE: {
       if (
@@ -155,7 +160,7 @@ export function guidedFlowReducer(state, action) {
         || state.stepIndex !== GUIDED_FLOW_STEP_INDEX.PRACTICE
         || state.practiceResponse
       ) return state;
-      const value = normalizeIdentity(action.value ?? state.practiceDraft);
+      const value = cloneGuidedPracticeResponse(action.value ?? state.practiceDraft);
       if (!value) return state;
       return {
         ...state,

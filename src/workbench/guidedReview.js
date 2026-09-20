@@ -1,3 +1,5 @@
+import { evaluateGuidedPracticeResponse } from "./guidedPractice.js";
+
 function getStep(definition, type) {
   return definition?.steps?.find((step) => step.type === type) ?? null;
 }
@@ -21,10 +23,7 @@ export function getGuidedReviewModel(state, definition) {
   const predictionStep = getStep(definition, "predict");
   const practiceStep = getStep(definition, "practice");
   const reviewStep = getStep(definition, "review");
-  const practiceOutcome = Object.freeze({
-    response: getChoice(practiceStep, state.practiceResponse),
-    observation: practiceStep?.reveal?.observation ?? null,
-  });
+  const practiceOutcome = evaluateGuidedPracticeResponse(practiceStep, state.practiceResponse);
 
   return Object.freeze({
     firstPrediction: getChoice(predictionStep, state.firstPrediction),

@@ -1,8 +1,16 @@
 import { systemClock } from "../platform/clock.js";
 import { createGuidedFlowState } from "./guidedFlow.js";
+import {
+  areGuidedPracticeResponsesEqual,
+  cloneGuidedPracticeResponse,
+  GUIDED_PRACTICE_KINDS,
+  isGuidedPracticeResponseValidForStep,
+} from "./guidedPractice.js";
 import { getBrowserStorage } from "./stateStorage.js";
 
-export const GUIDED_SESSION_SCHEMA_VERSION = 1;
+const LEGACY_GUIDED_SESSION_SCHEMA_VERSION = 1;
+export const GUIDED_SESSION_SCHEMA_VERSION = 2;
+// Keep the existing key so valid v1 choice sessions can be discovered and migrated in place.
 export const GUIDED_SESSION_STORAGE_PREFIX = "react-learning-workbench:guided-session:v1";
 
 export const GUIDED_SESSION_PERSISTENCE_STATUS = Object.freeze({
@@ -101,8 +109,8 @@ export function serializeGuidedSessionSnapshot(
     observation: state.observation ?? null,
     explanation: typeof state.explanation === "string" ? state.explanation : "",
     explanationSubmitted: Boolean(state.explanationSubmitted),
-    practiceDraft: state.practiceDraft ?? null,
-    practiceResponse: state.practiceResponse ?? null,
+    practiceDraft: cloneGuidedPracticeResponse(state.practiceDraft),
+    practiceResponse: cloneGuidedPracticeResponse(state.practiceResponse),
     needsReview: Boolean(state.needsReview),
     completedSteps: getCompletedGuidedStepIds(state, definition),
     sessionStarted: state.completionState !== "not-started",
@@ -146,13 +154,23 @@ export function validateGuidedSessionSnapshot(snapshot, { definition } = {}) {
   }
 
   const predictIds = getChoiceIds(getStep(definition, "predict"));
-  const practiceIds = getChoiceIds(getStep(definition, "practice"));
+  const practiceStep = getStep(definition, "practice");
   if (!isValidChoice(snapshot.predictionDraft, predictIds)) errors.push("predictionDraft is invalid");
   if (!isValidChoice(snapshot.firstPrediction, predictIds)) errors.push("firstPrediction is invalid");
   if (!isNullableString(snapshot.observation)) errors.push("observation must be a string or null");
   if (typeof snapshot.explanation !== "string") errors.push("explanation must be a string");
-  if (!isValidChoice(snapshot.practiceDraft, practiceIds)) errors.push("practiceDraft is invalid");
-  if (!isValidChoice(snapshot.practiceResponse, practiceIds)) errors.push("practiceResponse is invalid");
+  if (
+    snapshot.practiceDraft !== null
+    && (!isRecord(snapshot.practiceDraft) || !isGuidedPracticeResponseValidForStep(practiceStep, snapshot.practiceDraft))
+  ) {
+    errors.push("practiceDraft is invalid");
+  }
+  if (
+    snapshot.practiceResponse !== null
+    && (!isRecord(snapshot.practiceResponse) || !isGuidedPracticeResponseValidForStep(practiceStep, snapshot.practiceResponse))
+  ) {
+    errors.push("practiceResponse is invalid");
+  }
   if (snapshot.needsReview !== undefined && typeof snapshot.needsReview !== "boolean") {
     errors.push("needsReview must be boolean when present");
   }
@@ -176,7 +194,6 @@ export function validateGuidedSessionSnapshot(snapshot, { definition } = {}) {
   const predictStep = getStep(definition, "predict");
   const experimentStep = getStep(definition, "experiment");
   const explainStep = getStep(definition, "explain");
-  const practiceStep = getStep(definition, "practice");
   const reviewStep = getStep(definition, "review");
 
   if (snapshot.firstPrediction !== null && snapshot.predictionDraft !== snapshot.firstPrediction) {
@@ -188,8 +205,14 @@ export function validateGuidedSessionSnapshot(snapshot, { definition } = {}) {
   if (snapshot.explanationSubmitted && (!snapshot.experimentAcknowledged || !isNonBlankString(snapshot.explanation))) {
     errors.push("submitted explanation requires an experiment and non-blank text");
   }
-  if (snapshot.practiceResponse !== null && (!snapshot.explanationSubmitted || snapshot.practiceDraft !== snapshot.practiceResponse)) {
-    errors.push("practice response requires the submitted practice choice");
+  if (
+    snapshot.practiceResponse !== null
+    && (
+      !snapshot.explanationSubmitted
+      || !areGuidedPracticeResponsesEqual(snapshot.practiceDraft, snapshot.practiceResponse)
+    )
+  ) {
+    errors.push("practice response requires the submitted deterministic response");
   }
   if (snapshot.sessionCompleted && (!snapshot.sessionStarted || !snapshot.practiceResponse || currentStepIndex !== definition.steps.length - 1)) {
     errors.push("completed session must be at the review step with a practice response");
@@ -232,6 +255,40 @@ export function validateGuidedSessionSnapshot(snapshot, { definition } = {}) {
   };
 }
 
+function migrateLegacyGuidedSessionSnapshot(snapshot, { definition } = {}) {
+  if (snapshot?.schemaVersion !== LEGACY_GUIDED_SESSION_SCHEMA_VERSION) {
+    return { ok: true, snapshot };
+  }
+
+  const practiceStep = getStep(definition, "practice");
+  if (practiceStep?.response?.kind !== GUIDED_PRACTICE_KINDS.CHOICE) {
+    return {
+      ok: false,
+      reason: GUIDED_SESSION_PERSISTENCE_STATUS.INCOMPATIBLE,
+      errors: ["v1 Guided session can only migrate into a choice Practice activity"],
+    };
+  }
+
+  const migrateChoice = (value) => {
+    if (value === null || value === undefined) return null;
+    if (typeof value !== "string") return value;
+    return {
+      kind: GUIDED_PRACTICE_KINDS.CHOICE,
+      optionId: value,
+    };
+  };
+
+  return {
+    ok: true,
+    snapshot: {
+      ...snapshot,
+      schemaVersion: GUIDED_SESSION_SCHEMA_VERSION,
+      practiceDraft: migrateChoice(snapshot.practiceDraft),
+      practiceResponse: migrateChoice(snapshot.practiceResponse),
+    },
+  };
+}
+
 export function deserializeGuidedSessionSnapshot(raw, { definition } = {}) {
   if (raw === null || raw === undefined || raw === "") {
     return { status: GUIDED_SESSION_PERSISTENCE_STATUS.EMPTY, snapshot: null, errors: [] };
@@ -255,12 +312,21 @@ export function deserializeGuidedSessionSnapshot(raw, { definition } = {}) {
     };
   }
 
-  const validation = validateGuidedSessionSnapshot(snapshot, { definition });
+  const migration = migrateLegacyGuidedSessionSnapshot(snapshot, { definition });
+  if (!migration.ok) {
+    return {
+      status: migration.reason,
+      snapshot: null,
+      errors: migration.errors,
+    };
+  }
+
+  const validation = validateGuidedSessionSnapshot(migration.snapshot, { definition });
   return {
     status: validation.valid
       ? GUIDED_SESSION_PERSISTENCE_STATUS.RESTORED
       : validation.reason,
-    snapshot: validation.valid ? snapshot : null,
+    snapshot: validation.valid ? migration.snapshot : null,
     errors: validation.errors,
   };
 }

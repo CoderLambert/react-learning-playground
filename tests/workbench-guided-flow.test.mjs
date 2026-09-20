@@ -50,7 +50,10 @@ test("Guided flow stores the first prediction before the experiment and reaches 
   assert.equal(state.completionState, "completed");
   assert.equal(state.observation, "next render state 为 1");
   assert.equal(state.explanation, "三个 replace 使用同一份 render snapshot。");
-  assert.equal(state.practiceResponse, "same-result-different-semantics");
+  assert.deepEqual(state.practiceResponse, {
+    kind: "choice",
+    optionId: "same-result-different-semantics",
+  });
   assert.equal(state.needsReview, false);
   assert.equal(getGuidedFlowUnlockedStep(state), GUIDED_FLOW_STEP_INDEX.REVIEW);
 });
@@ -87,7 +90,10 @@ test("the same reducer completes several new Guided definitions without lesson-s
     assert.equal(state.learningUnitId, learningUnitId);
     assert.equal(state.firstPrediction, definition.steps[0].reveal.expectedOptionId);
     assert.equal(state.observation, definition.steps[1].expectedObservation);
-    assert.equal(state.practiceResponse, definition.steps[3].reveal.expectedOptionId);
+    assert.deepEqual(state.practiceResponse, {
+      kind: "choice",
+      optionId: definition.steps[3].reveal.expectedOptionId,
+    });
     assert.equal(state.completionState, "completed");
     assert.equal(state.stepIndex, GUIDED_FLOW_STEP_INDEX.REVIEW);
   }

@@ -281,3 +281,112 @@
     grid-template-columns: 1fr;
   }
 }
+
+
+.guided-flow-practice-option-content {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  width: 100%;
+}
+
+.guided-flow-patch {
+  margin: 0;
+  overflow-x: auto;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  background: var(--bg-surface-tertiary);
+  color: var(--text-main);
+  font-size: 12px;
+  line-height: 1.55;
+  white-space: pre;
+}
+
+.guided-flow-sequence {
+  display: grid;
+  gap: 8px;
+  max-width: 760px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.guided-flow-sequence li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  background: var(--bg-surface);
+}
+
+.guided-flow-sequence-index {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  border-radius: var(--radius-full);
+  background: var(--bg-surface-tertiary);
+  color: var(--text-subtle);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.guided-flow-sequence-label {
+  min-width: 0;
+  line-height: 1.5;
+}
+
+.guided-flow-sequence-actions {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.guided-flow-sequence-actions .btn {
+  min-height: 32px;
+  padding: 5px 9px;
+}
+
+.guided-flow-practice-outcome {
+  display: grid;
+  gap: 10px;
+}
+
+.guided-flow-practice-summary {
+  display: grid;
+  gap: 6px;
+}
+
+.guided-flow-practice-summary > p,
+.guided-flow-practice-summary > ol,
+.guided-flow-practice-rationale > p {
+  margin: 0;
+}
+
+.guided-flow-practice-summary > ol {
+  display: grid;
+  gap: 4px;
+  padding-left: 22px;
+}
+
+.guided-flow-practice-rationale {
+  display: grid;
+  gap: 6px;
+}
+
+[data-guided-review-practice] .guided-flow-observation {
+  margin-top: 8px;
+}
+
+@media (max-width: 720px) {
+  .guided-flow-sequence li {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .guided-flow-sequence-actions {
+    grid-column: 1 / -1;
+  }
+}
