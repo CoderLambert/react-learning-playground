@@ -507,15 +507,17 @@ export default function App() {
           </div>
         </div>
         <div className="top-bar-right">
-          <button
-            type="button"
-            className="btn btn-outline btn-sm workbench-source-locator-toggle"
-            onClick={() => setSourceLocatorActive((active) => !active)}
-            aria-pressed={sourceLocatorActive}
-            title="开启后悬停并点击 Demo 元素定位源码；Alt / Option + 点击可快速定位"
-          >
-            {sourceLocatorActive ? "退出源码定位" : "⌖ 定位源码"}
-          </button>
+          {centerView === "lesson" && (
+            <button
+              type="button"
+              className="btn btn-outline btn-sm workbench-source-locator-toggle"
+              onClick={() => setSourceLocatorActive((active) => !active)}
+              aria-pressed={sourceLocatorActive}
+              title="开启后悬停并点击 Demo 元素定位源码；Alt / Option + 点击可快速定位"
+            >
+              {sourceLocatorActive ? "退出源码定位" : "⌖ 定位源码"}
+            </button>
+          )}
           <button
             type="button"
             className="btn btn-outline btn-sm workbench-inspector-toggle"
@@ -527,13 +529,21 @@ export default function App() {
           <div className="view-mode-pill">
             <button
               className={`view-mode-btn ${viewMode === "focused" ? "active" : ""}`}
-              onClick={() => setViewMode("focused")}
+              onClick={() => {
+                setViewMode("focused");
+                setCenterView("lesson");
+                setOfficialDocsFullscreen(false);
+              }}
             >
               单篇聚焦
             </button>
             <button
               className={`view-mode-btn ${viewMode === "all" ? "active" : ""}`}
-              onClick={() => setViewMode("all")}
+              onClick={() => {
+                setViewMode("all");
+                setCenterView("lesson");
+                setOfficialDocsFullscreen(false);
+              }}
             >
               连续阅读
             </button>
@@ -541,45 +551,87 @@ export default function App() {
         </div>
       </header>
       <main className="app-content workbench-app-content">
+        {viewMode === "focused" && currentLearningUnit && currentOfficialDoc && (
+          <div className="workbench-center-view-switcher" role="tablist" aria-label="中心学习内容">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={centerView === "lesson"}
+              className={centerView === "lesson" ? "is-active" : ""}
+              onClick={() => {
+                setCenterView("lesson");
+                setOfficialDocsFullscreen(false);
+              }}
+            >
+              实验内容
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={centerView === "official"}
+              className={centerView === "official" ? "is-active" : ""}
+              onClick={() => {
+                setCenterView("official");
+                setSourceLocatorActive(false);
+              }}
+            >
+              React 官方文档
+            </button>
+          </div>
+        )}
+
         {viewMode === "focused" ? (
           currentLearningUnit ? (
-            <div key={currentLearningUnit.id} className="demo-page">
-              {guidedActivity ? (
-                <GuidedLearningFlow
-                  key={`${guidedActivity.learningUnitId}:${guidedActivity.revision}`}
-                  learningUnit={currentLearningUnit}
-                  definition={guidedActivity}
-                  renderDemo={() => (
-                    <DemoSourceLocator
-                      learningUnit={currentLearningUnit}
-                      enabled={sourceLocatorActive}
-                      onLocate={handleVisualSourceLocate}
-                    >
-                      <currentLearningUnit.component />
-                    </DemoSourceLocator>
-                  )}
-                  onReviewResource={handleGuidedReviewResource}
-                  onAskAi={handleGuidedAskAi}
-                  onContinue={handleGuidedContinue}
-                  canContinue={Boolean(currentLearningPathEntry?.nextId)}
-                />
-              ) : (
-                <DemoSourceLocator
-                  learningUnit={currentLearningUnit}
-                  enabled={sourceLocatorActive}
-                  onLocate={handleVisualSourceLocate}
-                >
-                  <currentLearningUnit.component />
-                </DemoSourceLocator>
-              )}
-              {currentCheckpointChapter && (
-                <ChapterCheckpoint
-                  chapter={currentCheckpointChapter}
-                  nextUnitId={currentLearningPathEntry?.nextChapterFirstId}
-                  onNavigate={handleSelectDemo}
-                />
-              )}
-            </div>
+            centerView === "official" && currentOfficialDoc ? (
+              <OfficialDocsPane
+                learningUnit={currentLearningUnit}
+                doc={currentOfficialDoc}
+                fullscreen={officialDocsFullscreen}
+                onFullscreenChange={setOfficialDocsFullscreen}
+                onBackToLesson={() => {
+                  setCenterView("lesson");
+                  setOfficialDocsFullscreen(false);
+                }}
+              />
+            ) : (
+              <div key={currentLearningUnit.id} className="demo-page">
+                {guidedActivity ? (
+                  <GuidedLearningFlow
+                    key={`${guidedActivity.learningUnitId}:${guidedActivity.revision}`}
+                    learningUnit={currentLearningUnit}
+                    definition={guidedActivity}
+                    renderDemo={() => (
+                      <DemoSourceLocator
+                        learningUnit={currentLearningUnit}
+                        enabled={sourceLocatorActive}
+                        onLocate={handleVisualSourceLocate}
+                      >
+                        <currentLearningUnit.component />
+                      </DemoSourceLocator>
+                    )}
+                    onReviewResource={handleGuidedReviewResource}
+                    onAskAi={handleGuidedAskAi}
+                    onContinue={handleGuidedContinue}
+                    canContinue={Boolean(currentLearningPathEntry?.nextId)}
+                  />
+                ) : (
+                  <DemoSourceLocator
+                    learningUnit={currentLearningUnit}
+                    enabled={sourceLocatorActive}
+                    onLocate={handleVisualSourceLocate}
+                  >
+                    <currentLearningUnit.component />
+                  </DemoSourceLocator>
+                )}
+                {currentCheckpointChapter && (
+                  <ChapterCheckpoint
+                    chapter={currentCheckpointChapter}
+                    nextUnitId={currentLearningPathEntry?.nextChapterFirstId}
+                    onNavigate={handleSelectDemo}
+                  />
+                )}
+              </div>
+            )
           ) : null
         ) : (
           <div className="demo-all-container">
