@@ -205,11 +205,6 @@ export function AssessmentPracticePane({
     question.learningUnitId,
     diagnosticMisconceptionId,
   );
-  const canCorrectionRetry = Boolean(
-    question.content?.diagnosticOptionMap
-      && view.feedback
-      && !view.feedback.correct,
-  );
   const hasAnswer = displayAnswer !== null && displayAnswer !== "";
   const hasFeedback = Boolean(displayFeedback);
   const progressValue = view.total ? Math.round((view.position / view.total) * 100) : 0;
