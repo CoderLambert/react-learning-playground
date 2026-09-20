@@ -1,5 +1,7 @@
 # React Learning Workbench architecture
 
+> **Architecture status note (2026-09):** the shell/domain ownership contracts in this document remain useful, but its early product-layout description predates the V2 learning orchestration. Product UX should follow [Product Vision V2](../product/PRODUCT-VISION-V2.md) and [Learning Experience V2](../product/LEARNING-EXPERIENCE-V2.md). V2 should converge existing Workbench capabilities without duplicating the Learning Unit registry, Assessment domain, Guided runtime, Source semantics, or AI transport.
+
 ## Goal
 
 Evolve the current React Learning Playground into a Workbench without destabilizing the existing 58 demos, 12 chapter checkpoints, focused/continuous reading modes, sidebar search, CodeViewer, GitHub Pages deployment or integration labs.
