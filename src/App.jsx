@@ -576,7 +576,7 @@ export default function App() {
                 setSourceLocatorActive(false);
               }}
             >
-              React 官方文档
+              官方文档
             </button>
           </div>
         )}
