@@ -119,6 +119,16 @@ export default function App() {
     setSourceFile(null);
     setSourceFocus(null);
   }, [currentLearningUnit?.id, setSourceFile]);
+
+  /* oxlint-enable react/set-state-in-effect */
+
+  // Browser back/forward can change the active lesson without going through
+  // navigateToDemo(). Reset transient reading UI so it never leaks across lessons.
+  /* oxlint-disable react/set-state-in-effect -- synchronize transient center-view state after URL navigation. */
+  useEffect(() => {
+    setCenterView("lesson");
+    setOfficialDocsFullscreen(false);
+  }, [currentLearningUnit?.id]);
   /* oxlint-enable react/set-state-in-effect */
 
   useEffect(() => {
@@ -585,6 +595,7 @@ export default function App() {
           currentLearningUnit ? (
             showingOfficialDocs ? (
               <OfficialDocsPane
+                key={currentLearningUnit.id}
                 learningUnit={currentLearningUnit}
                 doc={currentOfficialDoc}
                 fullscreen={officialDocsFullscreen}

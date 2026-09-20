@@ -42,6 +42,7 @@ export function OfficialDocsPane({
   const references = [doc.primary, ...(doc.related ?? [])];
   const activeReference = references.find((item) => item.url === selectedUrl) ?? doc.primary;
   const relationLabel = activeReference.match === "related" ? "相关延伸" : "直接对应";
+  const canEmbed = activeReference.presentation === "embed";
 
   return (
     <section
@@ -49,6 +50,7 @@ export function OfficialDocsPane({
       aria-label={`${activeReference.provider} 官方文档：${activeReference.title}`}
       data-fullscreen={fullscreen ? "true" : "false"}
       data-provider={activeReference.provider}
+      data-presentation={activeReference.presentation}
     >
       <div className="official-docs-toolbar">
         <div className="official-docs-heading">
@@ -91,7 +93,7 @@ export function OfficialDocsPane({
               返回实验
             </button>
           )}
-          {onFullscreenChange && (
+          {onFullscreenChange && canEmbed && (
             <button
               type="button"
               className="official-docs-action"
@@ -114,14 +116,33 @@ export function OfficialDocsPane({
       </div>
 
       <div className="official-docs-frame-shell">
-        <iframe
-          key={activeReference.url}
-          className="official-docs-frame"
-          src={activeReference.url}
-          title={`${activeReference.provider} 官方文档：${activeReference.title}`}
-          loading="lazy"
-          referrerPolicy="strict-origin-when-cross-origin"
-        />
+        {canEmbed ? (
+          <iframe
+            key={activeReference.url}
+            className="official-docs-frame"
+            src={activeReference.url}
+            title={`${activeReference.provider} 官方文档：${activeReference.title}`}
+            loading="lazy"
+            referrerPolicy="strict-origin-when-cross-origin"
+          />
+        ) : (
+          <div className="official-docs-external">
+            <span className="official-docs-external__provider">{activeReference.provider} 官方资料</span>
+            <h3>{activeReference.title}</h3>
+            <p>{activeReference.description}</p>
+            <p className="official-docs-external__note">
+              当前来源未标记为可安全内嵌，为避免浏览器安全策略导致空白页面，这里不强制使用 iframe。
+            </p>
+            <a
+              className="official-docs-external__open"
+              href={activeReference.url}
+              target="_blank"
+              rel="noreferrer"
+            >
+              在 {activeReference.provider} 官网阅读 ↗
+            </a>
+          </div>
+        )}
       </div>
 
       {fullscreen && (
@@ -130,7 +151,7 @@ export function OfficialDocsPane({
           className="official-docs-exit-fullscreen"
           onClick={() => onFullscreenChange?.(false)}
           aria-label="退出官方文档全屏"
-          title="退出全屏 (Esc)"
+          title="退出全屏"
         >
           ×
         </button>
