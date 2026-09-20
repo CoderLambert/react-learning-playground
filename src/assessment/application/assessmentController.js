@@ -174,10 +174,12 @@ export function createAssessmentController({
     },
 
     async start() {
-      return startSessionWithQuestions(state.questions);
+      if (state.questions.length === 0) return;
+      return startSessionWithQuestions();
     },
 
     async startCanonical() {
+      if (state.canonicalQuestions.length === 0) return;
       return startSessionWithQuestions(state.canonicalQuestions);
     },
 
@@ -249,7 +251,8 @@ export function createAssessmentController({
   });
 
   async function startSessionWithQuestions(questionRecords) {
-    if (!state.learningUnitId || !Array.isArray(questionRecords) || questionRecords.length === 0 || state.starting) return;
+    if (!state.learningUnitId || state.starting) return;
+    if (questionRecords !== undefined && (!Array.isArray(questionRecords) || questionRecords.length === 0)) return;
     const learningUnitId = state.learningUnitId;
     const requestId = ++startRequestId;
     const token = createOperationToken({ generation, learningUnitId, requestId });
@@ -257,7 +260,7 @@ export function createAssessmentController({
     try {
       const session = await runtime.sessionLifecycle.start({
         learningUnitId,
-        questionRecords,
+        ...(questionRecords ? { questionRecords } : {}),
       });
       if (!isOperationCurrent(token, currentContext(startRequestId))) return;
       update({
