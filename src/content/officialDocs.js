@@ -7,9 +7,17 @@ const TESTING_LIBRARY = "https://testing-library.com/docs";
 const VITEST = "https://vitest.dev";
 const PLAYWRIGHT = "https://playwright.dev/docs";
 const TYPESCRIPT = "https://www.typescriptlang.org/docs";
+const MDN = "https://developer.mozilla.org/zh-CN/docs";
 
-function reference(provider, title, url, match = "direct", description = "") {
-  return { provider, title, url, match, description };
+function reference(provider, title, url, match = "direct", description = "", presentation) {
+  return {
+    provider,
+    title,
+    url,
+    match,
+    description,
+    presentation: presentation ?? (provider === "React" ? "embed" : "external"),
+  };
 }
 
 function lesson(primary, related = []) {
@@ -140,9 +148,10 @@ const RAW_OFFICIAL_DOCS_BY_LEARNING_UNIT_ID = {
     ],
   ),
   "form-data-modeling": lesson(
-    reference("React", "<input>", `${REACT_REFERENCE}/react-dom/components/input`, "direct", "表单字段与 FormData 提交读取。"),
+    reference("MDN", "FormData", `${MDN}/Web/API/FormData`, "direct", "对应 new FormData(form)、get()、getAll() 与 has() 等本 Demo 的核心 Web API。"),
     [
-      reference("React", "<form>", `${REACT_REFERENCE}/react-dom/components/form`, "related", "补充 form 提交与 action 契约。"),
+      reference("React", "<form>", `${REACT_REFERENCE}/react-dom/components/form`, "related", "补充 React 表单提交与 action 契约。"),
+      reference("React", "<input>", `${REACT_REFERENCE}/react-dom/components/input`, "related", "补充 React 受控/非受控输入边界。"),
     ],
   ),
   "form-action": lesson(
@@ -189,10 +198,11 @@ const RAW_OFFICIAL_DOCS_BY_LEARNING_UNIT_ID = {
     reference("React", "渲染和提交", `${REACT_LEARN}/render-and-commit`, "direct", "区分组件 render 与实际 DOM commit。"),
   ),
   "reference-equality": lesson(
-    reference("React", "useMemo", `${REACT_REFERENCE}/react/useMemo`, "related", "React 没有单独的“引用相等”教程；该 API 展示依赖与缓存值如何按 Object.is 比较。"),
+    reference("MDN", "Object.is()", `${MDN}/Web/JavaScript/Reference/Global_Objects/Object/is`, "direct", "本 Demo 直接用 Object.is 比较跨 render 的对象、数组和函数引用身份。"),
     [
-      reference("React", "useCallback", `${REACT_REFERENCE}/react/useCallback`, "related", "函数 identity 与依赖比较的官方 API 语义。"),
-      reference("React", "memo", `${REACT_REFERENCE}/react/memo`, "related", "Props identity 与 memoization 的关联。"),
+      reference("React", "memo", `${REACT_REFERENCE}/react/memo`, "related", "补充 Props identity 与组件 memoization 的关联。"),
+      reference("React", "useMemo", `${REACT_REFERENCE}/react/useMemo`, "related", "补充依赖比较与缓存值 identity。"),
+      reference("React", "useCallback", `${REACT_REFERENCE}/react/useCallback`, "related", "补充函数 identity 与依赖比较。"),
     ],
   ),
   "react-memo": lesson(
@@ -294,9 +304,10 @@ const RAW_OFFICIAL_DOCS_BY_LEARNING_UNIT_ID = {
   ),
 
   "rendering-strategies": lesson(
-    reference("React Router", "Rendering Strategies", `${REACT_ROUTER}/start/framework/rendering`, "direct", "CSR、SSR 与静态预渲染的 framework 策略边界。"),
+    reference("React Router", "Rendering Strategies", `${REACT_ROUTER}/start/framework/rendering`, "related", "这是 framework 层的 CSR/SSR/静态预渲染实现案例，不代表 React Core 自身规定的统一渲染策略。"),
     [
-      reference("React", "renderToPipeableStream", `${REACT_REFERENCE}/react-dom/server/renderToPipeableStream`, "related", "补充 React SSR streaming primitive。"),
+      reference("React", "hydrateRoot", `${REACT_REFERENCE}/react-dom/client/hydrateRoot`, "related", "React Core 的 hydration primitive。"),
+      reference("React", "renderToPipeableStream", `${REACT_REFERENCE}/react-dom/server/renderToPipeableStream`, "related", "React Core 的 Node.js streaming SSR primitive。"),
     ],
   ),
   "hydration-streaming": lesson(
@@ -345,6 +356,15 @@ export const OFFICIAL_DOCS_BY_LEARNING_UNIT_ID = Object.freeze(
 
 export const OFFICIAL_DOCS_COVERED_IDS = Object.freeze(
   Object.keys(OFFICIAL_DOCS_BY_LEARNING_UNIT_ID),
+);
+
+// A learning unit may intentionally have no authoritative one-to-one reading.
+// Keep the reason explicit so future content does not invent a weak mapping just
+// to satisfy a coverage metric.
+export const OFFICIAL_DOCS_INTENTIONALLY_UNMAPPED = Object.freeze({});
+
+export const OFFICIAL_DOCS_INTENTIONALLY_UNMAPPED_IDS = Object.freeze(
+  Object.keys(OFFICIAL_DOCS_INTENTIONALLY_UNMAPPED),
 );
 
 // Backwards-compatible alias for the initial pilot export.
