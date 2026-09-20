@@ -113,11 +113,15 @@
   padding: 0 12px;
   border-bottom: 1px solid var(--border-color);
   background: var(--bg-surface);
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
 }
 
 .learning-inspector-tab {
   position: relative;
   min-width: 72px;
+  flex: 0 0 auto;
   padding: 0 14px;
   border: 0;
   background: transparent;
@@ -278,6 +282,8 @@
   }
 
   .learning-inspector-tab {
-    flex: 1;
+    min-width: 68px;
+    flex: 0 0 auto;
+    padding-inline: 10px;
   }
 }
