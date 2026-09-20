@@ -232,6 +232,7 @@ function GuidedReviewStep({
   onRetry,
   onContinue,
   canContinue,
+  continueLabel = "Continue to next lesson",
 }) {
   const step = definition.steps[GUIDED_FLOW_STEP_INDEX.REVIEW];
   const review = getGuidedReviewModel(state, definition);
@@ -312,7 +313,7 @@ function GuidedReviewStep({
           disabled={!canContinue || typeof onContinue !== "function"}
           onClick={onContinue}
         >
-          Continue to next lesson
+          {continueLabel}
         </button>
       </div>
       {!canContinue && <p className="guided-flow-hint" data-guided-continue-status>已到当前学习路径末尾。</p>}
@@ -328,6 +329,8 @@ export function GuidedLearningFlow({
   onAskAi,
   onContinue,
   canContinue = false,
+  presentation = "guided",
+  continueLabel,
 }) {
   const predictionInputId = useId();
   const practiceInputId = useId();
@@ -349,14 +352,18 @@ export function GuidedLearningFlow({
     return null;
   }
 
+  const practicePresentation = presentation === "practice";
+
   if (!state.active) {
     return (
       <>
         <section className="guided-flow-entry" data-guided-entry aria-labelledby="guided-learning-entry-title">
           <div>
-            <p className="guided-flow-eyebrow">可选学习路径</p>
-            <h2 id="guided-learning-entry-title">Guided Learning</h2>
-            <p>先暴露 prediction，再操作真实 Demo、写下 explanation，最后完成一个 practice 迁移题。</p>
+            <p className="guided-flow-eyebrow">{practicePresentation ? "当前阶段" : "可选学习路径"}</p>
+            <h2 id="guided-learning-entry-title">{practicePresentation ? "Practice" : "Guided Learning"}</h2>
+            <p>{practicePresentation
+              ? "先预测，再操作真实 Demo、解释观察结果，最后把 key 的身份模型迁移到新场景。"
+              : "先暴露 prediction，再操作真实 Demo、写下 explanation，最后完成一个 practice 迁移题。"}</p>
             {persistenceNotice && (
               <p className="guided-flow-persistence-notice" role="status" data-guided-persistence-status>
                 {persistenceNotice}
@@ -364,7 +371,9 @@ export function GuidedLearningFlow({
             )}
           </div>
           <button type="button" className="btn btn-primary" data-guided-action="start" onClick={start}>
-            {state.completionState === "not-started" ? "开始 Guided Learning" : "继续 Guided Learning"}
+            {state.completionState === "not-started"
+              ? (practicePresentation ? "开始实践" : "开始 Guided Learning")
+              : (practicePresentation ? "继续实践" : "继续 Guided Learning")}
           </button>
         </section>
         <div className="guided-flow-free-explore" data-guided-free-explore>
@@ -386,7 +395,7 @@ export function GuidedLearningFlow({
     >
       <header className="guided-flow-header">
         <div>
-          <p className="guided-flow-eyebrow">Guided Learning · {learningUnit.title}</p>
+          <p className="guided-flow-eyebrow">{practicePresentation ? "Practice" : "Guided Learning"} · {learningUnit.title}</p>
           <h2 id="guided-learning-title">{definition.goal}</h2>
           {persistenceNotice && (
             <p className="guided-flow-persistence-notice" role="status" data-guided-persistence-status>
@@ -399,7 +408,7 @@ export function GuidedLearningFlow({
             重新开始
           </button>
           <button type="button" className="btn btn-outline" data-guided-action="exit" onClick={exit}>
-            退出 Guided Mode
+            {practicePresentation ? "退出实践" : "退出 Guided Mode"}
           </button>
         </div>
       </header>
@@ -451,6 +460,7 @@ export function GuidedLearningFlow({
             onRetry={startOver}
             onContinue={onContinue}
             canContinue={canContinue}
+            continueLabel={continueLabel ?? (practicePresentation ? "进入验证" : "Continue to next lesson")}
           />
         )}
       </div>
