@@ -195,3 +195,89 @@ test("Guided contract does not copy Learning Unit catalog fields or score fields
   const publicSource = await readFile(new URL("../src/workbench/public.js", import.meta.url), "utf8");
   assert.match(publicSource, /getGuidedActivityDefinition/);
 });
+
+
+test("Practice V2 accepts a bounded patch-choice contract with stable ids", () => {
+  const definition = createValidDefinition();
+  definition.steps[3] = {
+    id: "practice-patch",
+    type: GUIDED_STEP_TYPES.PRACTICE,
+    prompt: "选择最小正确修复。",
+    response: {
+      kind: GUIDED_RESPONSE_KINDS.PATCH_CHOICE,
+      options: [
+        {
+          id: "use-updater",
+          label: "改为 functional updater",
+          patch: "- setCount(count + 1)\n+ setCount((value) => value + 1)",
+        },
+        {
+          id: "keep-snapshot",
+          label: "继续读取 snapshot",
+          patch: "- setCount(count + 1)\n+ setCount(count + 2)",
+        },
+      ],
+    },
+    reveal: {
+      expectedOptionId: "use-updater",
+      observation: "updater 会从 queue 中前一项结果继续计算。",
+    },
+  };
+
+  assert.deepEqual(validateGuidedActivityDefinition(definition), { valid: true, errors: [] });
+});
+
+test("Practice V2 rejects patch alternatives without inspectable patch text", () => {
+  const definition = createValidDefinition();
+  definition.steps[3] = {
+    id: "practice-patch",
+    type: GUIDED_STEP_TYPES.PRACTICE,
+    prompt: "选择最小正确修复。",
+    response: {
+      kind: GUIDED_RESPONSE_KINDS.PATCH_CHOICE,
+      options: [
+        { id: "patch-a", label: "方案 A", patch: "" },
+        { id: "patch-b", label: "方案 B", patch: "+ valid();" },
+      ],
+    },
+    reveal: {
+      expectedOptionId: "patch-b",
+      observation: "方案 B 保留目标语义。",
+    },
+  };
+
+  const result = validateGuidedActivityDefinition(definition);
+  assert.equal(result.valid, false);
+  assert.ok(result.errors.includes("steps[3].response.options[0].patch must be a non-blank string"));
+});
+
+test("Practice V2 accepts ordered-sequence only when expectedOrder is a complete stable-id permutation", () => {
+  const definition = createValidDefinition();
+  definition.steps[3] = {
+    id: "practice-sequence",
+    type: GUIDED_STEP_TYPES.PRACTICE,
+    prompt: "按真实执行顺序排列。",
+    response: {
+      kind: GUIDED_RESPONSE_KINDS.ORDERED_SEQUENCE,
+      items: [
+        { id: "commit", label: "commit" },
+        { id: "event", label: "event" },
+        { id: "render", label: "render" },
+        { id: "update", label: "update" },
+      ],
+    },
+    reveal: {
+      expectedOrder: ["event", "update", "render", "commit"],
+      observation: "事件触发更新，React 随后 render 并 commit。",
+    },
+  };
+
+  assert.deepEqual(validateGuidedActivityDefinition(definition), { valid: true, errors: [] });
+
+  definition.steps[3].reveal.expectedOrder = ["event", "update", "render", "unknown"];
+  const invalid = validateGuidedActivityDefinition(definition);
+  assert.equal(invalid.valid, false);
+  assert.ok(invalid.errors.includes(
+    "steps[3].reveal.expectedOrder must contain every response item id exactly once",
+  ));
+});
