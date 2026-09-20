@@ -22,12 +22,38 @@ const TARGET_LEARNING_UNIT_IDS = [
   "lifecycle-of-reactive-effects",
 ];
 
-const FROZEN_EXPECTED_OPTIONS = {
-  "state-snapshot-queue": { predict: "count-1", practice: "same-result-different-semantics" },
-  "rendering-lists-key": { predict: "stays-first-position", practice: "stable-task-id" },
-  "preserving-resetting-state": { predict: "draft-preserved", practice: "stable-product-key" },
-  "not-need-effect": { predict: "derive-during-render", practice: "render-event-effect" },
-  "lifecycle-of-reactive-effects": { predict: "cleanup-then-setup", practice: "connection-target-only" },
+const FROZEN_EXPECTED_PRACTICE = {
+  "state-snapshot-queue": {
+    predict: "count-1",
+    kind: GUIDED_RESPONSE_KINDS.PATCH_CHOICE,
+    expectedOptionId: "functional-updaters",
+  },
+  "rendering-lists-key": {
+    predict: "stays-first-position",
+    kind: GUIDED_RESPONSE_KINDS.PATCH_CHOICE,
+    expectedOptionId: "stable-todo-id-key",
+  },
+  "preserving-resetting-state": {
+    predict: "draft-preserved",
+    kind: GUIDED_RESPONSE_KINDS.PATCH_CHOICE,
+    expectedOptionId: "key-editor-by-customer",
+  },
+  "not-need-effect": {
+    predict: "derive-during-render",
+    kind: GUIDED_RESPONSE_KINDS.PATCH_CHOICE,
+    expectedOptionId: "derive-visible-products",
+  },
+  "lifecycle-of-reactive-effects": {
+    predict: "cleanup-then-setup",
+    kind: GUIDED_RESPONSE_KINDS.ORDERED_SEQUENCE,
+    expectedOrder: [
+      "change-topic",
+      "render-new-topic",
+      "commit-new-render",
+      "cleanup-old-subscription",
+      "setup-new-subscription",
+    ],
+  },
 };
 
 const FROZEN_EXPERIMENT_ACTIONS = {
@@ -132,10 +158,21 @@ test("the first five Guided definitions are available, frozen, and follow the co
         assert.equal(new Set(step.response.options.map(({ id }) => id)).size, step.response.options.length);
       }
     }
+    assert.equal(definition.revision, 2);
     assert.deepEqual(definition.steps.at(-1).resources, ["notes", "source", "demo"]);
-    assert.equal(definition.steps[0].reveal.expectedOptionId, FROZEN_EXPECTED_OPTIONS[learningUnitId].predict);
+    const expected = FROZEN_EXPECTED_PRACTICE[learningUnitId];
+    const practiceStep = definition.steps[3];
+    assert.equal(definition.steps[0].reveal.expectedOptionId, expected.predict);
     assert.equal(definition.steps[1].demoActionId, FROZEN_EXPERIMENT_ACTIONS[learningUnitId]);
-    assert.equal(definition.steps[3].reveal.expectedOptionId, FROZEN_EXPECTED_OPTIONS[learningUnitId].practice);
+    assert.equal(practiceStep.response.kind, expected.kind);
+    if (expected.kind === GUIDED_RESPONSE_KINDS.ORDERED_SEQUENCE) {
+      assert.deepEqual(practiceStep.reveal.expectedOrder, expected.expectedOrder);
+      assert.equal(new Set(practiceStep.response.items.map(({ id }) => id)).size, practiceStep.response.items.length);
+    } else {
+      assert.equal(practiceStep.reveal.expectedOptionId, expected.expectedOptionId);
+      assert.equal(new Set(practiceStep.response.options.map(({ id }) => id)).size, practiceStep.response.options.length);
+      assert.ok(practiceStep.response.options.every(({ patch }) => typeof patch === "string" && patch.trim()));
+    }
   }
 });
 
@@ -280,4 +317,21 @@ test("Practice V2 accepts ordered-sequence only when expectedOrder is a complete
   assert.ok(invalid.errors.includes(
     "steps[3].reveal.expectedOrder must contain every response item id exactly once",
   ));
+});
+
+
+test("the five upgraded practices use applied deterministic artifacts rather than conceptual choice recall", () => {
+  const practiceKinds = new Set();
+  for (const learningUnitId of TARGET_LEARNING_UNIT_IDS) {
+    const definition = getGuidedActivityDefinition(learningUnitId);
+    const practiceStep = definition.steps[3];
+    practiceKinds.add(practiceStep.response.kind);
+    assert.notEqual(practiceStep.response.kind, GUIDED_RESPONSE_KINDS.CHOICE);
+    assert.notEqual(practiceStep.prompt, definition.steps[0].prompt);
+  }
+
+  assert.deepEqual(
+    [...practiceKinds].sort(),
+    [GUIDED_RESPONSE_KINDS.ORDERED_SEQUENCE, GUIDED_RESPONSE_KINDS.PATCH_CHOICE].sort(),
+  );
 });
