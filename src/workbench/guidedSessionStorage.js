@@ -159,10 +159,16 @@ export function validateGuidedSessionSnapshot(snapshot, { definition } = {}) {
   if (!isValidChoice(snapshot.firstPrediction, predictIds)) errors.push("firstPrediction is invalid");
   if (!isNullableString(snapshot.observation)) errors.push("observation must be a string or null");
   if (typeof snapshot.explanation !== "string") errors.push("explanation must be a string");
-  if (!isGuidedPracticeResponseValidForStep(practiceStep, snapshot.practiceDraft)) {
+  if (
+    snapshot.practiceDraft !== null
+    && (!isRecord(snapshot.practiceDraft) || !isGuidedPracticeResponseValidForStep(practiceStep, snapshot.practiceDraft))
+  ) {
     errors.push("practiceDraft is invalid");
   }
-  if (!isGuidedPracticeResponseValidForStep(practiceStep, snapshot.practiceResponse)) {
+  if (
+    snapshot.practiceResponse !== null
+    && (!isRecord(snapshot.practiceResponse) || !isGuidedPracticeResponseValidForStep(practiceStep, snapshot.practiceResponse))
+  ) {
     errors.push("practiceResponse is invalid");
   }
   if (snapshot.needsReview !== undefined && typeof snapshot.needsReview !== "boolean") {
