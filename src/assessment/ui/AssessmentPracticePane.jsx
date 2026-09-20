@@ -123,8 +123,10 @@ export function AssessmentPracticePane({
   onNext,
   onOpenEvidence,
   onRequestAiQuestions,
+  onRequestExplanationReview,
 }) {
   const [correction, setCorrection] = useState(EMPTY_CORRECTION);
+  const [teachBackByQuestion, setTeachBackByQuestion] = useState({});
   const view = deriveAssessmentView({ session, currentIndex, feedback });
 
   if (view.kind === "empty") {
@@ -259,6 +261,8 @@ export function AssessmentPracticePane({
   };
 
   const correctionSucceeded = correctionActive && Boolean(activeCorrection.feedback?.correct);
+  const teachBack = teachBackByQuestion[question.id] ?? "";
+  const teachBackReady = teachBack.trim().length >= 8;
   const statusCorrect = correctionActive
     ? Boolean(displayFeedback?.correct)
     : Boolean(view.feedback?.correct);
@@ -370,10 +374,62 @@ export function AssessmentPracticePane({
                   </strong>
 
                   {correctionSucceeded && (
-                    <div className="mt-2 space-y-2 text-sm leading-6 text-[var(--text-main)]">
+                    <div className="mt-2 space-y-3 text-sm leading-6 text-[var(--text-main)]">
                       <p className="m-0">
                         你已经根据反证重新判断正确。第一次错误仍保留在复习记录中，用来提醒这个知识点曾出现过误区。
                       </p>
+
+                      <div
+                        className="space-y-3 rounded-lg border border-[var(--border-color)] bg-[var(--bg-surface)] p-3"
+                        data-assessment-teach-back={question.id}
+                      >
+                        <div>
+                          <strong className="text-sm font-bold text-[var(--text-main)]">
+                            用自己的话再解释一次
+                          </strong>
+                          <p className="mt-1 mb-0 text-xs leading-5 text-[var(--text-muted)]">
+                            用 1–2 句话说明：为什么你第一次的判断不成立，正确的机制是什么。这个步骤只检查心智模型，不改变本轮分数。
+                          </p>
+                        </div>
+
+                        <textarea
+                          className="form-input min-h-[96px] w-full resize-y"
+                          aria-label="用自己的话再解释一次"
+                          value={teachBack}
+                          onChange={(event) => {
+                            const nextValue = event.target.value;
+                            setTeachBackByQuestion((current) => ({
+                              ...current,
+                              [question.id]: nextValue,
+                            }));
+                          }}
+                          placeholder="例如：reorder 时 Props 会更新，但 local State 是否保留取决于 React 是否继续匹配到同一个组件身份……"
+                          rows={4}
+                        />
+
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                          <span className="text-xs text-[var(--text-muted)]">
+                            {teachBackReady
+                              ? "已写下解释。可以继续下一题，或让 AI 检查是否仍有概念混淆。"
+                              : "写下你的解释后即可选择让 AI 检查；不使用 AI 也可以直接继续。"}
+                          </span>
+                          {onRequestExplanationReview && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              disabled={!teachBackReady}
+                              onClick={() => onRequestExplanationReview({
+                                question,
+                                learnerResponse: teachBack.trim(),
+                              })}
+                              className="shrink-0"
+                            >
+                              让 AI 检查这段解释
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+
                       {showFeedbackExplanation && (
                         <details>
                           <summary className="cursor-pointer font-bold">查看完整解释</summary>
