@@ -14,7 +14,11 @@ test.describe("React Learning Workbench final acceptance", () => {
 
     for (const label of labels) {
       await openDemo(page, label);
-      await page.getByRole("tab", { name: "笔记" }).click();
+      if (label === "列表渲染与 key 身份") {
+        await page.getByText("阅读完整笔记", { exact: true }).click();
+      } else {
+        await page.getByRole("tab", { name: "笔记" }).click();
+      }
       await expect(page.locator(".note-runtime-content")).toBeVisible();
       await expect(page.getByText("该知识点的详细笔记尚未创建。", { exact: true })).toHaveCount(0);
       await expect(page.locator(".note-runtime-state-error")).toHaveCount(0);
