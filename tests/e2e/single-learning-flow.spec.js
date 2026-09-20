@@ -83,6 +83,23 @@ test("diagnostic verification turns a known wrong model into counter-evidence be
   await expect(page.locator("[data-assessment-correction='corrected']")).toBeVisible();
   await expect(page.getByText(/第一次错误仍保留在复习记录中/)).toBeVisible();
 
+  const teachBack = page.getByLabel("用自己的话再解释一次");
+  await expect(teachBack).toBeVisible();
+  await expect(page.getByRole("button", { name: "让 AI 检查这段解释" })).toBeDisabled();
+
+  const explanation = "index key 让组件身份按位置延续，所以 task Props 会更新，但 note State 仍留在原身份；stable id 才能让 State 跟着业务实体移动。";
+  await teachBack.fill(explanation);
+  await expect(page.getByText(/已写下解释/)).toBeVisible();
+
+  await page.getByRole("button", { name: "让 AI 检查这段解释" }).click();
+  await expect(page.getByRole("tab", { name: "AI", exact: true })).toHaveAttribute("aria-selected", "true");
+  const aiComposer = page.getByLabel("向 AI 助手提问");
+  await expect(aiComposer).toHaveValue(new RegExp("assessment-correction:canonical-rendering-lists-key-reorder"));
+  await expect(aiComposer).toHaveValue(new RegExp("index key 让组件身份按位置延续"));
+  await expect(page.getByText(/不改变本轮分数/)).toBeVisible();
+
+  await page.getByRole("button", { name: "关闭学习面板" }).last().click();
+
   await page.getByRole("button", { name: "查看依据 2" }).click();
   await expect(page.getByRole("tab", { name: "源码", exact: true })).toHaveAttribute("aria-selected", "true");
   await expect(page.locator(".source-viewer--inspector")).toHaveAttribute("data-source-focus", "22-33");
