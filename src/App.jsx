@@ -550,6 +550,50 @@ export default function App() {
     />
   ) : null;
 
+  const renderCurrentDemo = () => (
+    <DemoSourceLocator
+      learningUnit={currentLearningUnit}
+      enabled={sourceLocatorActive}
+      onLocate={handleVisualSourceLocate}
+    >
+      <currentLearningUnit.component />
+    </DemoSourceLocator>
+  );
+
+  const canonicalVerification = currentLearningFlow ? (
+    <div className="assessment-pane-shell single-learning-flow__verify-surface">
+      {assessmentView.storageNotice && <p role="status">{assessmentView.storageNotice}</p>}
+      {!assessmentView.ready && !assessmentView.initializationError && <p role="status">正在初始化验证记录…</p>}
+      {assessmentView.initializationError && (
+        <div role="alert" className="mx-4 mt-4 rounded-lg border border-[var(--color-danger-border)] bg-[var(--color-danger-light)] p-3 text-sm text-[var(--color-danger-text)] sm:mx-5">
+          <strong>验证记录初始化未完全成功</strong>
+          <p className="mt-1 mb-2">{assessmentView.initializationError}</p>
+          <button type="button" className="btn btn-outline btn-sm" onClick={assessmentCommands?.retryInitialization} disabled={!assessmentCommands}>
+            重试加载
+          </button>
+        </div>
+      )}
+      <AssessmentPracticePane
+        session={assessmentView.session}
+        currentIndex={assessmentView.currentIndex}
+        answer={assessmentView.answer}
+        feedback={assessmentView.feedback}
+        startError={assessmentView.startError}
+        starting={assessmentView.starting}
+        submitError={assessmentView.submitError}
+        submitting={assessmentView.submitting}
+        showAiQuestionAction={false}
+        onStart={assessmentCommands && assessmentView.canonicalQuestions.length
+          ? assessmentCommands.startCanonical
+          : undefined}
+        onAnswerChange={assessmentCommands?.setAnswer}
+        onSubmit={assessmentCommands?.submit}
+        onNext={assessmentCommands?.next}
+        onOpenEvidence={handleAssessmentEvidence}
+      />
+    </div>
+  ) : null;
+
   const content = (
     <div className="app-main workbench-main">
       <header className="top-bar">
@@ -571,7 +615,7 @@ export default function App() {
           </div>
         </div>
         <div className="top-bar-right">
-          {!showingOfficialDocs && (
+          {!showingOfficialDocs && (!currentLearningFlow || learningFlowStage !== LEARNING_FLOW_STAGES.VERIFY) && (
             <button
               type="button"
               className="btn btn-outline btn-sm workbench-source-locator-toggle"
@@ -660,6 +704,39 @@ export default function App() {
                   setOfficialDocsFullscreen(false);
                 }}
               />
+            ) : currentLearningFlow ? (
+              <SingleLearningFlow
+                key={currentLearningUnit.id}
+                learningUnit={currentLearningUnit}
+                definition={currentLearningFlow}
+                stage={learningFlowStage}
+                onStageChange={setLearningFlowStage}
+                renderDemo={renderCurrentDemo}
+                renderNotes={() => <NotesPane learningUnitId={currentLearningUnit.id} />}
+                renderPractice={({ onComplete }) => (
+                  <GuidedLearningFlow
+                    key={`${guidedActivity.learningUnitId}:${guidedActivity.revision}:practice`}
+                    learningUnit={currentLearningUnit}
+                    definition={guidedActivity}
+                    renderDemo={renderCurrentDemo}
+                    onReviewResource={handleLearningFlowReviewResource}
+                    onAskAi={handleGuidedAskAi}
+                    onContinue={() => {
+                      onComplete?.();
+                      return true;
+                    }}
+                    canContinue
+                    presentation="practice"
+                    continueLabel="进入验证"
+                  />
+                )}
+                renderVerify={() => canonicalVerification}
+                onOpenOfficial={handleLearningFlowOpenOfficial}
+                onOpenSource={handleLearningFlowOpenSource}
+                onOpenAi={handleLearningFlowOpenAi}
+                onContinue={handleGuidedContinue}
+                verificationSession={assessmentView.session}
+              />
             ) : (
               <div key={currentLearningUnit.id} className="demo-page">
                 {guidedActivity ? (
@@ -667,29 +744,13 @@ export default function App() {
                     key={`${guidedActivity.learningUnitId}:${guidedActivity.revision}`}
                     learningUnit={currentLearningUnit}
                     definition={guidedActivity}
-                    renderDemo={() => (
-                      <DemoSourceLocator
-                        learningUnit={currentLearningUnit}
-                        enabled={sourceLocatorActive}
-                        onLocate={handleVisualSourceLocate}
-                      >
-                        <currentLearningUnit.component />
-                      </DemoSourceLocator>
-                    )}
+                    renderDemo={renderCurrentDemo}
                     onReviewResource={handleGuidedReviewResource}
                     onAskAi={handleGuidedAskAi}
                     onContinue={handleGuidedContinue}
                     canContinue={Boolean(currentLearningPathEntry?.nextId)}
                   />
-                ) : (
-                  <DemoSourceLocator
-                    learningUnit={currentLearningUnit}
-                    enabled={sourceLocatorActive}
-                    onLocate={handleVisualSourceLocate}
-                  >
-                    <currentLearningUnit.component />
-                  </DemoSourceLocator>
-                )}
+                ) : renderCurrentDemo()}
                 {currentCheckpointChapter && (
                   <ChapterCheckpoint
                     chapter={currentCheckpointChapter}
