@@ -48,7 +48,7 @@ test("canonical verification works without AI authoring and wrong answers route 
   await expect(page.getByRole("tab", { name: "源码", exact: true })).toHaveAttribute("aria-selected", "true");
   await expect(page.locator(".source-viewer--inspector")).toHaveAttribute("data-source-focus", "39-46");
 
-  await page.getByRole("button", { name: /关闭学习面板/ }).click();
+  await page.getByRole("button", { name: "关闭学习面板" }).last().click();
   await page.getByRole("button", { name: /下一题/ }).click();
 
   await page.getByRole("radio", { name: /index 表示当前位置/ }).check();
