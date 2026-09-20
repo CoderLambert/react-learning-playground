@@ -7,6 +7,80 @@ const STAGE_ITEMS = Object.freeze([
   { id: LEARNING_FLOW_STAGES.VERIFY, index: 3, label: "验证" },
 ]);
 
+function MechanismMap({ model }) {
+  if (!model?.mechanismMap?.length) return null;
+
+  return (
+    <section className="single-learning-flow__mechanism" aria-labelledby="lists-key-mechanism-title">
+      <div className="single-learning-flow__section-heading">
+        <div>
+          <span>Mechanism map</span>
+          <h3 id="lists-key-mechanism-title">先把这些对象分开，再讨论 key</h3>
+        </div>
+      </div>
+
+      <div className="single-learning-flow__mechanism-table" role="table" aria-label="Lists and Key 机制区分">
+        <div className="single-learning-flow__mechanism-row is-header" role="row">
+          <strong role="columnheader">对象</strong>
+          <strong role="columnheader">当前 Demo</strong>
+          <strong role="columnheader">它负责什么</strong>
+          <strong role="columnheader">reorder 时会怎样</strong>
+        </div>
+        {model.mechanismMap.map((item) => (
+          <div className="single-learning-flow__mechanism-row" role="row" key={item.id}>
+            <strong role="cell">{item.label}</strong>
+            <code role="cell">{item.example}</code>
+            <span role="cell">{item.role}</span>
+            <span role="cell">{item.reorder}</span>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function ContrastCases({ model }) {
+  if (!model?.contrastCases?.length) return null;
+
+  return (
+    <section className="single-learning-flow__contrasts" aria-labelledby="lists-key-contrast-title">
+      <div className="single-learning-flow__section-heading">
+        <div>
+          <span>Contrast cases</span>
+          <h3 id="lists-key-contrast-title">三种变化，不要混成同一种“复用 / 重建”</h3>
+        </div>
+      </div>
+
+      <div className="single-learning-flow__contrast-grid">
+        {model.contrastCases.map((item) => (
+          <article key={item.id} className="single-learning-flow__contrast-card">
+            <h4>{item.title}</h4>
+            <dl>
+              <div>
+                <dt>key</dt>
+                <dd>{item.keyStory}</dd>
+              </div>
+              <div>
+                <dt>identity</dt>
+                <dd>{item.identityStory}</dd>
+              </div>
+              <div>
+                <dt>State</dt>
+                <dd>{item.stateStory}</dd>
+              </div>
+              <div>
+                <dt>UI</dt>
+                <dd>{item.uiStory}</dd>
+              </div>
+            </dl>
+            <p>{item.conclusion}</p>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 export function SingleLearningFlow({
   learningUnit,
   definition,
@@ -100,11 +174,14 @@ export function SingleLearningFlow({
             </article>
           </div>
 
+          <MechanismMap model={definition.conceptModel} />
+          <ContrastCases model={definition.conceptModel} />
+
           <div className="single-learning-flow__demo">
             <div className="single-learning-flow__section-heading">
               <div>
                 <span>Observable evidence</span>
-                <h3>先看真实行为</h3>
+                <h3>再用真实行为验证上面的机制</h3>
               </div>
               <button type="button" className="btn btn-outline btn-sm" onClick={onOpenSource}>
                 查看核心源码
@@ -151,8 +228,8 @@ export function SingleLearningFlow({
         <div className="single-learning-flow__stage" data-learning-stage-panel="verify">
           <div className="single-learning-flow__stage-intro">
             <span>验证</span>
-            <h3>不看答案，独立检查一次</h3>
-            <p>完成本节内置理解检查，不需要配置 AI 或先创建题目。</p>
+            <h3>不看答案，检查你有没有把几个机制混在一起</h3>
+            <p>诊断题会区分“记住规则”和“能解释 identity / Props / State / DOM 的因果关系”。答错时先用反证实验纠正模型，再看完整解释。</p>
           </div>
 
           {renderVerify?.()}
