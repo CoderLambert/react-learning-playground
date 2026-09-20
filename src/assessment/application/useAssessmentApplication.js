@@ -3,6 +3,7 @@ import { createAssessmentRuntime } from "../composition/assessmentRuntime.js";
 import { createLearningUnitEvidenceResolver } from "../composition/learningUnitEvidenceResolver.js";
 import { selectAssessmentQuestionsForLearningUnit } from "../ui/assessmentScope.js";
 import { createAssessmentController } from "./assessmentController.js";
+import { getCanonicalAssessmentQuestions } from "../content/canonicalQuestions.js";
 
 const EMPTY_VIEW = Object.freeze({
   learningUnitId: null,
@@ -11,6 +12,7 @@ const EMPTY_VIEW = Object.freeze({
   answer: null,
   feedback: null,
   questions: [],
+  canonicalQuestions: [],
   initializationErrors: { load: null, recover: null },
   startError: null,
   submitError: null,
@@ -59,6 +61,7 @@ export function useAssessmentApplication({ learningUnitId, learningUnitsById }) 
       ? createAssessmentController({
           runtime,
           selectQuestions: selectAssessmentQuestionsForLearningUnit,
+          getCanonicalQuestions: getCanonicalAssessmentQuestions,
         })
       : null,
     [runtime],
