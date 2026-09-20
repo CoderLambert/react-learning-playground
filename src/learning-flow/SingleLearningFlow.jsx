@@ -1,10 +1,5 @@
+import { LEARNING_FLOW_STAGES } from "./learningFlowRegistry.js";
 import "./SingleLearningFlow.css";
-
-export const LEARNING_FLOW_STAGES = Object.freeze({
-  UNDERSTAND: "understand",
-  PRACTICE: "practice",
-  VERIFY: "verify",
-});
 
 const STAGE_ITEMS = Object.freeze([
   { id: LEARNING_FLOW_STAGES.UNDERSTAND, index: 1, label: "理解" },
