@@ -53,8 +53,11 @@ export async function createAssessmentRuntime({
   });
   const capabilities = Object.freeze(createAssessmentCapabilities({ assessmentService: service }));
   const sessionLifecycle = Object.freeze({
-    async start({ learningUnitId }) {
-      return service.startSession({ trusted: { learningUnitId } });
+    async start({ learningUnitId, questionRecords }) {
+      return service.startSession({
+        trusted: { learningUnitId },
+        ...(questionRecords ? { questionRecords } : {}),
+      });
     },
     async submit({ learningUnitId, sessionId, questionId, answer }) {
       const attempt = await service.submitAnswer({
