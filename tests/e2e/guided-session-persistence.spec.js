@@ -25,7 +25,7 @@ async function completeGuidedSession(page) {
   await page.getByRole("button", { name: "我已运行并观察结果" }).click();
   await page.getByRole("textbox", { name: "你的 explanation" }).fill("三个更新读取同一份 render snapshot。");
   await page.getByRole("button", { name: "保存 explanation，继续 practice" }).click();
-  await page.getByRole("radio", { name: /结果可以相同，但 queue 处理语义不同/ }).check();
+  await page.locator("[data-guided-practice-kind='patch-choice'] input[value='functional-updaters']").check();
   await page.getByRole("button", { name: "提交 practice，查看 review" }).click();
   await expect(page.locator("[data-guided-flow]")).toHaveAttribute("data-guided-current-step", "review");
 }
@@ -45,7 +45,7 @@ test("restores Guided responses and current step after reload inside Practice", 
   await expect(flow).toContainText("第一次预测");
   await expect(flow).toContainText("3");
   await expect(flow).toContainText("三个更新读取同一份 render snapshot。");
-  await expect(flow).toContainText("结果可以相同，但 queue 处理语义不同");
+  await expect(flow).toContainText("setCount((n) => n + 1)");
   const needsReview = page.getByRole("button", { name: "标记为需要复习" });
   await needsReview.click();
   await expect(page.getByRole("button", { name: "取消需要复习" })).toHaveAttribute("aria-pressed", "true");
