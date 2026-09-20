@@ -1,5 +1,7 @@
 # React 学习实验室静态页面设计说明
 
+> **Historical / superseded design document.** This file describes the original MVP layout and should not be used as the current learning-experience contract. Current direction: [Product Vision V2](docs/product/PRODUCT-VISION-V2.md) and [Learning Experience V2](docs/product/LEARNING-EXPERIENCE-V2.md).
+
 - 设计版本：v0.1
 - 设计阶段：高保真开发交付
 - 交付类型：页面设计规格，不直接修改业务代码
