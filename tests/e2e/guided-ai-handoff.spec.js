@@ -20,8 +20,10 @@ async function installGatewaySpy(page, requests) {
 
 async function openGuidedExplanation(page) {
   await page.goto("./?demo=state-snapshot-queue");
-  await expect(page.locator(".demo-page h2.demo-title")).toBeVisible();
-  await page.getByRole("button", { name: "开始 Guided Learning" }).click();
+  const learningFlow = page.locator("[data-learning-flow='single']");
+  await expect(learningFlow).toBeVisible();
+  await learningFlow.locator(".single-learning-flow__stages button").filter({ hasText: "实践" }).click();
+  await page.getByRole("button", { name: "开始实践" }).click();
   await page.getByRole("radio", { name: "3" }).check();
   await page.getByRole("button", { name: "提交 prediction" }).click();
   await page.getByRole("button", { name: "Replace × 3" }).click();
