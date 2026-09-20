@@ -50,6 +50,6 @@ export async function openDemo(page, label) {
   const navItem = page.locator("button.workbench-navigation-item").filter({ hasText: label }).first();
   await expect(navItem).toBeVisible();
   await navItem.click();
-  await expect(page.locator(".demo-page")).toBeVisible();
-  await expect(page.locator(".demo-page h2.demo-title")).toBeVisible();
+  await expect(page.locator(".demo-page, [data-learning-flow='single']").first()).toBeVisible();
+  await expect(page.locator("h2.demo-title").first()).toBeVisible();
 }
