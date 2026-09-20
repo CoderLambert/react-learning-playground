@@ -17,24 +17,41 @@ async function openGuidedLesson(page, learningUnitId) {
   await expect(page.locator("[data-guided-flow]")).toHaveAttribute("data-guided-current-step", "predict");
 }
 
-async function completeGuidedLesson(page, { prediction, practice, predictionSubmitted = false }) {
+async function acknowledgeAndExplain(page, explanation) {
   const flow = page.locator("[data-guided-flow]");
-  if (!predictionSubmitted) {
-    await page.getByRole("radio", { name: prediction }).check();
-    await page.getByRole("button", { name: "提交 prediction" }).click();
-  }
-  await expect(flow).toHaveAttribute("data-guided-current-step", "experiment");
   await page.getByRole("button", { name: "我已运行并观察结果" }).click();
   await expect(flow).toHaveAttribute("data-guided-current-step", "explain");
-  await page.getByRole("textbox", { name: "你的 explanation" }).fill("我根据真实 Demo 的观察解释了这个因果关系。");
+  await page.getByRole("textbox", { name: "你的 explanation" }).fill(explanation);
   await page.getByRole("button", { name: "保存 explanation，继续 practice" }).click();
   await expect(flow).toHaveAttribute("data-guided-current-step", "practice");
-  await page.getByRole("radio", { name: practice }).check();
-  await page.getByRole("button", { name: "提交 practice，查看 review" }).click();
-  await expect(flow).toHaveAttribute("data-guided-current-step", "review");
 }
 
-test("identity Guided lesson uses the real list Demo and reaches review", async ({ page }) => {
+async function submitPatch(page, optionId) {
+  const flow = page.locator("[data-guided-flow]");
+  const practice = page.locator("[data-guided-practice-kind='patch-choice']");
+  await expect(practice).toBeVisible();
+  await expect(practice.getByText("期望结果", { exact: true })).toHaveCount(0);
+  await practice.locator(`input[value="${optionId}"]`).check();
+  await page.getByRole("button", { name: "提交 practice，查看 review" }).click();
+  await expect(flow).toHaveAttribute("data-guided-current-step", "review");
+  await expect(flow.locator("[data-guided-practice-outcome='correct']")).toBeVisible();
+}
+
+test("State Snapshot Practice V2 requires a queue-safe code repair", async ({ page }) => {
+  await openGuidedLesson(page, "state-snapshot-queue");
+  await page.getByRole("radio", { name: "3" }).check();
+  await page.getByRole("button", { name: "提交 prediction" }).click();
+
+  const demo = page.locator(".guided-flow-demo-surface");
+  await demo.getByRole("button", { name: "Replace × 3" }).click();
+  await acknowledgeAndExplain(page, "三个 replace 都读取当前 render snapshot，所以不会依次消费 queue 中前一项结果。");
+
+  await expect(page.locator("[data-guided-practice-kind='patch-choice']")).toContainText("handlePlusThree");
+  await submitPatch(page, "functional-updaters");
+  await expect(page.locator("[data-guided-review-practice]")).toContainText("setCount((n) => n + 1)");
+});
+
+test("List Key Practice V2 diagnoses and repairs unstable row identity", async ({ page }) => {
   await openGuidedLesson(page, "rendering-lists-key");
 
   await page.getByRole("radio", { name: /仍留在第一行/ }).check();
@@ -53,16 +70,12 @@ test("identity Guided lesson uses the real list Demo and reaches review", async 
   await demo.getByRole("button", { name: "反转顺序" }).click();
   await expect(demo.locator("input[placeholder='给这一行输入临时备注']").last()).toHaveValue("A-note");
 
-  await page.getByRole("button", { name: "我已运行并观察结果" }).click();
-  await expect(page.locator("[data-guided-flow]")).toHaveAttribute("data-guided-current-step", "explain");
-  await page.getByRole("textbox", { name: "你的 explanation" }).fill("stable identity 让局部 State 跟随业务实体。");
-  await page.getByRole("button", { name: "保存 explanation，继续 practice" }).click();
-  await page.getByRole("radio", { name: /数据模型中的稳定 todo\.id/ }).check();
-  await page.getByRole("button", { name: "提交 practice，查看 review" }).click();
-  await expect(page.locator("[data-guided-flow]")).toHaveAttribute("data-guided-current-step", "review");
+  await acknowledgeAndExplain(page, "index 把身份绑在位置上；stable id 才让局部 State 跟随 todo 实体。");
+  await submitPatch(page, "stable-todo-id-key");
+  await expect(page.locator("[data-guided-review-practice]")).toContainText("key={todo.id}");
 });
 
-test("state Guided lesson uses keyed identity and reaches review", async ({ page }) => {
+test("Preserve and Reset Practice V2 places the reset at the narrow identity boundary", async ({ page }) => {
   await openGuidedLesson(page, "preserving-resetting-state");
   await page.getByRole("radio", { name: /原草稿仍然保留/ }).check();
   await page.getByRole("button", { name: "提交 prediction" }).click();
@@ -76,14 +89,23 @@ test("state Guided lesson uses keyed identity and reaches review", async ({ page
   await demo.getByRole("button", { name: "Alice" }).nth(1).click();
   await expect(chats.nth(1)).toHaveValue("");
 
-  await completeGuidedLesson(page, {
-    prediction: /原草稿仍然保留/,
-    practice: /<ProductForm key=\{product\.id\}/,
-    predictionSubmitted: true,
-  });
+  await acknowledgeAndExplain(page, "State 绑定组件身份；只应在业务身份真正变化的子树上改变 key。");
+  await submitPatch(page, "key-editor-by-customer");
+  await expect(page.locator("[data-guided-review-practice]")).toContainText("key={customer.id}");
 });
 
-test("effect Guided lesson observes cleanup before setup in the real Demo", async ({ page }) => {
+test("You Might Not Need an Effect Practice V2 removes duplicated derived State", async ({ page }) => {
+  await openGuidedLesson(page, "not-need-effect");
+  await page.getByRole("radio", { name: /直接在这次 render 中/ }).check();
+  await page.getByRole("button", { name: "提交 prediction" }).click();
+  await expect(page.locator("[data-guided-flow]")).toHaveAttribute("data-guided-current-step", "experiment");
+
+  await acknowledgeAndExplain(page, "能从当前 props/state 推导的值属于 render，不需要额外 Effect 同步第二份 State。");
+  await submitPatch(page, "derive-visible-products");
+  await expect(page.locator("[data-guided-review-practice]")).toContainText("filterProducts(products, query)");
+});
+
+test("Effect Lifecycle Practice V2 orders update, commit, cleanup, and setup by stable ids", async ({ page }) => {
   await openGuidedLesson(page, "lifecycle-of-reactive-effects");
   await page.getByRole("radio", { name: /先 cleanup 旧房间连接/ }).check();
   await page.getByRole("button", { name: "提交 prediction" }).click();
@@ -93,13 +115,27 @@ test("effect Guided lesson observes cleanup before setup in the real Demo", asyn
   await demo.getByRole("button", { name: "房间 #102" }).click();
   await expect(demo).toContainText("cleanup：关闭房间 #101 的连接");
   await expect(demo).toContainText("setup：建立房间 #102 的连接");
-  await expect(demo).toContainText("响应式 Effect 的生命周期与依赖");
 
-  await completeGuidedLesson(page, {
-    prediction: /先 cleanup 旧房间连接/,
-    practice: /serverUrl \+ roomId；theme 作为非响应式消息处理逻辑读取/,
-    predictionSubmitted: true,
-  });
+  await acknowledgeAndExplain(page, "依赖变化触发新 render；commit 后先 cleanup 旧同步，再 setup 新同步。");
+
+  const practice = page.locator("[data-guided-practice-kind='ordered-sequence']");
+  await expect(practice).toBeVisible();
+  await expect(practice.getByText("期望结果", { exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: /上移 用户操作触发更新/ }).click();
+  await page.getByRole("button", { name: /上移 用户操作触发更新/ }).click();
+  await page.getByRole("button", { name: /上移 React render/ }).click();
+  await page.getByRole("button", { name: /上移 React commit/ }).click();
+  await page.getByRole("button", { name: /上移 React commit/ }).click();
+  await page.getByRole("button", { name: /上移 Effect cleanup/ }).click();
+
+  await page.getByRole("button", { name: "提交 practice，查看 review" }).click();
+  const flow = page.locator("[data-guided-flow]");
+  await expect(flow).toHaveAttribute("data-guided-current-step", "review");
+  await expect(flow.locator("[data-guided-practice-outcome='correct']")).toBeVisible();
+  const review = page.locator("[data-guided-review-practice]");
+  await expect(review).toContainText("topicId 从 news 变为 sports");
+  await expect(review).toContainText("取消上一轮 news 订阅");
+  await expect(review).toContainText("建立 sports 订阅");
 });
 
 test("Guided responses stay isolated when switching to another lesson", async ({ page }) => {
