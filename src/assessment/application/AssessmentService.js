@@ -342,8 +342,9 @@ export class AssessmentService {
     const value = requiredRecord(input, "startSession input");
     const { learningUnitId } = normalizeScope(value, "startSession");
 
+    const suppliedQuestionRecords = value.questionRecords !== undefined;
     let questions;
-    if (value.questionRecords !== undefined) {
+    if (suppliedQuestionRecords) {
       if (!Array.isArray(value.questionRecords) || value.questionRecords.length === 0) {
         throw invalidQuestion("startSession.questionRecords must be a non-empty array");
       }
@@ -369,7 +370,9 @@ export class AssessmentService {
     for (const question of selectedQuestions) {
       try {
         assertQuestionRecord(question);
-        await this.#validateEvidence(question, { learningUnitId, operation: "startSession" });
+        if (suppliedQuestionRecords) {
+          await this.#validateEvidence(question, { learningUnitId, operation: "startSession" });
+        }
         items.push(createSessionItem(question));
       } catch (error) {
         throw this.#normalizeValidationError(error, "startSession.question");
