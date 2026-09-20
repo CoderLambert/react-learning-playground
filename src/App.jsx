@@ -69,6 +69,7 @@ export default function App() {
   const { demoId, selectDemo } = useDemoUrlState({ learningUnits, defaultDemoId: learningUnits[0]?.id });
   const currentLearningUnit = learningUnits.find((unit) => unit.id === demoId) || learningUnits[0] || null;
   const currentOfficialDoc = currentLearningUnit ? getOfficialDocsForLearningUnit(currentLearningUnit.id) : null;
+  const showingOfficialDocs = centerView === "official" && Boolean(currentOfficialDoc);
   const learningUnitsById = useMemo(
     () => new Map(learningUnits.map((unit) => [unit.id, unit])),
     [],
@@ -507,7 +508,7 @@ export default function App() {
           </div>
         </div>
         <div className="top-bar-right">
-          {centerView === "lesson" && (
+          {!showingOfficialDocs && (
             <button
               type="button"
               className="btn btn-outline btn-sm workbench-source-locator-toggle"
@@ -582,7 +583,7 @@ export default function App() {
 
         {viewMode === "focused" ? (
           currentLearningUnit ? (
-            centerView === "official" && currentOfficialDoc ? (
+            showingOfficialDocs ? (
               <OfficialDocsPane
                 learningUnit={currentLearningUnit}
                 doc={currentOfficialDoc}
