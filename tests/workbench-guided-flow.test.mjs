@@ -15,10 +15,25 @@ function reduce(state, action) {
 }
 
 function startState(learningUnitId = "state-snapshot-queue") {
+  const definition = getGuidedActivityDefinition(learningUnitId);
   return reduce(
-    createGuidedFlowState({ learningUnitId, activityRevision: 1 }),
+    createGuidedFlowState({ learningUnitId, activityRevision: definition.revision }),
     { type: GUIDED_FLOW_ACTIONS.START },
   );
+}
+
+function expectedPracticeResponse(definition) {
+  const practice = definition.steps[GUIDED_FLOW_STEP_INDEX.PRACTICE];
+  if (practice.response.kind === "ordered-sequence") {
+    return {
+      kind: practice.response.kind,
+      itemIds: [...practice.reveal.expectedOrder],
+    };
+  }
+  return {
+    kind: practice.response.kind,
+    optionId: practice.reveal.expectedOptionId,
+  };
 }
 
 test("Guided flow stores the first prediction before the experiment and reaches review", () => {
@@ -42,7 +57,10 @@ test("Guided flow stores the first prediction before the experiment and reaches 
   state = reduce(state, { type: GUIDED_FLOW_ACTIONS.SUBMIT_EXPLANATION });
   state = reduce(state, {
     type: GUIDED_FLOW_ACTIONS.SET_PRACTICE_DRAFT,
-    value: "same-result-different-semantics",
+    value: {
+      kind: "patch-choice",
+      optionId: "functional-updaters",
+    },
   });
   state = reduce(state, { type: GUIDED_FLOW_ACTIONS.SUBMIT_PRACTICE });
 
@@ -51,8 +69,8 @@ test("Guided flow stores the first prediction before the experiment and reaches 
   assert.equal(state.observation, "next render state 为 1");
   assert.equal(state.explanation, "三个 replace 使用同一份 render snapshot。");
   assert.deepEqual(state.practiceResponse, {
-    kind: "choice",
-    optionId: "same-result-different-semantics",
+    kind: "patch-choice",
+    optionId: "functional-updaters",
   });
   assert.equal(state.needsReview, false);
   assert.equal(getGuidedFlowUnlockedStep(state), GUIDED_FLOW_STEP_INDEX.REVIEW);
@@ -81,19 +99,17 @@ test("the same reducer completes several new Guided definitions without lesson-s
       value: `explanation for ${learningUnitId}`,
     });
     state = reduce(state, { type: GUIDED_FLOW_ACTIONS.SUBMIT_EXPLANATION });
+    const practiceResponse = expectedPracticeResponse(definition);
     state = reduce(state, {
       type: GUIDED_FLOW_ACTIONS.SET_PRACTICE_DRAFT,
-      value: definition.steps[3].reveal.expectedOptionId,
+      value: practiceResponse,
     });
     state = reduce(state, { type: GUIDED_FLOW_ACTIONS.SUBMIT_PRACTICE });
 
     assert.equal(state.learningUnitId, learningUnitId);
     assert.equal(state.firstPrediction, definition.steps[0].reveal.expectedOptionId);
     assert.equal(state.observation, definition.steps[1].expectedObservation);
-    assert.deepEqual(state.practiceResponse, {
-      kind: "choice",
-      optionId: definition.steps[3].reveal.expectedOptionId,
-    });
+    assert.deepEqual(state.practiceResponse, practiceResponse);
     assert.equal(state.completionState, "completed");
     assert.equal(state.stepIndex, GUIDED_FLOW_STEP_INDEX.REVIEW);
   }
@@ -109,7 +125,10 @@ test("Needs Review is an explicit reversible state only at completed review", ()
   });
   state = reduce(state, { type: GUIDED_FLOW_ACTIONS.SET_EXPLANATION, value: "我的原始解释" });
   state = reduce(state, { type: GUIDED_FLOW_ACTIONS.SUBMIT_EXPLANATION });
-  state = reduce(state, { type: GUIDED_FLOW_ACTIONS.SET_PRACTICE_DRAFT, value: "same-result-different-semantics" });
+  state = reduce(state, { type: GUIDED_FLOW_ACTIONS.SET_PRACTICE_DRAFT, value: {
+      kind: "patch-choice",
+      optionId: "functional-updaters",
+    } });
   state = reduce(state, { type: GUIDED_FLOW_ACTIONS.SUBMIT_PRACTICE });
 
   state = reduce(state, { type: GUIDED_FLOW_ACTIONS.TOGGLE_NEEDS_REVIEW });
@@ -153,11 +172,14 @@ test("lesson reset isolates all temporary Guided responses", () => {
   state = reduce(state, {
     type: GUIDED_FLOW_ACTIONS.RESET_SESSION,
     learningUnitId: "rendering-lists-key",
-    activityRevision: 1,
+    activityRevision: getGuidedActivityDefinition("rendering-lists-key").revision,
   });
 
   assert.deepEqual(state, {
-    ...createGuidedFlowState({ learningUnitId: "rendering-lists-key", activityRevision: 1 }),
+    ...createGuidedFlowState({
+      learningUnitId: "rendering-lists-key",
+      activityRevision: getGuidedActivityDefinition("rendering-lists-key").revision,
+    }),
   });
 });
 
