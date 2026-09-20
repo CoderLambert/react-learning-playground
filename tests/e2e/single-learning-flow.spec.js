@@ -64,6 +64,25 @@ test("diagnostic verification turns a known wrong model into counter-evidence be
   await expect(remediation.getByText(/reorder 后 task Props 会正常更新/)).toBeHidden();
   await expect(remediation.getByText("实验后再看完整解释")).toBeVisible();
 
+  await page.getByRole("button", { name: "重新选择" }).click();
+  await expect(page.getByText("重新判断一次", { exact: true })).toBeVisible();
+  await expect(page.getByText("正确答案", { exact: true })).toHaveCount(0);
+
+  await page.getByRole("radio", { name: /AAA 存在 input DOM 节点内部/ }).check();
+  await page.getByRole("button", { name: "再次验证" }).click();
+
+  const secondRemediation = page.locator("[data-assessment-misconception='state-lives-in-dom']");
+  await expect(secondRemediation).toBeVisible();
+  await expect(secondRemediation).toContainText("把局部 State 当成 DOM 节点保存的数据");
+
+  await page.getByRole("button", { name: "重新选择" }).click();
+  await page.getByRole("radio", { name: /同一个 index 让原组件身份按位置延续/ }).check();
+  await page.getByRole("button", { name: "再次验证" }).click();
+
+  await expect(page.getByText("已纠正", { exact: true })).toBeVisible();
+  await expect(page.locator("[data-assessment-correction='corrected']")).toBeVisible();
+  await expect(page.getByText(/第一次错误仍保留在复习记录中/)).toBeVisible();
+
   await page.getByRole("button", { name: "查看依据 2" }).click();
   await expect(page.getByRole("tab", { name: "源码", exact: true })).toHaveAttribute("aria-selected", "true");
   await expect(page.locator(".source-viewer--inspector")).toHaveAttribute("data-source-focus", "22-33");
