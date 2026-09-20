@@ -11,6 +11,7 @@ import { LearningInspector } from "./components/learning-inspector";
 import { AssessmentPane } from "./assessment/ui/AssessmentPane.jsx";
 import { AssessmentPracticePane } from "./assessment/ui/AssessmentPracticePane.jsx";
 import { useAssessmentApplication } from "./assessment/application/useAssessmentApplication.js";
+import { useAssessmentReview } from "./assessment/application/useAssessmentReview.js";
 import { NoteToc } from "./components/notes/NoteToc";
 import { NoteViewer } from "./components/notes/NoteViewer";
 import { OfficialDocsPane } from "./components/official-docs/OfficialDocsPane";
@@ -103,6 +104,13 @@ export default function App() {
   });
   const assessmentView = assessment.view;
   const assessmentCommands = assessment.commands;
+  const completedLearningFlowSessionId = currentLearningFlow && assessmentView.session?.status === "completed"
+    ? assessmentView.session.id
+    : null;
+  const learningFlowReview = useAssessmentReview({
+    learningUnitId: currentLearningFlow ? currentLearningUnit?.id ?? null : null,
+    activeSessionId: completedLearningFlowSessionId,
+  });
 
   const aiAssessmentIntegration = useMemo(
     () => assessmentView.integrationCapabilities
@@ -736,6 +744,7 @@ export default function App() {
                 onOpenAi={handleLearningFlowOpenAi}
                 onContinue={handleGuidedContinue}
                 verificationSession={assessmentView.session}
+                assessmentReview={learningFlowReview}
               />
             ) : (
               <div key={currentLearningUnit.id} className="demo-page">
