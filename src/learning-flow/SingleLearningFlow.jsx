@@ -1,4 +1,3 @@
-import { useAssessmentReview } from "../assessment/application/useAssessmentReview.js";
 import "./SingleLearningFlow.css";
 
 export const LEARNING_FLOW_STAGES = Object.freeze({
@@ -27,15 +26,9 @@ export function SingleLearningFlow({
   onOpenAi,
   onContinue,
   verificationSession = null,
+  assessmentReview = null,
 }) {
-  const completedSessionId = verificationSession?.status === "completed"
-    ? verificationSession.id
-    : null;
-  const assessmentReview = useAssessmentReview({
-    learningUnitId: learningUnit?.id ?? null,
-    activeSessionId: completedSessionId,
-  });
-  const latestReview = assessmentReview.review ?? assessmentReview.history?.[0] ?? null;
+  const latestReview = assessmentReview?.review ?? assessmentReview?.history?.[0] ?? null;
   const needsReview = Boolean(latestReview?.incorrectCount > 0);
   const currentStage = STAGE_ITEMS.find((item) => item.id === stage) ?? STAGE_ITEMS[0];
 
