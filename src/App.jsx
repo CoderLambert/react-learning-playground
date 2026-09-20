@@ -52,6 +52,8 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState("");
   const [mobileNavigationOpen, setMobileNavigationOpen] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
+  const [centerView, setCenterView] = useState("lesson");
+  const [officialDocsFullscreen, setOfficialDocsFullscreen] = useState(false);
   const [sourceFocus, setSourceFocus] = useState(null);
   const [sourceLocatorActive, setSourceLocatorActive] = useState(false);
   const [pendingSourceTarget, setPendingSourceTarget] = useState(null);
@@ -66,6 +68,7 @@ export default function App() {
   } = usePersistedWorkbenchState();
   const { demoId, selectDemo } = useDemoUrlState({ learningUnits, defaultDemoId: learningUnits[0]?.id });
   const currentLearningUnit = learningUnits.find((unit) => unit.id === demoId) || learningUnits[0] || null;
+  const currentOfficialDoc = currentLearningUnit ? getOfficialDocsForLearningUnit(currentLearningUnit.id) : null;
   const learningUnitsById = useMemo(
     () => new Map(learningUnits.map((unit) => [unit.id, unit])),
     [],
@@ -235,6 +238,8 @@ export default function App() {
   const navigateToDemo = (id) => {
     selectDemo(id);
     setViewMode("focused");
+    setCenterView("lesson");
+    setOfficialDocsFullscreen(false);
     setMobileNavigationOpen(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -257,6 +262,8 @@ export default function App() {
     setPendingSourceTarget(null);
     setPendingConversationTarget(null);
     setSourceLocatorActive(false);
+    setCenterView("lesson");
+    setOfficialDocsFullscreen(false);
     setViewMode("all");
     setMobileNavigationOpen(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -392,12 +399,6 @@ export default function App() {
       onFocusModeChange={setFocusMode}
       onWidthChange={setInspectorWidth}
       notes={<NotesPane learningUnitId={currentLearningUnit.id} />}
-      official={(
-        <OfficialDocsPane
-          learningUnit={currentLearningUnit}
-          doc={getOfficialDocsForLearningUnit(currentLearningUnit.id)}
-        />
-      )}
       source={(
         <Suspense fallback={<div className="note-runtime-state">正在加载源码查看器…</div>}>
           <SourceViewer
