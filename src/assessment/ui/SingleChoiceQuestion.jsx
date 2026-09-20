@@ -10,6 +10,7 @@ export function SingleChoiceQuestion({
   question,
   value = "",
   feedback = null,
+  revealCorrectAnswer = true,
   onChange,
   disabled = false,
 }) {
@@ -31,9 +32,9 @@ export function SingleChoiceQuestion({
       <div className="mt-5 space-y-3">
         {question.content.options.map((option, index) => {
           const selected = value === option.id;
-          const correct =
-            revealAnswer && option.id === question.content.correctOptionId;
-          const incorrect = revealAnswer && selected && !correct;
+          const isCorrectOption = option.id === question.content.correctOptionId;
+          const correct = revealAnswer && revealCorrectAnswer && isCorrectOption;
+          const incorrect = revealAnswer && selected && !isCorrectOption;
           return (
             <label
               key={option.id}
