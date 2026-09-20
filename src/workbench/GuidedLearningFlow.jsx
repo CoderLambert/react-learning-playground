@@ -16,6 +16,14 @@ const STEP_LABELS = Object.freeze({
   review: "Review",
 });
 
+const PRACTICE_STEP_LABELS = Object.freeze({
+  predict: "预测",
+  experiment: "实验",
+  explain: "解释",
+  practice: "迁移",
+  review: "回顾",
+});
+
 function getChoiceLabel(step, optionId) {
   return step?.response?.options?.find((option) => option.id === optionId)?.label ?? optionId ?? "未选择";
 }
@@ -41,10 +49,16 @@ function GuidedAskAiButton({ source, step, learnerResponse, onAskAi }) {
   );
 }
 
-function GuidedStepProgress({ definition, state, onNavigate }) {
+function GuidedStepProgress({
+  definition,
+  state,
+  onNavigate,
+  labels = STEP_LABELS,
+  ariaLabel = "Guided 学习步骤",
+}) {
   const unlockedStep = getGuidedFlowUnlockedStep(state);
   return (
-    <nav className="guided-flow-progress" aria-label="Guided 学习步骤">
+    <nav className="guided-flow-progress" aria-label={ariaLabel}>
       {definition.steps.map((step, index) => (
         <button
           key={step.id}
@@ -56,7 +70,7 @@ function GuidedStepProgress({ definition, state, onNavigate }) {
           onClick={() => onNavigate(index)}
         >
           <span className="guided-flow-progress-index">{index + 1}</span>
-          <span>{STEP_LABELS[step.type] ?? step.type}</span>
+          <span>{labels[step.type] ?? step.type}</span>
         </button>
       ))}
     </nav>
@@ -233,6 +247,7 @@ function GuidedReviewStep({
   onContinue,
   canContinue,
   continueLabel = "Continue to next lesson",
+  practicePresentation = false,
 }) {
   const step = definition.steps[GUIDED_FLOW_STEP_INDEX.REVIEW];
   const review = getGuidedReviewModel(state, definition);
@@ -249,26 +264,30 @@ function GuidedReviewStep({
     <div className="guided-flow-step" data-guided-step-panel="review">
       <p className="guided-flow-eyebrow">回到证据验证理解</p>
       <h3>{step.prompt}</h3>
-      <div className="guided-flow-evidence" aria-label="本次 Guided 学习记录">
+      <div className="guided-flow-evidence" aria-label={practicePresentation ? "本次实践记录" : "本次 Guided 学习记录"}>
         <div>
-          <strong>Your first prediction</strong>
+          <strong>{practicePresentation ? "第一次预测" : "Your first prediction"}</strong>
           <p>{review?.firstPrediction.label}</p>
         </div>
         <div>
-          <strong>Actual observation</strong>
+          <strong>{practicePresentation ? "实际观察" : "Actual observation"}</strong>
           <p>{review?.actualObservation || "尚未记录"}</p>
         </div>
         <div>
-          <strong>Your explanation</strong>
+          <strong>{practicePresentation ? "你的解释" : "Your explanation"}</strong>
           <p>{review?.explanation || "尚未记录"}</p>
         </div>
         <div>
-          <strong>Practice outcome</strong>
+          <strong>{practicePresentation ? "迁移练习结果" : "Practice outcome"}</strong>
           <p>{review?.practiceOutcome.response.label}</p>
           {review?.practiceOutcome.observation && <p>{review.practiceOutcome.observation}</p>}
         </div>
       </div>
-      <p className="guided-flow-hint">这些是本次 session 的原始学习记录；Explanation 不在这里自动评分。</p>
+      <p className="guided-flow-hint">
+        {practicePresentation
+          ? "这些是你刚才留下的学习证据；自由解释暂不自动判定对错，可用 AI 做可选检查。"
+          : "这些是本次 session 的原始学习记录；Explanation 不在这里自动评分。"}
+      </p>
       <div className="guided-flow-review-actions" aria-label="Review 资源">
         {review?.resources.map((resource) => (
           <button
@@ -278,8 +297,8 @@ function GuidedReviewStep({
             data-guided-review-resource={resource}
             onClick={() => handleResource(resource)}
           >
-            {resource === "notes" && "回顾 Notes"}
-            {resource === "source" && "回顾 Source"}
+            {resource === "notes" && (practicePresentation ? "回顾笔记" : "回顾 Notes")}
+            {resource === "source" && (practicePresentation ? "查看源码" : "回顾 Source")}
             {resource === "demo" && "回到 Demo"}
           </button>
         ))}
@@ -296,7 +315,9 @@ function GuidedReviewStep({
           aria-pressed={review?.needsReview === true}
           onClick={() => dispatch({ type: GUIDED_FLOW_ACTIONS.TOGGLE_NEEDS_REVIEW })}
         >
-          {review?.needsReview ? "取消 Needs Review" : "标记 Needs Review"}
+          {practicePresentation
+            ? (review?.needsReview ? "取消需要复习" : "标记为需要复习")
+            : (review?.needsReview ? "取消 Needs Review" : "标记 Needs Review")}
         </button>
         <button
           type="button"
@@ -304,7 +325,7 @@ function GuidedReviewStep({
           data-guided-action="retry"
           onClick={onRetry}
         >
-          Retry Guided Lesson
+          {practicePresentation ? "重新实践" : "Retry Guided Lesson"}
         </button>
         <button
           type="button"
@@ -360,7 +381,7 @@ export function GuidedLearningFlow({
         <section className="guided-flow-entry" data-guided-entry aria-labelledby="guided-learning-entry-title">
           <div>
             <p className="guided-flow-eyebrow">{practicePresentation ? "当前阶段" : "可选学习路径"}</p>
-            <h2 id="guided-learning-entry-title">{practicePresentation ? "Practice" : "Guided Learning"}</h2>
+            <h2 id="guided-learning-entry-title">{practicePresentation ? "实践" : "Guided Learning"}</h2>
             <p>{practicePresentation
               ? "先预测，再操作真实 Demo、解释观察结果，最后把 key 的身份模型迁移到新场景。"
               : "先暴露 prediction，再操作真实 Demo、写下 explanation，最后完成一个 practice 迁移题。"}</p>
@@ -395,7 +416,7 @@ export function GuidedLearningFlow({
     >
       <header className="guided-flow-header">
         <div>
-          <p className="guided-flow-eyebrow">{practicePresentation ? "Practice" : "Guided Learning"} · {learningUnit.title}</p>
+          <p className="guided-flow-eyebrow">{practicePresentation ? "实践" : "Guided Learning"} · {learningUnit.title}</p>
           <h2 id="guided-learning-title">{definition.goal}</h2>
           {persistenceNotice && (
             <p className="guided-flow-persistence-notice" role="status" data-guided-persistence-status>
@@ -415,6 +436,8 @@ export function GuidedLearningFlow({
       <GuidedStepProgress
         definition={definition}
         state={state}
+        labels={practicePresentation ? PRACTICE_STEP_LABELS : STEP_LABELS}
+        ariaLabel={practicePresentation ? "实践步骤" : "Guided 学习步骤"}
         onNavigate={(stepIndex) => dispatch({ type: GUIDED_FLOW_ACTIONS.NAVIGATE, stepIndex })}
       />
       <div className="guided-flow-current-step">
@@ -461,6 +484,7 @@ export function GuidedLearningFlow({
             onContinue={onContinue}
             canContinue={canContinue}
             continueLabel={continueLabel ?? (practicePresentation ? "进入验证" : "Continue to next lesson")}
+            practicePresentation={practicePresentation}
           />
         )}
       </div>
