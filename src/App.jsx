@@ -433,12 +433,75 @@ export default function App() {
     </div>
   );
 
+  const inspectorSource = currentLearningUnit ? (
+    <Suspense fallback={<div className="note-runtime-state">正在加载源码查看器…</div>}>
+      <SourceViewer
+        learningUnit={currentLearningUnit}
+        activeFileName={workbenchState.sourceFile}
+        onActiveFileChange={(fileName) => {
+          setSourceFile(fileName);
+          if (sourceFocus?.fileName !== fileName) setSourceFocus(null);
+        }}
+        focusRange={sourceFocus}
+        onFocusRangeChange={setSourceFocus}
+      />
+    </Suspense>
+  ) : null;
+
+  const inspectorAi = currentLearningUnit ? (
+    <div>
+      {aiAssistant.mode === "assessment_authoring" && (
+        <div role="status" className="ai-assessment-mode-notice">
+          当前处于评测出题/管理模式；本次发送可使用评测工具。
+          <button type="button" onClick={aiAssistant.exitAssessmentAuthoring} disabled={aiAssistant.status === "streaming"}>
+            退出评测模式
+          </button>
+        </div>
+      )}
+      <AiAssistant
+        contextSummary={aiAssistant.contextSummary}
+        messages={aiAssistant.messages}
+        status={aiAssistant.status}
+        inputValue={aiAssistant.inputValue}
+        onInputChange={aiAssistant.setInputValue}
+        onSubmit={aiAssistant.submit}
+        onRetry={aiAssistant.canRetry ? aiAssistant.retryFailedTurn : undefined}
+        onStop={aiAssistant.stop}
+        onCitationOpen={handleCitationOpen}
+        disabled={aiAssistant.disabled}
+        error={aiAssistant.error}
+        notice={aiAssistant.notice}
+        providerLabel="DeepSeek"
+        modelLabel={aiAssistant.modelLabel}
+        conversationNavigation={conversationNavigation}
+        contextMeter={(
+          <ContextMeter
+            budget={aiAssistant.contextBudget}
+            onCompact={aiAssistant.compactContext}
+            compacting={aiAssistant.compacting}
+            disabled={!aiAssistant.configured || aiAssistant.messages.length === 0}
+          />
+        )}
+      />
+    </div>
+  ) : null;
+
+  const learningFlowInspectorPanels = currentLearningFlow
+    ? [
+        { id: "source", label: "源码", content: inspectorSource },
+        { id: "ai", label: "AI", content: inspectorAi },
+      ]
+    : null;
+  const inspectorActiveTab = currentLearningFlow && !["source", "ai"].includes(workbenchState.inspectorTab)
+    ? "source"
+    : workbenchState.inspectorTab;
+
   const inspector = currentLearningUnit ? (
     <LearningInspector
       learningUnit={currentLearningUnit}
       state={{
         open: workbenchState.inspectorOpen,
-        activeTab: workbenchState.inspectorTab,
+        activeTab: inspectorActiveTab,
         focusMode,
         width: workbenchState.inspectorWidth,
         sourceFile: workbenchState.sourceFile,
@@ -447,58 +510,10 @@ export default function App() {
       onOpenChange={setInspectorOpen}
       onFocusModeChange={setFocusMode}
       onWidthChange={setInspectorWidth}
+      panels={learningFlowInspectorPanels}
       notes={<NotesPane learningUnitId={currentLearningUnit.id} />}
-      source={(
-        <Suspense fallback={<div className="note-runtime-state">正在加载源码查看器…</div>}>
-          <SourceViewer
-            learningUnit={currentLearningUnit}
-            activeFileName={workbenchState.sourceFile}
-            onActiveFileChange={(fileName) => {
-              setSourceFile(fileName);
-              if (sourceFocus?.fileName !== fileName) setSourceFocus(null);
-            }}
-            focusRange={sourceFocus}
-            onFocusRangeChange={setSourceFocus}
-          />
-        </Suspense>
-      )}
-      ai={(
-        <div>
-          {aiAssistant.mode === "assessment_authoring" && (
-            <div role="status" className="ai-assessment-mode-notice">
-              当前处于评测出题/管理模式；本次发送可使用评测工具。
-              <button type="button" onClick={aiAssistant.exitAssessmentAuthoring} disabled={aiAssistant.status === "streaming"}>
-                退出评测模式
-              </button>
-            </div>
-          )}
-          <AiAssistant
-            contextSummary={aiAssistant.contextSummary}
-            messages={aiAssistant.messages}
-            status={aiAssistant.status}
-            inputValue={aiAssistant.inputValue}
-            onInputChange={aiAssistant.setInputValue}
-            onSubmit={aiAssistant.submit}
-            onRetry={aiAssistant.canRetry ? aiAssistant.retryFailedTurn : undefined}
-            onStop={aiAssistant.stop}
-            onCitationOpen={handleCitationOpen}
-            disabled={aiAssistant.disabled}
-            error={aiAssistant.error}
-            notice={aiAssistant.notice}
-            providerLabel="DeepSeek"
-            modelLabel={aiAssistant.modelLabel}
-            conversationNavigation={conversationNavigation}
-            contextMeter={(
-              <ContextMeter
-                budget={aiAssistant.contextBudget}
-                onCompact={aiAssistant.compactContext}
-                compacting={aiAssistant.compacting}
-                disabled={!aiAssistant.configured || aiAssistant.messages.length === 0}
-              />
-            )}
-          />
-        </div>
-      )}
+      source={inspectorSource}
+      ai={inspectorAi}
       assessment={(
         <div className="assessment-pane-shell">
           {assessmentView.storageNotice && <p role="status">{assessmentView.storageNotice}</p>}
