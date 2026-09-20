@@ -82,7 +82,10 @@ function createReviewState() {
   state = reduce(state, { type: GUIDED_FLOW_ACTIONS.SUBMIT_EXPLANATION });
   state = reduce(state, {
     type: GUIDED_FLOW_ACTIONS.SET_PRACTICE_DRAFT,
-    value: "same-result-different-semantics",
+    value: {
+      kind: "patch-choice",
+      optionId: "functional-updaters",
+    },
   });
   return reduce(state, { type: GUIDED_FLOW_ACTIONS.SUBMIT_PRACTICE });
 }
@@ -93,7 +96,7 @@ const fixedTimestamp = "2026-09-18T15:00:00.000Z";
 function createDefinitionWithPractice(practiceStep) {
   return {
     ...definition,
-    revision: 2,
+    revision: definition.revision + 1,
     steps: definition.steps.map((step, index) => (index === 3 ? practiceStep : step)),
   };
 }
@@ -133,7 +136,7 @@ test("serializes and restores the original Guided responses and current step", (
   assert.deepEqual(snapshot, {
     schemaVersion: 2,
     learningUnitId: "state-snapshot-queue",
-    activityRevision: 1,
+    activityRevision: 2,
     currentStepId: "review-snapshot-queue",
     predictionDraft: "count-3",
     firstPrediction: "count-3",
@@ -142,19 +145,19 @@ test("serializes and restores the original Guided responses and current step", (
     explanation: "三个更新读取同一份 render snapshot。",
     explanationSubmitted: true,
     practiceDraft: {
-      kind: "choice",
-      optionId: "same-result-different-semantics",
+      kind: "patch-choice",
+      optionId: "functional-updaters",
     },
     practiceResponse: {
-      kind: "choice",
-      optionId: "same-result-different-semantics",
+      kind: "patch-choice",
+      optionId: "functional-updaters",
     },
     needsReview: false,
     completedSteps: [
       "predict-replace-triple",
       "experiment-replace-triple",
       "explain-shared-snapshot",
-      "practice-updater-replace-semantics",
+      "practice-compose-three-increments",
       "review-snapshot-queue",
     ],
     sessionStarted: true,
@@ -170,34 +173,129 @@ test("serializes and restores the original Guided responses and current step", (
   assert.equal(restored.firstPrediction, "count-3");
   assert.equal(restored.explanation, "三个更新读取同一份 render snapshot。");
   assert.deepEqual(restored.practiceResponse, {
-    kind: "choice",
-    optionId: "same-result-different-semantics",
+    kind: "patch-choice",
+    optionId: "functional-updaters",
   });
   assert.equal(restored.needsReview, false);
   assert.equal(restored.completionState, "completed");
 });
 
-test("Needs Review persists without making older v1 snapshots incompatible", () => {
-  const state = reduce(createReviewState(), { type: GUIDED_FLOW_ACTIONS.TOGGLE_NEEDS_REVIEW });
-  const snapshot = serializeGuidedSessionSnapshot(state, { definition, updatedAt: fixedTimestamp });
-  assert.equal(snapshot.needsReview, true);
-  assert.equal(restoreGuidedFlowState(snapshot, { definition }).needsReview, true);
-
+test("legacy v1 choice sessions still migrate when the authored choice activity itself is unchanged", () => {
+  const legacyDefinition = {
+    ...definition,
+    revision: 1,
+    steps: definition.steps.map((step, index) => (
+      index === 3
+        ? {
+            id: "practice-updater-replace-semantics",
+            type: "practice",
+            prompt: "旧版 choice practice",
+            response: {
+              kind: "choice",
+              options: [
+                { id: "same-result-different-semantics", label: "结果相同但语义不同" },
+                { id: "same-result-same-semantics", label: "结果相同且语义相同" },
+              ],
+            },
+            reveal: {
+              expectedOptionId: "same-result-different-semantics",
+              observation: "旧版 choice activity 的迁移 fixture。",
+            },
+          }
+        : step
+    )),
+  };
   const legacySnapshot = {
-    ...snapshot,
     schemaVersion: 1,
+    learningUnitId: "state-snapshot-queue",
+    activityRevision: 1,
+    currentStepId: "review-snapshot-queue",
+    predictionDraft: "count-3",
+    firstPrediction: "count-3",
+    experimentAcknowledged: true,
+    observation: "next render state 为 1。",
+    explanation: "三个更新读取同一份 render snapshot。",
+    explanationSubmitted: true,
     practiceDraft: "same-result-different-semantics",
     practiceResponse: "same-result-different-semantics",
+    completedSteps: [
+      "predict-replace-triple",
+      "experiment-replace-triple",
+      "explain-shared-snapshot",
+      "practice-updater-replace-semantics",
+      "review-snapshot-queue",
+    ],
+    sessionStarted: true,
+    sessionCompleted: true,
+    updatedAt: fixedTimestamp,
   };
-  delete legacySnapshot.needsReview;
-  const legacyDecoded = deserializeGuidedSessionSnapshot(JSON.stringify(legacySnapshot), { definition });
-  assert.equal(legacyDecoded.status, GUIDED_SESSION_PERSISTENCE_STATUS.RESTORED);
-  assert.equal(legacyDecoded.snapshot.schemaVersion, 2);
-  assert.deepEqual(legacyDecoded.snapshot.practiceResponse, {
+
+  const decoded = deserializeGuidedSessionSnapshot(JSON.stringify(legacySnapshot), {
+    definition: legacyDefinition,
+  });
+  assert.equal(decoded.status, GUIDED_SESSION_PERSISTENCE_STATUS.RESTORED);
+  assert.equal(decoded.snapshot.schemaVersion, 2);
+  assert.deepEqual(decoded.snapshot.practiceResponse, {
     kind: "choice",
     optionId: "same-result-different-semantics",
   });
-  assert.equal(restoreGuidedFlowState(legacyDecoded.snapshot, { definition }).needsReview, false);
+  assert.equal(restoreGuidedFlowState(decoded.snapshot, { definition: legacyDefinition }).needsReview, false);
+});
+
+test("pre-V2 state-snapshot sessions fail safely after the lesson revision changes", () => {
+  const legacyDefinition = {
+    ...definition,
+    revision: 1,
+    steps: definition.steps.map((step, index) => (
+      index === 3
+        ? {
+            id: "practice-updater-replace-semantics",
+            type: "practice",
+            prompt: "旧版 choice practice",
+            response: {
+              kind: "choice",
+              options: [
+                { id: "same-result-different-semantics", label: "结果相同但语义不同" },
+                { id: "same-result-same-semantics", label: "结果相同且语义相同" },
+              ],
+            },
+            reveal: {
+              expectedOptionId: "same-result-different-semantics",
+              observation: "旧版 choice activity。",
+            },
+          }
+        : step
+    )),
+  };
+  const oldState = createGuidedFlowState({
+    learningUnitId: legacyDefinition.learningUnitId,
+    activityRevision: legacyDefinition.revision,
+  });
+  const storage = createMemoryStorage({
+    [getGuidedSessionStorageKey(definition.learningUnitId)]: JSON.stringify({
+      schemaVersion: 1,
+      learningUnitId: definition.learningUnitId,
+      activityRevision: 1,
+      currentStepId: "predict-replace-triple",
+      predictionDraft: null,
+      firstPrediction: null,
+      experimentAcknowledged: false,
+      observation: null,
+      explanation: "",
+      explanationSubmitted: false,
+      practiceDraft: null,
+      practiceResponse: null,
+      completedSteps: [],
+      sessionStarted: false,
+      sessionCompleted: false,
+      updatedAt: fixedTimestamp,
+    }),
+  });
+  assert.equal(oldState.activityRevision, 1);
+
+  const persistence = createGuidedSessionPersistence({ definition, storage });
+  assert.equal(persistence.read().status, GUIDED_SESSION_PERSISTENCE_STATUS.INCOMPATIBLE);
+  assert.equal(storage.getItem(persistence.key), null);
 });
 
 test("in-progress draft and first prediction survive restore without changing identity", () => {
@@ -271,7 +369,7 @@ test("malformed and impossible snapshots fall back safely", () => {
 
 test("activity revision mismatch invalidates old responses instead of migrating them", () => {
   const snapshot = serializeGuidedSessionSnapshot(createReviewState(), { definition, updatedAt: fixedTimestamp });
-  const changedDefinition = { ...definition, revision: 2 };
+  const changedDefinition = { ...definition, revision: definition.revision + 1 };
   const validation = validateGuidedSessionSnapshot(snapshot, { definition: changedDefinition });
   assert.equal(validation.valid, false);
   assert.equal(validation.reason, GUIDED_SESSION_PERSISTENCE_STATUS.INCOMPATIBLE);
