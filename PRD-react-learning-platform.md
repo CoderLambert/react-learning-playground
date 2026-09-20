@@ -1,5 +1,7 @@
 # React 学习实验室产品需求文档
 
+> **Historical / superseded product document.** This file records the original MVP direction from the Vite-template stage and contains repository-state assumptions that are no longer true. Current product direction: [Product Vision V2](docs/product/PRODUCT-VISION-V2.md) and [Learning Experience V2](docs/product/LEARNING-EXPERIENCE-V2.md). Keep this file for history; do not use it as the current implementation contract.
+
 - 文档版本：v0.1
 - 文档状态：草案
 - 产品名称：React 学习实验室
