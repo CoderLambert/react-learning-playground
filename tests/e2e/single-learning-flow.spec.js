@@ -60,7 +60,7 @@ test("diagnostic verification turns a known wrong model into counter-evidence be
   await expect(remediation).toContainText("反证线索");
   await expect(remediation).toContainText("先做这个实验");
   await expect(remediation).toContainText("第一行输入 AAA → 反转顺序");
-  await expect(remediation.getByText(/reorder 后 task Props 会正常更新/)).toHaveCount(0);
+  await expect(remediation.getByText(/reorder 后 task Props 会正常更新/)).toBeHidden();
   await expect(remediation.getByText("实验后再看完整解释")).toBeVisible();
 
   await page.getByRole("button", { name: "查看依据 2" }).click();
