@@ -3,6 +3,7 @@ import test from "node:test";
 
 import { AssessmentService } from "../src/assessment/application/AssessmentService.js";
 import { getCanonicalAssessmentQuestions } from "../src/assessment/content/canonicalQuestions.js";
+import { getMisconceptionForLearningUnit } from "../src/content/conceptModels.js";
 import { MemoryAssessmentRepository } from "../src/assessment/infrastructure/memoryAssessmentRepository.js";
 
 function createIdFactory() {
@@ -10,16 +11,18 @@ function createIdFactory() {
   return (prefix) => `${prefix}-canonical-${++sequence}`;
 }
 
-test("Lists & Key ships three validated canonical verification questions", () => {
+test("Lists & Key ships five validated canonical verification questions", () => {
   const questions = getCanonicalAssessmentQuestions("rendering-lists-key");
 
-  assert.equal(questions.length, 3);
+  assert.equal(questions.length, 5);
   assert.deepEqual(
     questions.map((question) => question.id),
     [
       "canonical-rendering-lists-key-identity",
       "canonical-rendering-lists-key-reorder",
       "canonical-rendering-lists-key-selection",
+      "canonical-rendering-lists-key-stable-reorder",
+      "canonical-rendering-lists-key-strategy-switch",
     ],
   );
   assert.ok(questions.every((question) => question.provenance.source === "canonical"));
@@ -28,7 +31,34 @@ test("Lists & Key ships three validated canonical verification questions", () =>
   assert.deepEqual(getCanonicalAssessmentQuestions("props"), []);
 });
 
-test("canonical verification snapshots product questions without adding them to the mutable question bank", async () => {
+test("diagnostic distractors map to product-owned misconceptions without mapping the correct answer", () => {
+  const questions = getCanonicalAssessmentQuestions("rendering-lists-key");
+  const diagnosticQuestions = questions.filter((question) => question.content.diagnosticOptionMap);
+
+  assert.ok(diagnosticQuestions.length >= 2);
+
+  for (const question of diagnosticQuestions) {
+    const mapping = question.content.diagnosticOptionMap;
+    assert.equal(Object.hasOwn(mapping, question.content.correctOptionId), false);
+
+    for (const [optionId, misconceptionId] of Object.entries(mapping)) {
+      assert.ok(question.content.options.some((option) => option.id === optionId));
+      assert.ok(
+        getMisconceptionForLearningUnit(question.learningUnitId, misconceptionId),
+        `${question.id}: missing misconception ${misconceptionId}`,
+      );
+    }
+  }
+
+  const reorder = questions.find((question) => question.id === "canonical-rendering-lists-key-reorder");
+  assert.equal(reorder.content.diagnosticOptionMap["dom-static"], "dom-not-updated");
+  assert.equal(reorder.content.diagnosticOptionMap["state-in-dom"], "state-lives-in-dom");
+
+  const stableReorder = questions.find((question) => question.id === "canonical-rendering-lists-key-stable-reorder");
+  assert.equal(stableReorder.content.diagnosticOptionMap["stable-remount"], "stable-key-remounts");
+});
+
+test("canonical verification snapshots diagnostics without adding product questions to the mutable question bank", async () => {
   const repository = new MemoryAssessmentRepository();
   const service = new AssessmentService({
     repository,
@@ -46,7 +76,7 @@ test("canonical verification snapshots product questions without adding them to 
     questionRecords: questions,
   });
 
-  assert.equal(session.items.length, 3);
+  assert.equal(session.items.length, 5);
   assert.deepEqual(
     session.items.map((item) => item.questionId),
     questions.map((question) => question.id),
@@ -55,6 +85,11 @@ test("canonical verification snapshots product questions without adding them to 
     await repository.listQuestions({ learningUnitId: "rendering-lists-key" }),
     [],
   );
+
+  const reorderSnapshot = session.items.find(
+    (item) => item.questionId === "canonical-rendering-lists-key-reorder",
+  ).snapshot;
+  assert.equal(reorderSnapshot.content.diagnosticOptionMap["dom-static"], "dom-not-updated");
 
   const first = session.items[0].snapshot;
   const attempt = await service.submitAnswer({
