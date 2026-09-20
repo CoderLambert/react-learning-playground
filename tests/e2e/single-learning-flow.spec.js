@@ -21,7 +21,7 @@ test("Lists and Key exposes one Understand Practice Verify journey instead of pa
 
   await flow.locator(".single-learning-flow__stages button").filter({ hasText: "实践" }).click();
   await expect(flow).toHaveAttribute("data-learning-stage", "practice");
-  await expect(page.getByRole("heading", { name: "Practice", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "实践", exact: true })).toBeVisible();
   await expect(page.getByText("Guided Learning", { exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "开始实践" })).toBeVisible();
 
