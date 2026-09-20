@@ -39,7 +39,7 @@ export function SingleLearningFlow({
     >
       <header className="single-learning-flow__header">
         <div className="single-learning-flow__heading">
-          <p className="single-learning-flow__eyebrow">Learning Loop · 首课试点</p>
+          <p className="single-learning-flow__eyebrow">本节学习</p>
           <h2 id="single-learning-flow-title">{learningUnit.title}</h2>
           <p>{definition.objective}</p>
         </div>
@@ -137,9 +137,9 @@ export function SingleLearningFlow({
       {currentStage.id === LEARNING_FLOW_STAGES.PRACTICE && (
         <div className="single-learning-flow__stage" data-learning-stage-panel="practice">
           <div className="single-learning-flow__stage-intro">
-            <span>Practice</span>
+            <span>实践</span>
             <h3>先做判断，再让 Demo 证明或推翻它</h3>
-            <p>这里复用现有 Guided runtime，但它只是本节“实践”阶段，不是另一套学习模式。</p>
+            <p>先预测结果，再亲手操作真实 Demo，最后把同一个 mental model 迁移到新场景。</p>
           </div>
           {renderPractice?.({
             onComplete: () => onStageChange?.(LEARNING_FLOW_STAGES.VERIFY),
@@ -150,9 +150,9 @@ export function SingleLearningFlow({
       {currentStage.id === LEARNING_FLOW_STAGES.VERIFY && (
         <div className="single-learning-flow__stage" data-learning-stage-panel="verify">
           <div className="single-learning-flow__stage-intro">
-            <span>Verify</span>
+            <span>验证</span>
             <h3>不看答案，独立检查一次</h3>
-            <p>这组题来自产品内置 canonical questions；不需要先让 AI 帮你出题。</p>
+            <p>完成本节内置理解检查，不需要配置 AI 或先创建题目。</p>
           </div>
 
           {renderVerify?.()}
@@ -164,7 +164,7 @@ export function SingleLearningFlow({
                 <p>
                   {needsReview
                     ? "先根据错误反馈回到证据，再决定是否继续。"
-                    : "当前证据没有发现错误；这不等同于生成一个虚假的 mastery 百分比。"}
+                    : "当前验证没有发现错误，可以继续下一知识点；需要时也可以随时回顾本节证据。"}
                 </p>
               </div>
               <div className="single-learning-flow__completion-actions">
