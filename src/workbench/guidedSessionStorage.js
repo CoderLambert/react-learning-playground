@@ -67,6 +67,7 @@ export function getCompletedGuidedStepIds(state, definition) {
   const predictStep = getStep(definition, "predict");
   const experimentStep = getStep(definition, "experiment");
   const explainStep = getStep(definition, "explain");
+  const practiceStep = getStep(definition, "practice");
   const reviewStep = getStep(definition, "review");
 
   if (state?.firstPrediction) completedStepIds.push(predictStep?.id);
@@ -187,7 +188,6 @@ export function validateGuidedSessionSnapshot(snapshot, { definition } = {}) {
   const predictStep = getStep(definition, "predict");
   const experimentStep = getStep(definition, "experiment");
   const explainStep = getStep(definition, "explain");
-  const practiceStep = getStep(definition, "practice");
   const reviewStep = getStep(definition, "review");
 
   if (snapshot.firstPrediction !== null && snapshot.predictionDraft !== snapshot.firstPrediction) {
