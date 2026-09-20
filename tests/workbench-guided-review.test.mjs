@@ -32,8 +32,11 @@ test("review model exposes deterministic outcome facts and raw reasoning only", 
   assert.deepEqual(model.firstPrediction, { optionId: "count-3", label: "3" });
   assert.equal(model.actualObservation, "next render state 为 1");
   assert.equal(model.explanation, "三个更新读取同一份 render snapshot。");
+  assert.equal(model.practiceOutcome.correct, true);
+  assert.equal(model.practiceOutcome.response.optionId, "same-result-different-semantics");
   assert.equal(model.practiceOutcome.response.label, "结果可以相同，但 queue 处理语义不同");
-  assert.match(model.practiceOutcome.observation, /updater|queue/);
+  assert.equal(model.practiceOutcome.expected.optionId, "same-result-different-semantics");
+  assert.match(model.practiceOutcome.rationale, /updater|queue/);
   assert.equal(model.needsReview, false);
   assert.deepEqual(model.resources, ["notes", "source", "demo"]);
   assert.equal("mastery" in model, false);
