@@ -1,3 +1,9 @@
+export const LEARNING_FLOW_STAGES = Object.freeze({
+  UNDERSTAND: "understand",
+  PRACTICE: "practice",
+  VERIFY: "verify",
+});
+
 const FLOW_DEFINITIONS = Object.freeze({
   "rendering-lists-key": Object.freeze({
     learningUnitId: "rendering-lists-key",
