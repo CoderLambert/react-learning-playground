@@ -1,0 +1,159 @@
+const LISTS_KEY_MODEL = {
+  learningUnitId: "rendering-lists-key",
+  version: 1,
+  mechanismMap: [
+    {
+      id: "business-entity",
+      label: "业务实体",
+      example: "task",
+      role: "产品里真正要持续识别的对象。",
+      reorder: "顺序会变，但同一个 task 仍是同一个业务实体。",
+    },
+    {
+      id: "key",
+      label: "key",
+      example: "index / task.id",
+      role: "同一父节点下，帮助 React 匹配前后两次 render 中的元素身份。",
+      reorder: "index 表示位置；task.id 表示稳定业务身份。",
+    },
+    {
+      id: "props",
+      label: "Props",
+      example: "task",
+      role: "当前 render 传给组件的新输入。",
+      reorder: "即使组件身份被复用，Props 仍会更新成当前位置的新 task。",
+    },
+    {
+      id: "component-identity",
+      label: "Component Identity",
+      example: "EditableRow",
+      role: "React 判断“前后是不是同一个组件实例”的结果。",
+      reorder: "身份延续时局部 State 会继续属于这个实例。",
+    },
+    {
+      id: "local-state",
+      label: "Local State",
+      example: "note",
+      role: "属于 React 组件身份，而不是业务数据对象或 DOM 节点。",
+      reorder: "它跟随被 React 保留的组件身份。",
+    },
+    {
+      id: "dom",
+      label: "DOM",
+      example: "标题 / input",
+      role: "React 根据最新 Props 与 State 提交出来的界面结果。",
+      reorder: "节点可能复用或移动，但内容仍可根据新 Props / State 更新。",
+    },
+  ],
+  contrastCases: [
+    {
+      id: "index-reorder",
+      title: "index key + reorder",
+      keyStory: "反转前后仍是 0 / 1 / 2，React 更容易按位置延续原身份。",
+      identityStory: "位置 0 的 EditableRow 仍被当作原来的组件身份。",
+      stateStory: "原来属于位置 0 身份的 note 继续保留。",
+      uiStory: "task Props 已经换成新的业务数据，所以标题会更新；note 却可能出现在错误任务旁边。",
+      conclusion: "错的不是“DOM 完全没更新”，而是组件身份与业务实体没有正确对齐。",
+    },
+    {
+      id: "stable-reorder",
+      title: "stable id + reorder",
+      keyStory: "task-a / task-b / task-c 与业务实体绑定，排序改变时 key 本身不变。",
+      identityStory: "React 能在新位置认出同一个组件身份。",
+      stateStory: "note 随这个身份一起保留，因此跟着 task 移动。",
+      uiStory: "这不是 remount；如果真的重建，useState 的 note 应重新初始化。",
+      conclusion: "stable key 的价值是该保留身份时保留，而不是“总是重建”。",
+    },
+    {
+      id: "strategy-switch",
+      title: "切换 index key ↔ stable id",
+      keyStory: "同一行从 key=0 变成 key=task-a（或反过来），显式 key 值本身变了。",
+      identityStory: "旧身份无法与新的 key 匹配，因此会创建新的组件身份。",
+      stateStory: "新的 EditableRow 从 useState 的初始值重新开始。",
+      uiStory: "这才是当前 Demo 中可直接观察的 identity reset / remount 场景。",
+      conclusion: "是否重建取决于身份是否还能匹配，而不是“stable id 天生会重建”。",
+    },
+  ],
+  misconceptions: {
+    "key-only-warning": {
+      id: "key-only-warning",
+      title: "把 key 当成 warning / 性能提示",
+      diagnosis: "这个判断只看到了语法提示，没有解释 key 为什么会改变局部 State 的归属。",
+      counterEvidence: "同一份列表数据只切换 key 策略，就能改变 note 在 reorder 后跟谁走；这已经是可观察的正确性差异。",
+      experiment: "先用 index key 给第一行输入 AAA 并反转；再恢复数据，用 stable id 重做一次。只比较 AAA 最后属于哪个 task。",
+      evidenceRefs: [{ kind: "source", fileName: "RenderingListsKeyDemo.jsx", startLine: 39, endLine: 46 }],
+    },
+    "dom-not-updated": {
+      id: "dom-not-updated",
+      title: "把“组件身份复用”理解成“DOM 没更新”",
+      diagnosis: "这里混淆了 React 复用组件身份，与 React 是否提交新的 DOM 内容。",
+      counterEvidence: "如果 DOM 内容真的没更新，反转后 AAA 所在行的 task.title / owner 也应该保持旧值；但 Demo 中它们会跟着新的 Props 更新。",
+      experiment: "保持 index key：第一行输入 AAA → 反转顺序。只观察 AAA 所在行上方的标题是否变化。",
+      evidenceRefs: [
+        { kind: "source", fileName: "RenderingListsKeyDemo.jsx", startLine: 22, endLine: 33 },
+        { kind: "source", fileName: "RenderingListsKeyDemo.jsx", startLine: 39, endLine: 46 },
+      ],
+    },
+    "state-lives-in-dom": {
+      id: "state-lives-in-dom",
+      title: "把局部 State 当成 DOM 节点保存的数据",
+      diagnosis: "note 来自 EditableRow 的 useState；input 的 value 只是把这个 React State 显示出来。",
+      counterEvidence: "如果 note 的来源是 DOM 自己保存的数据，那么源码中的 useState(note) 就无法解释为什么 React 身份变化时 note 会重置。",
+      experiment: "先输入 AAA，再切换 index key / stable id 策略。观察 key 值变化导致组件身份重建时，AAA 是否被清空。",
+      evidenceRefs: [
+        { kind: "source", fileName: "RenderingListsKeyDemo.jsx", startLine: 9, endLine: 11 },
+        { kind: "source", fileName: "RenderingListsKeyDemo.jsx", startLine: 29, endLine: 33 },
+      ],
+    },
+    "stable-key-remounts": {
+      id: "stable-key-remounts",
+      title: "认为 stable id 在 reorder 时会让组件重建",
+      diagnosis: "如果 reorder 真的是 remount，useState(\"\") 会重新初始化，原来的 AAA 应该消失。",
+      counterEvidence: "stable id 下 AAA 会跟着同一个 task 移到新位置且仍然存在，这恰好证明组件身份被保留。",
+      experiment: "切到 stable id → 第一行输入 AAA → 反转顺序。预测 AAA 是消失，还是跟着原 task 移动。",
+      evidenceRefs: [
+        { kind: "source", fileName: "RenderingListsKeyDemo.jsx", startLine: 9, endLine: 11 },
+        { kind: "source", fileName: "RenderingListsKeyDemo.jsx", startLine: 39, endLine: 46 },
+      ],
+    },
+    "id-changes-with-data": {
+      id: "id-changes-with-data",
+      title: "认为好的 id 应该“跟着数据变化”",
+      diagnosis: "稳定 key 的核心恰好相反：同一个业务实体存在期间，它的 key 应保持不变。",
+      counterEvidence: "排序改变的是 task 在数组里的位置，不应改变 task.id；index 会随位置语义变化，因此无法代表同一个业务实体。",
+      experiment: "反转前后分别看 task-a 的 id 与 index：哪个值仍然描述“这是 task-a”，哪个只描述“它现在排第几”？",
+      evidenceRefs: [{ kind: "source", fileName: "RenderingListsKeyDemo.jsx", startLine: 3, endLine: 7 }],
+    },
+    "props-reset-state": {
+      id: "props-reset-state",
+      title: "认为 Props 变化会自动重置组件局部 State",
+      diagnosis: "Props 是当前 render 的输入；是否保留 local State 取决于组件身份是否延续，而不是某个 prop 是否换了值。",
+      counterEvidence: "index key reorder 时 task Props 明明已经换成另一个 task，但 note 仍可能保留在原组件身份上。",
+      experiment: "index key 下输入 AAA 后反转：同时观察标题（Props）与 AAA（State），确认它们可以出现不同的变化路径。",
+      evidenceRefs: [
+        { kind: "source", fileName: "RenderingListsKeyDemo.jsx", startLine: 22, endLine: 33 },
+        { kind: "source", fileName: "RenderingListsKeyDemo.jsx", startLine: 39, endLine: 46 },
+      ],
+    },
+  },
+};
+
+function deepFreeze(value, visited = new WeakSet()) {
+  if (!value || typeof value !== "object" || visited.has(value)) return value;
+  visited.add(value);
+  Object.values(value).forEach((child) => deepFreeze(child, visited));
+  return Object.freeze(value);
+}
+
+export const CONCEPT_MODELS = deepFreeze({
+  [LISTS_KEY_MODEL.learningUnitId]: LISTS_KEY_MODEL,
+});
+
+export function getConceptModelForLearningUnit(learningUnitId) {
+  return CONCEPT_MODELS[learningUnitId] ?? null;
+}
+
+export function getMisconceptionForLearningUnit(learningUnitId, misconceptionId) {
+  if (!learningUnitId || !misconceptionId) return null;
+  return CONCEPT_MODELS[learningUnitId]?.misconceptions?.[misconceptionId] ?? null;
+}
