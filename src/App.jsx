@@ -218,6 +218,31 @@ export default function App() {
     setInspectorTab(resource);
   };
 
+  const handleLearningFlowReviewResource = (resource) => {
+    if (resource === "notes") {
+      setLearningFlowStage(LEARNING_FLOW_STAGES.UNDERSTAND);
+      return;
+    }
+    handleGuidedReviewResource(resource);
+  };
+
+  const handleLearningFlowOpenSource = () => {
+    setInspectorOpen(true);
+    setInspectorTab("source");
+  };
+
+  const handleLearningFlowOpenAi = () => {
+    aiAssistant.exitAssessmentAuthoring();
+    setInspectorOpen(true);
+    setInspectorTab("ai");
+  };
+
+  const handleLearningFlowOpenOfficial = () => {
+    if (!currentOfficialDoc) return;
+    setCenterView("official");
+    setSourceLocatorActive(false);
+  };
+
   const handleGuidedAskAi = (payload) => {
     const handoff = prepareGuidedAiHandoff({
       learningUnit: currentLearningUnit,
@@ -556,6 +581,7 @@ export default function App() {
               onClick={() => {
                 setViewMode("focused");
                 setCenterView("lesson");
+                setLearningFlowStage(LEARNING_FLOW_STAGES.UNDERSTAND);
                 setOfficialDocsFullscreen(false);
               }}
             >
@@ -566,6 +592,7 @@ export default function App() {
               onClick={() => {
                 setViewMode("all");
                 setCenterView("lesson");
+                setLearningFlowStage(LEARNING_FLOW_STAGES.UNDERSTAND);
                 setOfficialDocsFullscreen(false);
               }}
             >
@@ -575,7 +602,7 @@ export default function App() {
         </div>
       </header>
       <main className="app-content workbench-app-content">
-        {viewMode === "focused" && currentLearningUnit && currentOfficialDoc && (
+        {viewMode === "focused" && currentLearningUnit && currentOfficialDoc && !currentLearningFlow && (
           <div className="workbench-center-view-switcher" role="tablist" aria-label="中心学习内容">
             <button
               type="button"
