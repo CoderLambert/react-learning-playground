@@ -241,7 +241,7 @@ test("You Might Not Need an Effect uses causal-source diagnostics and preserves 
 
   await page.getByRole("button", { name: /下一题/ }).click();
 
-  await page.getByRole("radio", { name: /组件生命周期内需要与 React 外部的浏览器事件系统建立 setup/cleanup/ }).check();
+  await page.getByRole("radio", { name: "因为组件生命周期内需要与 React 外部的浏览器事件系统建立 setup/cleanup 同步关系" }).check();
   await page.getByRole("button", { name: "提交答案" }).click();
   await page.getByRole("button", { name: /下一题/ }).click();
 
