@@ -5,7 +5,7 @@ async function openGuidedLesson(page, learningUnitId) {
   await page.goto(`./?demo=${learningUnitId}`);
   await expect(page.locator("h2.demo-title").first()).toBeVisible();
 
-  if (learningUnitId === "rendering-lists-key") {
+  if (["rendering-lists-key", "state-snapshot-queue", "not-need-effect"].includes(learningUnitId)) {
     await page.locator("[data-learning-flow='single'] .single-learning-flow__stages button").filter({ hasText: "实践" }).click();
     await expect(page.locator("[data-guided-entry]")).toBeVisible();
     await page.getByRole("button", { name: /开始实践|继续实践/ }).click();

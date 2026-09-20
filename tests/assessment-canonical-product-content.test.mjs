@@ -193,3 +193,90 @@ test("State Snapshot canonical session snapshots diagnostics without entering th
   });
   assert.equal(attempt.correct, true);
 });
+
+test("You Might Not Need an Effect ships five causal diagnostic canonical questions", () => {
+  const questions = getCanonicalAssessmentQuestions("not-need-effect");
+
+  assert.equal(questions.length, 5);
+  assert.deepEqual(
+    questions.map((question) => question.id),
+    [
+      "canonical-not-need-effect-derived-list",
+      "canonical-not-need-effect-purchase-event",
+      "canonical-not-need-effect-external-sync",
+      "canonical-not-need-effect-expensive-derive",
+      "canonical-not-need-effect-key-reset",
+    ],
+  );
+  assert.ok(questions.every((question) => question.provenance.source === "canonical"));
+  assert.ok(questions.every((question) => question.learningUnitId === "not-need-effect"));
+  assert.ok(questions.every((question) => question.evidenceRefs.length > 0));
+
+  const diagnosticQuestions = questions.filter((question) => question.content.diagnosticOptionMap);
+  assert.ok(diagnosticQuestions.length >= 4);
+
+  for (const question of diagnosticQuestions) {
+    for (const [optionId, misconceptionId] of Object.entries(question.content.diagnosticOptionMap)) {
+      assert.notEqual(optionId, question.content.correctOptionId);
+      assert.ok(question.content.options.some((option) => option.id === optionId));
+      assert.ok(
+        getMisconceptionForLearningUnit("not-need-effect", misconceptionId),
+        `${question.id}: missing Effect misconception ${misconceptionId}`,
+      );
+    }
+  }
+
+  const purchase = questions.find(
+    (question) => question.id === "canonical-not-need-effect-purchase-event",
+  );
+  assert.equal(
+    purchase.content.diagnosticOptionMap["effect-watch-count"],
+    "state-change-needs-effect",
+  );
+  assert.equal(
+    purchase.content.diagnosticOptionMap["effect-network-rule"],
+    "side-effect-means-effect",
+  );
+});
+
+test("Effect canonical session snapshots diagnostics without entering the mutable question bank", async () => {
+  const repository = new MemoryAssessmentRepository();
+  const service = new AssessmentService({
+    repository,
+    idFactory: createIdFactory(),
+    evidenceResolver: {
+      resolve(ref) {
+        return ref?.kind === "source" ? { ok: true } : null;
+      },
+    },
+  });
+  const questions = getCanonicalAssessmentQuestions("not-need-effect");
+
+  const session = await service.startSession({
+    trusted: { learningUnitId: "not-need-effect" },
+    questionRecords: questions,
+  });
+
+  assert.equal(session.items.length, 5);
+  assert.deepEqual(
+    await repository.listQuestions({ learningUnitId: "not-need-effect" }),
+    [],
+  );
+
+  const purchase = session.items.find(
+    (item) => item.questionId === "canonical-not-need-effect-purchase-event",
+  ).snapshot;
+  assert.equal(
+    purchase.content.diagnosticOptionMap["effect-watch-count"],
+    "state-change-needs-effect",
+  );
+
+  const attempt = await service.submitAnswer({
+    trusted: { learningUnitId: "not-need-effect" },
+    sessionId: session.id,
+    questionId: purchase.id,
+    answer: purchase.content.correctOptionId,
+  });
+  assert.equal(attempt.correct, true);
+});
+

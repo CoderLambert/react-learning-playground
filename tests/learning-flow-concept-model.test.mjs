@@ -90,9 +90,55 @@ test("State Snapshot misconceptions are backed by queue evidence rather than asy
   }
 });
 
+
+test("You Might Not Need an Effect models causal source instead of API categories", () => {
+  const model = getConceptModelForLearningUnit("not-need-effect");
+
+  assert.equal(model.learningUnitId, "not-need-effect");
+  assert.deepEqual(
+    model.mechanismMap.map((item) => item.id),
+    [
+      "render-derivation",
+      "event-caused-logic",
+      "external-synchronization",
+      "identity-reset",
+      "memoization",
+    ],
+  );
+  assert.deepEqual(
+    model.contrastCases.map((item) => item.id),
+    ["derived-list", "purchase-event", "external-sync", "identity-reset"],
+  );
+  assert.deepEqual(
+    model.contrastDimensions.map((item) => item.id),
+    ["causeStory", "placementStory", "failureStory", "boundaryStory"],
+  );
+});
+
+test("Effect-decision misconceptions include deterministic counter-evidence and experiments", () => {
+  const ids = [
+    "derived-needs-effect-state",
+    "side-effect-means-effect",
+    "state-change-needs-effect",
+    "effect-is-change-listener",
+    "expensive-means-effect",
+    "key-reset-is-universal",
+  ];
+
+  for (const id of ids) {
+    const misconception = getMisconceptionForLearningUnit("not-need-effect", id);
+    assert.ok(misconception, `missing Effect misconception ${id}`);
+    assert.ok(misconception.diagnosis.length > 0);
+    assert.ok(misconception.counterEvidence.length > 0);
+    assert.ok(misconception.experiment.length > 0);
+    assert.ok(misconception.evidenceRefs.length > 0);
+  }
+});
+
 test("concept-model lookup remains sparse and lesson-scoped", () => {
   assert.equal(getConceptModelForLearningUnit("props"), null);
   assert.equal(getMisconceptionForLearningUnit("props", "dom-not-updated"), null);
   assert.equal(getMisconceptionForLearningUnit("rendering-lists-key", "unknown"), null);
   assert.equal(getMisconceptionForLearningUnit("state-snapshot-queue", "unknown"), null);
+  assert.equal(getMisconceptionForLearningUnit("not-need-effect", "unknown"), null);
 });

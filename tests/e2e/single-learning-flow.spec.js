@@ -13,6 +13,12 @@ async function openStateSnapshot(page) {
   return page.locator("[data-learning-flow='single']");
 }
 
+async function openNotNeedEffect(page) {
+  await loadApp(page);
+  await openDemo(page, "无需 Effect 的常见反模式");
+  return page.locator("[data-learning-flow='single']");
+}
+
 test("Lists and Key exposes one deep Understand Practice Verify journey instead of parallel learning modes", async ({ page }) => {
   const flow = await openListsAndKey(page);
 
@@ -181,6 +187,69 @@ test("State Snapshot reuses the diagnostic loop for queue reasoning and preserve
   await page.getByRole("button", { name: /下一题/ }).click();
 
   await page.getByRole("radio", { name: /React 依次处理前面的 replace 和 updater/ }).check();
+  await page.getByRole("button", { name: "提交答案" }).click();
+
+  await expect(page.getByText("本轮评测已完成", { exact: true })).toBeVisible();
+  await expect(flow.getByText("需要复习", { exact: true })).toBeVisible();
+  await expect(flow).toContainText("最近一次已完成评测有 1 道错误");
+});
+
+
+test("You Might Not Need an Effect uses causal-source diagnostics and preserves correction evidence", async ({ page }) => {
+  const flow = await openNotNeedEffect(page);
+
+  await expect(flow).toHaveAttribute("data-learning-unit", "not-need-effect");
+  await expect(flow).toHaveAttribute("data-learning-stage", "understand");
+  await expect(flow).toContainText("Why it runs → Where it belongs");
+  await expect(flow).toContainText("先问“为什么它需要运行”，再决定放在哪里");
+  await expect(flow).toContainText("Render Derivation");
+  await expect(flow).toContainText("Event-caused Logic");
+  await expect(flow).toContainText("External Synchronization");
+  await expect(flow).toContainText("过滤列表：render vs Effect + duplicate State");
+  await expect(flow).toContainText("购买 POST / 埋点：Event Handler vs Effect watching State");
+  await expect(flow).toContainText("window.resize / subscription：真正的 Effect");
+  await expect(flow).toContainText("userId 切换：key reset vs Effect setState reset");
+
+  await flow.locator(".single-learning-flow__stages button").filter({ hasText: "实践" }).click();
+  await expect(flow).toHaveAttribute("data-learning-stage", "practice");
+  await expect(page.getByRole("button", { name: "开始实践" })).toBeVisible();
+
+  await flow.locator(".single-learning-flow__stages button").filter({ hasText: "验证" }).click();
+  await page.getByRole("button", { name: "开始测试" }).click();
+
+  await page.getByRole("radio", { name: "直接在当前 render 中根据最新 props/state 派生 filteredProducts" }).check();
+  await page.getByRole("button", { name: "提交答案" }).click();
+  await page.getByRole("button", { name: /下一题/ }).click();
+
+  await page.getByRole("radio", { name: /先只更新 purchasedCount，再用 Effect 监听/ }).check();
+  await page.getByRole("button", { name: "提交答案" }).click();
+
+  const remediation = page.locator("[data-assessment-misconception='state-change-needs-effect']");
+  await expect(remediation).toBeVisible();
+  await expect(remediation).toContainText("某个 State 变化后要做事");
+  await expect(remediation).toContainText("productName");
+  await expect(page.getByText("正确答案", { exact: true })).toHaveCount(0);
+
+  await page.getByRole("button", { name: "重新选择" }).click();
+  await page.getByRole("radio", { name: /在购买按钮的 Event Handler 中直接发送请求/ }).check();
+  await page.getByRole("button", { name: "再次验证" }).click();
+
+  await expect(page.getByText("已纠正", { exact: true })).toBeVisible();
+  const teachBack = page.getByLabel("用自己的话再解释一次");
+  await expect(teachBack).toBeVisible();
+  await teachBack.fill("购买逻辑运行是因为这次明确点击，所以应该留在 handler；Effect 用来维持组件与 React 外部系统的同步，不是监听 purchasedCount 来反推购买事件。");
+
+  await page.getByRole("button", { name: /下一题/ }).click();
+
+  await page.getByRole("radio", { name: "因为组件生命周期内需要与 React 外部的浏览器事件系统建立 setup/cleanup 同步关系" }).check();
+  await page.getByRole("button", { name: "提交答案" }).click();
+  await page.getByRole("button", { name: /下一题/ }).click();
+
+  await page.getByRole("radio", { name: /仍属于 render 数据流；先测量/ }).check();
+  await page.getByRole("button", { name: "提交答案" }).click();
+  await page.getByRole("button", { name: /下一题/ }).click();
+
+  await page.getByRole("radio", { name: /业务身份变化就应该创建新的 CommentForm 身份/ }).check();
   await page.getByRole("button", { name: "提交答案" }).click();
 
   await expect(page.getByText("本轮评测已完成", { exact: true })).toBeVisible();

@@ -55,8 +55,28 @@ const FLOW_DEFINITIONS = Object.freeze({
       verify: "离开当前日志，独立推演 queue，并诊断是否仍把 setter 当成同步变量赋值。",
     },
   }),
+  "not-need-effect": flowDefinition({
+    learningUnitId: "not-need-effect",
+    version: 1,
+    objective: "根据逻辑的因果来源判断它应该留在 render、Event Handler、Effect，还是用 identity reset 表达业务边界。",
+    coreModelTitle: "Why it runs → Where it belongs",
+    mentalModel: "先问“为什么这段逻辑需要运行？”：为当前 UI 计算值就留在 render；因为一次明确用户交互就留在 Event Handler；因为组件存在而需要与 React 外部系统保持同步，才使用 Effect。",
+    misconceptionTitle: "Effect 不是通用“变化监听器”",
+    misconception: "“有副作用就用 Effect”“依赖某个 State 就监听它”“请求都必须放 Effect”都忽略了真正的因果来源。Effect 主要负责外部同步，而不是把内部数据流重新接一遍。",
+    decisionRuleTitle: "先找因果，再谈 API",
+    decisionRule: "能从当前 props/state 派生就直接计算；明确由用户动作触发就放 handler；需要组件生命周期内维持外部同步才用 Effect。key reset 与 memoization 分别属于 identity 与 performance 决策，不是 Effect 的通用替代或变体。",
+    practiceTitle: "先判断因果来源，再让三个 Demo 场景验证边界",
+    practiceDescription: "不要从 API 名称出发。先判断这段逻辑为什么运行，再对照派生列表、购买事件和 userId identity reset，最后迁移到真正的外部订阅场景。",
+    verifyTitle: "不看口诀，按因果来源做工程判断",
+    verifyDescription: "诊断题会检查你是否能区分 render derivation、event-caused logic、external synchronization、identity reset 与 memoization。答错时先用现有 Demo 反证，再重新选择并复述。",
+    stageHints: {
+      understand: "先建立 render / Event Handler / Effect / identity reset 的因果边界。",
+      practice: "先判断 filteredProducts、购买日志与 userId reset 为什么运行，再用 Demo 验证。",
+      verify: "离开当前说明，根据因果来源独立判断代码应该放在哪里。",
+    },
+  }),
 });
-
+ 
 export function getSingleLearningFlowDefinition(learningUnitId) {
   return FLOW_DEFINITIONS[learningUnitId] ?? null;
 }
