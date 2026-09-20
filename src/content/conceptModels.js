@@ -298,6 +298,158 @@ const STATE_SNAPSHOT_QUEUE_MODEL = {
   },
 };
 
+
+const NOT_NEED_EFFECT_MODEL = {
+  learningUnitId: "not-need-effect",
+  version: 1,
+  mechanismTitle: "先问“为什么它需要运行”，再决定放在哪里",
+  mechanismAriaLabel: "You Might Not Need an Effect 因果边界",
+  mechanismHeaders: {
+    subject: "因果来源",
+    example: "典型例子",
+    role: "优先放哪里",
+    change: "判断边界",
+  },
+  contrastTitle: "四类需求，关键不是“有没有副作用”，而是因果从哪里来",
+  contrastDimensions: [
+    { id: "causeStory", label: "为什么运行" },
+    { id: "placementStory", label: "代码位置" },
+    { id: "failureStory", label: "错放进 Effect 的代价" },
+    { id: "boundaryStory", label: "边界" },
+  ],
+  mechanismMap: [
+    {
+      id: "render-derivation",
+      label: "Render Derivation",
+      example: "filteredProducts",
+      role: "直接在 render 中根据当前 props/state 计算 UI 所需值。",
+      change: "只要输入变了，React 本来就会重新 render；不需要再用 Effect 同步第二份 State。",
+    },
+    {
+      id: "event-caused-logic",
+      label: "Event-caused Logic",
+      example: "handleBuy()",
+      role: "放在触发这件事的 Event Handler 中。",
+      change: "购买、提交、埋点等如果是因为这次明确点击发生，因果应停留在这次事件，而不是监听某个 State 变化再猜“发生了什么”。",
+    },
+    {
+      id: "external-synchronization",
+      label: "External Synchronization",
+      example: "resize / subscription",
+      role: "用 Effect 建立并清理与 React 外部系统的同步关系。",
+      change: "组件存在期间需要订阅浏览器 API、连接、计时器或第三方 widget，并在依赖变化/卸载时重新同步或 cleanup。",
+    },
+    {
+      id: "identity-reset",
+      label: "Identity Reset",
+      example: "key={userId}",
+      role: "当产品语义是“这是另一个实体，旧局部 State 应丢弃”时，让 React 创建新的组件身份。",
+      change: "它解决的是业务身份边界，不是所有 reset Effect 的通用替代品；若要保留每个实体草稿，应重新设计 State ownership。",
+    },
+    {
+      id: "memoization",
+      label: "Memoization",
+      example: "expensive derive",
+      role: "仍然先把纯计算留在 render；只有性能测量证明值得时，再考虑 memoization。",
+      change: "“计算很贵”是性能问题，不会自动把纯计算变成 Effect。",
+    },
+  ],
+  contrastCases: [
+    {
+      id: "derived-list",
+      title: "过滤列表：render vs Effect + duplicate State",
+      causeStory: "query / category 改变后，新的 UI 需要重新计算 filteredProducts。",
+      placementStory: "直接在 render 中从现有 State 派生。",
+      failureStory: "再存 filtered State 并用 Effect 同步，会制造第二份事实来源与额外 render / 同步链。",
+      boundaryStory: "是否昂贵另行讨论；昂贵纯计算仍然不是 Effect 的理由。",
+      conclusion: "能由当前 props/state 算出的 UI 数据，优先派生，不要先复制成第二份 State。",
+    },
+    {
+      id: "purchase-event",
+      title: "购买 POST / 埋点：Event Handler vs Effect watching State",
+      causeStory: "代码之所以运行，是因为用户刚刚点击了“购买”。",
+      placementStory: "在这次点击的 handler 中完成业务动作与记录。",
+      failureStory: "改成 Effect 监听 purchasedCount，会丢失原始事件语义，并让“为什么运行”依赖间接 State 变化。",
+      boundaryStory: "不是“网络请求都进 handler”；如果请求是为了组件显示期间与服务器/外部系统同步，因果来源不同。",
+      conclusion: "明确用户动作触发的逻辑，应留在对应事件中，不要把 Effect 当事件代理。",
+    },
+    {
+      id: "external-sync",
+      title: "window.resize / subscription：真正的 Effect",
+      causeStory: "组件显示期间，需要持续与浏览器或第三方外部系统保持同步。",
+      placementStory: "Effect 中 setup，并返回 cleanup；决定同步目标的 reactive values 进入依赖。",
+      failureStory: "放在 render 会重复制造副作用；只放在某个 click handler 又无法覆盖组件整个生命周期。",
+      boundaryStory: "核心问题不是“依赖变没变”，而是“有没有 React 之外需要同步的系统”。",
+      conclusion: "Effect 的主职责是外部同步，而不是通用的“值变化监听器”。",
+    },
+    {
+      id: "identity-reset",
+      title: "userId 切换：key reset vs Effect setState reset",
+      causeStory: "产品把 User_A 与 User_B 视为不同业务身份，并希望旧留言草稿被丢弃。",
+      placementStory: "用 key 表达身份边界，让新的 CommentForm 从初始 State 开始。",
+      failureStory: "Effect 监听 userId 再 setComment 会先用旧 State render 一次，再额外同步；也把身份语义藏进命令式修补。",
+      boundaryStory: "如果业务要求保留每个用户自己的草稿，就不应 reset，而应提升/按 userId 保存 State。",
+      conclusion: "key reset 是 identity 决策，不是“看到 reset Effect 就一律换 key”。",
+    },
+  ],
+  misconceptions: {
+    "derived-needs-effect-state": {
+      id: "derived-needs-effect-state",
+      title: "认为派生数据必须存成第二份 State 再用 Effect 同步",
+      diagnosis: "filteredProducts 已经完全由当前 query、category 与 products 决定；再同步一份 State 只会制造重复事实来源。",
+      counterEvidence: "当前 Demo 不使用 Effect：修改搜索词或分类仍会在同一次 React render 中得到正确 filteredProducts。",
+      experiment: "修改搜索词与分类，观察列表立即随当前输入变化；再对照源码 filteredProducts 直接在 render 中计算。",
+      evidenceRefs: [{ kind: "source", fileName: "NotNeedEffectDemo.jsx", startLine: 41, endLine: 50 }],
+    },
+    "side-effect-means-effect": {
+      id: "side-effect-means-effect",
+      title: "认为“有副作用 / 有网络请求”就必须放进 Effect",
+      diagnosis: "是否使用 Effect 不由“这段代码是不是副作用”决定，而要看它为什么运行。明确由一次用户点击触发的业务动作属于 Event Handler。",
+      counterEvidence: "购买日志只在点击购买时产生；Demo 直接在 handleBuy 中记录，不需要监听 purchasedCount 才知道用户刚做了什么。",
+      experiment: "连续点击不同商品的“购买”，观察每条日志都直接对应那次点击；再看 handleBuy 如何同时更新计数与日志。",
+      evidenceRefs: [{ kind: "source", fileName: "NotNeedEffectDemo.jsx", startLine: 55, endLine: 64 }],
+    },
+    "state-change-needs-effect": {
+      id: "state-change-needs-effect",
+      title: "认为“某个 State 变化后要做事”就应该写 Effect 监听",
+      diagnosis: "State 变化只是结果，不一定是原始因果。若逻辑真正由点击触发，监听 State 会把事件因果绕成间接变化监听。",
+      counterEvidence: "purchasedCount 的变化来自 handleBuy；如果日志的真正原因是购买点击，handler 已经拥有更准确的因果信息与 productName。",
+      experiment: "查看 handleBuy：同一事件里既知道 productName，也知道用户刚点击购买；比较这与 Effect 只能看到 purchasedCount 改变的差异。",
+      evidenceRefs: [{ kind: "source", fileName: "NotNeedEffectDemo.jsx", startLine: 55, endLine: 64 }],
+    },
+    "effect-is-change-listener": {
+      id: "effect-is-change-listener",
+      title: "把 Effect 当成通用的“值变化监听器”",
+      diagnosis: "Effect 的核心不是“有依赖变化就执行代码”，而是组件需要与 React 外部系统建立同步过程；依赖只描述这段同步何时需要重新建立。",
+      counterEvidence: "query / category 变化不需要 Effect 就能更新派生列表；购买计数变化也不需要 Effect 才能处理点击。只有外部订阅、连接、DOM/浏览器 API 等同步才需要 Effect。",
+      experiment: "把本节三类需求逐个问一遍：是在计算 UI、响应明确事件，还是在维持 React 外部系统同步？只有第三类属于 Effect。",
+      evidenceRefs: [
+        { kind: "source", fileName: "NotNeedEffectDemo.jsx", startLine: 45, endLine: 64 },
+        { kind: "source", fileName: "NotNeedEffectDemo.jsx", startLine: 191, endLine: 197 },
+      ],
+    },
+    "expensive-means-effect": {
+      id: "expensive-means-effect",
+      title: "认为计算昂贵就应该把它移进 Effect",
+      diagnosis: "昂贵与否是性能优化问题；只要结果是纯粹由当前 props/state 推导，它仍属于 render 数据流。",
+      counterEvidence: "Effect + State 并不会让派生逻辑变得更“正确”，反而会增加同步和额外 render。性能问题应先测量，再考虑 memoization。",
+      experiment: "先判断 filteredProducts 是否依赖任何外部系统。答案仍是“没有”；因此即使未来数据量变大，也应先从纯派生 + 性能优化角度处理。",
+      evidenceRefs: [{ kind: "source", fileName: "NotNeedEffectDemo.jsx", startLine: 45, endLine: 50 }],
+    },
+    "key-reset-is-universal": {
+      id: "key-reset-is-universal",
+      title: "认为 key reset 可以无条件替代任何 reset Effect",
+      diagnosis: "key 表达的是组件身份。只有业务语义明确要求“切换实体后旧局部 State 应被丢弃”时，重建身份才正确。",
+      counterEvidence: "Demo 的留言板把 User_A 与 User_B 当成不同身份，所以切换 key 会清空草稿；如果产品要求分别保留 A/B 草稿，这个 reset 就反而是错误需求。",
+      experiment: "给 User_A 输入 AAA，切到 User_B 再切回来。观察 AAA 不会被保留；再问自己：这是不是当前产品真正想要的语义？",
+      evidenceRefs: [
+        { kind: "source", fileName: "NotNeedEffectDemo.jsx", startLine: 5, endLine: 24 },
+        { kind: "source", fileName: "NotNeedEffectDemo.jsx", startLine: 236, endLine: 248 },
+      ],
+    },
+  },
+};
+
 function deepFreeze(value, visited = new WeakSet()) {
   if (!value || typeof value !== "object" || visited.has(value)) return value;
   visited.add(value);
@@ -308,6 +460,7 @@ function deepFreeze(value, visited = new WeakSet()) {
 export const CONCEPT_MODELS = deepFreeze({
   [LISTS_KEY_MODEL.learningUnitId]: LISTS_KEY_MODEL,
   [STATE_SNAPSHOT_QUEUE_MODEL.learningUnitId]: STATE_SNAPSHOT_QUEUE_MODEL,
+  [NOT_NEED_EFFECT_MODEL.learningUnitId]: NOT_NEED_EFFECT_MODEL,
 });
 
 export function getConceptModelForLearningUnit(learningUnitId) {
