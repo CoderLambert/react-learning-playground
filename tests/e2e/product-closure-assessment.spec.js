@@ -144,9 +144,13 @@ test("editing or retiring the bank never mutates an in-progress session snapshot
 
 test("chapter checkpoint no longer exposes the legacy editable localStorage question bank", async ({ page }) => {
   await page.goto("./?demo=props");
-  await expect(page.getByText("题库管理", { exact: true })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "新增", exact: true })).toHaveCount(0);
-  await expect(page.getByText(/所有修改保存在当前浏览器/)).toHaveCount(0);
+
+  const checkpoint = page.locator("[data-readonly-checkpoint]");
+  await expect(checkpoint).toBeVisible();
+  await expect(checkpoint.getByText("题库管理", { exact: true })).toHaveCount(0);
+  await expect(checkpoint.getByRole("button", { name: "新增", exact: true })).toHaveCount(0);
+  await expect(checkpoint.getByText(/所有修改保存在当前浏览器/)).toHaveCount(0);
+
   await page.getByRole("tab", { name: "评测", exact: true }).click();
   await expect(page.locator("#learning-inspector-panel-assessment")).toBeVisible();
 });
