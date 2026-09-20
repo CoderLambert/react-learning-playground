@@ -9,7 +9,9 @@ import { ContextMeter } from "./components/ai-assistant/context/ContextMeter.jsx
 import { ConversationHistory } from "./components/ai-assistant/conversations/ConversationHistory.jsx";
 import { LearningInspector } from "./components/learning-inspector";
 import { AssessmentPane } from "./assessment/ui/AssessmentPane.jsx";
+import { AssessmentPracticePane } from "./assessment/ui/AssessmentPracticePane.jsx";
 import { useAssessmentApplication } from "./assessment/application/useAssessmentApplication.js";
+import { useAssessmentReview } from "./assessment/application/useAssessmentReview.js";
 import { NoteToc } from "./components/notes/NoteToc";
 import { NoteViewer } from "./components/notes/NoteViewer";
 import { OfficialDocsPane } from "./components/official-docs/OfficialDocsPane";
@@ -18,6 +20,11 @@ import { DemoSourceLocator } from "./components/source-locator/DemoSourceLocator
 import { useAiLearningAssistant } from "./ai/useAiLearningAssistant.js";
 import { createAiAssessmentIntegration } from "./app/aiAssessmentIntegration.js";
 import { getOfficialDocsForLearningUnit } from "./content/officialDocs.js";
+import {
+  getSingleLearningFlowDefinition,
+  LEARNING_FLOW_STAGES,
+} from "./learning-flow/learningFlowRegistry.js";
+import { SingleLearningFlow } from "./learning-flow/SingleLearningFlow.jsx";
 import { prepareGuidedAiHandoff } from "./app/guidedAiHandoff.js";
 import { enrichLearningUnitSourceSemantics } from "./source/semanticSources";
 import { WorkbenchNavigation } from "./workbench/WorkbenchNavigation";
@@ -53,6 +60,7 @@ export default function App() {
   const [mobileNavigationOpen, setMobileNavigationOpen] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
   const [centerView, setCenterView] = useState("lesson");
+  const [learningFlowStage, setLearningFlowStage] = useState(LEARNING_FLOW_STAGES.UNDERSTAND);
   const [officialDocsFullscreen, setOfficialDocsFullscreen] = useState(false);
   const [sourceFocus, setSourceFocus] = useState(null);
   const [sourceLocatorActive, setSourceLocatorActive] = useState(false);
@@ -69,6 +77,9 @@ export default function App() {
   const { demoId, selectDemo } = useDemoUrlState({ learningUnits, defaultDemoId: learningUnits[0]?.id });
   const currentLearningUnit = learningUnits.find((unit) => unit.id === demoId) || learningUnits[0] || null;
   const currentOfficialDoc = currentLearningUnit ? getOfficialDocsForLearningUnit(currentLearningUnit.id) : null;
+  const currentLearningFlow = currentLearningUnit
+    ? getSingleLearningFlowDefinition(currentLearningUnit.id)
+    : null;
   const showingOfficialDocs = centerView === "official" && Boolean(currentOfficialDoc);
   const learningUnitsById = useMemo(
     () => new Map(learningUnits.map((unit) => [unit.id, unit])),
@@ -93,6 +104,13 @@ export default function App() {
   });
   const assessmentView = assessment.view;
   const assessmentCommands = assessment.commands;
+  const completedLearningFlowSessionId = currentLearningFlow && assessmentView.session?.status === "completed"
+    ? assessmentView.session.id
+    : null;
+  const learningFlowReview = useAssessmentReview({
+    learningUnitId: currentLearningFlow ? currentLearningUnit?.id ?? null : null,
+    activeSessionId: completedLearningFlowSessionId,
+  });
 
   const aiAssessmentIntegration = useMemo(
     () => assessmentView.integrationCapabilities
@@ -127,6 +145,7 @@ export default function App() {
   /* oxlint-disable react/set-state-in-effect -- synchronize transient center-view state after URL navigation. */
   useEffect(() => {
     setCenterView("lesson");
+    setLearningFlowStage(LEARNING_FLOW_STAGES.UNDERSTAND);
     setOfficialDocsFullscreen(false);
   }, [currentLearningUnit?.id]);
   /* oxlint-enable react/set-state-in-effect */
@@ -207,6 +226,31 @@ export default function App() {
     setInspectorTab(resource);
   };
 
+  const handleLearningFlowReviewResource = (resource) => {
+    if (resource === "notes") {
+      setLearningFlowStage(LEARNING_FLOW_STAGES.UNDERSTAND);
+      return;
+    }
+    handleGuidedReviewResource(resource);
+  };
+
+  const handleLearningFlowOpenSource = () => {
+    setInspectorOpen(true);
+    setInspectorTab("source");
+  };
+
+  const handleLearningFlowOpenAi = () => {
+    aiAssistant.exitAssessmentAuthoring();
+    setInspectorOpen(true);
+    setInspectorTab("ai");
+  };
+
+  const handleLearningFlowOpenOfficial = () => {
+    if (!currentOfficialDoc) return;
+    setCenterView("official");
+    setSourceLocatorActive(false);
+  };
+
   const handleGuidedAskAi = (payload) => {
     const handoff = prepareGuidedAiHandoff({
       learningUnit: currentLearningUnit,
@@ -250,6 +294,7 @@ export default function App() {
     selectDemo(id);
     setViewMode("focused");
     setCenterView("lesson");
+    setLearningFlowStage(LEARNING_FLOW_STAGES.UNDERSTAND);
     setOfficialDocsFullscreen(false);
     setMobileNavigationOpen(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -274,6 +319,7 @@ export default function App() {
     setPendingConversationTarget(null);
     setSourceLocatorActive(false);
     setCenterView("lesson");
+    setLearningFlowStage(LEARNING_FLOW_STAGES.UNDERSTAND);
     setOfficialDocsFullscreen(false);
     setViewMode("all");
     setMobileNavigationOpen(false);
@@ -395,12 +441,75 @@ export default function App() {
     </div>
   );
 
+  const inspectorSource = currentLearningUnit ? (
+    <Suspense fallback={<div className="note-runtime-state">正在加载源码查看器…</div>}>
+      <SourceViewer
+        learningUnit={currentLearningUnit}
+        activeFileName={workbenchState.sourceFile}
+        onActiveFileChange={(fileName) => {
+          setSourceFile(fileName);
+          if (sourceFocus?.fileName !== fileName) setSourceFocus(null);
+        }}
+        focusRange={sourceFocus}
+        onFocusRangeChange={setSourceFocus}
+      />
+    </Suspense>
+  ) : null;
+
+  const inspectorAi = currentLearningUnit ? (
+    <div>
+      {aiAssistant.mode === "assessment_authoring" && (
+        <div role="status" className="ai-assessment-mode-notice">
+          当前处于评测出题/管理模式；本次发送可使用评测工具。
+          <button type="button" onClick={aiAssistant.exitAssessmentAuthoring} disabled={aiAssistant.status === "streaming"}>
+            退出评测模式
+          </button>
+        </div>
+      )}
+      <AiAssistant
+        contextSummary={aiAssistant.contextSummary}
+        messages={aiAssistant.messages}
+        status={aiAssistant.status}
+        inputValue={aiAssistant.inputValue}
+        onInputChange={aiAssistant.setInputValue}
+        onSubmit={aiAssistant.submit}
+        onRetry={aiAssistant.canRetry ? aiAssistant.retryFailedTurn : undefined}
+        onStop={aiAssistant.stop}
+        onCitationOpen={handleCitationOpen}
+        disabled={aiAssistant.disabled}
+        error={aiAssistant.error}
+        notice={aiAssistant.notice}
+        providerLabel="DeepSeek"
+        modelLabel={aiAssistant.modelLabel}
+        conversationNavigation={conversationNavigation}
+        contextMeter={(
+          <ContextMeter
+            budget={aiAssistant.contextBudget}
+            onCompact={aiAssistant.compactContext}
+            compacting={aiAssistant.compacting}
+            disabled={!aiAssistant.configured || aiAssistant.messages.length === 0}
+          />
+        )}
+      />
+    </div>
+  ) : null;
+
+  const learningFlowInspectorPanels = currentLearningFlow
+    ? [
+        { id: "source", label: "源码", content: inspectorSource },
+        { id: "ai", label: "AI", content: inspectorAi },
+      ]
+    : null;
+  const inspectorActiveTab = currentLearningFlow && !["source", "ai"].includes(workbenchState.inspectorTab)
+    ? "source"
+    : workbenchState.inspectorTab;
+
   const inspector = currentLearningUnit ? (
     <LearningInspector
       learningUnit={currentLearningUnit}
       state={{
         open: workbenchState.inspectorOpen,
-        activeTab: workbenchState.inspectorTab,
+        activeTab: inspectorActiveTab,
         focusMode,
         width: workbenchState.inspectorWidth,
         sourceFile: workbenchState.sourceFile,
@@ -409,58 +518,10 @@ export default function App() {
       onOpenChange={setInspectorOpen}
       onFocusModeChange={setFocusMode}
       onWidthChange={setInspectorWidth}
+      panels={learningFlowInspectorPanels}
       notes={<NotesPane learningUnitId={currentLearningUnit.id} />}
-      source={(
-        <Suspense fallback={<div className="note-runtime-state">正在加载源码查看器…</div>}>
-          <SourceViewer
-            learningUnit={currentLearningUnit}
-            activeFileName={workbenchState.sourceFile}
-            onActiveFileChange={(fileName) => {
-              setSourceFile(fileName);
-              if (sourceFocus?.fileName !== fileName) setSourceFocus(null);
-            }}
-            focusRange={sourceFocus}
-            onFocusRangeChange={setSourceFocus}
-          />
-        </Suspense>
-      )}
-      ai={(
-        <div>
-          {aiAssistant.mode === "assessment_authoring" && (
-            <div role="status" className="ai-assessment-mode-notice">
-              当前处于评测出题/管理模式；本次发送可使用评测工具。
-              <button type="button" onClick={aiAssistant.exitAssessmentAuthoring} disabled={aiAssistant.status === "streaming"}>
-                退出评测模式
-              </button>
-            </div>
-          )}
-          <AiAssistant
-            contextSummary={aiAssistant.contextSummary}
-            messages={aiAssistant.messages}
-            status={aiAssistant.status}
-            inputValue={aiAssistant.inputValue}
-            onInputChange={aiAssistant.setInputValue}
-            onSubmit={aiAssistant.submit}
-            onRetry={aiAssistant.canRetry ? aiAssistant.retryFailedTurn : undefined}
-            onStop={aiAssistant.stop}
-            onCitationOpen={handleCitationOpen}
-            disabled={aiAssistant.disabled}
-            error={aiAssistant.error}
-            notice={aiAssistant.notice}
-            providerLabel="DeepSeek"
-            modelLabel={aiAssistant.modelLabel}
-            conversationNavigation={conversationNavigation}
-            contextMeter={(
-              <ContextMeter
-                budget={aiAssistant.contextBudget}
-                onCompact={aiAssistant.compactContext}
-                compacting={aiAssistant.compacting}
-                disabled={!aiAssistant.configured || aiAssistant.messages.length === 0}
-              />
-            )}
-          />
-        </div>
-      )}
+      source={inspectorSource}
+      ai={inspectorAi}
       assessment={(
         <div className="assessment-pane-shell">
           {assessmentView.storageNotice && <p role="status">{assessmentView.storageNotice}</p>}
@@ -497,6 +558,50 @@ export default function App() {
     />
   ) : null;
 
+  const renderCurrentDemo = () => (
+    <DemoSourceLocator
+      learningUnit={currentLearningUnit}
+      enabled={sourceLocatorActive}
+      onLocate={handleVisualSourceLocate}
+    >
+      <currentLearningUnit.component />
+    </DemoSourceLocator>
+  );
+
+  const canonicalVerification = currentLearningFlow ? (
+    <div className="assessment-pane-shell single-learning-flow__verify-surface">
+      {assessmentView.storageNotice && <p role="status">{assessmentView.storageNotice}</p>}
+      {!assessmentView.ready && !assessmentView.initializationError && <p role="status">正在初始化验证记录…</p>}
+      {assessmentView.initializationError && (
+        <div role="alert" className="mx-4 mt-4 rounded-lg border border-[var(--color-danger-border)] bg-[var(--color-danger-light)] p-3 text-sm text-[var(--color-danger-text)] sm:mx-5">
+          <strong>验证记录初始化未完全成功</strong>
+          <p className="mt-1 mb-2">{assessmentView.initializationError}</p>
+          <button type="button" className="btn btn-outline btn-sm" onClick={assessmentCommands?.retryInitialization} disabled={!assessmentCommands}>
+            重试加载
+          </button>
+        </div>
+      )}
+      <AssessmentPracticePane
+        session={assessmentView.session}
+        currentIndex={assessmentView.currentIndex}
+        answer={assessmentView.answer}
+        feedback={assessmentView.feedback}
+        startError={assessmentView.startError}
+        starting={assessmentView.starting}
+        submitError={assessmentView.submitError}
+        submitting={assessmentView.submitting}
+        showAiQuestionAction={false}
+        onStart={assessmentCommands && assessmentView.canonicalQuestions.length
+          ? assessmentCommands.startCanonical
+          : undefined}
+        onAnswerChange={assessmentCommands?.setAnswer}
+        onSubmit={assessmentCommands?.submit}
+        onNext={assessmentCommands?.next}
+        onOpenEvidence={handleAssessmentEvidence}
+      />
+    </div>
+  ) : null;
+
   const content = (
     <div className="app-main workbench-main">
       <header className="top-bar">
@@ -518,7 +623,7 @@ export default function App() {
           </div>
         </div>
         <div className="top-bar-right">
-          {!showingOfficialDocs && (
+          {!showingOfficialDocs && (!currentLearningFlow || learningFlowStage !== LEARNING_FLOW_STAGES.VERIFY) && (
             <button
               type="button"
               className="btn btn-outline btn-sm workbench-source-locator-toggle"
@@ -543,6 +648,7 @@ export default function App() {
               onClick={() => {
                 setViewMode("focused");
                 setCenterView("lesson");
+                setLearningFlowStage(LEARNING_FLOW_STAGES.UNDERSTAND);
                 setOfficialDocsFullscreen(false);
               }}
             >
@@ -553,6 +659,7 @@ export default function App() {
               onClick={() => {
                 setViewMode("all");
                 setCenterView("lesson");
+                setLearningFlowStage(LEARNING_FLOW_STAGES.UNDERSTAND);
                 setOfficialDocsFullscreen(false);
               }}
             >
@@ -562,7 +669,7 @@ export default function App() {
         </div>
       </header>
       <main className="app-content workbench-app-content">
-        {viewMode === "focused" && currentLearningUnit && currentOfficialDoc && (
+        {viewMode === "focused" && currentLearningUnit && currentOfficialDoc && !currentLearningFlow && (
           <div className="workbench-center-view-switcher" role="tablist" aria-label="中心学习内容">
             <button
               type="button"
@@ -605,6 +712,40 @@ export default function App() {
                   setOfficialDocsFullscreen(false);
                 }}
               />
+            ) : currentLearningFlow ? (
+              <SingleLearningFlow
+                key={currentLearningUnit.id}
+                learningUnit={currentLearningUnit}
+                definition={currentLearningFlow}
+                stage={learningFlowStage}
+                onStageChange={setLearningFlowStage}
+                renderDemo={renderCurrentDemo}
+                renderNotes={() => <NotesPane learningUnitId={currentLearningUnit.id} />}
+                renderPractice={({ onComplete }) => (
+                  <GuidedLearningFlow
+                    key={`${guidedActivity.learningUnitId}:${guidedActivity.revision}:practice`}
+                    learningUnit={currentLearningUnit}
+                    definition={guidedActivity}
+                    renderDemo={renderCurrentDemo}
+                    onReviewResource={handleLearningFlowReviewResource}
+                    onAskAi={handleGuidedAskAi}
+                    onContinue={() => {
+                      onComplete?.();
+                      return true;
+                    }}
+                    canContinue
+                    presentation="practice"
+                    continueLabel="进入验证"
+                  />
+                )}
+                renderVerify={() => canonicalVerification}
+                onOpenOfficial={handleLearningFlowOpenOfficial}
+                onOpenSource={handleLearningFlowOpenSource}
+                onOpenAi={handleLearningFlowOpenAi}
+                onContinue={handleGuidedContinue}
+                verificationSession={assessmentView.session}
+                assessmentReview={learningFlowReview}
+              />
             ) : (
               <div key={currentLearningUnit.id} className="demo-page">
                 {guidedActivity ? (
@@ -612,29 +753,13 @@ export default function App() {
                     key={`${guidedActivity.learningUnitId}:${guidedActivity.revision}`}
                     learningUnit={currentLearningUnit}
                     definition={guidedActivity}
-                    renderDemo={() => (
-                      <DemoSourceLocator
-                        learningUnit={currentLearningUnit}
-                        enabled={sourceLocatorActive}
-                        onLocate={handleVisualSourceLocate}
-                      >
-                        <currentLearningUnit.component />
-                      </DemoSourceLocator>
-                    )}
+                    renderDemo={renderCurrentDemo}
                     onReviewResource={handleGuidedReviewResource}
                     onAskAi={handleGuidedAskAi}
                     onContinue={handleGuidedContinue}
                     canContinue={Boolean(currentLearningPathEntry?.nextId)}
                   />
-                ) : (
-                  <DemoSourceLocator
-                    learningUnit={currentLearningUnit}
-                    enabled={sourceLocatorActive}
-                    onLocate={handleVisualSourceLocate}
-                  >
-                    <currentLearningUnit.component />
-                  </DemoSourceLocator>
-                )}
+                ) : renderCurrentDemo()}
                 {currentCheckpointChapter && (
                   <ChapterCheckpoint
                     chapter={currentCheckpointChapter}

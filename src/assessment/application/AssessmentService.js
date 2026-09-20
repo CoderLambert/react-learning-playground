@@ -341,25 +341,43 @@ export class AssessmentService {
   async startSession(input = {}) {
     const value = requiredRecord(input, "startSession input");
     const { learningUnitId } = normalizeScope(value, "startSession");
-    const questions = await this.#repository.listQuestions({ learningUnitId, status: "active" });
-    if (!Array.isArray(questions)) throw new TypeError("assessment repository.listQuestions must return an array");
+
+    const suppliedQuestionRecords = value.questionRecords !== undefined;
+    let questions;
+    if (suppliedQuestionRecords) {
+      if (!Array.isArray(value.questionRecords) || value.questionRecords.length === 0) {
+        throw invalidQuestion("startSession.questionRecords must be a non-empty array");
+      }
+      questions = clone(value.questionRecords);
+    } else {
+      questions = await this.#repository.listQuestions({ learningUnitId, status: "active" });
+      if (!Array.isArray(questions)) throw new TypeError("assessment repository.listQuestions must return an array");
+    }
 
     const activeQuestions = questions.filter((question) => (
       question?.learningUnitId === learningUnitId && question.status === "active"
     ));
+    if (activeQuestions.length !== questions.length) {
+      throw invalidQuestion("startSession questions must belong to the current learning unit and be active");
+    }
+
     const selectedQuestions = this.#selectSessionQuestions(activeQuestions, value.questionIds);
     if (selectedQuestions.length === 0) {
       throw invalidQuestion("startSession requires at least one active question");
     }
 
-    const items = selectedQuestions.map((question) => {
+    const items = [];
+    for (const question of selectedQuestions) {
       try {
         assertQuestionRecord(question);
-        return createSessionItem(question);
+        if (suppliedQuestionRecords) {
+          await this.#validateEvidence(question, { learningUnitId, operation: "startSession" });
+        }
+        items.push(createSessionItem(question));
       } catch (error) {
         throw this.#normalizeValidationError(error, "startSession.question");
       }
-    });
+    }
     const startedAt = nowIso(this.#clock, "startSession");
     const session = {
       id: createEntityId(this.#idFactory, "session"),

@@ -3,9 +3,17 @@ import { test } from "./test-fixtures.js";
 
 async function openGuidedLesson(page, learningUnitId) {
   await page.goto(`./?demo=${learningUnitId}`);
-  await expect(page.locator(".demo-page h2.demo-title")).toBeVisible();
-  await expect(page.locator("[data-guided-entry]")).toBeVisible();
-  await page.getByRole("button", { name: /开始|继续 Guided Learning/ }).click();
+  await expect(page.locator("h2.demo-title").first()).toBeVisible();
+
+  if (learningUnitId === "rendering-lists-key") {
+    await page.locator("[data-learning-flow='single'] .single-learning-flow__stages button").filter({ hasText: "实践" }).click();
+    await expect(page.locator("[data-guided-entry]")).toBeVisible();
+    await page.getByRole("button", { name: /开始实践|继续实践/ }).click();
+  } else {
+    await expect(page.locator("[data-guided-entry]")).toBeVisible();
+    await page.getByRole("button", { name: /开始|继续 Guided Learning/ }).click();
+  }
+
   await expect(page.locator("[data-guided-flow]")).toHaveAttribute("data-guided-current-step", "predict");
 }
 

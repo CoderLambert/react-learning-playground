@@ -93,6 +93,37 @@ test("learning-unit transition rejects stale initialize completion", async () =>
   assert.equal(runtime.queryStore.getSnapshot().learningUnitId, "unit-b");
 });
 
+test("canonical start is opt-in and does not replace the mutable question-bank start path", async () => {
+  const starts = [];
+  const canonicalQuestions = [{ id: "canonical-q", learningUnitId: "unit-a", status: "active" }];
+  const runtime = makeRuntime({
+    sessionLifecycle: {
+      async recover() { return null; },
+      async start(input) {
+        starts.push(input);
+        return { id: `s-${starts.length}`, status: "in_progress", items: [] };
+      },
+    },
+  });
+  const controller = createAssessmentController({
+    runtime,
+    selectQuestions,
+    getCanonicalQuestions: (learningUnitId) => learningUnitId === "unit-a" ? canonicalQuestions : [],
+  });
+
+  await controller.commands.initialize("unit-a");
+  assert.equal(controller.getSnapshot().canonicalQuestions.length, 1);
+
+  await controller.commands.start();
+  assert.deepEqual(starts[0], { learningUnitId: "unit-a" });
+
+  await controller.commands.startCanonical();
+  assert.deepEqual(starts[1], {
+    learningUnitId: "unit-a",
+    questionRecords: canonicalQuestions,
+  });
+});
+
 test("start failure is retryable", async () => {
   let attempts = 0;
   const runtime = makeRuntime({

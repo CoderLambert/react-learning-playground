@@ -31,7 +31,11 @@ const errorMessage = (error, fallback) => error?.message || fallback;
  * controller. Composition consumers receive only snapshot state, semantic
  * capabilities and commands.
  */
-export function createAssessmentController({ runtime, selectQuestions = () => [] }) {
+export function createAssessmentController({
+  runtime,
+  selectQuestions = () => [],
+  getCanonicalQuestions = () => [],
+}) {
   if (!runtime) throw new Error("Assessment runtime is required");
 
   let generation = 0;
@@ -48,6 +52,7 @@ export function createAssessmentController({ runtime, selectQuestions = () => []
     answer: null,
     feedback: null,
     questions: [],
+    canonicalQuestions: [],
     initializationErrors: { load: null, recover: null },
     startError: null,
     submitError: null,
@@ -110,6 +115,11 @@ export function createAssessmentController({ runtime, selectQuestions = () => []
       submitRequestId += 1;
       const token = createOperationToken({ generation: currentGeneration, learningUnitId, requestId });
 
+      const canonicalQuestions = getCanonicalQuestions(learningUnitId);
+      if (!Array.isArray(canonicalQuestions)) {
+        throw new TypeError("getCanonicalQuestions must return an array");
+      }
+
       state = {
         ...state,
         learningUnitId,
@@ -118,6 +128,7 @@ export function createAssessmentController({ runtime, selectQuestions = () => []
         answer: null,
         feedback: null,
         questions: [],
+        canonicalQuestions,
         initializationErrors: { load: null, recover: null },
         startError: null,
         submitError: null,
@@ -163,28 +174,13 @@ export function createAssessmentController({ runtime, selectQuestions = () => []
     },
 
     async start() {
-      if (!state.learningUnitId || state.questions.length === 0 || state.starting) return;
-      const learningUnitId = state.learningUnitId;
-      const requestId = ++startRequestId;
-      const token = createOperationToken({ generation, learningUnitId, requestId });
-      update({ starting: true, startError: null });
-      try {
-        const session = await runtime.sessionLifecycle.start({ learningUnitId });
-        if (!isOperationCurrent(token, currentContext(startRequestId))) return;
-        update({
-          session,
-          currentIndex: 0,
-          answer: null,
-          feedback: null,
-          submitError: null,
-        });
-      } catch (error) {
-        if (isOperationCurrent(token, currentContext(startRequestId))) {
-          update({ startError: errorMessage(error, "无法开始评测") });
-        }
-      } finally {
-        if (isOperationCurrent(token, currentContext(startRequestId))) update({ starting: false });
-      }
+      if (state.questions.length === 0) return;
+      return startSessionWithQuestions();
+    },
+
+    async startCanonical() {
+      if (state.canonicalQuestions.length === 0) return;
+      return startSessionWithQuestions(state.canonicalQuestions);
     },
 
     async submit({ questionId, answer }) {
@@ -253,6 +249,37 @@ export function createAssessmentController({ runtime, selectQuestions = () => []
       }
     },
   });
+
+  async function startSessionWithQuestions(questionRecords) {
+    if (!state.learningUnitId || state.starting) return;
+    if (questionRecords !== undefined && (!Array.isArray(questionRecords) || questionRecords.length === 0)) return;
+    const learningUnitId = state.learningUnitId;
+    const requestId = ++startRequestId;
+    const token = createOperationToken({ generation, learningUnitId, requestId });
+    update({ starting: true, startError: null });
+    try {
+      const session = await runtime.sessionLifecycle.start({
+        learningUnitId,
+        ...(questionRecords ? { questionRecords } : {}),
+      });
+      if (!isOperationCurrent(token, currentContext(startRequestId))) return;
+      update({
+        session,
+        currentIndex: 0,
+        answer: null,
+        feedback: null,
+        submitError: null,
+      });
+      return session;
+    } catch (error) {
+      if (isOperationCurrent(token, currentContext(startRequestId))) {
+        update({ startError: errorMessage(error, "无法开始评测") });
+      }
+      return undefined;
+    } finally {
+      if (isOperationCurrent(token, currentContext(startRequestId))) update({ starting: false });
+    }
+  }
 
   async function refreshQuestionsAfterMutationFailure() {
     if (!state.learningUnitId) return;
