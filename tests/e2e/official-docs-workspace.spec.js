@@ -31,3 +31,4 @@ test("React official docs use the center workspace and fullscreen shows only the
   await page.getByRole("button", { name: "返回实验" }).click();
   await expect(page.locator(".demo-page h2.demo-title")).toContainText("Component");
 });
+// @browser-owner workbench
