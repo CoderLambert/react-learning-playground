@@ -36,9 +36,13 @@ test.describe("React Learning Workbench integration", () => {
     }
 
     const notesTab = page.getByRole("tab", { name: "笔记", exact: true });
+    const officialTab = page.getByRole("tab", { name: "官方", exact: true });
     const sourceTab = page.getByRole("tab", { name: "源码", exact: true });
     await notesTab.focus();
     await notesTab.press("ArrowRight");
+    await expect(officialTab).toBeFocused();
+    await expect(officialTab).toHaveAttribute("aria-selected", "true");
+    await officialTab.press("ArrowRight");
     await expect(sourceTab).toBeFocused();
     await expect(sourceTab).toHaveAttribute("aria-selected", "true");
     await expect(page.locator(".source-viewer--inspector")).toBeVisible();

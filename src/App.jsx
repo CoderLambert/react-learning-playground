@@ -12,10 +12,12 @@ import { AssessmentPane } from "./assessment/ui/AssessmentPane.jsx";
 import { useAssessmentApplication } from "./assessment/application/useAssessmentApplication.js";
 import { NoteToc } from "./components/notes/NoteToc";
 import { NoteViewer } from "./components/notes/NoteViewer";
+import { OfficialDocsPane } from "./components/official-docs/OfficialDocsPane";
 import { MDX_TEACHING_COMPONENTS } from "./components/mdx";
 import { DemoSourceLocator } from "./components/source-locator/DemoSourceLocator";
 import { useAiLearningAssistant } from "./ai/useAiLearningAssistant.js";
 import { createAiAssessmentIntegration } from "./app/aiAssessmentIntegration.js";
+import { getOfficialDocsForLearningUnit } from "./content/officialDocs.js";
 import { prepareGuidedAiHandoff } from "./app/guidedAiHandoff.js";
 import { enrichLearningUnitSourceSemantics } from "./source/semanticSources";
 import { WorkbenchNavigation } from "./workbench/WorkbenchNavigation";
@@ -390,6 +392,12 @@ export default function App() {
       onFocusModeChange={setFocusMode}
       onWidthChange={setInspectorWidth}
       notes={<NotesPane learningUnitId={currentLearningUnit.id} />}
+      official={(
+        <OfficialDocsPane
+          learningUnit={currentLearningUnit}
+          doc={getOfficialDocsForLearningUnit(currentLearningUnit.id)}
+        />
+      )}
       source={(
         <Suspense fallback={<div className="note-runtime-state">正在加载源码查看器…</div>}>
           <SourceViewer

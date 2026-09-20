@@ -5,6 +5,11 @@ const DEFAULT_PANEL_DEFINITIONS = [
     placeholder: ["笔记区域", "等待 MDX Runtime 注入当前知识点笔记。"],
   },
   {
+    id: "official",
+    label: "官方",
+    placeholder: ["React 官方文档", "当前知识点尚未接入对应的 React 官方章节。"],
+  },
+  {
     id: "source",
     label: "源码",
     placeholder: ["源码区域", "等待 SourceViewer 注入当前 Demo 源码。"],
