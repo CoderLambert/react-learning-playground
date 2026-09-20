@@ -7,6 +7,12 @@ async function openListsAndKey(page) {
   return page.locator("[data-learning-flow='single']");
 }
 
+async function openStateSnapshot(page) {
+  await loadApp(page);
+  await openDemo(page, "State Snapshot、Batching 与 Update Queue");
+  return page.locator("[data-learning-flow='single']");
+}
+
 test("Lists and Key exposes one deep Understand Practice Verify journey instead of parallel learning modes", async ({ page }) => {
   const flow = await openListsAndKey(page);
 
@@ -122,6 +128,64 @@ test("diagnostic verification turns a known wrong model into counter-evidence be
   await expect(flow.getByText("需要复习", { exact: true })).toBeVisible();
   await expect(flow).toContainText("最近一次已完成评测有 1 道错误");
   await expect(page.getByText(/mastery/i)).toHaveCount(0);
+});
+
+test("State Snapshot reuses the diagnostic loop for queue reasoning and preserves the first formal error", async ({ page }) => {
+  const flow = await openStateSnapshot(page);
+
+  await expect(flow).toHaveAttribute("data-learning-unit", "state-snapshot-queue");
+  await expect(flow).toHaveAttribute("data-learning-stage", "understand");
+  await expect(flow).toContainText("Render Snapshot → Update Queue → Next Render State");
+  await expect(flow).toContainText("先区分当前快照、更新请求和下一次 render");
+  await expect(flow).toContainText("Replace × 3");
+  await expect(flow).toContainText("Updater × 3");
+  await expect(flow).toContainText("Replace + Updater + Replace 42");
+
+  await flow.locator(".single-learning-flow__stages button").filter({ hasText: "实践" }).click();
+  await expect(flow).toHaveAttribute("data-learning-stage", "practice");
+  await expect(page.getByRole("button", { name: "开始实践" })).toBeVisible();
+
+  await flow.locator(".single-learning-flow__stages button").filter({ hasText: "验证" }).click();
+  await page.getByRole("button", { name: "开始测试" }).click();
+
+  await page.getByRole("radio", { name: /setCount 会先把当前变量 count 直接改成 1/ }).check();
+  await page.getByRole("button", { name: "提交答案" }).click();
+
+  const remediation = page.locator("[data-assessment-misconception='setter-mutates-snapshot']");
+  await expect(remediation).toBeVisible();
+  await expect(remediation).toContainText("setter 会立即修改当前 render 里的 State 变量");
+  await expect(remediation).toContainText("handler snapshot");
+  await expect(page.getByText("正确答案", { exact: true })).toHaveCount(0);
+
+  await page.getByRole("button", { name: "重新选择" }).click();
+  await page.getByRole("radio", { name: /当前 handler 仍读取这次 render 的 count = 0/ }).check();
+  await page.getByRole("button", { name: "再次验证" }).click();
+
+  await expect(page.getByText("已纠正", { exact: true })).toBeVisible();
+  const teachBack = page.getByLabel("用自己的话再解释一次");
+  await expect(teachBack).toBeVisible();
+  await teachBack.fill("setter 不会改写当前 render 的 count snapshot；它把更新请求加入队列，React 处理完后下一次 render 才拿到新的 State。");
+
+  await page.getByRole("button", { name: /下一题/ }).click();
+
+  await page.getByRole("radio", { name: /三次表达式都读取同一个 count = 0 snapshot/ }).check();
+  await page.getByRole("button", { name: "提交答案" }).click();
+  await page.getByRole("button", { name: /下一题/ }).click();
+
+  await page.getByRole("radio", { name: /每个 updater 在 queue processing 时接收前一项 pending State/ }).check();
+  await page.getByRole("button", { name: "提交答案" }).click();
+  await page.getByRole("button", { name: /下一题/ }).click();
+
+  await page.getByRole("radio", { name: /queue 先把 pending 替换成 5/ }).check();
+  await page.getByRole("button", { name: "提交答案" }).click();
+  await page.getByRole("button", { name: /下一题/ }).click();
+
+  await page.getByRole("radio", { name: /React 依次处理前面的 replace 和 updater/ }).check();
+  await page.getByRole("button", { name: "提交答案" }).click();
+
+  await expect(page.getByText("本轮评测已完成", { exact: true })).toBeVisible();
+  await expect(flow.getByText("需要复习", { exact: true })).toBeVisible();
+  await expect(flow).toContainText("最近一次已完成评测有 1 道错误");
 });
 
 test("official deep reading returns to the current Understand stage", async ({ page }) => {

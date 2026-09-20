@@ -118,3 +118,78 @@ test("canonical session records cannot cross learning-unit scope", async () => {
     /current learning unit/,
   );
 });
+
+
+test("State Snapshot ships five validated diagnostic canonical questions", () => {
+  const questions = getCanonicalAssessmentQuestions("state-snapshot-queue");
+
+  assert.equal(questions.length, 5);
+  assert.deepEqual(
+    questions.map((question) => question.id),
+    [
+      "canonical-state-snapshot-current-value",
+      "canonical-state-snapshot-replace-three",
+      "canonical-state-snapshot-updater-three",
+      "canonical-state-snapshot-replace-updater",
+      "canonical-state-snapshot-final-replace",
+    ],
+  );
+  assert.ok(questions.every((question) => question.provenance.source === "canonical"));
+  assert.ok(questions.every((question) => question.learningUnitId === "state-snapshot-queue"));
+  assert.ok(questions.every((question) => question.evidenceRefs.length > 0));
+
+  const diagnosticQuestions = questions.filter((question) => question.content.diagnosticOptionMap);
+  assert.ok(diagnosticQuestions.length >= 4);
+
+  for (const question of diagnosticQuestions) {
+    for (const [optionId, misconceptionId] of Object.entries(question.content.diagnosticOptionMap)) {
+      assert.notEqual(optionId, question.content.correctOptionId);
+      assert.ok(question.content.options.some((option) => option.id === optionId));
+      assert.ok(
+        getMisconceptionForLearningUnit("state-snapshot-queue", misconceptionId),
+        `${question.id}: missing State Snapshot misconception ${misconceptionId}`,
+      );
+    }
+  }
+});
+
+test("State Snapshot canonical session snapshots diagnostics without entering the mutable question bank", async () => {
+  const repository = new MemoryAssessmentRepository();
+  const service = new AssessmentService({
+    repository,
+    idFactory: createIdFactory(),
+    evidenceResolver: {
+      resolve(ref) {
+        return ref?.kind === "source" ? { ok: true } : null;
+      },
+    },
+  });
+  const questions = getCanonicalAssessmentQuestions("state-snapshot-queue");
+
+  const session = await service.startSession({
+    trusted: { learningUnitId: "state-snapshot-queue" },
+    questionRecords: questions,
+  });
+
+  assert.equal(session.items.length, 5);
+  assert.deepEqual(
+    await repository.listQuestions({ learningUnitId: "state-snapshot-queue" }),
+    [],
+  );
+
+  const replaceThree = session.items.find(
+    (item) => item.questionId === "canonical-state-snapshot-replace-three",
+  ).snapshot;
+  assert.equal(
+    replaceThree.content.diagnosticOptionMap["auto-accumulate"],
+    "repeated-replace-accumulates",
+  );
+
+  const attempt = await service.submitAnswer({
+    trusted: { learningUnitId: "state-snapshot-queue" },
+    sessionId: session.id,
+    questionId: replaceThree.id,
+    answer: replaceThree.content.correctOptionId,
+  });
+  assert.equal(attempt.correct, true);
+});

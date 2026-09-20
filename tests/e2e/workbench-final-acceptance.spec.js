@@ -14,8 +14,9 @@ test.describe("React Learning Workbench final acceptance", () => {
 
     for (const label of labels) {
       await openDemo(page, label);
-      if (label === "列表渲染与 key 身份") {
-        await page.getByText("阅读完整笔记", { exact: true }).click();
+      const inlineNotes = page.getByText("阅读完整笔记", { exact: true });
+      if (await inlineNotes.count()) {
+        await inlineNotes.click();
       } else {
         await page.getByRole("tab", { name: "笔记" }).click();
       }

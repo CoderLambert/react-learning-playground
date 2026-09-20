@@ -383,7 +383,7 @@ export function GuidedLearningFlow({
             <p className="guided-flow-eyebrow">{practicePresentation ? "当前阶段" : "可选学习路径"}</p>
             <h2 id="guided-learning-entry-title">{practicePresentation ? "实践" : "Guided Learning"}</h2>
             <p>{practicePresentation
-              ? "先预测，再操作真实 Demo、解释观察结果，最后把 key 的身份模型迁移到新场景。"
+              ? "先预测，再操作真实 Demo、解释观察结果，最后把当前 mental model 迁移到新场景。"
               : "先暴露 prediction，再操作真实 Demo、写下 explanation，最后完成一个 practice 迁移题。"}</p>
             {persistenceNotice && (
               <p className="guided-flow-persistence-notice" role="status" data-guided-persistence-status>

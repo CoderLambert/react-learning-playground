@@ -9,29 +9,34 @@ const STAGE_ITEMS = Object.freeze([
 
 function MechanismMap({ model }) {
   if (!model?.mechanismMap?.length) return null;
+  const titleId = `${model.learningUnitId}-mechanism-title`;
 
   return (
-    <section className="single-learning-flow__mechanism" aria-labelledby="lists-key-mechanism-title">
+    <section className="single-learning-flow__mechanism" aria-labelledby={titleId}>
       <div className="single-learning-flow__section-heading">
         <div>
           <span>Mechanism map</span>
-          <h3 id="lists-key-mechanism-title">先把这些对象分开，再讨论 key</h3>
+          <h3 id={titleId}>{model.mechanismTitle ?? "先把关键对象分开"}</h3>
         </div>
       </div>
 
-      <div className="single-learning-flow__mechanism-table" role="table" aria-label="Lists and Key 机制区分">
+      <div
+        className="single-learning-flow__mechanism-table"
+        role="table"
+        aria-label={model.mechanismAriaLabel ?? "核心机制区分"}
+      >
         <div className="single-learning-flow__mechanism-row is-header" role="row">
-          <strong role="columnheader">对象</strong>
-          <strong role="columnheader">当前 Demo</strong>
-          <strong role="columnheader">它负责什么</strong>
-          <strong role="columnheader">reorder 时会怎样</strong>
+          <strong role="columnheader">{model.mechanismHeaders?.subject ?? "对象"}</strong>
+          <strong role="columnheader">{model.mechanismHeaders?.example ?? "当前 Demo"}</strong>
+          <strong role="columnheader">{model.mechanismHeaders?.role ?? "它负责什么"}</strong>
+          <strong role="columnheader">{model.mechanismHeaders?.change ?? "变化时会怎样"}</strong>
         </div>
         {model.mechanismMap.map((item) => (
           <div className="single-learning-flow__mechanism-row" role="row" key={item.id}>
             <strong role="cell">{item.label}</strong>
             <code role="cell">{item.example}</code>
             <span role="cell">{item.role}</span>
-            <span role="cell">{item.reorder}</span>
+            <span role="cell">{item.change ?? item.reorder}</span>
           </div>
         ))}
       </div>
@@ -41,13 +46,20 @@ function MechanismMap({ model }) {
 
 function ContrastCases({ model }) {
   if (!model?.contrastCases?.length) return null;
+  const titleId = `${model.learningUnitId}-contrast-title`;
+  const dimensions = model.contrastDimensions ?? [
+    { id: "keyStory", label: "key" },
+    { id: "identityStory", label: "identity" },
+    { id: "stateStory", label: "State" },
+    { id: "uiStory", label: "UI" },
+  ];
 
   return (
-    <section className="single-learning-flow__contrasts" aria-labelledby="lists-key-contrast-title">
+    <section className="single-learning-flow__contrasts" aria-labelledby={titleId}>
       <div className="single-learning-flow__section-heading">
         <div>
           <span>Contrast cases</span>
-          <h3 id="lists-key-contrast-title">三种变化，不要混成同一种“复用 / 重建”</h3>
+          <h3 id={titleId}>{model.contrastTitle ?? "把相似结果背后的不同机制分开"}</h3>
         </div>
       </div>
 
@@ -56,22 +68,12 @@ function ContrastCases({ model }) {
           <article key={item.id} className="single-learning-flow__contrast-card">
             <h4>{item.title}</h4>
             <dl>
-              <div>
-                <dt>key</dt>
-                <dd>{item.keyStory}</dd>
-              </div>
-              <div>
-                <dt>identity</dt>
-                <dd>{item.identityStory}</dd>
-              </div>
-              <div>
-                <dt>State</dt>
-                <dd>{item.stateStory}</dd>
-              </div>
-              <div>
-                <dt>UI</dt>
-                <dd>{item.uiStory}</dd>
-              </div>
+              {dimensions.map((dimension) => (
+                <div key={dimension.id}>
+                  <dt>{dimension.label}</dt>
+                  <dd>{item[dimension.id]}</dd>
+                </div>
+              ))}
             </dl>
             <p>{item.conclusion}</p>
           </article>
@@ -159,17 +161,17 @@ export function SingleLearningFlow({
           <div className="single-learning-flow__concept-grid">
             <article className="single-learning-flow__concept single-learning-flow__concept--primary">
               <span>核心模型</span>
-              <h3>key → Component Identity → State preservation</h3>
+              <h3>{definition.coreModelTitle}</h3>
               <p>{definition.mentalModel}</p>
             </article>
             <article className="single-learning-flow__concept">
               <span>常见误区</span>
-              <h3>不只是性能优化</h3>
+              <h3>{definition.misconceptionTitle}</h3>
               <p>{definition.misconception}</p>
             </article>
             <article className="single-learning-flow__concept">
               <span>工程判断</span>
-              <h3>什么时候必须稳定 key</h3>
+              <h3>{definition.decisionRuleTitle}</h3>
               <p>{definition.decisionRule}</p>
             </article>
           </div>
@@ -215,8 +217,8 @@ export function SingleLearningFlow({
         <div className="single-learning-flow__stage" data-learning-stage-panel="practice">
           <div className="single-learning-flow__stage-intro">
             <span>实践</span>
-            <h3>先做判断，再让 Demo 证明或推翻它</h3>
-            <p>先预测结果，再亲手操作真实 Demo，最后把同一个 mental model 迁移到新场景。</p>
+            <h3>{definition.practiceTitle ?? "先做判断，再让 Demo 证明或推翻它"}</h3>
+            <p>{definition.practiceDescription ?? "先预测结果，再亲手操作真实 Demo，最后把同一个 mental model 迁移到新场景。"}</p>
           </div>
           {renderPractice?.({
             onComplete: () => onStageChange?.(LEARNING_FLOW_STAGES.VERIFY),
@@ -228,8 +230,8 @@ export function SingleLearningFlow({
         <div className="single-learning-flow__stage" data-learning-stage-panel="verify">
           <div className="single-learning-flow__stage-intro">
             <span>验证</span>
-            <h3>不看答案，检查你有没有把几个机制混在一起</h3>
-            <p>诊断题会区分“记住规则”和“能解释 identity / Props / State / DOM 的因果关系”。答错时先用反证实验纠正模型，再看完整解释。</p>
+            <h3>{definition.verifyTitle ?? "不看答案，检查你有没有把几个机制混在一起"}</h3>
+            <p>{definition.verifyDescription ?? "诊断题会区分“记住规则”和“能解释底层因果关系”。答错时先用反证实验纠正模型，再看完整解释。"}</p>
           </div>
 
           {renderVerify?.()}
