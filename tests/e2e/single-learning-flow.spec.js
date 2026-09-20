@@ -7,12 +7,18 @@ async function openListsAndKey(page) {
   return page.locator("[data-learning-flow='single']");
 }
 
-test("Lists and Key exposes one Understand Practice Verify journey instead of parallel learning modes", async ({ page }) => {
+test("Lists and Key exposes one deep Understand Practice Verify journey instead of parallel learning modes", async ({ page }) => {
   const flow = await openListsAndKey(page);
 
   await expect(flow).toHaveAttribute("data-learning-stage", "understand");
   await expect(flow).toContainText("key → Component Identity → State preservation");
-  await expect(flow).toContainText("不只是性能优化");
+  await expect(flow).toContainText("先把这些对象分开，再讨论 key");
+  await expect(flow).toContainText("Local State");
+  await expect(flow).toContainText("DOM");
+  await expect(flow).toContainText("index key + reorder");
+  await expect(flow).toContainText("stable id + reorder");
+  await expect(flow).toContainText("切换 index key ↔ stable id");
+  await expect(flow).toContainText("错的不是“DOM 完全没更新”");
   await expect(page.getByRole("tab", { name: "源码", exact: true })).toBeVisible();
   await expect(page.getByRole("tab", { name: "AI", exact: true })).toBeVisible();
   await expect(page.getByRole("tab", { name: "笔记", exact: true })).toHaveCount(0);
@@ -32,31 +38,47 @@ test("Lists and Key exposes one Understand Practice Verify journey instead of pa
   await expect(page.getByRole("button", { name: /让 AI/ })).toHaveCount(0);
 });
 
-test("canonical verification works without AI authoring and wrong answers route back to evidence", async ({ page }) => {
+test("diagnostic verification turns a known wrong model into counter-evidence before the full answer", async ({ page }) => {
   const flow = await openListsAndKey(page);
   await flow.locator(".single-learning-flow__stages button").filter({ hasText: "验证" }).click();
 
   await page.getByRole("button", { name: "开始测试" }).click();
-  await expect(page.getByText("在可重排列表中，稳定 key 最核心的作用是什么？")).toBeVisible();
 
-  await page.getByRole("radio", { name: "只用于消除控制台 warning，不影响 State 保留" }).check();
-  await page.getByRole("button", { name: "提交答案" }).click();
-  await expect(page.getByText("再想一想", { exact: true })).toBeVisible();
-  await expect(page.getByText(/key 的核心是 sibling 范围内的身份线索/)).toBeVisible();
-
-  await page.getByRole("button", { name: "查看依据 1" }).click();
-  await expect(page.getByRole("tab", { name: "源码", exact: true })).toHaveAttribute("aria-selected", "true");
-  await expect(page.locator(".source-viewer--inspector")).toHaveAttribute("data-source-focus", "39-46");
-
-  await page.getByRole("button", { name: "关闭学习面板" }).last().click();
-  await page.getByRole("button", { name: /下一题/ }).click();
-
-  await page.getByRole("radio", { name: /index 表示当前位置/ }).check();
+  await page.getByRole("radio", { name: /给同级元素提供稳定身份线索/ }).check();
   await page.getByRole("button", { name: "提交答案" }).click();
   await expect(page.getByText("回答正确", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: /下一题/ }).click();
 
+  await expect(page.getByText(/AAA 还在第一行/)).toBeVisible();
+  await page.getByRole("radio", { name: /DOM 没有更新/ }).check();
+  await page.getByRole("button", { name: "提交答案" }).click();
+
+  const remediation = page.locator("[data-assessment-misconception='dom-not-updated']");
+  await expect(page.getByText("再想一想", { exact: true })).toBeVisible();
+  await expect(remediation).toBeVisible();
+  await expect(remediation).toContainText("把“组件身份复用”理解成“DOM 没更新”");
+  await expect(remediation).toContainText("反证线索");
+  await expect(remediation).toContainText("先做这个实验");
+  await expect(remediation).toContainText("第一行输入 AAA → 反转顺序");
+  await expect(remediation.getByText(/reorder 后 task Props 会正常更新/)).toHaveCount(0);
+  await expect(remediation.getByText("实验后再看完整解释")).toBeVisible();
+
+  await page.getByRole("button", { name: "查看依据 2" }).click();
+  await expect(page.getByRole("tab", { name: "源码", exact: true })).toHaveAttribute("aria-selected", "true");
+  await expect(page.locator(".source-viewer--inspector")).toHaveAttribute("data-source-focus", "22-33");
+
+  await page.getByRole("button", { name: "关闭学习面板" }).last().click();
+  await page.getByRole("button", { name: /下一题/ }).click();
+
   await page.getByRole("radio", { name: /数据模型中创建后保持稳定的 todo.id/ }).check();
+  await page.getByRole("button", { name: "提交答案" }).click();
+  await page.getByRole("button", { name: /下一题/ }).click();
+
+  await page.getByRole("radio", { name: /相同 task.id 让 React 在新位置认出同一个组件身份/ }).check();
+  await page.getByRole("button", { name: "提交答案" }).click();
+  await page.getByRole("button", { name: /下一题/ }).click();
+
+  await page.getByRole("radio", { name: /显式 key 从 0 变成 task-a/ }).check();
   await page.getByRole("button", { name: "提交答案" }).click();
 
   await expect(page.getByText("本轮评测已完成", { exact: true })).toBeVisible();
