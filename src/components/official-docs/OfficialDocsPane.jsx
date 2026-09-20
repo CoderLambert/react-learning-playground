@@ -1,7 +1,5 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import "./OfficialDocsPane.css";
-
-const REACT_LEARN_HOME = "https://zh-hans.react.dev/learn";
 
 export function OfficialDocsPane({
   learningUnit,
@@ -10,6 +8,8 @@ export function OfficialDocsPane({
   onFullscreenChange,
   onBackToLesson,
 }) {
+  const [selectedUrl, setSelectedUrl] = useState(null);
+
   useEffect(() => {
     if (!fullscreen || typeof document === "undefined") return undefined;
 
@@ -29,38 +29,59 @@ export function OfficialDocsPane({
     };
   }, [fullscreen, onFullscreenChange]);
 
-  if (!doc) {
+  if (!doc?.primary) {
     return (
       <div className="official-docs-empty">
-        <span className="official-docs-kicker">React 官方文档</span>
-        <h3>当前知识点还未接入官方章节</h3>
-        <p>当前试点只为已完成映射的知识点提供产品内官方文档阅读。</p>
-        <a href={REACT_LEARN_HOME} target="_blank" rel="noreferrer">
-          打开 React 官方 Learn ↗
-        </a>
+        <span className="official-docs-kicker">官方文档</span>
+        <h3>当前知识点还未接入权威资料</h3>
+        <p>该知识点暂时只提供实验、笔记、源码、AI 与评测内容。</p>
       </div>
     );
   }
 
-  const relationLabel = doc.match === "related" ? "相关延伸" : "直接对应";
+  const references = [doc.primary, ...(doc.related ?? [])];
+  const activeReference = references.find((item) => item.url === selectedUrl) ?? doc.primary;
+  const relationLabel = activeReference.match === "related" ? "相关延伸" : "直接对应";
 
   return (
     <section
       className={`official-docs-pane ${fullscreen ? "is-fullscreen" : ""}`.trim()}
-      aria-label={`React 官方文档：${doc.title}`}
+      aria-label={`${activeReference.provider} 官方文档：${activeReference.title}`}
       data-fullscreen={fullscreen ? "true" : "false"}
+      data-provider={activeReference.provider}
     >
       <div className="official-docs-toolbar">
         <div className="official-docs-heading">
           <div className="official-docs-title-row">
-            <span className="official-docs-kicker">React 官方</span>
-            <span className={`official-docs-relation ${doc.match === "related" ? "is-related" : ""}`.trim()}>
+            <span className="official-docs-kicker">{activeReference.provider} 官方</span>
+            <span className={`official-docs-relation ${activeReference.match === "related" ? "is-related" : ""}`.trim()}>
               {relationLabel}
             </span>
           </div>
-          <strong>{doc.title}</strong>
+
+          <div className="official-docs-reference-row">
+            <strong>{activeReference.title}</strong>
+            {references.length > 1 && (
+              <label className="official-docs-reference-picker">
+                <span>资料</span>
+                <select
+                  aria-label="选择官方资料"
+                  value={activeReference.url}
+                  onChange={(event) => setSelectedUrl(event.target.value)}
+                >
+                  {references.map((item, index) => (
+                    <option key={item.url} value={item.url}>
+                      {index === 0 ? "主要" : "延伸"} · {item.provider} · {item.title}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+          </div>
+
           <span className="official-docs-course-link">
-            {learningUnit?.title ? `对应「${learningUnit.title}」` : doc.description}
+            {learningUnit?.title ? `对应「${learningUnit.title}」` : ""}
+            {activeReference.description ? ` · ${activeReference.description}` : ""}
           </span>
         </div>
 
@@ -75,17 +96,17 @@ export function OfficialDocsPane({
               type="button"
               className="official-docs-action"
               onClick={() => onFullscreenChange(true)}
-              aria-label="全屏阅读 React 官方文档"
+              aria-label="全屏阅读官方文档"
             >
               ⛶ 全屏阅读
             </button>
           )}
           <a
             className="official-docs-action"
-            href={doc.url}
+            href={activeReference.url}
             target="_blank"
             rel="noreferrer"
-            aria-label={`在 React 官方网站打开：${doc.title}`}
+            aria-label={`在 ${activeReference.provider} 官网打开：${activeReference.title}`}
           >
             官网打开 ↗
           </a>
@@ -94,10 +115,10 @@ export function OfficialDocsPane({
 
       <div className="official-docs-frame-shell">
         <iframe
-          key={doc.url}
+          key={activeReference.url}
           className="official-docs-frame"
-          src={doc.url}
-          title={`React 官方文档：${doc.title}`}
+          src={activeReference.url}
+          title={`${activeReference.provider} 官方文档：${activeReference.title}`}
           loading="lazy"
           referrerPolicy="strict-origin-when-cross-origin"
         />
