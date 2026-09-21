@@ -19,6 +19,12 @@ async function openNotNeedEffect(page) {
   return page.locator("[data-learning-flow='single']");
 }
 
+async function openPreserveReset(page) {
+  await loadApp(page);
+  await openDemo(page, "State 保留与重置");
+  return page.locator("[data-learning-flow='single']");
+}
+
 test("Lists and Key exposes one deep Understand Practice Verify journey instead of parallel learning modes", async ({ page }) => {
   const flow = await openListsAndKey(page);
 
@@ -298,6 +304,67 @@ test("Guided Needs Review projects to the lesson level and survives reload", asy
   await expect(page.locator("[data-guided-flow]")).toHaveAttribute("data-guided-current-step", "review");
   await page.getByRole("button", { name: "取消需要复习" }).click();
   await expect(flow.locator(".single-learning-flow__review-signal")).toHaveCount(0);
+});
+
+test("Preserving / Resetting State diagnoses identity preservation before reset-boundary decisions", async ({ page }) => {
+  const flow = await openPreserveReset(page);
+
+  await expect(flow).toHaveAttribute("data-learning-unit", "preserving-resetting-state");
+  await expect(flow).toHaveAttribute("data-learning-stage", "understand");
+  await expect(flow).toContainText("Identity match → Preserve State / New identity → Reset State");
+  await expect(flow).toContainText("Parent / tree slot");
+  await expect(flow).toContainText("同位置 + 同类型 + 无 key 变化");
+  await expect(flow).toContainText("同位置 + 同类型 + key={contact.id}");
+  await expect(flow).toContainText("只 reset 真正属于新实体的子树");
+  await expect(flow).toContainText("随机 / 不稳定 key");
+
+  await flow.locator(".single-learning-flow__stages button").filter({ hasText: "实践" }).click();
+  await expect(flow).toHaveAttribute("data-learning-stage", "practice");
+  await expect(page.getByRole("button", { name: "开始实践" })).toBeVisible();
+  await expect(page.getByText("Guided Learning", { exact: true })).toHaveCount(0);
+
+  await flow.locator(".single-learning-flow__stages button").filter({ hasText: "验证" }).click();
+  await expect(flow).toHaveAttribute("data-learning-stage", "verify");
+  await page.getByRole("button", { name: "开始测试" }).click();
+
+  await page.getByRole("radio", { name: /contact prop 已变化，React 应自动创建新的 Chat State/ }).check();
+  await page.getByRole("button", { name: "提交答案" }).click();
+
+  const remediation = page.locator("[data-assessment-misconception='props-reset-state']");
+  await expect(remediation).toBeVisible();
+  await expect(remediation).toContainText("Props 变化会自动重置子组件的局部 State");
+  await expect(remediation).toContainText("Taylor");
+  await expect(remediation).toContainText("Alice");
+  await expect(page.getByText("正确答案", { exact: true })).toHaveCount(0);
+
+  await page.getByRole("button", { name: "重新选择" }).click();
+  await page.getByRole("radio", { name: /父级同一位置仍渲染同一个 Chat 类型/ }).check();
+  await page.getByRole("button", { name: "再次验证" }).click();
+
+  await expect(page.getByText("已纠正", { exact: true })).toBeVisible();
+  const teachBack = page.getByLabel("用自己的话再解释一次");
+  await teachBack.fill("contact Props 可以更新，但同一位置、类型和 key 仍匹配时 Chat identity 被保留，所以 draft State 也继续属于这个 identity。");
+
+  await page.getByRole("button", { name: /下一题/ }).click();
+
+  await page.getByRole("radio", { name: /key 从 taylor 变为 alice/ }).check();
+  await page.getByRole("button", { name: "提交答案" }).click();
+  await page.getByRole("button", { name: /下一题/ }).click();
+
+  await page.getByRole("radio", { name: /保留 WorkspaceShell identity，只给 InvoiceEditor/ }).check();
+  await page.getByRole("button", { name: "提交答案" }).click();
+  await page.getByRole("button", { name: /下一题/ }).click();
+
+  await page.getByRole("radio", { name: /key 仍是 alice/ }).check();
+  await page.getByRole("button", { name: "提交答案" }).click();
+  await page.getByRole("button", { name: /下一题/ }).click();
+
+  await page.getByRole("radio", { name: /需要把草稿 State 提升或按 contact.id 存储/ }).check();
+  await page.getByRole("button", { name: "提交答案" }).click();
+
+  await expect(page.getByText("本轮评测已完成", { exact: true })).toBeVisible();
+  await expect(flow.getByText("需要复习", { exact: true })).toBeVisible();
+  await expect(flow).toContainText("最近一次已完成评测有 1 道错误");
 });
 
 test("official deep reading returns to the current Understand stage", async ({ page }) => {
