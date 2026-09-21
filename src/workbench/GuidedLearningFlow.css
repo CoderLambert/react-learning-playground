@@ -304,13 +304,16 @@
 }
 
 .guided-flow-patch {
-  margin: 0;
-  overflow-x: auto;
+  min-width: 0;
+  overflow: hidden;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
-  padding: 10px 12px;
   background: var(--bg-surface-tertiary);
-  color: var(--text-main);
+}
+
+.guided-flow-patch .shiki,
+.guided-flow-patch > pre {
+  padding: 10px 12px;
   font-size: 12px;
   line-height: 1.55;
   white-space: pre;
