@@ -298,7 +298,7 @@ test("Guided Needs Review projects to the lesson level and survives reload", asy
   );
   await page.getByRole("button", { name: "保存 explanation，继续 practice" }).click();
   await expect(page.locator("[data-guided-practice-code-context] [data-code-highlighted='true']")).toBeVisible();
-  await expect(page.locator("[data-guided-practice-kind='patch-choice'] .guided-flow-practice-option-content > .guided-flow-patch[data-code-highlighted='true']")).toHaveCount(2);
+  await expect(page.locator("[data-guided-practice-kind='patch-choice'] .guided-flow-practice-option-content > .guided-flow-patch[data-code-highlighted='true']")).toHaveCount(3);
   await page.locator("[data-guided-practice-kind='patch-choice'] input[value='functional-updaters']").check();
   await page.getByRole("button", { name: "提交 practice，查看 review" }).click();
 
