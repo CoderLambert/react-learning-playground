@@ -185,6 +185,60 @@ test("Preserving / Resetting misconceptions have deterministic identity counter-
   }
 });
 
+test("Effect Lifecycle models external synchronization instead of dependency-array folklore", () => {
+  const model = getConceptModelForLearningUnit("lifecycle-of-reactive-effects");
+
+  assert.equal(model.learningUnitId, "lifecycle-of-reactive-effects");
+  assert.deepEqual(
+    model.mechanismMap.map((item) => item.id),
+    [
+      "render-reactive-read",
+      "commit",
+      "sync-target",
+      "effect-cleanup",
+      "effect-setup",
+      "functional-updater",
+      "effect-event",
+      "strict-mode-check",
+    ],
+  );
+  assert.deepEqual(
+    model.contrastCases.map((item) => item.id),
+    [
+      "room-target-change",
+      "muted-event-behavior",
+      "message-updater",
+      "strict-mode-development",
+    ],
+  );
+  assert.deepEqual(
+    model.contrastDimensions.map((item) => item.id),
+    ["triggerStory", "syncStory", "dependencyStory", "boundaryStory"],
+  );
+});
+
+test("Effect Lifecycle misconceptions have deterministic synchronization counter-evidence", () => {
+  const ids = [
+    "dependency-array-run-switch",
+    "cleanup-only-on-unmount",
+    "setup-before-old-cleanup",
+    "every-changing-value-reconnects",
+    "remove-true-dependency",
+    "updater-is-dependency-hack",
+    "effect-event-is-dependency-hack",
+    "strict-mode-is-production-duplicate",
+  ];
+
+  for (const id of ids) {
+    const misconception = getMisconceptionForLearningUnit("lifecycle-of-reactive-effects", id);
+    assert.ok(misconception, `missing Effect Lifecycle misconception ${id}`);
+    assert.ok(misconception.diagnosis.length > 0);
+    assert.ok(misconception.counterEvidence.length > 0);
+    assert.ok(misconception.experiment.length > 0);
+    assert.ok(misconception.evidenceRefs.length > 0);
+  }
+});
+
 test("concept-model lookup remains sparse and lesson-scoped", () => {
   assert.equal(getConceptModelForLearningUnit("props"), null);
   assert.equal(getMisconceptionForLearningUnit("props", "dom-not-updated"), null);
@@ -192,4 +246,5 @@ test("concept-model lookup remains sparse and lesson-scoped", () => {
   assert.equal(getMisconceptionForLearningUnit("state-snapshot-queue", "unknown"), null);
   assert.equal(getMisconceptionForLearningUnit("not-need-effect", "unknown"), null);
   assert.equal(getMisconceptionForLearningUnit("preserving-resetting-state", "unknown"), null);
+  assert.equal(getMisconceptionForLearningUnit("lifecycle-of-reactive-effects", "unknown"), null);
 });

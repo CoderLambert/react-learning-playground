@@ -358,3 +358,81 @@ test("Preserving / Resetting canonical session snapshots diagnostics outside the
   });
   assert.equal(attempt.correct, true);
 });
+
+
+test("Effect Lifecycle ships five synchronization diagnostic canonical questions", () => {
+  const questions = getCanonicalAssessmentQuestions("lifecycle-of-reactive-effects");
+
+  assert.equal(questions.length, 5);
+  assert.deepEqual(
+    questions.map((question) => question.id),
+    [
+      "canonical-effect-lifecycle-room-switch-order",
+      "canonical-effect-lifecycle-muted-no-reconnect",
+      "canonical-effect-lifecycle-messages-updater",
+      "canonical-effect-lifecycle-keep-room-dependency",
+      "canonical-effect-lifecycle-strict-mode",
+    ],
+  );
+  assert.ok(questions.every((question) => question.provenance.source === "canonical"));
+  assert.ok(questions.every((question) => question.learningUnitId === "lifecycle-of-reactive-effects"));
+  assert.ok(questions.every((question) => question.evidenceRefs.length > 0));
+
+  const diagnosticQuestions = questions.filter((question) => question.content.diagnosticOptionMap);
+  assert.ok(diagnosticQuestions.length >= 4);
+
+  for (const question of diagnosticQuestions) {
+    for (const [optionId, misconceptionId] of Object.entries(question.content.diagnosticOptionMap)) {
+      assert.notEqual(optionId, question.content.correctOptionId);
+      assert.ok(question.content.options.some((option) => option.id === optionId));
+      assert.ok(
+        getMisconceptionForLearningUnit("lifecycle-of-reactive-effects", misconceptionId),
+        `${question.id}: missing Effect Lifecycle misconception ${misconceptionId}`,
+      );
+    }
+  }
+
+  const order = questions.find(
+    (question) => question.id === "canonical-effect-lifecycle-room-switch-order",
+  );
+  assert.equal(order.content.diagnosticOptionMap["setup-cleanup"], "setup-before-old-cleanup");
+  assert.equal(order.content.diagnosticOptionMap["cleanup-only-unmount"], "cleanup-only-on-unmount");
+});
+
+test("Effect Lifecycle canonical session snapshots diagnostics outside the mutable bank", async () => {
+  const repository = new MemoryAssessmentRepository();
+  const service = new AssessmentService({
+    repository,
+    idFactory: createIdFactory(),
+    evidenceResolver: {
+      resolve(ref) {
+        return ref?.kind === "source" ? { ok: true } : null;
+      },
+    },
+  });
+  const questions = getCanonicalAssessmentQuestions("lifecycle-of-reactive-effects");
+
+  const session = await service.startSession({
+    trusted: { learningUnitId: "lifecycle-of-reactive-effects" },
+    questionRecords: questions,
+  });
+
+  assert.equal(session.items.length, 5);
+  assert.deepEqual(
+    await repository.listQuestions({ learningUnitId: "lifecycle-of-reactive-effects" }),
+    [],
+  );
+
+  const order = session.items.find(
+    (item) => item.questionId === "canonical-effect-lifecycle-room-switch-order",
+  ).snapshot;
+  assert.equal(order.content.diagnosticOptionMap["setup-cleanup"], "setup-before-old-cleanup");
+
+  const attempt = await service.submitAnswer({
+    trusted: { learningUnitId: "lifecycle-of-reactive-effects" },
+    sessionId: session.id,
+    questionId: order.id,
+    answer: order.content.correctOptionId,
+  });
+  assert.equal(attempt.correct, true);
+});

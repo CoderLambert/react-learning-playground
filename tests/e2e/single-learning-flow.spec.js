@@ -25,6 +25,12 @@ async function openPreserveReset(page) {
   return page.locator("[data-learning-flow='single']");
 }
 
+async function openEffectLifecycle(page) {
+  await loadApp(page);
+  await openDemo(page, "响应式 Effect 生命周期与依赖");
+  return page.locator("[data-learning-flow='single']");
+}
+
 test("Lists and Key exposes one deep Understand Practice Verify journey instead of parallel learning modes", async ({ page }) => {
   const flow = await openListsAndKey(page);
 
@@ -360,6 +366,67 @@ test("Preserving / Resetting State diagnoses identity preservation before reset-
   await page.getByRole("button", { name: /下一题/ }).click();
 
   await page.getByRole("radio", { name: /需要把草稿 State 提升或按 contact.id 存储/ }).check();
+  await page.getByRole("button", { name: "提交答案" }).click();
+
+  await expect(page.getByText("本轮评测已完成", { exact: true })).toBeVisible();
+  await expect(flow.getByText("需要复习", { exact: true })).toBeVisible();
+  await expect(flow).toContainText("最近一次已完成评测有 1 道错误");
+});
+
+test("Effect Lifecycle diagnoses synchronization order and dependency boundaries", async ({ page }) => {
+  const flow = await openEffectLifecycle(page);
+
+  await expect(flow).toHaveAttribute("data-learning-unit", "lifecycle-of-reactive-effects");
+  await expect(flow).toHaveAttribute("data-learning-stage", "understand");
+  await expect(flow).toContainText("Render → Commit → Cleanup(old) → Setup(new)");
+  await expect(flow).toContainText("Synchronization Target");
+  await expect(flow).toContainText("roomId 改变：同步目标真的变了");
+  await expect(flow).toContainText("isMuted 改变：行为变了，同步目标没变");
+  await expect(flow).toContainText("messages 更新：State 变了，但不需要重连");
+  await expect(flow).toContainText("Strict Mode：开发期额外 setup / cleanup");
+
+  await flow.locator(".single-learning-flow__stages button").filter({ hasText: "实践" }).click();
+  await expect(flow).toHaveAttribute("data-learning-stage", "practice");
+  await expect(page.getByRole("button", { name: "开始实践" })).toBeVisible();
+  await expect(page.getByText("Guided Learning", { exact: true })).toHaveCount(0);
+
+  await flow.locator(".single-learning-flow__stages button").filter({ hasText: "验证" }).click();
+  await expect(flow).toHaveAttribute("data-learning-stage", "verify");
+  await page.getByRole("button", { name: "开始测试" }).click();
+
+  await page.getByRole("radio", { name: /先 setup #102/ }).check();
+  await page.getByRole("button", { name: "提交答案" }).click();
+
+  const remediation = page.locator("[data-assessment-misconception='setup-before-old-cleanup']");
+  await expect(remediation).toBeVisible();
+  await expect(remediation).toContainText("先 setup 新同步，再 cleanup 旧同步");
+  await expect(remediation).toContainText("cleanup");
+  await expect(remediation).toContainText("setup");
+  await expect(page.getByText("正确答案", { exact: true })).toHaveCount(0);
+
+  await page.getByRole("button", { name: "重新选择" }).click();
+  await page.getByRole("radio", { name: /更新触发新 render，commit 后先 cleanup #101/ }).check();
+  await page.getByRole("button", { name: "再次验证" }).click();
+
+  await expect(page.getByText("已纠正", { exact: true })).toBeVisible();
+  const teachBack = page.getByLabel("用自己的话再解释一次");
+  await teachBack.fill("roomId 更新先产生新的 render 和 commit，然后旧连接 cleanup，最后用新的 committed roomId setup 下一轮同步。");
+
+  await page.getByRole("button", { name: /下一题/ }).click();
+
+  await page.getByRole("radio", { name: /isMuted 只影响收到消息后的通知行为/ }).check();
+  await page.getByRole("button", { name: "提交答案" }).click();
+  await page.getByRole("button", { name: /下一题/ }).click();
+
+  await page.getByRole("radio", { name: /基于上一份 messages 计算下一份 messages/ }).check();
+  await page.getByRole("button", { name: "提交答案" }).click();
+  await page.getByRole("button", { name: /下一题/ }).click();
+
+  await page.getByRole("radio", { name: /不能靠删 roomId 优化/ }).check();
+  await page.getByRole("button", { name: "提交答案" }).click();
+  await page.getByRole("button", { name: /下一题/ }).click();
+
+  await page.getByRole("radio", { name: /Strict Mode 的开发期压力测试/ }).check();
   await page.getByRole("button", { name: "提交答案" }).click();
 
   await expect(page.getByText("本轮评测已完成", { exact: true })).toBeVisible();

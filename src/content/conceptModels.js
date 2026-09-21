@@ -611,6 +611,211 @@ const PRESERVING_RESETTING_STATE_MODEL = {
   },
 };
 
+const LIFECYCLE_OF_REACTIVE_EFFECTS_MODEL = {
+  learningUnitId: "lifecycle-of-reactive-effects",
+  version: 1,
+  mechanismTitle: "把 Effect 看成独立的外部同步过程",
+  mechanismAriaLabel: "Reactive Effect 生命周期机制区分",
+  mechanismHeaders: {
+    subject: "机制",
+    example: "当前 Demo",
+    role: "它负责什么",
+    change: "roomId / messages / isMuted 变化时",
+  },
+  contrastTitle: "哪些变化应该重建同步，哪些变化只应影响同步内部行为",
+  contrastDimensions: [
+    { id: "triggerStory", label: "发生了什么" },
+    { id: "syncStory", label: "同步过程" },
+    { id: "dependencyStory", label: "依赖含义" },
+    { id: "boundaryStory", label: "边界" },
+  ],
+  mechanismMap: [
+    {
+      id: "render-reactive-read",
+      label: "Render + reactive read",
+      example: "render 读取 roomId",
+      role: "本次 render 决定 Effect setup 将同步到哪个目标。",
+      change: "roomId 改变会进入新的 render；当前连接不是在 render 中直接替换。",
+    },
+    {
+      id: "commit",
+      label: "Commit",
+      example: "提交 room #102 UI",
+      role: "React 先完成这次 render 的 commit，再处理需要重新同步的 Effect。",
+      change: "依赖变化的 Effect cleanup/setup 属于 commit 后的同步阶段。",
+    },
+    {
+      id: "sync-target",
+      label: "Synchronization Target",
+      example: "roomId",
+      role: "真正决定外部 Socket 连接目标的 reactive value。",
+      change: "目标改变意味着旧同步已不再正确，需要 cleanup old → setup new。",
+    },
+    {
+      id: "effect-cleanup",
+      label: "Effect cleanup",
+      example: "socket.close()",
+      role: "准确撤销上一轮 setup 建立的外部同步。",
+      change: "不仅卸载时执行；依赖导致重新同步前也会先清理旧同步。",
+    },
+    {
+      id: "effect-setup",
+      label: "Effect setup",
+      example: "connectChatSocket(roomId)",
+      role: "用本次 committed render 的 reactive values 建立下一轮外部同步。",
+      change: "roomId 改变后，在旧 cleanup 完成后建立新连接。",
+    },
+    {
+      id: "functional-updater",
+      label: "Functional State Updater",
+      example: "setMessages(prev => ...)",
+      role: "当下一份 messages 只依赖前一份 State 时，让回调无需读取当前 render 的 messages。",
+      change: "消息列表可以持续更新，而连接 Effect 不需要因为 messages 改变而重新 setup。",
+    },
+    {
+      id: "effect-event",
+      label: "Effect Event",
+      example: "notifyForMessage() 读取 isMuted",
+      role: "把 Effect 内触发、但不应让同步本身响应式重建的事件逻辑分离出来。",
+      change: "isMuted 可以读取最新 committed 值，但它不决定连接哪个 room，因此静音切换不重连。",
+    },
+    {
+      id: "strict-mode-check",
+      label: "Strict Mode dev check",
+      example: "setup → cleanup → setup",
+      role: "开发环境压力测试 Effect 的 setup/cleanup 是否能正确镜像。",
+      change: "它不是一次 roomId 依赖变化，也不能用来推断 production 每次都会额外重连。",
+    },
+  ],
+  contrastCases: [
+    {
+      id: "room-target-change",
+      title: "roomId 改变：同步目标真的变了",
+      triggerStory: "用户把 roomId 从 101 切到 102。",
+      syncStory: "新的 render/commit 完成后，先 cleanup 101 连接，再 setup 102 连接。",
+      dependencyStory: "roomId 被 setup 读取并决定连接目标，因此必须保留为真实依赖。",
+      boundaryStory: "不能为了减少重连删除 roomId；那会让外部同步停留在错误房间。",
+      conclusion: "依赖数组描述同步过程读取的 reactive values，不是“想运行几次”的配置。",
+    },
+    {
+      id: "muted-event-behavior",
+      title: "isMuted 改变：行为变了，同步目标没变",
+      triggerStory: "用户切换静音状态。",
+      syncStory: "Socket 仍连接同一个 room；收到消息时通知逻辑读取最新 committed isMuted。",
+      dependencyStory: "isMuted 不决定 setup 建立哪个连接，因此通过 Effect Event 读取它不会要求重建连接。",
+      boundaryStory: "Effect Event 不是通用依赖逃生口；真正决定同步关系的 roomId 仍必须是依赖。",
+      conclusion: "先区分“同步关系本身”与“同步内部发生的一次事件要做什么”。",
+    },
+    {
+      id: "message-updater",
+      title: "messages 更新：State 变了，但不需要重连",
+      triggerStory: "Socket 回调收到一条新消息。",
+      syncStory: "现有连接继续工作，只把消息追加进列表。",
+      dependencyStory: "使用 setMessages(prev => ...) 后，回调不需要读取当前 messages，因此连接 Effect 没有这个 reactive read。",
+      boundaryStory: "先改变代码以消除不必要读取，再让依赖准确反映剩余 reactive reads；不是关掉 linter。",
+      conclusion: "State 会变化不等于它就必须成为这个 Effect 的依赖。",
+    },
+    {
+      id: "strict-mode-development",
+      title: "Strict Mode：开发期额外 setup / cleanup",
+      triggerStory: "组件首次进入开发环境 Strict Mode 检查。",
+      syncStory: "React 额外执行 setup → cleanup → setup，检查 cleanup 是否完整镜像 setup。",
+      dependencyStory: "这不是 roomId 变化导致的重新同步。",
+      boundaryStory: "生产依赖变化仍按真实目标变化来理解，不要把开发检查误认成 production 生命周期规则。",
+      conclusion: "判断日志先区分“依赖变化”与“Strict Mode 开发检查”。",
+    },
+  ],
+  misconceptions: {
+    "dependency-array-run-switch": {
+      id: "dependency-array-run-switch",
+      title: "把依赖数组当成 Effect 运行次数开关",
+      diagnosis: "依赖数组不是“希望 Effect 运行几次”的配置；它应准确描述 setup 读取并参与同步过程的 reactive values。",
+      counterEvidence: "roomId 决定 connectChatSocket(roomId) 的真实目标。删除它不会优化模型，只会让连接与当前 UI 的 roomId 脱节。",
+      experiment: "切换房间并观察日志：只有同步目标 roomId 改变时才出现对应旧房间 cleanup 和新房间 setup。",
+      evidenceRefs: [
+        { kind: "source", fileName: "LifecycleOfReactiveEffectsDemo.jsx", startLine: 51, endLine: 65 },
+        { kind: "source", fileName: "LifecycleOfReactiveEffectsDemo.jsx", startLine: 149, endLine: 152 },
+      ],
+    },
+    "cleanup-only-on-unmount": {
+      id: "cleanup-only-on-unmount",
+      title: "认为 cleanup 只在组件卸载时执行",
+      diagnosis: "cleanup 撤销上一轮 setup。只要 Effect 需要用新依赖重新同步，React 就要先清理旧同步；卸载只是最后一次 cleanup 的另一种触发。",
+      counterEvidence: "Demo 不卸载组件，只把 roomId 从 101 改到 102，也会记录旧房间 cleanup。",
+      experiment: "清空日志后只切换房间，观察同一个页面内先出现旧 room cleanup，再出现新 room setup。",
+      evidenceRefs: [
+        { kind: "source", fileName: "LifecycleOfReactiveEffectsDemo.jsx", startLine: 51, endLine: 65 },
+        { kind: "source", fileName: "LifecycleOfReactiveEffectsDemo.jsx", startLine: 95, endLine: 99 },
+      ],
+    },
+    "setup-before-old-cleanup": {
+      id: "setup-before-old-cleanup",
+      title: "认为依赖变化时应先 setup 新同步，再 cleanup 旧同步",
+      diagnosis: "重新同步时需要先结束上一轮外部关系，随后再建立基于新 committed values 的下一轮同步。",
+      counterEvidence: "切换房间日志明确先记录“cleanup：关闭旧房间”，再记录“setup：建立新房间”。",
+      experiment: "从房间 101 切到 102，对照日志序号确认 cleanup 101 排在 setup 102 前。",
+      evidenceRefs: [
+        { kind: "source", fileName: "LifecycleOfReactiveEffectsDemo.jsx", startLine: 51, endLine: 65 },
+        { kind: "source", fileName: "LifecycleOfReactiveEffectsDemo.jsx", startLine: 95, endLine: 99 },
+      ],
+    },
+    "every-changing-value-reconnects": {
+      id: "every-changing-value-reconnects",
+      title: "认为组件里任何变化的值都应该让连接 Effect 重跑",
+      diagnosis: "是否需要成为依赖取决于 Effect setup 的 reactive reads，而不是这个组件里有没有某个值变化。isMuted 和 messages 都会变化，但并不决定 Socket 连接目标。",
+      counterEvidence: "Demo 中切换静音、接收消息都不会出现新的连接 cleanup/setup；只有 roomId 变化会重连。",
+      experiment: "先切静音，再等待消息列表更新，分别观察连接生命周期日志是否增加 cleanup/setup。",
+      evidenceRefs: [
+        { kind: "source", fileName: "LifecycleOfReactiveEffectsDemo.jsx", startLine: 38, endLine: 49 },
+        { kind: "source", fileName: "LifecycleOfReactiveEffectsDemo.jsx", startLine: 51, endLine: 65 },
+        { kind: "source", fileName: "LifecycleOfReactiveEffectsDemo.jsx", startLine: 95, endLine: 99 },
+      ],
+    },
+    "remove-true-dependency": {
+      id: "remove-true-dependency",
+      title: "认为为了减少 Effect 执行可以删除真实依赖",
+      diagnosis: "若 setup 确实读取 roomId 并用它决定外部连接目标，roomId 就是同步过程的真实 reactive dependency。删除它会制造 stale synchronization。",
+      counterEvidence: "源码中 connectChatSocket(roomId) 直接使用 roomId；连接正确性依赖它与当前 UI 保持一致。",
+      experiment: "问自己：如果 UI 已显示 room #102，但 Effect 不因 roomId 变化重新同步，外部 Socket 还会连接到哪里？",
+      evidenceRefs: [
+        { kind: "source", fileName: "LifecycleOfReactiveEffectsDemo.jsx", startLine: 51, endLine: 65 },
+        { kind: "source", fileName: "LifecycleOfReactiveEffectsDemo.jsx", startLine: 149, endLine: 152 },
+      ],
+    },
+    "updater-is-dependency-hack": {
+      id: "updater-is-dependency-hack",
+      title: "把 functional updater 当成绕过依赖检查的技巧",
+      diagnosis: "functional updater 改变的是代码的数据依赖：当下一份 messages 只依赖上一份 messages 时，把计算交给 setMessages(prev => ...) 后，回调确实不再需要读取当前 render 的 messages。",
+      counterEvidence: "源码使用 prev 追加消息，因此 Effect callback 没有读取 messages；列表持续变化但连接保持不变。",
+      experiment: "等待两条消息，观察列表持续更新，同时生命周期日志没有因为 messages 更新出现新的 reconnect。",
+      evidenceRefs: [
+        { kind: "source", fileName: "LifecycleOfReactiveEffectsDemo.jsx", startLine: 51, endLine: 65 },
+      ],
+    },
+    "effect-event-is-dependency-hack": {
+      id: "effect-event-is-dependency-hack",
+      title: "把 Effect Event 当成任意逃避依赖的工具",
+      diagnosis: "Effect Event 用于 Effect 内部触发的非响应式事件逻辑，让它读取最新 committed 值而不重新定义同步关系；它不能隐藏真正决定同步目标的 reactive value。",
+      counterEvidence: "notifyForMessage 读取 isMuted，但连接 Effect 仍保留 roomId 依赖。静音只影响收到消息后的通知行为，不改变连接哪个房间。",
+      experiment: "切换静音后等待消息：通知日志按最新静音状态变化，但没有 Socket reconnect。",
+      evidenceRefs: [
+        { kind: "source", fileName: "LifecycleOfReactiveEffectsDemo.jsx", startLine: 38, endLine: 49 },
+        { kind: "source", fileName: "LifecycleOfReactiveEffectsDemo.jsx", startLine: 159, endLine: 165 },
+      ],
+    },
+    "strict-mode-is-production-duplicate": {
+      id: "strict-mode-is-production-duplicate",
+      title: "把 Strict Mode 的额外 setup/cleanup 当成 production 重复同步规则",
+      diagnosis: "开发环境 Strict Mode 会额外做 setup → cleanup → setup 压力测试，验证 cleanup 能否完整撤销 setup；它与真实依赖变化是不同原因。",
+      counterEvidence: "Demo 明确标注这个额外周期是开发环境边界。依赖变化仍应按 roomId 的真实同步目标来判断。",
+      experiment: "区分日志来源：首次开发加载可能有压力测试；随后只切换 roomId 时再观察一次真实 cleanup old → setup new。",
+      evidenceRefs: [
+        { kind: "source", fileName: "LifecycleOfReactiveEffectsDemo.jsx", startLine: 159, endLine: 165 },
+      ],
+    },
+  },
+};
+
 function deepFreeze(value, visited = new WeakSet()) {
   if (!value || typeof value !== "object" || visited.has(value)) return value;
   visited.add(value);
@@ -623,6 +828,7 @@ export const CONCEPT_MODELS = deepFreeze({
   [STATE_SNAPSHOT_QUEUE_MODEL.learningUnitId]: STATE_SNAPSHOT_QUEUE_MODEL,
   [NOT_NEED_EFFECT_MODEL.learningUnitId]: NOT_NEED_EFFECT_MODEL,
   [PRESERVING_RESETTING_STATE_MODEL.learningUnitId]: PRESERVING_RESETTING_STATE_MODEL,
+  [LIFECYCLE_OF_REACTIVE_EFFECTS_MODEL.learningUnitId]: LIFECYCLE_OF_REACTIVE_EFFECTS_MODEL,
 });
 
 export function getConceptModelForLearningUnit(learningUnitId) {
