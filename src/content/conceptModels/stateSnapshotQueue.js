@@ -10,6 +10,20 @@ export const STATE_SNAPSHOT_QUEUE_MODEL = {
     change: "同一次事件里会怎样",
   },
   contrastTitle: "三种队列，不要只看最后数字",
+  codeEvidence: [
+    {
+      id: "replace-updates",
+      title: "Replace：表达式先读取当前 render snapshot",
+      explanation: "Replace × 3 的三个 count + 1 都在同一个 handler 中读取同一份 snapshot，所以 Demo 的 queue debugger 会得到三个相同 replacement value。",
+      sourceRef: { kind: "source", fileName: "StateSnapshotQueueDemo.jsx", startLine: 29, endLine: 45 },
+    },
+    {
+      id: "functional-updaters",
+      title: "Updater：把计算交给 queue processing",
+      explanation: "Updater × 3 入队的是函数。React 处理 queue 时把上一项 pending State 交给下一项 updater，因此 Demo 才会显示 0 → 1 → 2 → 3。",
+      sourceRef: { kind: "source", fileName: "StateSnapshotQueueDemo.jsx", startLine: 47, endLine: 63 },
+    },
+  ],
   contrastDimensions: [
     { id: "handlerStory", label: "当前 handler" },
     { id: "queueStory", label: "入队内容" },
