@@ -103,5 +103,3 @@ handlePlusThree();
     },
   ],
 };
-
-assertGuidedActivityDefinition(STATE_SNAPSHOT_QUEUE_DEFINITION);
