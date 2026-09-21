@@ -450,6 +450,167 @@ const NOT_NEED_EFFECT_MODEL = {
   },
 };
 
+const PRESERVING_RESETTING_STATE_MODEL = {
+  learningUnitId: "preserving-resetting-state",
+  version: 1,
+  mechanismTitle: "先判断 React 是否还在表示同一个组件身份",
+  mechanismAriaLabel: "Preserving and Resetting State 身份机制区分",
+  mechanismHeaders: {
+    subject: "对象",
+    example: "当前 Demo",
+    role: "它决定什么",
+    change: "业务实体切换时",
+  },
+  contrastTitle: "State 应该保留还是 reset，取决于哪一层身份发生变化",
+  contrastDimensions: [
+    { id: "inputStory", label: "输入 / 结构" },
+    { id: "identityStory", label: "组件身份" },
+    { id: "stateStory", label: "局部 State" },
+    { id: "productStory", label: "产品语义" },
+  ],
+  mechanismMap: [
+    {
+      id: "business-entity",
+      label: "业务实体",
+      example: "Taylor / Alice",
+      role: "产品真正想区分的聊天对象、客户、编辑对象。",
+      change: "实体可以变化，但是否要创建新 UI 身份由产品语义决定。",
+    },
+    {
+      id: "tree-slot",
+      label: "Parent / tree slot",
+      example: "<Chat ... /> 的位置",
+      role: "React 在同一父级下比较前后 render 的对应位置。",
+      change: "同一位置继续出现兼容元素时，身份有机会延续。",
+    },
+    {
+      id: "component-type",
+      label: "Component type",
+      example: "Chat",
+      role: "类型不同意味着不是同一个组件身份。",
+      change: "Taylor → Alice 时组件类型仍然是 Chat。",
+    },
+    {
+      id: "key",
+      label: "key",
+      example: "无 key / contact.id",
+      role: "在同一父级中参与显式身份匹配。",
+      change: "无 key 时联系人变化不改身份；contact.id 变化时显式要求新身份。",
+    },
+    {
+      id: "component-identity",
+      label: "Component Identity",
+      example: "当前 Chat 实例",
+      role: "React 判断前后 render 是否仍是同一个组件实例的结果。",
+      change: "身份延续就保留其 State；身份不匹配就丢弃旧实例并创建新实例。",
+    },
+    {
+      id: "local-state",
+      label: "Local State",
+      example: "draft",
+      role: "属于 React 组件身份，不自动属于 contact 对象或某个 prop 值。",
+      change: "组件身份保留就继续存在；新身份从 useState 初始值开始。",
+    },
+  ],
+  contrastCases: [
+    {
+      id: "prop-change-preserves",
+      title: "同位置 + 同类型 + 无 key 变化",
+      inputStory: "contact 从 Taylor 变成 Alice，但父级仍在同一位置渲染 <Chat contact={...} />。",
+      identityStory: "React 仍匹配到同一个 Chat 组件身份；Props 更新不等于身份 reset。",
+      stateStory: "Taylor 时输入的 draft 继续保留，并出现在 Alice 的 Chat 中。",
+      productStory: "如果聊天对象切换后旧草稿不应继承，这种“技术上保留”就是产品风险。",
+      conclusion: "Props 可以变化，同时局部 State 仍属于被保留的组件身份。",
+    },
+    {
+      id: "business-key-resets",
+      title: "同位置 + 同类型 + key={contact.id}",
+      inputStory: "contact 与 key 从 Taylor/taylor 一起变成 Alice/alice。",
+      identityStory: "显式 key 不再匹配旧 Chat，React 丢弃旧身份并创建新的 Chat 身份。",
+      stateStory: "新 Chat 的 draft 从 useState(\"\") 初始值开始。",
+      productStory: "当“不同联系人 = 不同聊天实例”且旧草稿应丢弃时，这个 reset 与业务边界一致。",
+      conclusion: "key 不是刷新按钮；它是在告诉 React 这里应该是另一个组件身份。",
+    },
+    {
+      id: "narrow-reset-boundary",
+      title: "只 reset 真正属于新实体的子树",
+      inputStory: "WorkspaceShell 保存面板/滚动 State；InvoiceEditor 保存当前 customer 的未提交草稿。",
+      identityStory: "Shell 应继续是同一个工作区身份；Editor 才应随 customer.id 获得新身份。",
+      stateStory: "Shell State 保留，InvoiceEditor 草稿 reset。",
+      productStory: "把 key 放到需要 reset 的最窄业务边界，避免无关 UI State 一起丢失。",
+      conclusion: "identity boundary 的位置本身就是产品设计决策。",
+    },
+    {
+      id: "unstable-key-over-resets",
+      title: "随机 / 不稳定 key",
+      inputStory: "key 与业务实体无关，在普通 render 中也不断变化。",
+      identityStory: "React 无法延续组件身份，每次都被迫创建新身份。",
+      stateStory: "局部 State 在无关 render 中也不断重新初始化。",
+      productStory: "虽然看起来“总能清空”，却破坏了该保留的 UI 状态和生命周期。",
+      conclusion: "能造成 reset 不代表 identity 设计正确；key 必须表达稳定业务身份。",
+    },
+  ],
+  misconceptions: {
+    "props-reset-state": {
+      id: "props-reset-state",
+      title: "认为 Props 变化会自动重置子组件的局部 State",
+      diagnosis: "Props 是当前 render 的输入；只要 React 仍匹配到同一个组件身份，Props 可以更新而这个身份上的 local State 继续保留。",
+      counterEvidence: "Demo 上半区从 Taylor 切到 Alice 后收件人文字会更新，但 textarea 中原 draft 仍然存在。",
+      experiment: "在上半区给 Taylor 输入 AAA，再点击 Alice：同时观察“当前收件人”已经变化，而 AAA 仍保留。",
+      evidenceRefs: [{ kind: "source", fileName: "PreservingResettingStateDemo.jsx", startLine: 72, endLine: 86 }],
+    },
+    "state-follows-business-object": {
+      id: "state-follows-business-object",
+      title: "认为 local State 会自动跟随当前 contact / customer 业务对象",
+      diagnosis: "useState 创建的 draft 属于 React component identity；React 不会因为 contact 对象换了，就自动替每个联系人保存或恢复一份独立 draft。",
+      counterEvidence: "无 key 的 Chat 切到 Alice 时，Taylor 的 draft 会继续出现在同一个 Chat 身份里，而不是自动切换到 Alice 专属 State。",
+      experiment: "Taylor 输入一段独特草稿后切 Alice，再切 Bob，观察同一份 draft 如何跨不同 contact Props 继续存在。",
+      evidenceRefs: [
+        { kind: "source", fileName: "PreservingResettingStateDemo.jsx", startLine: 9, endLine: 28 },
+        { kind: "source", fileName: "PreservingResettingStateDemo.jsx", startLine: 72, endLine: 82 },
+      ],
+    },
+    "key-only-for-lists": {
+      id: "key-only-for-lists",
+      title: "认为 key 只用于列表或消除 warning",
+      diagnosis: "key 的语义是同一父级下的身份线索。列表是最常见场景，但非列表位置也可以用 key 明确表达“这是另一个组件身份”。",
+      counterEvidence: "Demo 下半区只有一个 Chat，不是 map 列表；key={contact.id} 仍直接控制联系人切换时是否保留 Chat identity。",
+      experiment: "对比上下两个单独 Chat：唯一关键差异是下半区给 Chat 加了 contact.id key，切联系人时只有下半区 draft reset。",
+      evidenceRefs: [{ kind: "source", fileName: "PreservingResettingStateDemo.jsx", startLine: 89, endLine: 100 }],
+    },
+    "key-is-dom-refresh": {
+      id: "key-is-dom-refresh",
+      title: "把 key 变化理解成“强制刷新 DOM”",
+      diagnosis: "关键变化发生在 React component identity：旧组件身份被丢弃，新组件重新初始化 State。DOM 变化只是随后 commit 的界面结果。",
+      counterEvidence: "Demo 的直接语义是旧 Chat identity unmount、新 Chat identity mount，并因此重新执行 useState 初始值；不是对原 State 做清空命令。",
+      experiment: "先看 Chat 的 useState(\"\")，再切换下半区联系人：解释为什么新的 draft 是空值，而不是把现有 draft 字符串手动改成空。",
+      evidenceRefs: [
+        { kind: "source", fileName: "PreservingResettingStateDemo.jsx", startLine: 9, endLine: 28 },
+        { kind: "source", fileName: "PreservingResettingStateDemo.jsx", startLine: 91, endLine: 99 },
+      ],
+    },
+    "random-key-is-reset-strategy": {
+      id: "random-key-is-reset-strategy",
+      title: "认为随机 key 是通用、可靠的 reset 方案",
+      diagnosis: "随机 key 不表达业务身份；它会让组件在无关 render 中也失去身份，造成不必要的卸载、挂载和 State 丢失。",
+      counterEvidence: "当前 Demo 使用稳定 contact.id：同一联系人普通 render 时 key 不变，只有业务实体变化才 reset。",
+      experiment: "比较“key={contact.id}”与“每次 render 都变化的 key”：问哪一种能表达“只在联系人真的变化时 reset”。",
+      evidenceRefs: [
+        { kind: "source", fileName: "PreservingResettingStateDemo.jsx", startLine: 96, endLine: 99 },
+        { kind: "source", fileName: "PreservingResettingStateDemo.jsx", startLine: 125, endLine: 136 },
+      ],
+    },
+    "reset-boundary-too-high": {
+      id: "reset-boundary-too-high",
+      title: "认为某个子组件要 reset，就应该给更外层整个页面/工作区加 key",
+      diagnosis: "key 会重置它所在的组件身份及其子树。把 identity boundary 放得过高，会把本应保留的面板、滚动、展开等 UI State 一起丢弃。",
+      counterEvidence: "当前 Guided 迁移题要求 WorkspaceShell 保留 UI State、只有 InvoiceEditor 草稿随 customer 切换 reset；正确边界因此是 Editor 本身。",
+      experiment: "把需求拆成两列：哪些 State 属于“工作区”应保留，哪些 State 属于“当前 customer 编辑器”应 reset，再决定 key 放在哪一层。",
+      evidenceRefs: [{ kind: "source", fileName: "PreservingResettingStateDemo.jsx", startLine: 125, endLine: 136 }],
+    },
+  },
+};
+
 function deepFreeze(value, visited = new WeakSet()) {
   if (!value || typeof value !== "object" || visited.has(value)) return value;
   visited.add(value);
@@ -461,6 +622,7 @@ export const CONCEPT_MODELS = deepFreeze({
   [LISTS_KEY_MODEL.learningUnitId]: LISTS_KEY_MODEL,
   [STATE_SNAPSHOT_QUEUE_MODEL.learningUnitId]: STATE_SNAPSHOT_QUEUE_MODEL,
   [NOT_NEED_EFFECT_MODEL.learningUnitId]: NOT_NEED_EFFECT_MODEL,
+  [PRESERVING_RESETTING_STATE_MODEL.learningUnitId]: PRESERVING_RESETTING_STATE_MODEL,
 });
 
 export function getConceptModelForLearningUnit(learningUnitId) {

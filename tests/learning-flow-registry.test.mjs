@@ -6,14 +6,16 @@ import {
   isSingleLearningFlowUnit,
 } from "../src/learning-flow/learningFlowRegistry.js";
 
-test("single learning flow registry keeps the three validated diagnostic lesson families sparse", () => {
+test("single learning flow registry keeps the controlled diagnostic rollout sparse", () => {
   const lists = getSingleLearningFlowDefinition("rendering-lists-key");
   const snapshot = getSingleLearningFlowDefinition("state-snapshot-queue");
   const effect = getSingleLearningFlowDefinition("not-need-effect");
+  const preserveReset = getSingleLearningFlowDefinition("preserving-resetting-state");
 
   assert.equal(lists.learningUnitId, "rendering-lists-key");
   assert.equal(snapshot.learningUnitId, "state-snapshot-queue");
   assert.equal(effect.learningUnitId, "not-need-effect");
+  assert.equal(preserveReset.learningUnitId, "preserving-resetting-state");
 
   assert.equal(snapshot.coreModelTitle, "Render Snapshot → Update Queue → Next Render State");
   assert.equal(snapshot.conceptModel.learningUnitId, "state-snapshot-queue");
@@ -26,9 +28,15 @@ test("single learning flow registry keeps the three validated diagnostic lesson 
   assert.match(effect.decisionRule, /identity/);
   assert.equal(effect.stageHints.verify.length > 0, true);
 
+  assert.equal(preserveReset.coreModelTitle, "Identity match → Preserve State / New identity → Reset State");
+  assert.equal(preserveReset.conceptModel.learningUnitId, "preserving-resetting-state");
+  assert.match(preserveReset.decisionRule, /identity|State|key/);
+  assert.equal(preserveReset.stageHints.verify.length > 0, true);
+
   assert.equal(isSingleLearningFlowUnit("rendering-lists-key"), true);
   assert.equal(isSingleLearningFlowUnit("state-snapshot-queue"), true);
   assert.equal(isSingleLearningFlowUnit("not-need-effect"), true);
+  assert.equal(isSingleLearningFlowUnit("preserving-resetting-state"), true);
   assert.equal(isSingleLearningFlowUnit("props"), false);
   assert.equal(getSingleLearningFlowDefinition("props"), null);
 });
