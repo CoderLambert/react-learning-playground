@@ -162,6 +162,12 @@ test("the first five Guided definitions are available, frozen, and follow the co
     assert.deepEqual(definition.steps.at(-1).resources, ["notes", "source", "demo"]);
     const expected = FROZEN_EXPECTED_PRACTICE[learningUnitId];
     const practiceStep = definition.steps[3];
+    if (learningUnitId === "state-snapshot-queue" || learningUnitId === "rendering-lists-key") {
+      assert.equal(typeof practiceStep.codeContext?.code, "string");
+      assert.ok(practiceStep.codeContext.code.trim().length > 0);
+    } else {
+      assert.equal(practiceStep.codeContext, undefined);
+    }
     assert.equal(definition.steps[0].reveal.expectedOptionId, expected.predict);
     assert.equal(definition.steps[1].demoActionId, FROZEN_EXPERIMENT_ACTIONS[learningUnitId]);
     assert.equal(practiceStep.response.kind, expected.kind);
@@ -262,6 +268,21 @@ test("Practice V2 accepts a bounded patch-choice contract with stable ids", () =
   };
 
   assert.deepEqual(validateGuidedActivityDefinition(definition), { valid: true, errors: [] });
+});
+
+test("Practice codeContext is optional but must contain inspectable code when present", () => {
+  const definition = createValidDefinition();
+  definition.steps[3].codeContext = {
+    label: "当前实现",
+    language: "jsx",
+    code: "<Row key={index} />",
+  };
+  assert.deepEqual(validateGuidedActivityDefinition(definition), { valid: true, errors: [] });
+
+  definition.steps[3].codeContext.code = "   ";
+  const invalid = validateGuidedActivityDefinition(definition);
+  assert.equal(invalid.valid, false);
+  assert.ok(invalid.errors.includes("steps[3].codeContext.code must be a non-blank string"));
 });
 
 test("Practice V2 rejects patch alternatives without inspectable patch text", () => {
