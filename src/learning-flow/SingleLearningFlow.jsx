@@ -1,5 +1,6 @@
 import { LEARNING_FLOW_STAGES } from "./learningFlowRegistry.js";
 import { createLearningReviewProjection } from "./learningReviewProjection.js";
+import { resolveLearningSourceExcerpt } from "./sourceEvidence.js";
 import "./SingleLearningFlow.css";
 
 const STAGE_ITEMS = Object.freeze([
@@ -77,6 +78,54 @@ function ContrastCases({ model }) {
               ))}
             </dl>
             <p>{item.conclusion}</p>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function SourceEvidence({ learningUnit, model }) {
+  if (!model?.codeEvidence?.length) return null;
+
+  const items = model.codeEvidence
+    .map((item) => ({
+      ...item,
+      excerpt: resolveLearningSourceExcerpt(learningUnit, item.sourceRef),
+    }))
+    .filter((item) => item.excerpt);
+
+  if (items.length === 0) return null;
+  const titleId = `${model.learningUnitId}-source-evidence-title`;
+
+  return (
+    <section
+      className="single-learning-flow__source-evidence"
+      aria-labelledby={titleId}
+      data-learning-code-evidence
+    >
+      <div className="single-learning-flow__section-heading">
+        <div>
+          <span>Real React code</span>
+          <h3 id={titleId}>把机制落到当前 Demo 的真实实现</h3>
+        </div>
+      </div>
+
+      <div className="single-learning-flow__source-evidence-grid">
+        {items.map((item) => (
+          <article
+            key={item.id}
+            className="single-learning-flow__source-evidence-card"
+            data-learning-code-evidence-item={item.id}
+          >
+            <div className="single-learning-flow__source-evidence-meta">
+              <strong>{item.title}</strong>
+              <span>
+                {item.excerpt.fileName} · L{item.excerpt.startLine}–L{item.excerpt.endLine}
+              </span>
+            </div>
+            <pre><code>{item.excerpt.code}</code></pre>
+            <p>{item.explanation}</p>
           </article>
         ))}
       </div>
@@ -196,6 +245,7 @@ export function SingleLearningFlow({
 
           <MechanismMap model={definition.conceptModel} />
           <ContrastCases model={definition.conceptModel} />
+          <SourceEvidence learningUnit={learningUnit} model={definition.conceptModel} />
 
           <div className="single-learning-flow__demo">
             <div className="single-learning-flow__section-heading">
