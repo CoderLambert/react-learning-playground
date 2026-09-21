@@ -2,7 +2,13 @@ import { expect } from "@playwright/test";
 import { test } from "./test-fixtures.js";
 
 const SINGLE_LEARNING_FLOW_GUIDED_IDS = new Set([
+  "component-jsx-pure-render",
+  "props",
+  "children",
+  "multi-slots",
+  "conditional-rendering",
   "rendering-lists-key",
+  "prop-drilling",
   "state-snapshot-queue",
   "preserving-resetting-state",
   "not-need-effect",
