@@ -25,7 +25,18 @@ function validateDiagnosticOptionMap(learningUnitId, content) {
   }
 }
 
-export function canonicalQuestion({ id, learningUnitId, type = "single_choice", content, difficulty, conceptTags, evidenceRefs = [] }) {
+export function canonicalQuestion({
+  id,
+  learningUnitId,
+  type = "single_choice",
+  content,
+  difficulty,
+  conceptTags,
+  evidenceRefs = [],
+  revision = 1,
+  updatedAt = CANONICAL_TIMESTAMP,
+  catalogVersion = CANONICAL_CATALOG_VERSION,
+}) {
   validateDiagnosticOptionMap(learningUnitId, content);
   const question = {
     id,
@@ -36,12 +47,12 @@ export function canonicalQuestion({ id, learningUnitId, type = "single_choice", 
     conceptTags,
     evidenceRefs,
     status: "active",
-    revision: 1,
+    revision,
     createdAt: CANONICAL_TIMESTAMP,
-    updatedAt: CANONICAL_TIMESTAMP,
+    updatedAt,
     provenance: {
       source: "canonical",
-      catalogVersion: CANONICAL_CATALOG_VERSION,
+      catalogVersion,
     },
   };
   assertQuestionRecord(question);
