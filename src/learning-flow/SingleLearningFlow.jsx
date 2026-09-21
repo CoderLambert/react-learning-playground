@@ -1,5 +1,6 @@
 import { LEARNING_FLOW_STAGES } from "./learningFlowRegistry.js";
 import { createLearningReviewProjection } from "./learningReviewProjection.js";
+import { HighlightedCode } from "../components/HighlightedCode.jsx";
 import { resolveLearningSourceExcerpt } from "./sourceEvidence.js";
 import "./SingleLearningFlow.css";
 
@@ -124,7 +125,11 @@ function SourceEvidence({ learningUnit, model }) {
                 {item.excerpt.fileName} · L{item.excerpt.startLine}–L{item.excerpt.endLine}
               </span>
             </div>
-            <pre><code>{item.excerpt.code}</code></pre>
+            <HighlightedCode
+              code={item.excerpt.code}
+              fileName={item.excerpt.fileName}
+              className="single-learning-flow__source-evidence-code"
+            />
             <p>{item.explanation}</p>
           </article>
         ))}
