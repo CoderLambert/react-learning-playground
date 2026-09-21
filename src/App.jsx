@@ -25,6 +25,7 @@ import {
   LEARNING_FLOW_STAGES,
 } from "./learning-flow/learningFlowRegistry.js";
 import { SingleLearningFlow } from "./learning-flow/SingleLearningFlow.jsx";
+import { useGuidedReviewSignal } from "./learning-flow/useGuidedReviewSignal.js";
 import { prepareGuidedAiHandoff } from "./app/guidedAiHandoff.js";
 import { enrichLearningUnitSourceSemantics } from "./source/semanticSources";
 import { WorkbenchNavigation } from "./workbench/WorkbenchNavigation";
@@ -97,6 +98,9 @@ export default function App() {
     () => (currentLearningUnit ? getGuidedActivityDefinition(currentLearningUnit.id) : null),
     [currentLearningUnit],
   );
+  const guidedReviewSignal = useGuidedReviewSignal({
+    definition: currentLearningFlow ? guidedActivity : null,
+  });
 
   const assessment = useAssessmentApplication({
     learningUnitId: currentLearningUnit?.id ?? null,
@@ -751,6 +755,7 @@ export default function App() {
                       onComplete?.();
                       return true;
                     }}
+                    onNeedsReviewChange={guidedReviewSignal.setNeedsReview}
                     canContinue
                     presentation="practice"
                     continueLabel="进入验证"
@@ -763,6 +768,7 @@ export default function App() {
                 onContinue={handleGuidedContinue}
                 verificationSession={assessmentView.session}
                 assessmentReview={learningFlowReview}
+                guidedNeedsReview={guidedReviewSignal.needsReview}
               />
             ) : (
               <div key={currentLearningUnit.id} className="demo-page">
