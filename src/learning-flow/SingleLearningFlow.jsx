@@ -1,4 +1,5 @@
 import { LEARNING_FLOW_STAGES } from "./learningFlowRegistry.js";
+import { createLearningReviewProjection } from "./learningReviewProjection.js";
 import "./SingleLearningFlow.css";
 
 const STAGE_ITEMS = Object.freeze([
@@ -98,9 +99,13 @@ export function SingleLearningFlow({
   onContinue,
   verificationSession = null,
   assessmentReview = null,
+  guidedNeedsReview = false,
 }) {
-  const latestReview = assessmentReview?.review ?? assessmentReview?.history?.[0] ?? null;
-  const needsReview = Boolean(latestReview?.incorrectCount > 0);
+  const reviewProjection = createLearningReviewProjection({
+    assessmentReview,
+    guidedNeedsReview,
+  });
+  const needsReview = reviewProjection.needsReview;
   const currentStage = STAGE_ITEMS.find((item) => item.id === stage) ?? STAGE_ITEMS[0];
 
   if (!learningUnit || !definition || definition.learningUnitId !== learningUnit.id) return null;
@@ -144,10 +149,23 @@ export function SingleLearningFlow({
         </div>
 
         {needsReview && (
-          <div className="single-learning-flow__review-signal" role="status">
+          <div
+            className="single-learning-flow__review-signal"
+            role="status"
+            data-learning-review-assessment-errors={reviewProjection.assessmentIncorrectCount}
+            data-learning-review-guided={reviewProjection.guidedNeedsReview ? "true" : "false"}
+          >
             <div>
               <strong>需要复习</strong>
-              <span>最近一次已完成评测有 {latestReview.incorrectCount} 道错误。</span>
+              {reviewProjection.assessmentIncorrectCount > 0 && reviewProjection.guidedNeedsReview ? (
+                <span>
+                  最近一次已完成评测有 {reviewProjection.assessmentIncorrectCount} 道错误；你也在实践回顾中标记了需要复习。
+                </span>
+              ) : reviewProjection.assessmentIncorrectCount > 0 ? (
+                <span>最近一次已完成评测有 {reviewProjection.assessmentIncorrectCount} 道错误。</span>
+              ) : (
+                <span>你在实践回顾中标记了需要复习。</span>
+              )}
             </div>
             <button type="button" className="btn btn-outline btn-sm" onClick={() => onStageChange?.(LEARNING_FLOW_STAGES.UNDERSTAND)}>
               回到理解
