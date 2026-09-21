@@ -280,3 +280,81 @@ test("Effect canonical session snapshots diagnostics without entering the mutabl
   assert.equal(attempt.correct, true);
 });
 
+
+
+test("Preserving / Resetting State ships five identity-boundary diagnostic questions", () => {
+  const questions = getCanonicalAssessmentQuestions("preserving-resetting-state");
+
+  assert.equal(questions.length, 5);
+  assert.deepEqual(
+    questions.map((question) => question.id),
+    [
+      "canonical-preserve-reset-props-switch",
+      "canonical-preserve-reset-contact-key",
+      "canonical-preserve-reset-boundary",
+      "canonical-preserve-reset-stable-key-rerender",
+      "canonical-preserve-reset-per-entity-drafts",
+    ],
+  );
+  assert.ok(questions.every((question) => question.provenance.source === "canonical"));
+  assert.ok(questions.every((question) => question.learningUnitId === "preserving-resetting-state"));
+  assert.ok(questions.every((question) => question.evidenceRefs.length > 0));
+
+  const diagnosticQuestions = questions.filter((question) => question.content.diagnosticOptionMap);
+  assert.ok(diagnosticQuestions.length >= 4);
+
+  for (const question of diagnosticQuestions) {
+    for (const [optionId, misconceptionId] of Object.entries(question.content.diagnosticOptionMap)) {
+      assert.notEqual(optionId, question.content.correctOptionId);
+      assert.ok(question.content.options.some((option) => option.id === optionId));
+      assert.ok(
+        getMisconceptionForLearningUnit("preserving-resetting-state", misconceptionId),
+        `${question.id}: missing Preserve/Reset misconception ${misconceptionId}`,
+      );
+    }
+  }
+
+  const boundary = questions.find(
+    (question) => question.id === "canonical-preserve-reset-boundary",
+  );
+  assert.equal(boundary.content.diagnosticOptionMap["key-shell"], "reset-boundary-too-high");
+  assert.equal(boundary.content.diagnosticOptionMap["random-editor"], "random-key-is-reset-strategy");
+});
+
+test("Preserving / Resetting canonical session snapshots diagnostics outside the mutable bank", async () => {
+  const repository = new MemoryAssessmentRepository();
+  const service = new AssessmentService({
+    repository,
+    idFactory: createIdFactory(),
+    evidenceResolver: {
+      resolve(ref) {
+        return ref?.kind === "source" ? { ok: true } : null;
+      },
+    },
+  });
+  const questions = getCanonicalAssessmentQuestions("preserving-resetting-state");
+
+  const session = await service.startSession({
+    trusted: { learningUnitId: "preserving-resetting-state" },
+    questionRecords: questions,
+  });
+
+  assert.equal(session.items.length, 5);
+  assert.deepEqual(
+    await repository.listQuestions({ learningUnitId: "preserving-resetting-state" }),
+    [],
+  );
+
+  const boundary = session.items.find(
+    (item) => item.questionId === "canonical-preserve-reset-boundary",
+  ).snapshot;
+  assert.equal(boundary.content.diagnosticOptionMap["key-shell"], "reset-boundary-too-high");
+
+  const attempt = await service.submitAnswer({
+    trusted: { learningUnitId: "preserving-resetting-state" },
+    sessionId: session.id,
+    questionId: boundary.id,
+    answer: boundary.content.correctOptionId,
+  });
+  assert.equal(attempt.correct, true);
+});
