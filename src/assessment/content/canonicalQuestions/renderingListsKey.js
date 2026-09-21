@@ -54,10 +54,22 @@ export const RENDERING_LISTS_KEY_QUESTIONS = Object.freeze([
   canonicalQuestion({
     id: "canonical-rendering-lists-key-selection",
     learningUnitId: "rendering-lists-key",
+    revision: 2,
+    updatedAt: "2026-09-21T09:20:00.000Z",
+    catalogVersion: "2026-09-21-vnext-code-transfer",
     difficulty: "easy",
     conceptTags: ["key", "stable-id"],
     content: {
-      prompt: "一个待办列表允许顶部插入、删除、排序，并且每行都有输入草稿。以下哪个值最适合作为 key？",
+      prompt: "下面的 TodoList 支持顶部插入、删除、拖动排序，而且每个 TodoRow 内部都有尚未保存的 input draft。要让 draft 在结构变化后继续属于同一个 todo，最适合作为 key 的值是什么？",
+      codeContext: {
+        label: "陌生代码场景 · TodoList.jsx",
+        language: "jsx",
+        code: `function TodoList({ todos }) {
+  return todos.map((todo, index) => (
+    <TodoRow key={index} todo={todo} />
+  ));
+}`,
+      },
       options: [
         { id: "todo-id", text: "数据模型中创建后保持稳定的 todo.id" },
         { id: "index", text: "当前数组 index" },
