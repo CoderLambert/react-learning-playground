@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { getMisconceptionForLearningUnit } from "../../content/conceptModels.js";
+import { HighlightedCode } from "../../components/HighlightedCode.jsx";
 import { Badge } from "../../components/ui/badge.jsx";
 import { Button } from "../../components/ui/button.jsx";
 import { Card, CardContent, CardHeader } from "../../components/ui/card.jsx";
@@ -38,9 +39,11 @@ function QuestionCodeContext({ codeContext }) {
           {codeContext.label}
         </div>
       )}
-      <pre className="m-0 overflow-x-auto bg-[var(--bg-surface)] p-3 text-xs leading-6 text-[var(--text-main)]">
-        <code>{codeContext.code}</code>
-      </pre>
+      <HighlightedCode
+        code={codeContext.code}
+        language={codeContext.language ?? "jsx"}
+        className="assessment-code-context__code"
+      />
     </div>
   );
 }

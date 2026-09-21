@@ -44,6 +44,7 @@ test("Lists and Key exposes one deep Understand Practice Verify journey instead 
   await expect(flow).toContainText("切换 index key ↔ stable id");
   await expect(flow).toContainText("错的不是“DOM 完全没更新”");
   await expect(flow.locator("[data-learning-code-evidence-item='row-local-state']")).toContainText("useState");
+  await expect(flow.locator("[data-learning-code-evidence-item='row-local-state'] [data-code-highlighted='true']")).toBeVisible();
   await expect(flow.locator("[data-learning-code-evidence-item='list-key-selection']")).toContainText("key={useIndexKey ? index : task.id}");
   await expect(page.getByRole("tab", { name: "源码", exact: true })).toBeVisible();
   await expect(page.getByRole("tab", { name: "AI", exact: true })).toBeVisible();
@@ -137,6 +138,7 @@ test("diagnostic verification turns a known wrong model into counter-evidence be
   await page.getByRole("button", { name: /下一题/ }).click();
 
   await expect(page.locator("[data-assessment-code-context]")).toContainText("function TodoList");
+  await expect(page.locator("[data-assessment-code-context] [data-code-highlighted='true']")).toBeVisible();
   await expect(page.locator("[data-assessment-code-context]")).toContainText("<TodoRow key={index}");
   await page.getByRole("radio", { name: /数据模型中创建后保持稳定的 todo.id/ }).check();
   await page.getByRole("button", { name: "提交答案" }).click();
@@ -166,6 +168,7 @@ test("State Snapshot reuses the diagnostic loop for queue reasoning and preserve
   await expect(flow).toContainText("Updater × 3");
   await expect(flow).toContainText("Replace + Updater + Replace 42");
   await expect(flow.locator("[data-learning-code-evidence-item='replace-updates']")).toContainText("setCount(snapshot + 1)");
+  await expect(flow.locator("[data-learning-code-evidence-item='replace-updates'] [data-code-highlighted='true']")).toBeVisible();
   await expect(flow.locator("[data-learning-code-evidence-item='functional-updaters']")).toContainText("setCount((value) => value + 1)");
 
   await flow.locator(".single-learning-flow__stages button").filter({ hasText: "实践" }).click();
@@ -176,6 +179,7 @@ test("State Snapshot reuses the diagnostic loop for queue reasoning and preserve
   await page.getByRole("button", { name: "开始测试" }).click();
 
   await expect(page.locator("[data-assessment-code-context]")).toContainText("function handleAdd");
+  await expect(page.locator("[data-assessment-code-context] [data-code-highlighted='true']")).toBeVisible();
   await expect(page.locator("[data-assessment-code-context]")).toContainText("track(quantity)");
   await page.getByRole("radio", { name: /setQuantity 会先把当前变量 quantity 直接改成 1/ }).check();
   await page.getByRole("button", { name: "提交答案" }).click();
@@ -293,6 +297,8 @@ test("Guided Needs Review projects to the lesson level and survives reload", asy
     "setter 不会改写当前 render snapshot；更新请求会进入 queue。",
   );
   await page.getByRole("button", { name: "保存 explanation，继续 practice" }).click();
+  await expect(page.locator("[data-guided-practice-code-context] [data-code-highlighted='true']")).toBeVisible();
+  await expect(page.locator("[data-guided-practice-kind='patch-choice'] .guided-flow-practice-option-content > .guided-flow-patch[data-code-highlighted='true']")).toHaveCount(3);
   await page.locator("[data-guided-practice-kind='patch-choice'] input[value='functional-updaters']").check();
   await page.getByRole("button", { name: "提交 practice，查看 review" }).click();
 

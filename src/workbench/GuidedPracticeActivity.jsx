@@ -1,3 +1,4 @@
+import { HighlightedCode } from "../components/HighlightedCode.jsx";
 import {
   GUIDED_FLOW_ACTIONS,
 } from "./guidedFlow.js";
@@ -42,7 +43,7 @@ function PracticeResponseSummary({ summary, label }) {
       <strong>{label}</strong>
       <p>{summary.label}</p>
       {summary.kind === GUIDED_PRACTICE_KINDS.PATCH_CHOICE && summary.patch && (
-        <pre className="guided-flow-patch"><code>{summary.patch}</code></pre>
+        <HighlightedCode code={summary.patch} language="diff" className="guided-flow-patch" />
       )}
     </div>
   );
@@ -100,7 +101,7 @@ function PracticeOptionList({
           />
           <span className="guided-flow-practice-option-content">
             <span>{option.label}</span>
-            {patch && <pre className="guided-flow-patch"><code>{option.patch}</code></pre>}
+            {patch && <HighlightedCode code={option.patch} language="diff" className="guided-flow-patch" />}
           </span>
         </label>
       ))}
@@ -198,9 +199,11 @@ export function GuidedPracticeActivity({
       {step.codeContext && (
         <div className="guided-flow-code-context" data-guided-practice-code-context>
           {step.codeContext.label && <strong>{step.codeContext.label}</strong>}
-          <pre className="guided-flow-patch">
-            <code>{step.codeContext.code}</code>
-          </pre>
+          <HighlightedCode
+            code={step.codeContext.code}
+            language={step.codeContext.language ?? "jsx"}
+            className="guided-flow-patch"
+          />
         </div>
       )}
 
