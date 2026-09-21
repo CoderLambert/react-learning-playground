@@ -1,16 +1,18 @@
 import { expect } from "@playwright/test";
 import { test } from "./test-fixtures.js";
 
+const SINGLE_LEARNING_FLOW_GUIDED_IDS = new Set([
+  "rendering-lists-key",
+  "state-snapshot-queue",
+  "preserving-resetting-state",
+  "not-need-effect",
+]);
+
 async function openGuidedLesson(page, learningUnitId) {
   await page.goto(`./?demo=${learningUnitId}`);
   await expect(page.locator("h2.demo-title").first()).toBeVisible();
 
-  if ([
-    "rendering-lists-key",
-    "state-snapshot-queue",
-    "preserving-resetting-state",
-    "not-need-effect",
-  ].includes(learningUnitId)) {
+  if (SINGLE_LEARNING_FLOW_GUIDED_IDS.has(learningUnitId)) {
     await page.locator("[data-learning-flow='single'] .single-learning-flow__stages button").filter({ hasText: "实践" }).click();
     await expect(page.locator("[data-guided-entry]")).toBeVisible();
     await page.getByRole("button", { name: /开始实践|继续实践/ }).click();
