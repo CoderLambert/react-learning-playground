@@ -331,6 +331,36 @@ export function deserializeGuidedSessionSnapshot(raw, { definition } = {}) {
   };
 }
 
+export function readGuidedSessionReviewSignal({
+  definition,
+  storage = getBrowserStorage(),
+} = {}) {
+  const key = getGuidedSessionStorageKey(definition?.learningUnitId);
+  if (!isStorageLike(storage) || !key) {
+    return Object.freeze({
+      status: GUIDED_SESSION_PERSISTENCE_STATUS.UNAVAILABLE,
+      needsReview: false,
+    });
+  }
+
+  let raw;
+  try {
+    raw = storage.getItem(key);
+  } catch {
+    return Object.freeze({
+      status: GUIDED_SESSION_PERSISTENCE_STATUS.UNAVAILABLE,
+      needsReview: false,
+    });
+  }
+
+  const result = deserializeGuidedSessionSnapshot(raw, { definition });
+  return Object.freeze({
+    status: result.status,
+    needsReview: result.status === GUIDED_SESSION_PERSISTENCE_STATUS.RESTORED
+      && result.snapshot?.needsReview === true,
+  });
+}
+
 export function restoreGuidedFlowState(snapshot, { definition } = {}) {
   const validation = validateGuidedSessionSnapshot(snapshot, { definition });
   if (!validation.valid) {
