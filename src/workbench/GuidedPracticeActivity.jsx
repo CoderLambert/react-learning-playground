@@ -1,3 +1,4 @@
+import { HighlightedCode } from "../components/HighlightedCode.jsx";
 import {
   GUIDED_FLOW_ACTIONS,
 } from "./guidedFlow.js";
@@ -198,9 +199,11 @@ export function GuidedPracticeActivity({
       {step.codeContext && (
         <div className="guided-flow-code-context" data-guided-practice-code-context>
           {step.codeContext.label && <strong>{step.codeContext.label}</strong>}
-          <pre className="guided-flow-patch">
-            <code>{step.codeContext.code}</code>
-          </pre>
+          <HighlightedCode
+            code={step.codeContext.code}
+            language={step.codeContext.language ?? "jsx"}
+            className="guided-flow-patch"
+          />
         </div>
       )}
 
