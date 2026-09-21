@@ -195,6 +195,15 @@ export function GuidedPracticeActivity({
       <p className="guided-flow-eyebrow">迁移到新情境</p>
       <h3>{step.prompt}</h3>
 
+      {step.codeContext && (
+        <div className="guided-flow-code-context" data-guided-practice-code-context>
+          {step.codeContext.label && <strong>{step.codeContext.label}</strong>}
+          <pre className="guided-flow-patch">
+            <code>{step.codeContext.code}</code>
+          </pre>
+        </div>
+      )}
+
       {kind === GUIDED_PRACTICE_KINDS.CHOICE && (
         <PracticeOptionList
           step={step}

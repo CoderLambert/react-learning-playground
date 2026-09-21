@@ -43,17 +43,18 @@ export const STATE_SNAPSHOT_QUEUE_DEFINITION = {
       type: GUIDED_STEP_TYPES.PRACTICE,
       prompt: `现在把问题迁移到真实修复场景。
 
-一个 “+3” handler 可能和同一次事件中更早入队的 updater 一起执行：
-
-\`\`\`js
-setCount((n) => n + 10);
-handlePlusThree();
-\`\`\`
+一个 “+3” handler 可能和同一次事件中更早入队的 updater 一起执行。
 
 产品要求 \`handlePlusThree()\` 的三个 “+1” 都继续基于 queue 中前一项结果计算，
 不能用当前 render snapshot 覆盖掉前面已经排队的更新。
 
 选择最小且语义正确的修复。`,
+      codeContext: {
+        label: "调用现场",
+        language: "js",
+        code: `setCount((n) => n + 10);
+handlePlusThree();`,
+      },
       response: {
         kind: GUIDED_RESPONSE_KINDS.PATCH_CHOICE,
         options: [

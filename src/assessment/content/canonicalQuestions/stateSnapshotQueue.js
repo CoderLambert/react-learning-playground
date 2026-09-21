@@ -4,18 +4,29 @@ export const STATE_SNAPSHOT_QUEUE_QUESTIONS = Object.freeze([
   canonicalQuestion({
     id: "canonical-state-snapshot-current-value",
     learningUnitId: "state-snapshot-queue",
+    revision: 2,
+    updatedAt: "2026-09-21T09:20:00.000Z",
+    catalogVersion: "2026-09-21-vnext-code-transfer",
     difficulty: "medium",
     conceptTags: ["state-snapshot", "setter"],
     content: {
-      prompt: "当前 render 中 count = 0。事件 handler 里先执行 setCount(count + 1)，然后在同一个 handler 后面再次读取 count。这里最准确的理解是什么？",
+      prompt: "CartButton 当前 render 的 quantity = 0。用户点击一次后，track(quantity) 最可能记录什么？哪种解释最准确？",
+      codeContext: {
+        label: "陌生代码场景 · CartButton.jsx",
+        language: "jsx",
+        code: `function handleAdd() {
+  setQuantity(quantity + 1);
+  track(quantity);
+}`,
+      },
       options: [
-        { id: "snapshot-stays-zero", text: "当前 handler 仍读取这次 render 的 count = 0；setter 请求 React 为后续 render 计算新 State" },
-        { id: "setter-mutates-now", text: "setCount 会先把当前变量 count 直接改成 1，后面的代码立刻读取 1" },
-        { id: "count-unknown", text: "setCount 后 count 变成不可预测值，要等浏览器事件循环决定" },
-        { id: "dom-first", text: "DOM 先更新为 1，然后 React 再把 JavaScript 变量同步成 1" },
+        { id: "snapshot-stays-zero", text: "track 仍读取这次 render 的 quantity = 0；setter 请求 React 为后续 render 计算新 State" },
+        { id: "setter-mutates-now", text: "setQuantity 会先把当前变量 quantity 直接改成 1，所以 track 立刻读取 1" },
+        { id: "count-unknown", text: "setQuantity 后 quantity 变成不可预测值，要等浏览器事件循环决定" },
+        { id: "dom-first", text: "DOM 先更新 quantity，再由 React 把 JavaScript 变量同步成新值给 track" },
       ],
       correctOptionId: "snapshot-stays-zero",
-      explanation: "State 是一次 render 的 snapshot。setter 不会回头修改当前 handler 已经读取到的 count；它提交更新请求，React 处理更新后由下一次 render 得到新的 State snapshot。",
+      explanation: "State 是一次 render 的 snapshot。setter 不会回头修改当前 handler 已经读取到的 quantity；它提交更新请求，React 处理更新后由下一次 render 得到新的 State snapshot。",
       diagnosticOptionMap: {
         "setter-mutates-now": "setter-mutates-snapshot",
       },

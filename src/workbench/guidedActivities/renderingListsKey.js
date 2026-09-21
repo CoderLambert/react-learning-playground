@@ -66,16 +66,15 @@ export const RENDERING_LISTS_KEY_DEFINITION = {
       prompt: `另一个可编辑 Todo 列表支持顶部插入、拖动排序和修改标题。
 每个 \`TodoRow\` 内部都有尚未保存的 input draft。
 
-当前实现：
-
-\`\`\`jsx
-{todos.map((todo, index) => (
-  <TodoRow key={index} todo={todo} />
-))}
-\`\`\`
-
 要求：列表结构变化后，已有 draft 必须继续属于同一个 todo 实体。
 选择最小正确修复。`,
+      codeContext: {
+        label: "当前 TodoList 实现",
+        language: "jsx",
+        code: `{todos.map((todo, index) => (
+  <TodoRow key={index} todo={todo} />
+))}`,
+      },
       response: {
         kind: GUIDED_RESPONSE_KINDS.PATCH_CHOICE,
         options: [

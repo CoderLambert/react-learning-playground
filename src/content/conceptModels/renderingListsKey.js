@@ -10,6 +10,20 @@ export const LISTS_KEY_MODEL = {
     change: "reorder 时会怎样",
   },
   contrastTitle: "三种变化，不要混成同一种“复用 / 重建”",
+  codeEvidence: [
+    {
+      id: "row-local-state",
+      title: "先看 State 真正属于哪里",
+      explanation: "EditableRow 自己持有 note State。反转列表时要追踪的不是 input DOM，而是 React 是否继续把这个局部 State 归给同一个组件身份。",
+      sourceRef: { kind: "source", fileName: "RenderingListsKeyDemo.jsx", startLine: 9, endLine: 11 },
+    },
+    {
+      id: "list-key-selection",
+      title: "再看 React 用什么线索匹配这一行",
+      explanation: "同一个 TaskList 只切换 key 表达式：index 表示当前位置，task.id 表示稳定业务身份。Demo 的备注“跟错行 / 跟着任务移动”正由这里的身份线索决定。",
+      sourceRef: { kind: "source", fileName: "RenderingListsKeyDemo.jsx", startLine: 39, endLine: 46 },
+    },
+  ],
   mechanismMap: [
     {
       id: "business-entity",

@@ -283,6 +283,19 @@
 }
 
 
+.guided-flow-code-context {
+  display: grid;
+  gap: 7px;
+  max-width: 760px;
+}
+
+.guided-flow-code-context > strong {
+  color: var(--text-subtle);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
 .guided-flow-practice-option-content {
   display: grid;
   gap: 8px;
