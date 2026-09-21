@@ -25,6 +25,26 @@ const EMPTY_CORRECTION = Object.freeze({
   feedback: null,
 });
 
+function QuestionCodeContext({ codeContext }) {
+  if (!codeContext?.code) return null;
+
+  return (
+    <div
+      className="overflow-hidden rounded-lg border border-[var(--border-color)] bg-[var(--bg-surface-secondary)]"
+      data-assessment-code-context
+    >
+      {codeContext.label && (
+        <div className="border-b border-[var(--border-subtle)] px-3 py-2 text-xs font-bold text-[var(--text-muted)]">
+          {codeContext.label}
+        </div>
+      )}
+      <pre className="m-0 overflow-x-auto bg-[var(--bg-surface)] p-3 text-xs leading-6 text-[var(--text-main)]">
+        <code>{codeContext.code}</code>
+      </pre>
+    </div>
+  );
+}
+
 function EvidenceButton({ evidence, index, onOpen }) {
   const lineLabel = evidence?.kind === "source"
     ? `L${evidence.startLine}${evidence.endLine !== evidence.startLine ? `–${evidence.endLine}` : ""}`
@@ -331,6 +351,7 @@ export function AssessmentPracticePane({
           )}
 
           <form className="space-y-5" onSubmit={handleSubmit}>
+            <QuestionCodeContext codeContext={question.content?.codeContext} />
             <QuestionRenderer
               question={question}
               value={displayAnswer}
