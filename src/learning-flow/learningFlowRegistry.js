@@ -116,6 +116,8 @@ const FLOW_DEFINITIONS = Object.freeze({
     },
   }),
 });
+
+export const SINGLE_LEARNING_FLOW_UNIT_IDS = Object.freeze(Object.keys(FLOW_DEFINITIONS));
  
 export function getSingleLearningFlowDefinition(learningUnitId) {
   return FLOW_DEFINITIONS[learningUnitId] ?? null;
