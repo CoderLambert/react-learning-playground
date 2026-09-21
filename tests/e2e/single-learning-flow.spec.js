@@ -21,7 +21,7 @@ async function openNotNeedEffect(page) {
 
 async function openPreserveReset(page) {
   await loadApp(page);
-  await openDemo(page, "State 保留与重置");
+  await openDemo(page, "State 保留、重置与 key 身份");
   return page.locator("[data-learning-flow='single']");
 }
 
