@@ -78,7 +78,13 @@ test("Guided flow stores the first prediction before the experiment and reaches 
 
 test("the same reducer completes several new Guided definitions without lesson-specific state", () => {
   for (const learningUnitId of [
+    "component-jsx-pure-render",
+    "props",
+    "children",
+    "multi-slots",
+    "conditional-rendering",
     "rendering-lists-key",
+    "prop-drilling",
     "preserving-resetting-state",
     "not-need-effect",
     "lifecycle-of-reactive-effects",
