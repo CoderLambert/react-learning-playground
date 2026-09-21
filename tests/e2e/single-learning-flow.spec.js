@@ -1,6 +1,12 @@
 import { expect } from "@playwright/test";
 import { loadApp, openDemo, test } from "./test-fixtures.js";
 
+async function openComponentPureRender(page) {
+  await loadApp(page);
+  await openDemo(page, "Component、JSX 与纯渲染");
+  return page.locator("[data-learning-flow='single']");
+}
+
 async function openListsAndKey(page) {
   await loadApp(page);
   await openDemo(page, "列表渲染与 key 身份");
@@ -30,6 +36,61 @@ async function openEffectLifecycle(page) {
   await openDemo(page, "响应式 Effect 生命周期与依赖");
   return page.locator("[data-learning-flow='single']");
 }
+
+test("Batch A Component pure render completes the VNext code-transfer journey", async ({ page }) => {
+  const flow = await openComponentPureRender(page);
+
+  await expect(flow).toHaveAttribute("data-learning-unit", "component-jsx-pure-render");
+  await expect(flow).toHaveAttribute("data-learning-stage", "understand");
+  await expect(flow).toContainText("Inputs → Component Function → JSX Description → Commit");
+  const evidence = flow.locator("[data-learning-code-evidence-item='pure-vs-impure-calculation']");
+  await expect(evidence).toContainText("function buildPureDescription");
+  await expect(evidence.locator("[data-code-highlighted='true']")).toBeVisible();
+
+  await flow.locator(".single-learning-flow__stages button").filter({ hasText: "实践" }).click();
+  await page.getByRole("button", { name: "开始实践" }).click();
+  await page.getByRole("radio", { name: "相同输入得到相同结果" }).check();
+  await page.getByRole("button", { name: "提交 prediction" }).click();
+  await page.getByRole("button", { name: "我已运行并观察结果" }).click();
+  await page.getByRole("textbox", { name: "你的 explanation" }).fill(
+    "纯 render 的输出只由当前输入决定；修改模块级变量会让相同输入依赖执行次数。",
+  );
+  await page.getByRole("button", { name: "保存 explanation，继续 practice" }).click();
+
+  const practice = page.locator("[data-guided-practice-kind='patch-choice']");
+  await expect(practice.locator("[data-guided-practice-code-context] [data-code-highlighted='true']")).toBeVisible();
+  await practice.locator("input[value='remove-external-sequence']").check();
+  await page.getByRole("button", { name: "提交 practice，查看 review" }).click();
+  await expect(page.locator("[data-guided-practice-outcome='correct']")).toBeVisible();
+
+  await flow.locator(".single-learning-flow__stages button").filter({ hasText: "验证" }).click();
+  await page.getByRole("button", { name: "开始测试" }).click();
+
+  await page.getByRole("radio", { name: /相同的 UI 描述/ }).check();
+  await page.getByRole("button", { name: "提交答案" }).click();
+  await page.getByRole("button", { name: /下一题/ }).click();
+
+  await page.getByRole("radio", { name: /返回 React 元素描述/ }).check();
+  await page.getByRole("button", { name: "提交答案" }).click();
+  await page.getByRole("button", { name: /下一题/ }).click();
+
+  const transferCode = page.locator("[data-assessment-code-context]");
+  await expect(transferCode).toContainText("visits += 1");
+  await expect(transferCode.locator("[data-code-highlighted='true']")).toBeVisible();
+  await page.getByRole("radio", { name: /visits \+= 1 修改了/ }).check();
+  await page.getByRole("button", { name: "提交答案" }).click();
+  await page.getByRole("button", { name: /下一题/ }).click();
+
+  await page.getByRole("radio", { name: /本次 render 内新建/ }).check();
+  await page.getByRole("button", { name: "提交答案" }).click();
+  await page.getByRole("button", { name: /下一题/ }).click();
+
+  await page.getByRole("radio", { name: /render 先计算元素描述/ }).check();
+  await page.getByRole("button", { name: "提交答案" }).click();
+
+  await expect(page.getByText("本轮评测已完成", { exact: true })).toBeVisible();
+  await expect(flow.getByText("本节验证完成", { exact: true })).toBeVisible();
+});
 
 test("Lists and Key exposes one deep Understand Practice Verify journey instead of parallel learning modes", async ({ page }) => {
   const flow = await openListsAndKey(page);
