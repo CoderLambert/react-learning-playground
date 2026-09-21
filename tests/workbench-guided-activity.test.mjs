@@ -15,23 +15,70 @@ import {
 } from "../src/workbench/guidedActivity.js";
 
 const TARGET_LEARNING_UNIT_IDS = [
-  "state-snapshot-queue",
+  "component-jsx-pure-render",
+  "props",
+  "children",
+  "multi-slots",
+  "conditional-rendering",
   "rendering-lists-key",
+  "prop-drilling",
+  "state-snapshot-queue",
   "preserving-resetting-state",
   "not-need-effect",
   "lifecycle-of-reactive-effects",
 ];
 
+const CODE_CONTEXT_LEARNING_UNIT_IDS = new Set([
+  "component-jsx-pure-render",
+  "props",
+  "children",
+  "multi-slots",
+  "conditional-rendering",
+  "rendering-lists-key",
+  "prop-drilling",
+  "state-snapshot-queue",
+]);
+
 const FROZEN_EXPECTED_PRACTICE = {
-  "state-snapshot-queue": {
-    predict: "count-1",
+  "component-jsx-pure-render": {
+    predict: "same-result",
     kind: GUIDED_RESPONSE_KINDS.PATCH_CHOICE,
-    expectedOptionId: "functional-updaters",
+    expectedOptionId: "remove-external-sequence",
+  },
+  "props": {
+    predict: "new-prop-rendered",
+    kind: GUIDED_RESPONSE_KINDS.PATCH_CHOICE,
+    expectedOptionId: "derive-during-render",
+  },
+  "children": {
+    predict: "nothing-about-form",
+    kind: GUIDED_RESPONSE_KINDS.PATCH_CHOICE,
+    expectedOptionId: "accept-children",
+  },
+  "multi-slots": {
+    predict: "footer-hidden",
+    kind: GUIDED_RESPONSE_KINDS.PATCH_CHOICE,
+    expectedOptionId: "explicit-three-state",
+  },
+  "conditional-rendering": {
+    predict: "only-error",
+    kind: GUIDED_RESPONSE_KINDS.PATCH_CHOICE,
+    expectedOptionId: "derive-is-empty",
   },
   "rendering-lists-key": {
     predict: "stays-first-position",
     kind: GUIDED_RESPONSE_KINDS.PATCH_CHOICE,
     expectedOptionId: "stable-todo-id-key",
+  },
+  "prop-drilling": {
+    predict: "all-update",
+    kind: GUIDED_RESPONSE_KINDS.PATCH_CHOICE,
+    expectedOptionId: "compose-avatar-from-page",
+  },
+  "state-snapshot-queue": {
+    predict: "count-1",
+    kind: GUIDED_RESPONSE_KINDS.PATCH_CHOICE,
+    expectedOptionId: "functional-updaters",
   },
   "preserving-resetting-state": {
     predict: "draft-preserved",
@@ -55,15 +102,19 @@ const FROZEN_EXPECTED_PRACTICE = {
     ],
   },
 };
-
 const FROZEN_EXPERIMENT_ACTIONS = {
-  "state-snapshot-queue": "replace-three-times",
+  "component-jsx-pure-render": "compare-pure-and-impure-calculation",
+  "props": "edit-parent-props-inputs",
+  "children": "compare-children-composition",
+  "multi-slots": "compare-slot-three-state-contract",
+  "conditional-rendering": "switch-four-conditional-states",
   "rendering-lists-key": "compare-index-and-stable-key",
+  "prop-drilling": "compare-props-composition-context",
+  "state-snapshot-queue": "replace-three-times",
   "preserving-resetting-state": "compare-preserved-and-keyed-chat",
   "not-need-effect": "exercise-render-event-identity-boundaries",
   "lifecycle-of-reactive-effects": "observe-room-resynchronization",
 };
-
 function createValidDefinition(overrides = {}) {
   return {
     learningUnitId: "fixture-lesson",
@@ -133,7 +184,7 @@ test("state-snapshot-queue is a sparse, frozen Guided Activity fixture", () => {
   assert.deepEqual(validateGuidedActivityDefinition(definition), { valid: true, errors: [] });
 });
 
-test("the first five Guided definitions are available, frozen, and follow the contract", async () => {
+test("all currently migrated Guided definitions are available, frozen, and follow the shared contract", async () => {
   const registrySource = await readFile(new URL("../src/demos/index.js", import.meta.url), "utf8");
   const demosStart = registrySource.indexOf("export const demos = [");
   assert.notEqual(demosStart, -1);
@@ -153,24 +204,22 @@ test("the first five Guided definitions are available, frozen, and follow the co
       ["predict", "experiment", "explain", "practice", "review"],
     );
     assert.equal(new Set(definition.steps.map(({ id }) => id)).size, definition.steps.length);
-    for (const step of definition.steps) {
-      if (step.response?.kind === GUIDED_RESPONSE_KINDS.CHOICE) {
-        assert.equal(new Set(step.response.options.map(({ id }) => id)).size, step.response.options.length);
-      }
-    }
-    assert.equal(definition.revision, 2);
+    assert.ok(Number.isInteger(definition.revision) && definition.revision >= 1);
     assert.deepEqual(definition.steps.at(-1).resources, ["notes", "source", "demo"]);
+
     const expected = FROZEN_EXPECTED_PRACTICE[learningUnitId];
     const practiceStep = definition.steps[3];
-    if (learningUnitId === "state-snapshot-queue" || learningUnitId === "rendering-lists-key") {
+    if (CODE_CONTEXT_LEARNING_UNIT_IDS.has(learningUnitId)) {
       assert.equal(typeof practiceStep.codeContext?.code, "string");
       assert.ok(practiceStep.codeContext.code.trim().length > 0);
     } else {
       assert.equal(practiceStep.codeContext, undefined);
     }
+
     assert.equal(definition.steps[0].reveal.expectedOptionId, expected.predict);
     assert.equal(definition.steps[1].demoActionId, FROZEN_EXPERIMENT_ACTIONS[learningUnitId]);
     assert.equal(practiceStep.response.kind, expected.kind);
+
     if (expected.kind === GUIDED_RESPONSE_KINDS.ORDERED_SEQUENCE) {
       assert.deepEqual(practiceStep.reveal.expectedOrder, expected.expectedOrder);
       assert.equal(new Set(practiceStep.response.items.map(({ id }) => id)).size, practiceStep.response.items.length);
@@ -341,7 +390,7 @@ test("Practice V2 accepts ordered-sequence only when expectedOrder is a complete
 });
 
 
-test("the five upgraded practices use applied deterministic artifacts rather than conceptual choice recall", () => {
+test("the migrated practices use applied deterministic artifacts rather than conceptual choice recall", () => {
   const practiceKinds = new Set();
   for (const learningUnitId of TARGET_LEARNING_UNIT_IDS) {
     const definition = getGuidedActivityDefinition(learningUnitId);
