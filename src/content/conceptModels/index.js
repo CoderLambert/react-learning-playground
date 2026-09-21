@@ -1,3 +1,9 @@
+import { COMPONENT_JSX_PURE_RENDER_MODEL } from "./componentJsxPureRender.js";
+import { PROPS_MODEL } from "./props.js";
+import { CHILDREN_MODEL } from "./children.js";
+import { MULTI_SLOTS_MODEL } from "./multiSlots.js";
+import { CONDITIONAL_RENDERING_MODEL } from "./conditionalRendering.js";
+import { PROP_DRILLING_MODEL } from "./propDrilling.js";
 import { LISTS_KEY_MODEL } from "./renderingListsKey.js";
 import { STATE_SNAPSHOT_QUEUE_MODEL } from "./stateSnapshotQueue.js";
 import { NOT_NEED_EFFECT_MODEL } from "./notNeedEffect.js";
@@ -12,6 +18,12 @@ function deepFreeze(value, visited = new WeakSet()) {
 }
 
 export const CONCEPT_MODELS = deepFreeze({
+  [COMPONENT_JSX_PURE_RENDER_MODEL.learningUnitId]: COMPONENT_JSX_PURE_RENDER_MODEL,
+  [PROPS_MODEL.learningUnitId]: PROPS_MODEL,
+  [CHILDREN_MODEL.learningUnitId]: CHILDREN_MODEL,
+  [MULTI_SLOTS_MODEL.learningUnitId]: MULTI_SLOTS_MODEL,
+  [CONDITIONAL_RENDERING_MODEL.learningUnitId]: CONDITIONAL_RENDERING_MODEL,
+  [PROP_DRILLING_MODEL.learningUnitId]: PROP_DRILLING_MODEL,
   [LISTS_KEY_MODEL.learningUnitId]: LISTS_KEY_MODEL,
   [STATE_SNAPSHOT_QUEUE_MODEL.learningUnitId]: STATE_SNAPSHOT_QUEUE_MODEL,
   [NOT_NEED_EFFECT_MODEL.learningUnitId]: NOT_NEED_EFFECT_MODEL,
