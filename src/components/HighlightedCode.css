@@ -1,0 +1,29 @@
+.highlighted-code {
+  min-width: 0;
+  overflow: hidden;
+  border-radius: inherit;
+}
+
+.highlighted-code__shiki {
+  min-width: 0;
+}
+
+.highlighted-code__shiki > .shiki,
+.highlighted-code > pre {
+  margin: 0;
+  padding: 12px 14px;
+  overflow-x: auto;
+  font-size: 12px;
+  line-height: 1.65;
+  tab-size: 2;
+}
+
+.highlighted-code__shiki > .shiki code,
+.highlighted-code > pre code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.highlighted-code > pre {
+  background: var(--bg-code, var(--bg-surface-tertiary));
+  color: var(--text-main);
+}
