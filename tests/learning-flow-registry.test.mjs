@@ -21,6 +21,11 @@ test("single learning flow registry keeps the controlled diagnostic rollout spar
 
   assert.equal(snapshot.coreModelTitle, "Render Snapshot → Update Queue → Next Render State");
   assert.equal(snapshot.conceptModel.learningUnitId, "state-snapshot-queue");
+  assert.match(snapshot.aiReviewTarget, /snapshot|queue/i);
+  assert.match(lists.aiReviewTarget, /stable key|身份/);
+  assert.equal(effect.aiReviewTarget, undefined);
+  assert.equal(preserveReset.aiReviewTarget, undefined);
+  assert.equal(lifecycle.aiReviewTarget, undefined);
 
   assert.equal(effect.coreModelTitle, "Why it runs → Where it belongs");
   assert.equal(effect.conceptModel.learningUnitId, "not-need-effect");
