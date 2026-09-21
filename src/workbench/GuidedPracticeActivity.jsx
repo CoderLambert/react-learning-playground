@@ -43,7 +43,7 @@ function PracticeResponseSummary({ summary, label }) {
       <strong>{label}</strong>
       <p>{summary.label}</p>
       {summary.kind === GUIDED_PRACTICE_KINDS.PATCH_CHOICE && summary.patch && (
-        <pre className="guided-flow-patch"><code>{summary.patch}</code></pre>
+        <HighlightedCode code={summary.patch} language="diff" className="guided-flow-patch" />
       )}
     </div>
   );
@@ -101,7 +101,7 @@ function PracticeOptionList({
           />
           <span className="guided-flow-practice-option-content">
             <span>{option.label}</span>
-            {patch && <pre className="guided-flow-patch"><code>{option.patch}</code></pre>}
+            {patch && <HighlightedCode code={option.patch} language="diff" className="guided-flow-patch" />}
           </span>
         </label>
       ))}
