@@ -42,6 +42,23 @@ function isStableId(value) {
   return typeof value === "string" && STABLE_ID_PATTERN.test(value);
 }
 
+function validateCodeContext(codeContext, path, errors) {
+  if (codeContext === undefined) return;
+  if (!isRecord(codeContext)) {
+    errors.push(`${path} must be an object`);
+    return;
+  }
+  if (!isNonBlankString(codeContext.code)) {
+    errors.push(`${path}.code must be a non-blank string`);
+  }
+  if (codeContext.label !== undefined && !isNonBlankString(codeContext.label)) {
+    errors.push(`${path}.label must be a non-blank string when provided`);
+  }
+  if (codeContext.language !== undefined && !isNonBlankString(codeContext.language)) {
+    errors.push(`${path}.language must be a non-blank string when provided`);
+  }
+}
+
 function collectForbiddenFields(value, path, errors, visited = new WeakSet()) {
   if (!value || typeof value !== "object") return;
   if (visited.has(value)) {
@@ -174,6 +191,7 @@ function validateStep(step, index, errors) {
   }
 
   if (step.type === GUIDED_STEP_TYPES.PRACTICE) {
+    validateCodeContext(step.codeContext, `${path}.codeContext`, errors);
     if (!isRecord(step.response)) {
       errors.push(`${path}.response must be a deterministic practice response`);
     } else if (step.response.kind === GUIDED_RESPONSE_KINDS.CHOICE) {
