@@ -95,6 +95,26 @@ const FLOW_DEFINITIONS = Object.freeze({
       verify: "离开当前说明，根据因果来源独立判断代码应该放在哪里。",
     },
   }),
+  "lifecycle-of-reactive-effects": flowDefinition({
+    learningUnitId: "lifecycle-of-reactive-effects",
+    version: 1,
+    objective: "把 Effect 理解为独立外部同步过程，并根据真实 reactive reads 判断何时 cleanup 旧同步、setup 新同步。",
+    coreModelTitle: "Render → Commit → Cleanup(old) → Setup(new)",
+    mentalModel: "Effect 不等同于组件生命周期回调。render 先读取本次 reactive values，commit 后如果同步目标需要变化，React 先运行上一轮 cleanup 撤销旧外部关系，再用本次 committed values 运行 setup 建立下一轮同步。",
+    misconceptionTitle: "依赖数组不是“运行次数控制器”",
+    misconception: "真正的问题是 setup 读取了哪些 reactive values、这些值是否决定同步关系。为了少运行删除真实依赖会制造 stale synchronization；反过来，组件里某个值会变化也不代表它一定要让这个 Effect 重建。",
+    decisionRuleTitle: "先定义同步目标，再检查 reactive reads",
+    decisionRule: "决定外部同步目标的 reactive value 必须保留为依赖；如果某个 read 只是为了基于旧 State 计算下一份 State，可改用 functional updater；如果它属于 Effect 内触发、但不应重建同步的事件逻辑，可用 Effect Event 分离。先改变代码，再让依赖准确反映代码。",
+    practiceTitle: "先观察真实 cleanup/setup，再重建一次完整更新顺序",
+    practiceDescription: "用聊天室 Demo 验证 roomId 变化、静音切换和消息更新的不同效果，再通过 ordered-sequence 把 update → render → commit → cleanup → setup 顺序迁移到 topic subscription。",
+    verifyTitle: "不靠依赖数组口诀，判断同步过程为什么需要重建",
+    verifyDescription: "诊断题会检查 cleanup 时机、真实依赖、functional updater、Effect Event 与 Strict Mode 边界。答错时先用日志或源码做反证，再重新选择并复述。",
+    stageHints: {
+      understand: "先区分 render/commit 与 Effect 的 cleanup/setup，并找到真正决定外部同步目标的值。",
+      practice: "切换 room、静音和消息更新，观察哪些变化真的重建连接，再排列订阅更新顺序。",
+      verify: "离开当前日志，根据同步目标和 reactive reads 独立判断依赖与生命周期。",
+    },
+  }),
 });
  
 export function getSingleLearningFlowDefinition(learningUnitId) {
