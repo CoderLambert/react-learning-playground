@@ -135,10 +135,61 @@ test("Effect-decision misconceptions include deterministic counter-evidence and 
   }
 });
 
+test("Preserving / Resetting State models identity matching and boundary placement", () => {
+  const model = getConceptModelForLearningUnit("preserving-resetting-state");
+
+  assert.equal(model.learningUnitId, "preserving-resetting-state");
+  assert.deepEqual(
+    model.mechanismMap.map((item) => item.id),
+    [
+      "business-entity",
+      "tree-slot",
+      "component-type",
+      "key",
+      "component-identity",
+      "local-state",
+    ],
+  );
+  assert.deepEqual(
+    model.contrastCases.map((item) => item.id),
+    [
+      "prop-change-preserves",
+      "business-key-resets",
+      "narrow-reset-boundary",
+      "unstable-key-over-resets",
+    ],
+  );
+  assert.deepEqual(
+    model.contrastDimensions.map((item) => item.id),
+    ["inputStory", "identityStory", "stateStory", "productStory"],
+  );
+});
+
+test("Preserving / Resetting misconceptions have deterministic identity counter-evidence", () => {
+  const ids = [
+    "props-reset-state",
+    "state-follows-business-object",
+    "key-only-for-lists",
+    "key-is-dom-refresh",
+    "random-key-is-reset-strategy",
+    "reset-boundary-too-high",
+  ];
+
+  for (const id of ids) {
+    const misconception = getMisconceptionForLearningUnit("preserving-resetting-state", id);
+    assert.ok(misconception, `missing Preserve/Reset misconception ${id}`);
+    assert.ok(misconception.diagnosis.length > 0);
+    assert.ok(misconception.counterEvidence.length > 0);
+    assert.ok(misconception.experiment.length > 0);
+    assert.ok(misconception.evidenceRefs.length > 0);
+  }
+});
+
 test("concept-model lookup remains sparse and lesson-scoped", () => {
   assert.equal(getConceptModelForLearningUnit("props"), null);
   assert.equal(getMisconceptionForLearningUnit("props", "dom-not-updated"), null);
   assert.equal(getMisconceptionForLearningUnit("rendering-lists-key", "unknown"), null);
   assert.equal(getMisconceptionForLearningUnit("state-snapshot-queue", "unknown"), null);
   assert.equal(getMisconceptionForLearningUnit("not-need-effect", "unknown"), null);
+  assert.equal(getMisconceptionForLearningUnit("preserving-resetting-state", "unknown"), null);
 });
