@@ -85,6 +85,7 @@ export function createGuidedReasoningReviewContext({
   stepId,
   stepPrompt,
   learnerResponse,
+  reviewTarget,
 } = {}) {
   if (!GUIDED_REVIEW_SOURCES.includes(source)) {
     throw new TypeError("Guided reasoning review source is required");
@@ -95,6 +96,7 @@ export function createGuidedReasoningReviewContext({
   const normalizedStepId = clean(stepId);
   const normalizedStepPrompt = clean(stepPrompt);
   const response = clampLearningSelection(learnerResponse);
+  const target = clampLearningSelection(reviewTarget, 2000);
 
   if (!learningUnitId) throw new TypeError("Guided reasoning review requires a learning unit");
   if (!normalizedStepId) throw new TypeError("Guided reasoning review requires a step id");
@@ -110,6 +112,8 @@ export function createGuidedReasoningReviewContext({
     stepPrompt: normalizedStepPrompt,
     learnerResponse: response.text,
     learnerResponseTruncated: response.truncated,
+    reviewTarget: target.text,
+    reviewTargetTruncated: target.truncated,
   });
 }
 
@@ -134,9 +138,32 @@ function buildGuidedReasoningReviewPrompt(context) {
     "</learner_reasoning>",
     "<\\/learner_reasoning>",
   );
+  const delimitedReviewTarget = clean(context.reviewTarget).replaceAll(
+    "</review_target>",
+    "<\\/review_target>",
+  );
+  const closureContract = delimitedReviewTarget
+    ? [
+        "",
+        "本次是 lesson-scoped review。只按下面的本节核心目标判断，不要自行扩展成新的必修问题。",
+        "你的第一行必须且只能二选一：",
+        "结论：核心目标已成立",
+        "结论：还缺一个核心点",
+        "",
+        "如果核心目标已成立：用最多 2 个简短要点说明依据，然后停止 remediation；如确有延伸价值，只能放在“可选进阶：”下，且明确它不影响本节完成。",
+        "如果还缺一个核心点：只指出最高价值的那个核心缺口，并给 1 个最小追问或验证实验；不要同时展开多个边界问题。",
+        "",
+        "[本节 review target]",
+        "<review_target>",
+        delimitedReviewTarget,
+        "</review_target>",
+        context.reviewTargetTruncated ? "[review target 已按安全长度截断]" : "",
+      ]
+    : [];
 
   return [
     ACTION_INSTRUCTIONS[LEARNING_ACTION_KINDS.REVIEW_REASONING],
+    ...closureContract,
     "",
     `[学习单元] ${context.learningUnitTitle || context.learningUnitId}`,
     `[Guided step] ${context.stepId}`,
