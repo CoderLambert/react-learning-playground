@@ -6,6 +6,7 @@ const SINGLE_LEARNING_FLOW_GUIDED_IDS = new Set([
   "state-snapshot-queue",
   "preserving-resetting-state",
   "not-need-effect",
+  "lifecycle-of-reactive-effects",
 ]);
 
 async function openGuidedLesson(page, learningUnitId) {
