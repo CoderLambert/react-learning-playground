@@ -43,6 +43,8 @@ test("Lists and Key exposes one deep Understand Practice Verify journey instead 
   await expect(flow).toContainText("stable id + reorder");
   await expect(flow).toContainText("切换 index key ↔ stable id");
   await expect(flow).toContainText("错的不是“DOM 完全没更新”");
+  await expect(flow.locator("[data-learning-code-evidence-item='row-local-state']")).toContainText("useState");
+  await expect(flow.locator("[data-learning-code-evidence-item='list-key-selection']")).toContainText("key={useIndexKey ? index : task.id}");
   await expect(page.getByRole("tab", { name: "源码", exact: true })).toBeVisible();
   await expect(page.getByRole("tab", { name: "AI", exact: true })).toBeVisible();
   await expect(page.getByRole("tab", { name: "笔记", exact: true })).toHaveCount(0);
@@ -120,6 +122,9 @@ test("diagnostic verification turns a known wrong model into counter-evidence be
   const aiComposer = page.getByLabel("向 AI 助手提问");
   await expect(aiComposer).toHaveValue(new RegExp("assessment-correction:canonical-rendering-lists-key-reorder"));
   await expect(aiComposer).toHaveValue(new RegExp("index key 让组件身份按位置延续"));
+  await expect(aiComposer).toHaveValue(/结论：核心目标已成立/);
+  await expect(aiComposer).toHaveValue(/stable key 是同级元素的稳定身份线索/);
+  await expect(aiComposer).toHaveValue(/可选进阶：/);
   await expect(page.getByText(/不改变本轮分数/)).toBeVisible();
 
   await page.getByRole("button", { name: "关闭学习面板" }).last().click();
@@ -131,6 +136,8 @@ test("diagnostic verification turns a known wrong model into counter-evidence be
   await page.getByRole("button", { name: "关闭学习面板" }).last().click();
   await page.getByRole("button", { name: /下一题/ }).click();
 
+  await expect(page.locator("[data-assessment-code-context]")).toContainText("function TodoList");
+  await expect(page.locator("[data-assessment-code-context]")).toContainText("<TodoRow key={index}");
   await page.getByRole("radio", { name: /数据模型中创建后保持稳定的 todo.id/ }).check();
   await page.getByRole("button", { name: "提交答案" }).click();
   await page.getByRole("button", { name: /下一题/ }).click();
@@ -158,6 +165,8 @@ test("State Snapshot reuses the diagnostic loop for queue reasoning and preserve
   await expect(flow).toContainText("Replace × 3");
   await expect(flow).toContainText("Updater × 3");
   await expect(flow).toContainText("Replace + Updater + Replace 42");
+  await expect(flow.locator("[data-learning-code-evidence-item='replace-updates']")).toContainText("setCount(snapshot + 1)");
+  await expect(flow.locator("[data-learning-code-evidence-item='functional-updaters']")).toContainText("setCount((value) => value + 1)");
 
   await flow.locator(".single-learning-flow__stages button").filter({ hasText: "实践" }).click();
   await expect(flow).toHaveAttribute("data-learning-stage", "practice");
@@ -166,7 +175,9 @@ test("State Snapshot reuses the diagnostic loop for queue reasoning and preserve
   await flow.locator(".single-learning-flow__stages button").filter({ hasText: "验证" }).click();
   await page.getByRole("button", { name: "开始测试" }).click();
 
-  await page.getByRole("radio", { name: /setCount 会先把当前变量 count 直接改成 1/ }).check();
+  await expect(page.locator("[data-assessment-code-context]")).toContainText("function handleAdd");
+  await expect(page.locator("[data-assessment-code-context]")).toContainText("track(quantity)");
+  await page.getByRole("radio", { name: /setQuantity 会先把当前变量 quantity 直接改成 1/ }).check();
   await page.getByRole("button", { name: "提交答案" }).click();
 
   const remediation = page.locator("[data-assessment-misconception='setter-mutates-snapshot']");
@@ -176,7 +187,7 @@ test("State Snapshot reuses the diagnostic loop for queue reasoning and preserve
   await expect(page.getByText("正确答案", { exact: true })).toHaveCount(0);
 
   await page.getByRole("button", { name: "重新选择" }).click();
-  await page.getByRole("radio", { name: /当前 handler 仍读取这次 render 的 count = 0/ }).check();
+  await page.getByRole("radio", { name: /track 仍读取这次 render 的 quantity = 0/ }).check();
   await page.getByRole("button", { name: "再次验证" }).click();
 
   await expect(page.getByText("已纠正", { exact: true })).toBeVisible();
