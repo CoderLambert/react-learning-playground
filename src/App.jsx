@@ -258,7 +258,9 @@ export default function App() {
   const handleGuidedAskAi = (payload) => {
     const handoff = prepareGuidedAiHandoff({
       learningUnit: currentLearningUnit,
-      payload,
+      payload: currentLearningFlow?.aiReviewTarget
+        ? { ...payload, reviewTarget: currentLearningFlow.aiReviewTarget }
+        : payload,
       currentDraft: aiAssistant.inputValue,
     });
     if (!handoff.accepted) return false;
@@ -279,9 +281,8 @@ export default function App() {
       source: "review",
       stepId: `assessment-correction:${question.id}`,
       stepPrompt: [
-        "这是一次评测纠错后的复述。请检查我是否真正修正了心智模型，而不是只改对了选项。",
+        "这是一次评测纠错后的复述。请检查我是否真正修正了当前知识点的核心心智模型，而不是只改对了选项。",
         `原题：${question.content?.prompt ?? question.id}`,
-        "优先检查我是否正确区分 component identity、Props、local State 与 DOM；如果仍有偏差，先指出一个最值得验证的点，不要直接重写成标准答案。",
       ].join("\n"),
       learnerResponse: learnerResponse.trim(),
     });
