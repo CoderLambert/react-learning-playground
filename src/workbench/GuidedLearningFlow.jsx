@@ -1,4 +1,4 @@
-import { useId } from "react";
+import { useEffect, useId } from "react";
 import {
   GUIDED_FLOW_ACTIONS,
   GUIDED_FLOW_STEP_INDEX,
@@ -320,6 +320,7 @@ export function GuidedLearningFlow({
   onReviewResource,
   onAskAi,
   onContinue,
+  onNeedsReviewChange,
   canContinue = false,
   presentation = "guided",
   continueLabel,
@@ -339,6 +340,11 @@ export function GuidedLearningFlow({
     activityRevision: definition?.revision,
     definition,
   });
+
+  useEffect(() => {
+    if (!isCurrentActivity || typeof onNeedsReviewChange !== "function") return;
+    onNeedsReviewChange(state.needsReview === true);
+  }, [isCurrentActivity, onNeedsReviewChange, state.needsReview]);
 
   if (!definition || !learningUnit || definition.learningUnitId !== learningUnit.id || !isCurrentActivity) {
     return null;
