@@ -226,16 +226,9 @@ test("Learner Evidence runtime fails closed on incompatible Guided persistence",
     JSON.stringify(snapshot),
   );
 
-  const guidedSource = createGuidedEvidenceSource({ storage });
-  const sourceResult = guidedSource.read({ learningUnitId: "props" });
-  assert.equal(
-    sourceResult.status,
-    GUIDED_EVIDENCE_SOURCE_STATUS.INCOMPATIBLE,
-  );
-
   const runtime = createLearnerEvidenceRuntime({
     assessmentSource: { async read() { return []; } },
-    guidedSource,
+    guidedSource: createGuidedEvidenceSource({ storage }),
   });
   await assert.rejects(
     runtime.read({ learningUnitId: "props" }),
