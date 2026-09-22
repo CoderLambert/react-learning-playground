@@ -239,7 +239,7 @@ test("Effect Lifecycle misconceptions have deterministic synchronization counter
   }
 });
 
-test("Batch A concept models expose source-backed VNext authoring and lookup stays lesson-scoped", () => {
+test("current rollout concept models expose source-backed VNext authoring and lookup stays lesson-scoped", () => {
   for (const learningUnitId of [
     "component-jsx-pure-render",
     "props",
@@ -247,6 +247,9 @@ test("Batch A concept models expose source-backed VNext authoring and lookup sta
     "multi-slots",
     "conditional-rendering",
     "prop-drilling",
+    "event-propagation",
+    "immutable-state",
+    "render-commit",
   ]) {
     const model = getConceptModelForLearningUnit(learningUnitId);
     assert.equal(model.learningUnitId, learningUnitId);
@@ -255,8 +258,8 @@ test("Batch A concept models expose source-backed VNext authoring and lookup sta
   }
 
   assert.equal(getMisconceptionForLearningUnit("props", "dom-not-updated"), null);
-  assert.equal(getConceptModelForLearningUnit("immutable-state"), null);
-  assert.equal(getMisconceptionForLearningUnit("immutable-state", "unknown"), null);
+  assert.equal(getConceptModelForLearningUnit("state-dry"), null);
+  assert.equal(getMisconceptionForLearningUnit("state-dry", "unknown"), null);
   assert.equal(getMisconceptionForLearningUnit("rendering-lists-key", "unknown"), null);
   assert.equal(getMisconceptionForLearningUnit("state-snapshot-queue", "unknown"), null);
   assert.equal(getMisconceptionForLearningUnit("not-need-effect", "unknown"), null);
