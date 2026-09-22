@@ -66,6 +66,7 @@ test("ownership manifest exposes reusable owner and browser-impact taxonomy", ()
   assert.equal(getArchitectureOwner("src/ai/chatClient.js")?.id, "ai");
   assert.equal(getArchitectureOwner("src/assessment/application/AssessmentService.js")?.id, "assessment");
   assert.equal(getArchitectureOwner("src/workbench/noteRegistry.js")?.id, "workbench");
+  assert.equal(getArchitectureOwner("src/learning-evidence/runtime.js")?.id, "learning-evidence");
   assert.equal(getArchitectureOwner("src/platform/browser.js")?.id, "platform");
   assert.equal(getArchitectureOwner("src/components/ai-assistant/AiAssistant.jsx")?.id, "ai");
   assert.equal(getArchitectureOwner("src/components/learning-inspector/LearningInspector.jsx")?.id, "workbench");
@@ -130,6 +131,28 @@ test("AI, Assessment and Workbench expose curated public entries rather than meg
     assert.doesNotMatch(source, /export\s+\*\s+from/);
     assert.match(source, /export\s+\{/);
   }
+});
+
+test("Learning Evidence exposes curated public seams without Workbench UI imports", async () => {
+  assert.equal(
+    isCuratedPublicEntry("learning-evidence", "src/learning-evidence/public.js"),
+    true,
+  );
+  assert.equal(
+    isCuratedPublicEntry("workbench", "src/workbench/evidencePublic.js"),
+    true,
+  );
+
+  const [evidencePublic, evidenceRuntime, workbenchEvidencePublic] = await Promise.all([
+    readFile(new URL("../src/learning-evidence/public.js", import.meta.url), "utf8"),
+    readFile(new URL("../src/learning-evidence/runtime.js", import.meta.url), "utf8"),
+    readFile(new URL("../src/workbench/evidencePublic.js", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(evidencePublic, /createLearnerEvidenceRuntime/);
+  assert.match(evidenceRuntime, /from "\.\.\/workbench\/evidencePublic\.js"/);
+  assert.doesNotMatch(evidenceRuntime, /workbench\/guided/);
+  assert.doesNotMatch(workbenchEvidencePublic, /\.jsx/);
 });
 
 test("AI and Assessment composition is owned by app/integration", async () => {
