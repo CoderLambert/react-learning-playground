@@ -16,6 +16,20 @@ export const PRESERVING_RESETTING_STATE_MODEL = {
     { id: "stateStory", label: "局部 State" },
     { id: "productStory", label: "产品语义" },
   ],
+  codeEvidence: [
+    {
+      id: "chat-local-draft",
+      title: "draft 属于 Chat 组件身份，而不是 contact prop",
+      explanation: "Chat 自己创建 draft State。只替换 contact prop 时，如果 React 继续匹配同一个 Chat identity，这份 draft 就继续存在。",
+      sourceRef: { kind: "source", fileName: "PreservingResettingStateDemo.jsx", startLine: 9, endLine: 28 },
+    },
+    {
+      id: "same-position-vs-keyed-chat",
+      title: "同一位置：无业务 key 保留；contact.id key 显式创建新身份",
+      explanation: "上下两组都渲染 Chat。下半区唯一关键差异是 key={resetContact.id}，因此业务实体变化时 React 会建立新的 Chat identity。",
+      sourceRef: { kind: "source", fileName: "PreservingResettingStateDemo.jsx", startLine: 79, endLine: 99 },
+    },
+  ],
   mechanismMap: [
     {
       id: "business-entity",
