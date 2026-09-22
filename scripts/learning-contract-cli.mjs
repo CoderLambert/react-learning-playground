@@ -2,6 +2,7 @@ import { pathToFileURL } from "node:url";
 
 import {
   buildRepositoryLearningContractAudit,
+  buildRepositorySemanticFingerprints,
   createCoverageSummary,
 } from "./learning-contract/repository.mjs";
 
@@ -53,6 +54,8 @@ export async function runLearningContractCli(command) {
     printCoverage(createCoverageSummary(audit));
   } else if (command === "validate") {
     printValidation(audit);
+  } else if (command === "fingerprints") {
+    console.log(JSON.stringify(await buildRepositorySemanticFingerprints(), null, 2));
   } else {
     console.error("Unknown Learning Contract command: " + command);
     return 2;
