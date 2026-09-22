@@ -188,7 +188,7 @@ test("Learning Contract V1 keeps review and closure evidence deterministic and A
 
   const guidedReview = createLearningReviewProjection({ guidedNeedsReview: true });
   assert.equal(guidedReview.needsReview, true);
-  assert.equal(guidedReview.guidedNedsReview, true);
+  assert.equal(guidedReview.guidedNeedsReview, true);
 
   for (const projection of [assessmentReview, guidedReview]) {
     assert.equal("score" in projection, false);
@@ -201,7 +201,7 @@ test("Learning Contract V1 keeps review and closure evidence deterministic and A
     "utf8",
   );
 
-  assert.match(flowSource, /verificationSession\\\?\\\.status === "completed"/);
-  assert.match(flowSource, /createLearningReviewProjection\\\(\\\{\\s*assessmentReview,\\s*guidedNeedsReview,\/);
+  assert.match(flowSource, /verificationSession\?\.status === "completed"/);
+  assert.match(flowSource, /createLearningReviewProjection\(\{\s*assessmentReview,\s*guidedNeedsReview,/);
   assert.equal(flowSource.includes("aiReviewTarget"), false);
 });
