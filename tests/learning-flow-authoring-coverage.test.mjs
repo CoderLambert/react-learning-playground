@@ -28,6 +28,8 @@ const VNEXT_CODE_TRANSFER_UNIT_IDS = new Set([
   "state-reducer",
   "context-propagation",
   "use-reduce-with-context",
+  "use-ref",
+  "use-effect-correct-usage",
 ]);
 
 test("every Single Learning Flow unit has complete lesson-owned authoring assets", () => {
