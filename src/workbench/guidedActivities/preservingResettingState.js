@@ -2,7 +2,7 @@ import { GUIDED_RESPONSE_KINDS, GUIDED_STEP_TYPES } from "./contract.js";
 
 export const PRESERVING_RESETTING_STATE_DEFINITION = {
   learningUnitId: "preserving-resetting-state",
-  revision: 2,
+  revision: 3,
   goal: "理解局部 State 与组件身份关联，并用稳定业务 key 明确表达何时保留或重置。",
   steps: [
     {
@@ -59,23 +59,21 @@ Taylor 的 Chat 中已经输入草稿「明天开会」。
     {
       id: "practice-place-reset-boundary",
       type: GUIDED_STEP_TYPES.PRACTICE,
-      prompt: `CustomerWorkspace 中，\`WorkspaceShell\` 保存展开面板、滚动位置等 UI State；
-\`InvoiceEditor\` 保存当前客户尚未提交的发票草稿。
+      prompt: `CustomerWorkspace 中，WorkspaceShell 保存展开面板、滚动位置等 UI State；InvoiceEditor 保存当前客户尚未提交的发票草稿。
 
 需求：
 - customer 从 A 切到 B 时，只丢弃 InvoiceEditor 草稿；
 - WorkspaceShell 的 UI State 必须保留；
 - 普通 re-render 不能重置草稿。
 
-当前结构：
-
-\`\`\`jsx
-<WorkspaceShell>
-  <InvoiceEditor customer={customer} />
-</WorkspaceShell>
-\`\`\`
-
 选择最小且准确的 identity 修复。`,
+      codeContext: {
+        label: "陌生组件 · CustomerWorkspace.jsx",
+        language: "jsx",
+        code: `<WorkspaceShell>
+  <InvoiceEditor customer={customer} />
+</WorkspaceShell>`,
+      },
       response: {
         kind: GUIDED_RESPONSE_KINDS.PATCH_CHOICE,
         options: [
