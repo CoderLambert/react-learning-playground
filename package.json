@@ -8,6 +8,7 @@
     "dev": "vite",
     "build": "vite build",
     "demo:new": "node scripts/create-demo.mjs",
+    "audit:learning-baseline": "node scripts/audit-learning-contract-baseline.mjs",
     "lint": "oxlint",
     "preview": "vite preview",
     "test:content": "node --test tests/content-contract.test.mjs",
