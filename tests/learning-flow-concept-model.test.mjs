@@ -257,6 +257,8 @@ test("current rollout concept models expose source-backed VNext authoring and lo
     "state-reducer",
     "context-propagation",
     "use-reduce-with-context",
+    "use-ref",
+    "use-effect-correct-usage",
   ]) {
     const model = getConceptModelForLearningUnit(learningUnitId);
     assert.equal(model.learningUnitId, learningUnitId);
@@ -265,8 +267,8 @@ test("current rollout concept models expose source-backed VNext authoring and lo
   }
 
   assert.equal(getMisconceptionForLearningUnit("props", "dom-not-updated"), null);
-  assert.equal(getConceptModelForLearningUnit("use-ref"), null);
-  assert.equal(getMisconceptionForLearningUnit("use-ref", "unknown"), null);
+  assert.equal(getConceptModelForLearningUnit("event-vs-effect"), null);
+  assert.equal(getMisconceptionForLearningUnit("event-vs-effect", "unknown"), null);
   assert.equal(getMisconceptionForLearningUnit("rendering-lists-key", "unknown"), null);
   assert.equal(getMisconceptionForLearningUnit("state-snapshot-queue", "unknown"), null);
   assert.equal(getMisconceptionForLearningUnit("not-need-effect", "unknown"), null);

@@ -20,6 +20,8 @@ const SINGLE_LEARNING_FLOW_GUIDED_IDS = new Set([
   "state-reducer",
   "context-propagation",
   "use-reduce-with-context",
+  "use-ref",
+  "use-effect-correct-usage",
   "not-need-effect",
   "lifecycle-of-reactive-effects",
 ]);

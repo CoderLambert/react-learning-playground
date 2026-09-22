@@ -33,6 +33,8 @@ const TARGET_LEARNING_UNIT_IDS = [
   "state-reducer",
   "context-propagation",
   "use-reduce-with-context",
+  "use-ref",
+  "use-effect-correct-usage",
   "not-need-effect",
   "lifecycle-of-reactive-effects",
 ];
@@ -56,6 +58,8 @@ const CODE_CONTEXT_LEARNING_UNIT_IDS = new Set([
   "state-reducer",
   "context-propagation",
   "use-reduce-with-context",
+  "use-ref",
+  "use-effect-correct-usage",
 ]);
 
 const FROZEN_EXPECTED_PRACTICE = {
@@ -155,6 +159,16 @@ const FROZEN_EXPECTED_PRACTICE = {
     kind: GUIDED_RESPONSE_KINDS.PATCH_CHOICE,
     expectedOptionId: "split-state-dispatch",
   },
+  "use-ref": {
+    predict: "no-render-request",
+    kind: GUIDED_RESPONSE_KINDS.PATCH_CHOICE,
+    expectedOptionId: "visible-count-state",
+  },
+  "use-effect-correct-usage": {
+    predict: "cleanup-remove-listener",
+    kind: GUIDED_RESPONSE_KINDS.PATCH_CHOICE,
+    expectedOptionId: "return-remove-same-handler",
+  },
   "not-need-effect": {
     predict: "derive-during-render",
     kind: GUIDED_RESPONSE_KINDS.PATCH_CHOICE,
@@ -191,6 +205,8 @@ const FROZEN_EXPERIMENT_ACTIONS = {
   "state-reducer": "trace-reducer-transitions",
   "context-propagation": "compare-context-and-parent-updates",
   "use-reduce-with-context": "compare-single-and-split-context",
+  "use-ref": "compare-ref-and-state-roles",
+  "use-effect-correct-usage": "observe-effect-setup-cleanup",
   "not-need-effect": "exercise-render-event-identity-boundaries",
   "lifecycle-of-reactive-effects": "observe-room-resynchronization",
 };
@@ -311,7 +327,7 @@ test("all currently migrated Guided definitions are available, frozen, and follo
 });
 
 test("lookup returns an explicit no-guided state for an unconfigured unit", () => {
-  for (const learningUnitId of ["not-configured", "use-ref", "render-vs-dom-update"]) {
+  for (const learningUnitId of ["not-configured", "event-vs-effect", "render-vs-dom-update"]) {
     assert.equal(hasGuidedActivity(learningUnitId), false);
     assert.equal(getGuidedActivityDefinition(learningUnitId), null);
     assert.deepEqual(getGuidedActivity(learningUnitId), {

@@ -95,6 +95,8 @@ test("the same reducer completes several new Guided definitions without lesson-s
     "state-reducer",
     "context-propagation",
     "use-reduce-with-context",
+    "use-ref",
+    "use-effect-correct-usage",
     "not-need-effect",
     "lifecycle-of-reactive-effects",
   ]) {

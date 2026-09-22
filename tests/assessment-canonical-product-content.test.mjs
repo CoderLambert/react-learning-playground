@@ -92,6 +92,23 @@ test("Batch C ships five canonical questions per lesson with unfamiliar-code tra
   }
 });
 
+test("Batch D ships five canonical questions per lesson with unfamiliar-code transfer", () => {
+  for (const learningUnitId of [
+    "use-ref",
+    "use-effect-correct-usage",
+  ]) {
+    const questions = getCanonicalAssessmentQuestions(learningUnitId);
+    assert.equal(questions.length, 5, `${learningUnitId} should ship five canonical questions`);
+    assert.ok(questions.every((question) => question.learningUnitId === learningUnitId));
+    assert.ok(questions.every((question) => question.provenance.source === "canonical"));
+    assert.ok(questions.every((question) => question.evidenceRefs.length > 0));
+    assert.ok(
+      questions.some((question) => question.content?.codeContext?.code),
+      `${learningUnitId} should include unfamiliar-code transfer`,
+    );
+  }
+});
+
 test("diagnostic distractors map to product-owned misconceptions without mapping the correct answer", () => {
   const questions = getCanonicalAssessmentQuestions("rendering-lists-key");
   const diagnosticQuestions = questions.filter((question) => question.content.diagnosticOptionMap);
