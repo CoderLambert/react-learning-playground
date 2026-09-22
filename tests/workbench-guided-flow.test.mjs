@@ -88,7 +88,13 @@ test("the same reducer completes several new Guided definitions without lesson-s
     "event-propagation",
     "immutable-state",
     "render-commit",
+    "state-dry",
+    "controlled-uncontrolled",
+    "lifting-state-up",
     "preserving-resetting-state",
+    "state-reducer",
+    "context-propagation",
+    "use-reduce-with-context",
     "not-need-effect",
     "lifecycle-of-reactive-effects",
   ]) {
