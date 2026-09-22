@@ -37,7 +37,7 @@ async function installCreateQuestionMock(page) {
 }
 
 async function createQuestionViaAi(page) {
-  await page.goto("./?demo=props");
+  await page.goto("./?demo=event-vs-effect");
   await page.getByRole("tab", { name: "评测", exact: true }).click();
   const panel = page.locator("#learning-inspector-panel-assessment");
   await panel.getByRole("button", { name: "让 AI 帮我出题" }).click();
@@ -143,10 +143,14 @@ test("editing or retiring the bank never mutates an in-progress session snapshot
 });
 
 test("chapter checkpoint no longer exposes the legacy editable localStorage question bank", async ({ page }) => {
-  await page.goto("./?demo=props");
-  await expect(page.getByText("题库管理", { exact: true })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "新增", exact: true })).toHaveCount(0);
-  await expect(page.getByText(/所有修改保存在当前浏览器/)).toHaveCount(0);
+  await page.goto("./?demo=prop-drilling");
+  const checkpoint = page.locator('[data-chapter-checkpoint="1"]');
+  await expect(checkpoint).toBeVisible();
+  await expect(checkpoint.getByText("题库管理", { exact: true })).toHaveCount(0);
+  await expect(checkpoint.getByRole("button", { name: "新增", exact: true })).toHaveCount(0);
+  await expect(checkpoint.getByText(/所有修改保存在当前浏览器/)).toHaveCount(0);
+
+  await page.goto("./?demo=event-vs-effect");
   await page.getByRole("tab", { name: "评测", exact: true }).click();
   await expect(page.locator("#learning-inspector-panel-assessment")).toBeVisible();
 });
