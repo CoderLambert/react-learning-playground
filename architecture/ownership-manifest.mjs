@@ -30,7 +30,15 @@ export const ARCHITECTURE_OWNERS = [
     kind: "domain",
     exactPaths: [],
     prefixes: ["src/workbench/"],
-    publicEntries: ["src/workbench/public.js"],
+    publicEntries: ["src/workbench/public.js", "src/workbench/evidencePublic.js"],
+    browserImpact: "domain",
+  },
+  {
+    id: "learning-evidence",
+    kind: "domain",
+    exactPaths: [],
+    prefixes: ["src/learning-evidence/"],
+    publicEntries: ["src/learning-evidence/public.js"],
     browserImpact: "domain",
   },
   {
