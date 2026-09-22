@@ -771,6 +771,13 @@ export default function App() {
                   assessmentReview={learningFlowReview}
                   guidedNeedsReview={guidedReviewSignal.needsReview}
                 />
+                {currentCheckpointChapter && (
+                  <ChapterCheckpoint
+                    chapter={currentCheckpointChapter}
+                    nextUnitId={currentLearningPathEntry?.nextChapterFirstId}
+                    onNavigate={handleSelectDemo}
+                  />
+                )}
               </div>
             ) : (
               <div key={currentLearningUnit.id} className="demo-page">
