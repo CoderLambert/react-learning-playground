@@ -1,3 +1,9 @@
+import { COMPONENT_JSX_PURE_RENDER_QUESTIONS } from "./componentJsxPureRender.js";
+import { PROPS_QUESTIONS } from "./props.js";
+import { CHILDREN_QUESTIONS } from "./children.js";
+import { MULTI_SLOTS_QUESTIONS } from "./multiSlots.js";
+import { CONDITIONAL_RENDERING_QUESTIONS } from "./conditionalRendering.js";
+import { PROP_DRILLING_QUESTIONS } from "./propDrilling.js";
 import { RENDERING_LISTS_KEY_QUESTIONS } from "./renderingListsKey.js";
 import { STATE_SNAPSHOT_QUEUE_QUESTIONS } from "./stateSnapshotQueue.js";
 import { PRESERVING_RESETTING_STATE_QUESTIONS } from "./preservingResettingState.js";
@@ -5,6 +11,12 @@ import { NOT_NEED_EFFECT_QUESTIONS } from "./notNeedEffect.js";
 import { LIFECYCLE_OF_REACTIVE_EFFECTS_QUESTIONS } from "./lifecycleOfReactiveEffects.js";
 
 const CANONICAL_QUESTIONS_BY_LEARNING_UNIT = Object.freeze({
+  "component-jsx-pure-render": COMPONENT_JSX_PURE_RENDER_QUESTIONS,
+  "props": PROPS_QUESTIONS,
+  "children": CHILDREN_QUESTIONS,
+  "multi-slots": MULTI_SLOTS_QUESTIONS,
+  "conditional-rendering": CONDITIONAL_RENDERING_QUESTIONS,
+  "prop-drilling": PROP_DRILLING_QUESTIONS,
   "rendering-lists-key": RENDERING_LISTS_KEY_QUESTIONS,
   "state-snapshot-queue": STATE_SNAPSHOT_QUEUE_QUESTIONS,
   "not-need-effect": NOT_NEED_EFFECT_QUESTIONS,

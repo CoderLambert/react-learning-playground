@@ -736,41 +736,49 @@ export default function App() {
                 }}
               />
             ) : currentLearningFlow ? (
-              <SingleLearningFlow
-                key={currentLearningUnit.id}
-                learningUnit={currentLearningUnit}
-                definition={currentLearningFlow}
-                stage={learningFlowStage}
-                onStageChange={setLearningFlowStage}
-                renderDemo={renderCurrentDemo}
-                renderNotes={() => <NotesPane learningUnitId={currentLearningUnit.id} />}
-                renderPractice={({ onComplete }) => (
-                  <GuidedLearningFlow
-                    key={`${guidedActivity.learningUnitId}:${guidedActivity.revision}:practice`}
-                    learningUnit={currentLearningUnit}
-                    definition={guidedActivity}
-                    renderDemo={renderCurrentDemo}
-                    onReviewResource={handleLearningFlowReviewResource}
-                    onAskAi={handleGuidedAskAi}
-                    onContinue={() => {
-                      onComplete?.();
-                      return true;
-                    }}
-                    onNeedsReviewChange={guidedReviewSignal.setNeedsReview}
-                    canContinue
-                    presentation="practice"
-                    continueLabel="进入验证"
+              <div key={currentLearningUnit.id} className="demo-page">
+                <SingleLearningFlow
+                  learningUnit={currentLearningUnit}
+                  definition={currentLearningFlow}
+                  stage={learningFlowStage}
+                  onStageChange={setLearningFlowStage}
+                  renderDemo={renderCurrentDemo}
+                  renderNotes={() => <NotesPane learningUnitId={currentLearningUnit.id} />}
+                  renderPractice={({ onComplete }) => (
+                    <GuidedLearningFlow
+                      key={`${guidedActivity.learningUnitId}:${guidedActivity.revision}:practice`}
+                      learningUnit={currentLearningUnit}
+                      definition={guidedActivity}
+                      renderDemo={renderCurrentDemo}
+                      onReviewResource={handleLearningFlowReviewResource}
+                      onAskAi={handleGuidedAskAi}
+                      onContinue={() => {
+                        onComplete?.();
+                        return true;
+                      }}
+                      onNeedsReviewChange={guidedReviewSignal.setNeedsReview}
+                      canContinue
+                      presentation="practice"
+                      continueLabel="进入验证"
+                    />
+                  )}
+                  renderVerify={() => canonicalVerification}
+                  onOpenOfficial={handleLearningFlowOpenOfficial}
+                  onOpenSource={handleLearningFlowOpenSource}
+                  onOpenAi={handleLearningFlowOpenAi}
+                  onContinue={handleGuidedContinue}
+                  verificationSession={assessmentView.session}
+                  assessmentReview={learningFlowReview}
+                  guidedNeedsReview={guidedReviewSignal.needsReview}
+                />
+                {currentCheckpointChapter && (
+                  <ChapterCheckpoint
+                    chapter={currentCheckpointChapter}
+                    nextUnitId={currentLearningPathEntry?.nextChapterFirstId}
+                    onNavigate={handleSelectDemo}
                   />
                 )}
-                renderVerify={() => canonicalVerification}
-                onOpenOfficial={handleLearningFlowOpenOfficial}
-                onOpenSource={handleLearningFlowOpenSource}
-                onOpenAi={handleLearningFlowOpenAi}
-                onContinue={handleGuidedContinue}
-                verificationSession={assessmentView.session}
-                assessmentReview={learningFlowReview}
-                guidedNeedsReview={guidedReviewSignal.needsReview}
-              />
+              </div>
             ) : (
               <div key={currentLearningUnit.id} className="demo-page">
                 {guidedActivity ? (

@@ -13,7 +13,7 @@ async function seedCompletedReview(page) {
       const sessions = tx.objectStore("sessions");
       const attempts = tx.objectStore("attempts");
       const baseQuestion = {
-        learningUnitId: "props",
+        learningUnitId: "event-vs-effect",
         type: "single_choice",
         status: "active",
         revision: 2,
@@ -53,7 +53,7 @@ async function seedCompletedReview(page) {
       });
       sessions.put({
         id: "review-session-current",
-        learningUnitId: "props",
+        learningUnitId: "event-vs-effect",
         items: [
           { questionId: q1.id, revision: 1, snapshot: snapshot(q1, "HISTORICAL snapshot prompt A") },
           { questionId: q2.id, revision: 1, snapshot: snapshot(q2, "HISTORICAL snapshot prompt B") },
@@ -104,7 +104,7 @@ async function seedCompletedReview(page) {
 }
 
 test("assessment tab exposes the new runtime-backed question manager", async ({ page }) => {
-  await page.goto("?demo=props");
+  await page.goto("?demo=event-vs-effect");
   await page.getByRole("tab", { name: "评测" }).click();
 
   await expect(page.getByRole("heading", { name: "当前知识点题目" })).toBeVisible();
@@ -113,7 +113,7 @@ test("assessment tab exposes the new runtime-backed question manager", async ({ 
 });
 
 test("assessment manager keeps practice UI in the same tab", async ({ page }) => {
-  await page.goto("?demo=props");
+  await page.goto("?demo=event-vs-effect");
   await page.getByRole("tab", { name: "评测" }).click();
 
   const panel = page.getByRole("tabpanel", { name: "评测" });
@@ -122,7 +122,7 @@ test("assessment manager keeps practice UI in the same tab", async ({ page }) =>
 });
 
 test("completed session review is scoped, snapshot-correct, reloadable, and wrong-first", async ({ page }) => {
-  await page.goto("?demo=props");
+  await page.goto("?demo=event-vs-effect");
   await page.getByRole("tab", { name: "评测" }).click();
   await expect(page.getByRole("heading", { name: "当前知识点题目" })).toBeVisible();
   await seedCompletedReview(page);

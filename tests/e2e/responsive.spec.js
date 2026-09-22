@@ -43,6 +43,7 @@ test.describe("desktop viewport", () => {
 
   test("keeps note and source panes within the viewport and independently scrollable", async ({ page }) => {
     await loadApp(page);
+    await openDemo(page, "Event vs Effect 因果边界");
     await expect(page.locator(".note-runtime-content")).toBeVisible();
 
     const inspectorMetrics = await page.locator(".learning-inspector").evaluate((element) => {

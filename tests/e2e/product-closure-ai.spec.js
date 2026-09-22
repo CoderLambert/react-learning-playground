@@ -137,7 +137,7 @@ test("conversation export popover dismisses with Escape and returns focus to its
 });
 
 test("switching from AI to Assessment hides the AI panel and shows the selected tabpanel", async ({ page }) => {
-  await page.goto("./?demo=props");
+  await page.goto("./?demo=event-vs-effect");
 
   const aiTab = page.getByRole("tab", { name: "AI", exact: true });
   const assessmentTab = page.getByRole("tab", { name: "评测", exact: true });

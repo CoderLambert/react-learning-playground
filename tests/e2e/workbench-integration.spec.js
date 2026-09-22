@@ -10,9 +10,9 @@ test.describe("React Learning Workbench integration", () => {
     await expect(page.locator(".workbench-shell")).toHaveAttribute("data-navigation-collapsed", "true");
     await page.getByRole("button", { name: "展开左侧导航" }).click();
 
-    await openDemo(page, "Props 基础");
-    await expect(page).toHaveURL(/demo=props/);
-    await expect(page.locator(".demo-page h2.demo-title")).toContainText("Props 基础");
+    await openDemo(page, "Event vs Effect 因果边界");
+    await expect(page).toHaveURL(/demo=event-vs-effect/);
+    await expect(page.locator(".demo-page h2.demo-title")).toContainText("Event vs Effect");
     await expect(page.locator(".note-toc")).toBeVisible();
 
     const resize = page.getByRole("separator", { name: "调整学习面板宽度" });
@@ -55,7 +55,7 @@ test.describe("React Learning Workbench integration", () => {
     await expect(page.locator(".workbench-shell")).toHaveAttribute("data-inspector-open", "true");
 
     await page.reload();
-    await expect(page.locator(".demo-page h2.demo-title")).toContainText("Props 基础");
+    await expect(page.locator(".demo-page h2.demo-title")).toContainText("Event vs Effect");
   });
 
   test("canonicalizes an invalid demo URL", async ({ page }) => {

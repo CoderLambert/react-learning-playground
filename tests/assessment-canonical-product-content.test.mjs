@@ -28,7 +28,28 @@ test("Lists & Key ships five validated canonical verification questions", () => 
   assert.ok(questions.every((question) => question.provenance.source === "canonical"));
   assert.ok(questions.every((question) => question.learningUnitId === "rendering-lists-key"));
   assert.ok(questions.every((question) => question.evidenceRefs.length > 0));
-  assert.deepEqual(getCanonicalAssessmentQuestions("props"), []);
+  assert.equal(getCanonicalAssessmentQuestions("props").length, 5);
+});
+
+test("Batch A ships five canonical questions per new lesson with unfamiliar-code transfer", () => {
+  for (const learningUnitId of [
+    "component-jsx-pure-render",
+    "props",
+    "children",
+    "multi-slots",
+    "conditional-rendering",
+    "prop-drilling",
+  ]) {
+    const questions = getCanonicalAssessmentQuestions(learningUnitId);
+    assert.equal(questions.length, 5, `${learningUnitId} should ship five canonical questions`);
+    assert.ok(questions.every((question) => question.learningUnitId === learningUnitId));
+    assert.ok(questions.every((question) => question.provenance.source === "canonical"));
+    assert.ok(questions.every((question) => question.evidenceRefs.length > 0));
+    assert.ok(
+      questions.some((question) => question.content?.codeContext?.code),
+      `${learningUnitId} should include unfamiliar-code transfer`,
+    );
+  }
 });
 
 test("diagnostic distractors map to product-owned misconceptions without mapping the correct answer", () => {

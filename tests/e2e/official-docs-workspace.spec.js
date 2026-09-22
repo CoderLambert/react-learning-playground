@@ -5,9 +5,9 @@ test("verified React docs stay embedded and support focused fullscreen reading",
   await loadApp(page);
   await openDemo(page, "Component、JSX 与纯渲染");
 
-  const officialViewTab = page.getByRole("tab", { name: "官方文档", exact: true });
-  await expect(officialViewTab).toBeVisible();
-  await officialViewTab.click();
+  const officialAction = page.getByRole("button", { name: "React 官方解释", exact: true });
+  await expect(officialAction).toBeVisible();
+  await officialAction.click();
 
   const pane = page.locator(".official-docs-pane");
   const frame = page.locator(".official-docs-frame");
@@ -75,16 +75,16 @@ test("browser back navigation resets transient official-reading state to the res
   await loadApp(page);
   await openDemo(page, "Props 基础与解构");
 
-  await page.getByRole("tab", { name: "官方文档", exact: true }).click();
+  await page.getByRole("button", { name: "React 官方解释", exact: true }).click();
   await expect(page.locator(".official-docs-pane")).toBeVisible();
 
   await page.goBack();
 
   await expect(page.locator(".official-docs-pane")).toHaveCount(0);
-  await expect(page.locator(".demo-page h2.demo-title")).toContainText("Component");
-  await expect(page.getByRole("tab", { name: "实验内容", exact: true })).toHaveAttribute(
-    "aria-selected",
-    "true",
+  await expect(page.locator("[data-learning-flow='single']")).toHaveAttribute(
+    "data-learning-unit",
+    "component-jsx-pure-render",
   );
+  await expect(page.locator(".demo-page h2.demo-title")).toContainText("Component");
 });
 // @browser-owner workbench
