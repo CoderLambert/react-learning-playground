@@ -1,5 +1,4 @@
 import { readFile } from "node:fs/promises";
-import { REPRESENTATIVE_PILOT } from "../audit-learning-contract-baseline.mjs";
 import { getSingleLearningFlowDefinition } from "../../src/learning-flow/learningFlowRegistry.js";
 import { getConceptModelForLearningUnit } from "../../src/content/conceptModels.js";
 import { getGuidedActivityDefinition } from "../../src/workbench/guidedActivity.js";
@@ -11,6 +10,7 @@ import {
   validateLearningContractSnapshot,
 } from "./validator.mjs";
 import { fingerprintLearningContractSnapshot } from "./semanticReview.mjs";
+import { LEARNING_CONTRACT_SEMANTIC_REVIEW_BASELINE } from "./semanticReviewBaseline.mjs";
 
 const DEMO_REGISTRY_URL = new URL("../../src/demos/index.js", import.meta.url);
 const FLOW_REGISTRY_URL = new URL("../../src/learning-flow/learningFlowRegistry.js", import.meta.url);
@@ -235,12 +235,19 @@ export async function buildRepositorySemanticFingerprints() {
 export async function buildRepositoryLearningContractAudit() {
   const { entries } = await loadDemoRegistry();
   const first20 = entries.slice(0, 20);
-  const semanticReviewed = new Set(REPRESENTATIVE_PILOT.map(({ learningUnitId }) => learningUnitId));
 
   const globalErrors = [
     ...(await inspectDuplicateOwnership(entries)),
     ...(await inspectRuntimeBoundary()),
   ];
+
+  if (LEARNING_CONTRACT_SEMANTIC_REVIEW_BASELINE.contractVersion !== LEARNING_CONTRACT_VERSION) {
+    globalErrors.push(globalIssue(
+      "SEMANTIC_BASELINE_CONTRACT_MISMATCH",
+      "semantic review baseline contract version does not match " + LEARNING_CONTRACT_VERSION,
+      "semanticReviewBaseline",
+    ));
+  }
 
   if (first20.length !== 20) {
     globalErrors.push(globalIssue(
@@ -253,18 +260,40 @@ export async function buildRepositoryLearningContractAudit() {
   const units = [];
   for (const entry of first20) {
     const snapshot = await createRepositorySnapshot(entry);
-    const result = validateLearningContractSnapshot(snapshot, {
-      semanticReviewed: semanticReviewed.has(entry.id),
-    });
+    const currentFingerprint = fingerprintLearningContractSnapshot(snapshot);
+    const reviewedFingerprint =
+      LEARNING_CONTRACT_SEMANTIC_REVIEW_BASELINE.fingerprints[entry.id] ?? null;
+    const semanticReviewed = currentFingerprint === reviewedFingerprint;
+
+    const result = validateLearningContractSnapshot(snapshot, { semanticReviewed });
+    let reviewRequired = result.reviewRequired;
+
+    if (!semanticReviewed) {
+      reviewRequired = Object.freeze([
+        globalIssue(
+          reviewedFingerprint ? "SEMANTIC_BASELINE_STALE" : "SEMANTIC_BASELINE_MISSING",
+          reviewedFingerprint
+            ? entry.id + ": semantic authoring changed after the recorded review"
+            : entry.id + ": no semantic review fingerprint is recorded",
+          null,
+        ),
+      ]);
+    }
+
     units.push(Object.freeze({
       learningUnitId: entry.id,
       label: entry.label,
       category: entry.category,
       practiceKind: practiceKind(snapshot.guided),
-      semanticReviewed: semanticReviewed.has(entry.id),
+      semanticReviewed,
+      semanticReview: Object.freeze({
+        status: semanticReviewed ? "current" : reviewedFingerprint ? "stale" : "missing",
+        currentFingerprint,
+        reviewedFingerprint,
+      }),
       errors: result.errors,
       warnings: result.warnings,
-      reviewRequired: result.reviewRequired,
+      reviewRequired,
     }));
   }
 
