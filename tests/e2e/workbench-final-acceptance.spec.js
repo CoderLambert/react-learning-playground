@@ -30,11 +30,13 @@ test.describe("React Learning Workbench final acceptance", () => {
     await page.goto("./?demo=props");
     await expect(page).toHaveURL(/\/react-learning-playground\/\?demo=props$/);
     await expect(page.locator(".demo-page h2.demo-title")).toContainText("Props 基础");
+    await page.getByText("阅读完整笔记", { exact: true }).click();
     await expect(page.locator(".note-runtime-content")).toBeVisible();
 
     await page.reload();
     await expect(page).toHaveURL(/\/react-learning-playground\/\?demo=props$/);
     await expect(page.locator(".demo-page h2.demo-title")).toContainText("Props 基础");
+    await page.getByText("阅读完整笔记", { exact: true }).click();
     await expect(page.locator(".note-runtime-content")).toBeVisible();
   });
 });
