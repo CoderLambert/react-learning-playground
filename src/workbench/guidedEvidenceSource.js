@@ -1,4 +1,5 @@
 import { getGuidedActivityDefinition } from "./guidedActivity.js";
+import { evaluateGuidedPracticeResponse } from "./guidedPractice.js";
 import {
   createGuidedSessionPersistence,
   GUIDED_SESSION_PERSISTENCE_STATUS,
@@ -27,10 +28,16 @@ export function createGuidedEvidenceSource({ storage } = {}) {
       });
       const result = persistence.read();
 
+      const practiceStep = definition.steps.find((step) => step.type === "practice");
+      const practiceOutcome = result.snapshot?.practiceResponse
+        ? evaluateGuidedPracticeResponse(practiceStep, result.snapshot.practiceResponse)
+        : null;
+
       return Object.freeze({
         status: result.status,
         definition,
         snapshot: result.snapshot,
+        practiceOutcome,
       });
     },
   });
