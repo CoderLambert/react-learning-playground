@@ -39,15 +39,21 @@ const ALLOWED_POST_20_FLOW_IDS = [
 ];
 
 async function readAuthoringSource(fileName) {
-  const candidateDirs = ["../src/demos/", "../src/components/"];
-  for (const directory of candidateDirs) {
-    try {
-      return await readFile(new URL(`${directory}${fileName}`, import.meta.url), "utf8");
-    } catch (error) {
-      if (error?.code !== "ENOENT") throw error;
-    }
+  const registryUrl = new URL("../src/demos/index.js", import.meta.url);
+  const registrySource = await readFile(registryUrl, "utf8");
+  const rawImports = new Map(
+    [...registrySource.matchAll(/import\s+([A-Za-z0-9_]+)\s+from\s+"([^"]+)\?raw";/g)]
+      .map((match) => [match[1], match[2]]),
+  );
+
+  for (const match of registrySource.matchAll(/\{\s*name:\s*"([^"]+)",\s*code:\s*([A-Za-z0-9_]+)\s*\}/g)) {
+    if (match[1] !== fileName) continue;
+    const sourcePath = rawImports.get(match[2]);
+    assert.ok(sourcePath, `missing authoritative raw import for ${fileName}`);
+    return readFile(new URL(sourcePath, registryUrl), "utf8");
   }
-  assert.fail(`source-backed authoring file not found: ${fileName}`);
+
+  assert.fail(`source-backed authoring file is not registered in src/demos/index.js: ${fileName}`);
 }
 
 async function authoritativeDemoIds() {
