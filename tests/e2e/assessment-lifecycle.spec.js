@@ -160,8 +160,7 @@ test.describe("Assessment Product Lifecycle E2E", () => {
     await assessment.getByRole("button", { name: "开始测试" }).click();
     const firstPrompt = assessment.locator("legend");
     await expect(firstPrompt).toBeVisible();
-    const firstPromptText = await firstPrompt.textContent();
-    const firstIsChoice = firstPromptText === QUESTIONS[0].content.prompt;
+    const firstIsChoice = await assessment.getByLabel("Effect", { exact: true }).count() > 0;
 
     if (firstIsChoice) {
       await assessment.getByLabel("Effect", { exact: true }).check();
