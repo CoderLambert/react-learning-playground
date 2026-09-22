@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import {
@@ -80,4 +81,29 @@ test("single learning flow registry includes the current VNext rollout while pre
   assert.equal(isSingleLearningFlowUnit("event-vs-effect"), false);
   assert.equal(getSingleLearningFlowDefinition("event-vs-effect"), null);
   assert.equal(new Set(SINGLE_LEARNING_FLOW_UNIT_IDS).size, SINGLE_LEARNING_FLOW_UNIT_IDS.length);
+});
+
+
+test("the first 20 authoritative demos are VNext-complete without leaking rollout into later units", async () => {
+  const registrySource = await readFile(new URL("../src/demos/index.js", import.meta.url), "utf8");
+  const demosStart = registrySource.indexOf("export const demos = [");
+  assert.notEqual(demosStart, -1);
+  const demoIds = [...registrySource.slice(demosStart).matchAll(/\bid:\s*"([a-z0-9-]+)"/g)].map((match) => match[1]);
+
+  assert.deepEqual(demoIds.slice(0, 20), CURRENT_VNEXT_IDS);
+  assert.ok(CURRENT_VNEXT_IDS.every((learningUnitId) => isSingleLearningFlowUnit(learningUnitId)));
+
+  const allowedExistingBeyondTwenty = new Set([
+    "not-need-effect",
+    "lifecycle-of-reactive-effects",
+  ]);
+  const migratedBeyondTwenty = demoIds
+    .slice(20)
+    .filter((learningUnitId) => isSingleLearningFlowUnit(learningUnitId));
+
+  assert.deepEqual(
+    [...migratedBeyondTwenty].sort(),
+    [...allowedExistingBeyondTwenty].sort(),
+    "unit 21+ must not receive accidental VNext rollout beyond the pre-existing pilot lessons",
+  );
 });
