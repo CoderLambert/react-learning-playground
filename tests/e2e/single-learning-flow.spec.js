@@ -13,6 +13,12 @@ async function openImmutableState(page) {
   return page.locator("[data-learning-flow='single']");
 }
 
+async function openStateDry(page) {
+  await loadApp(page);
+  await openDemo(page, "State 结构设计与单一数据源");
+  return page.locator("[data-learning-flow='single']");
+}
+
 async function openListsAndKey(page) {
   await loadApp(page);
   await openDemo(page, "列表渲染与 key 身份");
@@ -148,6 +154,63 @@ test("Batch B Immutable State completes source-to-patch-to-transfer verification
   await page.getByRole("button", { name: /下一题/ }).click();
 
   await page.getByRole("radio", { name: /旧 State 对象本身已经被改写/ }).check();
+  await page.getByRole("button", { name: "提交答案" }).click();
+
+  await expect(page.getByText("本轮评测已完成", { exact: true })).toBeVisible();
+  await expect(flow.getByText("本节验证完成", { exact: true })).toBeVisible();
+});
+
+test("Batch C State Dry completes source-to-patch-to-transfer verification", async ({ page }) => {
+  const flow = await openStateDry(page);
+
+  await expect(flow).toHaveAttribute("data-learning-unit", "state-dry");
+  await expect(flow).toHaveAttribute("data-learning-stage", "understand");
+  await expect(flow).toContainText("Independent facts → Derive the rest → Smaller valid state space");
+  const evidence = flow.locator("[data-learning-code-evidence-item='derived-vs-stored-name']");
+  await expect(evidence).toContainText("derivedFullName");
+  await expect(evidence.locator("[data-code-highlighted='true']")).toBeVisible();
+
+  await flow.locator(".single-learning-flow__stages button").filter({ hasText: "实践" }).click();
+  await page.getByRole("button", { name: "开始实践" }).click();
+  await page.getByRole("radio", { name: /storedFullName 可以过期/ }).check();
+  await page.getByRole("button", { name: "提交 prediction" }).click();
+  await page.getByRole("button", { name: "我已运行并观察结果" }).click();
+  await page.getByRole("textbox", { name: "你的 explanation" }).fill(
+    "State 应只保存独立事实。fullName 能由 firstName 和 lastName 派生，额外副本会制造需要同步的不变量。",
+  );
+  await page.getByRole("button", { name: "保存 explanation，继续 practice" }).click();
+
+  const practice = page.locator("[data-guided-practice-kind='patch-choice']");
+  const practiceCode = practice.locator("[data-guided-practice-code-context]");
+  await expect(practiceCode).toContainText("setFullName");
+  await expect(practiceCode.locator("[data-code-highlighted='true']")).toBeVisible();
+  await practice.locator("input[value='derive-in-render']").check();
+  await page.getByRole("button", { name: "提交 practice，查看 review" }).click();
+  await expect(page.locator("[data-guided-practice-outcome='correct']")).toBeVisible();
+
+  await flow.locator(".single-learning-flow__stages button").filter({ hasText: "验证" }).click();
+  await page.getByRole("button", { name: "开始测试" }).click();
+
+  await page.getByRole("radio", { name: /在 render 中直接派生 fullName/ }).check();
+  await page.getByRole("button", { name: "提交答案" }).click();
+  await page.getByRole("button", { name: /下一题/ }).click();
+
+  await page.getByRole("radio", { name: /status 只枚举合法阶段/ }).check();
+  await page.getByRole("button", { name: "提交答案" }).click();
+  await page.getByRole("button", { name: /下一题/ }).click();
+
+  await page.getByRole("radio", { name: /selectedId 是独立选择事实/ }).check();
+  await page.getByRole("button", { name: "提交答案" }).click();
+  await page.getByRole("button", { name: /下一题/ }).click();
+
+  const transfer = page.locator("[data-assessment-code-context]");
+  await expect(transfer).toContainText("setTotal");
+  await expect(transfer.locator("[data-code-highlighted='true']")).toBeVisible();
+  await page.getByRole("radio", { name: /移除 total State/ }).check();
+  await page.getByRole("button", { name: "提交答案" }).click();
+  await page.getByRole("button", { name: /下一题/ }).click();
+
+  await page.getByRole("radio", { name: /保存无法从其他当前输入完整推出的独立事实/ }).check();
   await page.getByRole("button", { name: "提交答案" }).click();
 
   await expect(page.getByText("本轮评测已完成", { exact: true })).toBeVisible();
@@ -463,6 +526,9 @@ test("Preserving / Resetting State diagnoses identity preservation before reset-
   await expect(flow).toContainText("同位置 + 同类型 + key={contact.id}");
   await expect(flow).toContainText("只 reset 真正属于新实体的子树");
   await expect(flow).toContainText("随机 / 不稳定 key");
+  await expect(flow.locator("[data-learning-code-evidence-item='chat-local-draft']")).toContainText("useState");
+  await expect(flow.locator("[data-learning-code-evidence-item='chat-local-draft'] [data-code-highlighted='true']")).toBeVisible();
+  await expect(flow.locator("[data-learning-code-evidence-item='same-position-vs-keyed-chat']")).toContainText("key={resetContact.id}");
 
   await flow.locator(".single-learning-flow__stages button").filter({ hasText: "实践" }).click();
   await expect(flow).toHaveAttribute("data-learning-stage", "practice");
@@ -497,6 +563,9 @@ test("Preserving / Resetting State diagnoses identity preservation before reset-
   await page.getByRole("button", { name: "提交答案" }).click();
   await page.getByRole("button", { name: /下一题/ }).click();
 
+  const preserveTransfer = page.locator("[data-assessment-code-context]");
+  await expect(preserveTransfer).toContainText("InvoiceEditor customer={customer}");
+  await expect(preserveTransfer.locator("[data-code-highlighted='true']")).toBeVisible();
   await page.getByRole("radio", { name: /保留 WorkspaceShell identity，只给 InvoiceEditor/ }).check();
   await page.getByRole("button", { name: "提交答案" }).click();
   await page.getByRole("button", { name: /下一题/ }).click();
