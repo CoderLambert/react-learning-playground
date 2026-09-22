@@ -61,7 +61,14 @@ function scanForbiddenKeys(value, path, errors) {
         nextPath,
       ));
     }
-    scanForbiddenKeys(nested, nextPath, errors);
+
+    const opaqueSourcePayload =
+      key === "response"
+      || key === "context"
+      || (key === "snapshot" && path.endsWith(".task"));
+    if (!opaqueSourcePayload) {
+      scanForbiddenKeys(nested, nextPath, errors);
+    }
   }
 }
 
