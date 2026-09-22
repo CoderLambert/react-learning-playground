@@ -5,6 +5,9 @@ import {
   findDuplicateValues,
   validateLearningContractSnapshot,
 } from "../scripts/learning-contract/validator.mjs";
+import { fingerprintLearningContractSnapshot } from "../scripts/learning-contract/semanticReview.mjs";
+import { LEARNING_CONTRACT_SEMANTIC_REVIEW_BASELINE } from "../scripts/learning-contract/semanticReviewBaseline.mjs";
+import { REPRESENTATIVE_PILOT } from "../scripts/audit-learning-contract-baseline.mjs";
 import {
   buildRepositoryLearningContractAudit,
   buildRepositorySemanticFingerprints,
@@ -87,17 +90,15 @@ test("repository adapter validates the authoritative first 20 without a second r
   assert.equal(audit.summary.errorCount, 0);
   assert.equal(audit.global.errors.length, 0);
 
-  assert.equal(audit.summary.semanticReviewedUnits, 5);
-  assert.equal(audit.summary.semanticReviewPendingUnits, 15);
-  assert.equal(audit.summary.reviewRequiredCount, 15);
+  assert.equal(audit.summary.semanticReviewedUnits, 20);
+  assert.equal(audit.summary.semanticReviewPendingUnits, 0);
+  assert.equal(audit.summary.reviewRequiredCount, 0);
 
   for (const unit of audit.units) {
     assert.deepEqual(unit.errors, [], unit.learningUnitId + " should pass deterministic V1 validation");
-    if (unit.semanticReviewed) {
-      assert.deepEqual(unit.reviewRequired, []);
-    } else {
-      assert.deepEqual(codes(unit.reviewRequired), ["SEMANTIC_ALIGNMENT_REVIEW"]);
-    }
+    assert.equal(unit.semanticReviewed, true, unit.learningUnitId + " should match the reviewed semantic fingerprint");
+    assert.equal(unit.semanticReview.status, "current");
+    assert.deepEqual(unit.reviewRequired, []);
   }
 });
 
@@ -107,8 +108,8 @@ test("coverage summary distinguishes deterministic validity from semantic review
   assert.equal(coverage.totalUnits, 20);
   assert.equal(coverage.validUnits, 20);
   assert.equal(coverage.errorCount, 0);
-  assert.equal(coverage.semanticReviewedUnits, 5);
-  assert.equal(coverage.semanticReviewPendingUnits, 15);
+  assert.equal(coverage.semanticReviewedUnits, 20);
+  assert.equal(coverage.semanticReviewPendingUnits, 0);
   assert.equal(coverage.practiceKinds["patch-choice"], 19);
   assert.equal(coverage.practiceKinds["ordered-sequence"], 1);
   assert.deepEqual(coverage.categories, {
@@ -120,8 +121,67 @@ test("coverage summary distinguishes deterministic validity from semantic review
 });
 
 
-test("current first-20 semantic fingerprints are reproducible", async () => {
+test("current first-20 semantic fingerprints match the reviewed #317 baseline", async () => {
   const fingerprints = await buildRepositorySemanticFingerprints();
+
   assert.equal(Object.keys(fingerprints).length, 20);
-  console.log("LEARNING_CONTRACT_SEMANTIC_FINGERPRINTS=" + JSON.stringify(fingerprints));
+  assert.equal(
+    LEARNING_CONTRACT_SEMANTIC_REVIEW_BASELINE.contractVersion,
+    "learning-contract-v1",
+  );
+  assert.deepEqual(
+    fingerprints,
+    LEARNING_CONTRACT_SEMANTIC_REVIEW_BASELINE.fingerprints,
+  );
+});
+
+test("representative canary remains fully current under the reviewed semantic baseline", async () => {
+  const audit = await buildRepositoryLearningContractAudit();
+  const canaryIds = new Set(REPRESENTATIVE_PILOT.map(({ learningUnitId }) => learningUnitId));
+  const canary = audit.units.filter(({ learningUnitId }) => canaryIds.has(learningUnitId));
+
+  assert.equal(canary.length, REPRESENTATIVE_PILOT.length);
+  for (const unit of canary) {
+    assert.equal(unit.semanticReview.status, "current");
+    assert.deepEqual(unit.errors, []);
+    assert.deepEqual(unit.reviewRequired, []);
+  }
+});
+
+test("semantic fingerprints change when a frozen teaching surface changes", () => {
+  const cases = [
+    {
+      name: "flow objective",
+      mutate: (fixture) => {
+        fixture.flow.objective += " changed";
+      },
+    },
+    {
+      name: "actual source evidence",
+      mutate: (fixture) => {
+        fixture.sourceFiles["FixtureDemo.jsx"] += "\nconst changed = true;";
+        fixture.concept.codeEvidence[1].sourceRef.endLine = 5;
+      },
+    },
+    {
+      name: "Guided Practice",
+      mutate: (fixture) => {
+        fixture.guided.steps[3].prompt += " changed";
+      },
+    },
+    {
+      name: "canonical Verify",
+      mutate: (fixture) => {
+        fixture.questions[0].content.prompt += " changed";
+      },
+    },
+  ];
+
+  for (const { name, mutate } of cases) {
+    const fixture = createGoldenLearningContractFixture();
+    const before = fingerprintLearningContractSnapshot(fixture);
+    mutate(fixture);
+    const after = fingerprintLearningContractSnapshot(fixture);
+    assert.notEqual(after, before, name + " must invalidate semantic review");
+  }
 });
