@@ -5,6 +5,8 @@ import {
   createIndexedDbAssessmentRepository,
   MemoryAssessmentRepository,
 } from "../infrastructure/index.js";
+import { assertAssessmentSession } from "../domain/assessmentSession.js";
+import { assertAttempt } from "../domain/attempt.js";
 import { createAssessmentQueryStore } from "../store/AssessmentQueryStore.js";
 
 let activeAssessmentRuntime = null;
@@ -61,7 +63,9 @@ export async function createAssessmentRuntime({
       ));
 
       return Promise.all(orderedSessions.map(async (session) => {
+        assertAssessmentSession(session);
         const attempts = await repository.listAttempts({ sessionId: session.id });
+        attempts.forEach(assertAttempt);
         return Object.freeze({
           session,
           attempts: Object.freeze([...attempts].sort((left, right) => (
