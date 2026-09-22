@@ -18,3 +18,8 @@ export {
   validateGuidedActivityDefinition,
 } from "./guidedActivity.js";
 export { GuidedLearningFlow } from "./GuidedLearningFlow.jsx";
+
+export {
+  createGuidedEvidenceSource,
+  GUIDED_EVIDENCE_SOURCE_STATUS,
+} from "./guidedEvidenceSource.js";
