@@ -1,7 +1,7 @@
 import {
   createGuidedEvidenceSource,
   GUIDED_EVIDENCE_SOURCE_STATUS,
-} from "../workbench/public.js";
+} from "../workbench/evidencePublic.js";
 import { createLearnerEvidenceProjection } from "./projection.js";
 
 export class LearnerEvidenceSourceError extends Error {
