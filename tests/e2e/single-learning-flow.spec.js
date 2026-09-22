@@ -19,6 +19,12 @@ async function openStateDry(page) {
   return page.locator("[data-learning-flow='single']");
 }
 
+async function openUseRef(page) {
+  await loadApp(page);
+  await openDemo(page, "useRef 引用与 DOM 控制");
+  return page.locator("[data-learning-flow='single']");
+}
+
 async function openListsAndKey(page) {
   await loadApp(page);
   await openDemo(page, "列表渲染与 key 身份");
@@ -211,6 +217,63 @@ test("Batch C State Dry completes source-to-patch-to-transfer verification", asy
   await page.getByRole("button", { name: /下一题/ }).click();
 
   await page.getByRole("radio", { name: /保存无法从其他当前输入完整推出的独立事实/ }).check();
+  await page.getByRole("button", { name: "提交答案" }).click();
+
+  await expect(page.getByText("本轮评测已完成", { exact: true })).toBeVisible();
+  await expect(flow.getByText("本节验证完成", { exact: true })).toBeVisible();
+});
+
+test("Batch D useRef completes State-vs-Ref code transfer", async ({ page }) => {
+  const flow = await openUseRef(page);
+
+  await expect(flow).toHaveAttribute("data-learning-unit", "use-ref");
+  await expect(flow).toHaveAttribute("data-learning-stage", "understand");
+  await expect(flow).toContainText("Visible UI fact → State / Silent mutable handle → Ref / DOM node → Commit");
+  const evidence = flow.locator("[data-learning-code-evidence-item='dom-ref-event-access']");
+  await expect(evidence).toContainText("inputRef.current?.focus()");
+  await expect(evidence.locator("[data-code-highlighted='true']")).toBeVisible();
+
+  await flow.locator(".single-learning-flow__stages button").filter({ hasText: "实践" }).click();
+  await page.getByRole("button", { name: "开始实践" }).click();
+  await page.getByRole("radio", { name: /不会；写 ref\.current 不会请求 React 重新 render/ }).check();
+  await page.getByRole("button", { name: "提交 prediction" }).click();
+  await page.getByRole("button", { name: "我已运行并观察结果" }).click();
+  await page.getByRole("textbox", { name: "你的 explanation" }).fill(
+    "State 是 JSX 的声明式输入；Ref 可以跨 render 保留句柄，但写 current 本身不会请求重新 render。",
+  );
+  await page.getByRole("button", { name: "保存 explanation，继续 practice" }).click();
+
+  const practice = page.locator("[data-guided-practice-kind='patch-choice']");
+  const practiceCode = practice.locator("[data-guided-practice-code-context]");
+  await expect(practiceCode).toContainText("countRef.current += 1");
+  await expect(practiceCode.locator("[data-code-highlighted='true']")).toBeVisible();
+  await practice.locator("input[value='visible-count-state']").check();
+  await page.getByRole("button", { name: "提交 practice，查看 review" }).click();
+  await expect(page.locator("[data-guided-practice-outcome='correct']")).toBeVisible();
+
+  await flow.locator(".single-learning-flow__stages button").filter({ hasText: "验证" }).click();
+  await page.getByRole("button", { name: "开始测试" }).click();
+
+  await page.getByRole("radio", { name: /State，因为更新需要请求新的 render/ }).check();
+  await page.getByRole("button", { name: "提交答案" }).click();
+  await page.getByRole("button", { name: /下一题/ }).click();
+
+  await page.getByRole("radio", { name: /不会；写 ref\.current 本身不进入 React render 调度/ }).check();
+  await page.getByRole("button", { name: "提交答案" }).click();
+  await page.getByRole("button", { name: /下一题/ }).click();
+
+  await page.getByRole("radio", { name: /DOM ref 在对应节点 commit 后才可靠指向真实 DOM/ }).check();
+  await page.getByRole("button", { name: "提交答案" }).click();
+  await page.getByRole("button", { name: /下一题/ }).click();
+
+  const transfer = page.locator("[data-assessment-code-context]");
+  await expect(transfer).toContainText("countRef.current += 1");
+  await expect(transfer.locator("[data-code-highlighted='true']")).toBeVisible();
+  await page.getByRole("radio", { name: /可见 count 应由 State 驱动/ }).check();
+  await page.getByRole("button", { name: "提交答案" }).click();
+  await page.getByRole("button", { name: /下一题/ }).click();
+
+  await page.getByRole("radio", { name: /interval handle 放 Ref；seconds 和 running 放 State/ }).check();
   await page.getByRole("button", { name: "提交答案" }).click();
 
   await expect(page.getByText("本轮评测已完成", { exact: true })).toBeVisible();
