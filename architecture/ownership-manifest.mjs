@@ -34,6 +34,14 @@ export const ARCHITECTURE_OWNERS = [
     browserImpact: "domain",
   },
   {
+    id: "learning-evidence",
+    kind: "domain",
+    exactPaths: [],
+    prefixes: ["src/learning-evidence/"],
+    publicEntries: ["src/learning-evidence/public.js"],
+    browserImpact: "domain",
+  },
+  {
     id: "learning-actions",
     kind: "domain",
     exactPaths: [],
