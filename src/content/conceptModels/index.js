@@ -9,6 +9,12 @@ import { EVENT_PROPAGATION_MODEL } from "./eventPropagation.js";
 import { STATE_SNAPSHOT_QUEUE_MODEL } from "./stateSnapshotQueue.js";
 import { IMMUTABLE_STATE_MODEL } from "./immutableState.js";
 import { RENDER_COMMIT_MODEL } from "./renderCommit.js";
+import { STATE_DRY_MODEL } from "./stateDry.js";
+import { CONTROLLED_UNCONTROLLED_MODEL } from "./controlledUncontrolled.js";
+import { LIFTING_STATE_UP_MODEL } from "./liftingStateUp.js";
+import { STATE_REDUCER_MODEL } from "./stateReducer.js";
+import { CONTEXT_PROPAGATION_MODEL } from "./contextPropagation.js";
+import { USE_REDUCE_WITH_CONTEXT_MODEL } from "./useReduceWithContext.js";
 import { NOT_NEED_EFFECT_MODEL } from "./notNeedEffect.js";
 import { PRESERVING_RESETTING_STATE_MODEL } from "./preservingResettingState.js";
 import { LIFECYCLE_OF_REACTIVE_EFFECTS_MODEL } from "./lifecycleOfReactiveEffects.js";
@@ -32,6 +38,12 @@ export const CONCEPT_MODELS = deepFreeze({
   [STATE_SNAPSHOT_QUEUE_MODEL.learningUnitId]: STATE_SNAPSHOT_QUEUE_MODEL,
   [IMMUTABLE_STATE_MODEL.learningUnitId]: IMMUTABLE_STATE_MODEL,
   [RENDER_COMMIT_MODEL.learningUnitId]: RENDER_COMMIT_MODEL,
+  [STATE_DRY_MODEL.learningUnitId]: STATE_DRY_MODEL,
+  [CONTROLLED_UNCONTROLLED_MODEL.learningUnitId]: CONTROLLED_UNCONTROLLED_MODEL,
+  [LIFTING_STATE_UP_MODEL.learningUnitId]: LIFTING_STATE_UP_MODEL,
+  [STATE_REDUCER_MODEL.learningUnitId]: STATE_REDUCER_MODEL,
+  [CONTEXT_PROPAGATION_MODEL.learningUnitId]: CONTEXT_PROPAGATION_MODEL,
+  [USE_REDUCE_WITH_CONTEXT_MODEL.learningUnitId]: USE_REDUCE_WITH_CONTEXT_MODEL,
   [NOT_NEED_EFFECT_MODEL.learningUnitId]: NOT_NEED_EFFECT_MODEL,
   [PRESERVING_RESETTING_STATE_MODEL.learningUnitId]: PRESERVING_RESETTING_STATE_MODEL,
   [LIFECYCLE_OF_REACTIVE_EFFECTS_MODEL.learningUnitId]: LIFECYCLE_OF_REACTIVE_EFFECTS_MODEL,
