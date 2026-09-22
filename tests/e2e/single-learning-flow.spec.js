@@ -321,7 +321,7 @@ test("Batch D useEffect completes external-sync source-to-patch-to-transfer veri
   await page.getByRole("button", { name: "提交答案" }).click();
   await page.getByRole("button", { name: /下一题/ }).click();
 
-  await page.getByRole("radio", { name: "window.removeEventListener(\'resize\', handleResize)", exact: true }).check();
+  await page.getByRole("radio", { name: "window.removeEventListener('resize', handleResize)", exact: true }).check();
   await page.getByRole("button", { name: "提交答案" }).click();
   await page.getByRole("button", { name: /下一题/ }).click();
 
