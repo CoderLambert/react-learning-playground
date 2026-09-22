@@ -51,7 +51,7 @@ export const STATE_DRY_DEFINITION = {
   const [fullName, setFullName] = useState("");
 
   useEffect(() => {
-    setFullName(\`${firstName} ${lastName}\`.trim());
+    setFullName(\`\${firstName} \${lastName}\`.trim());
   }, [firstName, lastName]);
 
   return <p>{fullName}</p>;
@@ -66,9 +66,9 @@ export const STATE_DRY_DEFINITION = {
             patch: `- const [fullName, setFullName] = useState("");
 -
 - useEffect(() => {
--   setFullName(\`${firstName} ${lastName}\`.trim());
+-   setFullName(\`\${firstName} \${lastName}\`.trim());
 - }, [firstName, lastName]);
-+ const fullName = \`${firstName} ${lastName}\`.trim();`,
++ const fullName = \`\${firstName} \${lastName}\`.trim();`,
           },
           {
             id: "sync-more-often",
