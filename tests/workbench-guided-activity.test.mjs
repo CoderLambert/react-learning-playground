@@ -26,7 +26,13 @@ const TARGET_LEARNING_UNIT_IDS = [
   "state-snapshot-queue",
   "immutable-state",
   "render-commit",
+  "state-dry",
+  "controlled-uncontrolled",
+  "lifting-state-up",
   "preserving-resetting-state",
+  "state-reducer",
+  "context-propagation",
+  "use-reduce-with-context",
   "not-need-effect",
   "lifecycle-of-reactive-effects",
 ];
@@ -43,6 +49,13 @@ const CODE_CONTEXT_LEARNING_UNIT_IDS = new Set([
   "state-snapshot-queue",
   "immutable-state",
   "render-commit",
+  "state-dry",
+  "controlled-uncontrolled",
+  "lifting-state-up",
+  "preserving-resetting-state",
+  "state-reducer",
+  "context-propagation",
+  "use-reduce-with-context",
 ]);
 
 const FROZEN_EXPECTED_PRACTICE = {
@@ -107,10 +120,40 @@ const FROZEN_EXPECTED_PRACTICE = {
       "browser-paint",
     ],
   },
+  "state-dry": {
+    predict: "stored-can-stale",
+    kind: GUIDED_RESPONSE_KINDS.PATCH_CHOICE,
+    expectedOptionId: "derive-in-render",
+  },
+  "controlled-uncontrolled": {
+    predict: "old-value-remains",
+    kind: GUIDED_RESPONSE_KINDS.PATCH_CHOICE,
+    expectedOptionId: "read-value-directly",
+  },
+  "lifting-state-up": {
+    predict: "nearest-common-parent",
+    kind: GUIDED_RESPONSE_KINDS.PATCH_CHOICE,
+    expectedOptionId: "lift-to-workspace",
+  },
   "preserving-resetting-state": {
     predict: "draft-preserved",
     kind: GUIDED_RESPONSE_KINDS.PATCH_CHOICE,
     expectedOptionId: "key-editor-by-customer",
+  },
+  "state-reducer": {
+    predict: "current-snapshot-remains",
+    kind: GUIDED_RESPONSE_KINDS.PATCH_CHOICE,
+    expectedOptionId: "time-in-action",
+  },
+  "context-propagation": {
+    predict: "consumer-rerenders",
+    kind: GUIDED_RESPONSE_KINDS.PATCH_CHOICE,
+    expectedOptionId: "split-contexts",
+  },
+  "use-reduce-with-context": {
+    predict: "receives-context-update",
+    kind: GUIDED_RESPONSE_KINDS.PATCH_CHOICE,
+    expectedOptionId: "split-state-dispatch",
   },
   "not-need-effect": {
     predict: "derive-during-render",
@@ -141,7 +184,13 @@ const FROZEN_EXPERIMENT_ACTIONS = {
   "state-snapshot-queue": "replace-three-times",
   "immutable-state": "compare-state-mutation-and-copy",
   "render-commit": "compare-render-and-dom-mutation",
+  "state-dry": "compare-minimal-and-duplicated-state",
+  "controlled-uncontrolled": "compare-controlled-and-uncontrolled-authority",
+  "lifting-state-up": "trace-lifted-query-flow",
   "preserving-resetting-state": "compare-preserved-and-keyed-chat",
+  "state-reducer": "trace-reducer-transitions",
+  "context-propagation": "compare-context-and-parent-updates",
+  "use-reduce-with-context": "compare-single-and-split-context",
   "not-need-effect": "exercise-render-event-identity-boundaries",
   "lifecycle-of-reactive-effects": "observe-room-resynchronization",
 };
@@ -262,7 +311,7 @@ test("all currently migrated Guided definitions are available, frozen, and follo
 });
 
 test("lookup returns an explicit no-guided state for an unconfigured unit", () => {
-  for (const learningUnitId of ["not-configured", "state-dry", "render-vs-dom-update"]) {
+  for (const learningUnitId of ["not-configured", "use-ref", "render-vs-dom-update"]) {
     assert.equal(hasGuidedActivity(learningUnitId), false);
     assert.equal(getGuidedActivityDefinition(learningUnitId), null);
     assert.deepEqual(getGuidedActivity(learningUnitId), {
