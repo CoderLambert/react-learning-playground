@@ -15,6 +15,8 @@ import { LIFTING_STATE_UP_QUESTIONS } from "./liftingStateUp.js";
 import { STATE_REDUCER_QUESTIONS } from "./stateReducer.js";
 import { CONTEXT_PROPAGATION_QUESTIONS } from "./contextPropagation.js";
 import { USE_REDUCE_WITH_CONTEXT_QUESTIONS } from "./useReduceWithContext.js";
+import { USE_REF_QUESTIONS } from "./useRef.js";
+import { USE_EFFECT_CORRECT_USAGE_QUESTIONS } from "./useEffectCorrectUsage.js";
 import { PRESERVING_RESETTING_STATE_QUESTIONS } from "./preservingResettingState.js";
 import { NOT_NEED_EFFECT_QUESTIONS } from "./notNeedEffect.js";
 import { LIFECYCLE_OF_REACTIVE_EFFECTS_QUESTIONS } from "./lifecycleOfReactiveEffects.js";
@@ -37,6 +39,8 @@ const CANONICAL_QUESTIONS_BY_LEARNING_UNIT = Object.freeze({
   "state-reducer": STATE_REDUCER_QUESTIONS,
   "context-propagation": CONTEXT_PROPAGATION_QUESTIONS,
   "use-reduce-with-context": USE_REDUCE_WITH_CONTEXT_QUESTIONS,
+  "use-ref": USE_REF_QUESTIONS,
+  "use-effect-correct-usage": USE_EFFECT_CORRECT_USAGE_QUESTIONS,
   "not-need-effect": NOT_NEED_EFFECT_QUESTIONS,
   "preserving-resetting-state": PRESERVING_RESETTING_STATE_QUESTIONS,
   "lifecycle-of-reactive-effects": LIFECYCLE_OF_REACTIVE_EFFECTS_QUESTIONS,
