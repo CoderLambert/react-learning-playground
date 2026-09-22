@@ -53,7 +53,7 @@ async function seedCompletedReview(page) {
       });
       sessions.put({
         id: "review-session-current",
-        learningUnitId: "props",
+        learningUnitId: "event-vs-effect",
         items: [
           { questionId: q1.id, revision: 1, snapshot: snapshot(q1, "HISTORICAL snapshot prompt A") },
           { questionId: q2.id, revision: 1, snapshot: snapshot(q2, "HISTORICAL snapshot prompt B") },
