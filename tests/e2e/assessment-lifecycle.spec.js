@@ -9,27 +9,27 @@ const QUESTIONS = [
   {
     type: "single_choice",
     content: {
-      prompt: "React component render is controlled by which input?",
+      prompt: "A purchase command is caused by the user's click. Which location best expresses that cause?",
       options: [
-        { id: "props", text: "Props" },
-        { id: "state", text: "Local State" },
+        { id: "event-handler", text: "Event Handler" },
+        { id: "effect", text: "Effect" },
       ],
-      correctOptionId: "props",
-      explanation: "Props are an input to a component render.",
+      correctOptionId: "event-handler",
+      explanation: "A command caused by this interaction belongs directly in the Event Handler.",
     },
     difficulty: "easy",
-    conceptTags: ["assessment", "props"],
-    evidenceRefs: [{ kind: "source", fileName: "PropsBasicsDemo.jsx", startLine: 1, endLine: 2 }],
+    conceptTags: ["assessment", "event", "effect"],
+    evidenceRefs: [{ kind: "source", fileName: "EventVsEffectDemo.jsx", startLine: 44, endLine: 49 }],
   },
   {
     type: "true_false",
     content: {
-      prompt: "Props are read-only inputs to a React component.",
+      prompt: "A command caused by a specific user click should normally run directly in that Event Handler.",
       correct: true,
-      explanation: "A component should treat props as immutable inputs.",
+      explanation: "Event-caused commands should preserve the direct interaction cause instead of being routed through State + Effect.",
     },
     difficulty: "easy",
-    conceptTags: ["assessment", "props"],
+    conceptTags: ["assessment", "event", "effect"],
   },
 ];
 
@@ -131,9 +131,9 @@ test.describe("Assessment Product Lifecycle E2E", () => {
       requests.push(route.request().postDataJSON());
       await route.fulfill({ status: 200, contentType: "text/event-stream", body: textTurn("Plain chat response.") });
     });
-    await page.goto("./?demo=props");
+    await page.goto("./?demo=event-vs-effect");
     await page.getByRole("tab", { name: "AI", exact: true }).click();
-    await page.getByRole("textbox", { name: "向 AI 助手提问" }).fill("解释当前 Props 示例");
+    await page.getByRole("textbox", { name: "向 AI 助手提问" }).fill("解释当前 Event vs Effect 示例");
     await page.getByRole("button", { name: "发送" }).click();
     await expect(page.getByText("Plain chat response.", { exact: true })).toBeVisible();
 
@@ -143,7 +143,7 @@ test.describe("Assessment Product Lifecycle E2E", () => {
 
   test("AI create persists a recoverable snapshot session and completes after reload", async ({ page }, testInfo) => {
     const requests = await installAssessmentModelMock(page);
-    await page.goto("./?demo=props");
+    await page.goto("./?demo=event-vs-effect");
     await page.getByRole("tab", { name: "评测", exact: true }).click();
 
     const assessment = page.locator("#learning-inspector-panel-assessment");
@@ -164,16 +164,16 @@ test.describe("Assessment Product Lifecycle E2E", () => {
     const firstIsChoice = firstPromptText === QUESTIONS[0].content.prompt;
 
     if (firstIsChoice) {
-      await assessment.getByLabel("Local State", { exact: true }).check();
+      await assessment.getByLabel("Effect", { exact: true }).check();
       await assessment.getByRole("button", { name: "提交答案" }).click();
       await expect(assessment.getByText("再想一想", { exact: true })).toBeVisible();
       await expect(assessment.getByText(QUESTIONS[0].content.explanation, { exact: true })).toBeVisible();
 
       await assessment.getByRole("button", { name: "查看依据 1" }).click();
       await expect(page.getByRole("tab", { name: "源码", exact: true })).toHaveAttribute("aria-selected", "true");
-      await expect(page.locator('[data-source-file="PropsBasicsDemo.jsx"]')).toHaveAttribute("data-source-focus", "1-2");
-      await expect(page.locator('[data-source-line="1"][data-highlighted="true"]')).toBeVisible();
-      await expect(page.locator('[data-source-line="2"][data-highlighted="true"]')).toBeVisible();
+      await expect(page.locator('[data-source-file="EventVsEffectDemo.jsx"]')).toHaveAttribute("data-source-focus", "44-49");
+      await expect(page.locator('[data-source-line="44"][data-highlighted="true"]')).toBeVisible();
+      await expect(page.locator('[data-source-line="49"][data-highlighted="true"]')).toBeVisible();
     } else {
       await assessment.getByLabel("错误", { exact: true }).check();
       await assessment.getByRole("button", { name: "提交答案" }).click();
@@ -207,15 +207,15 @@ test.describe("Assessment Product Lifecycle E2E", () => {
       await expect(assessment.getByText("回答正确", { exact: true })).toBeVisible();
       await expect(assessment.getByText(QUESTIONS[1].content.explanation, { exact: true })).toBeVisible();
     } else {
-      await assessment.getByLabel("Props", { exact: true }).check();
+      await assessment.getByLabel("Event Handler", { exact: true }).check();
       await assessment.getByRole("button", { name: "提交答案" }).click();
       await expect(assessment.getByText("回答正确", { exact: true })).toBeVisible();
       await expect(assessment.getByText(QUESTIONS[0].content.explanation, { exact: true })).toBeVisible();
       await assessment.getByRole("button", { name: "查看依据 1" }).click();
       await expect(page.getByRole("tab", { name: "源码", exact: true })).toHaveAttribute("aria-selected", "true");
-      await expect(page.locator('[data-source-file="PropsBasicsDemo.jsx"]')).toHaveAttribute("data-source-focus", "1-2");
-      await expect(page.locator('[data-source-line="1"][data-highlighted="true"]')).toBeVisible();
-      await expect(page.locator('[data-source-line="2"][data-highlighted="true"]')).toBeVisible();
+      await expect(page.locator('[data-source-file="EventVsEffectDemo.jsx"]')).toHaveAttribute("data-source-focus", "44-49");
+      await expect(page.locator('[data-source-line="44"][data-highlighted="true"]')).toBeVisible();
+      await expect(page.locator('[data-source-line="49"][data-highlighted="true"]')).toBeVisible();
     }
 
     const afterReload = await readAssessmentDb(page);
@@ -243,7 +243,7 @@ test.describe("Assessment Product Lifecycle E2E", () => {
           attempts: afterReload.attempts.length,
           sessionStatus: afterReload.sessions[0].status,
         },
-        evidence: "PropsBasicsDemo.jsx L1-L2 highlighted in Source inspector",
+        evidence: "EventVsEffectDemo.jsx L44-L49 highlighted in Source inspector",
       }, null, 2),
       contentType: "application/json",
     });
@@ -254,7 +254,7 @@ test.describe("Assessment Product Lifecycle E2E", () => {
       Object.defineProperty(window, "indexedDB", { configurable: true, value: undefined });
     });
     const requests = await installAssessmentModelMock(page);
-    await page.goto("./?demo=props");
+    await page.goto("./?demo=event-vs-effect");
     await page.getByRole("tab", { name: "评测", exact: true }).click();
     const assessment = page.locator("#learning-inspector-panel-assessment");
     await expect(assessment).toContainText("本地持久化不可用，评测当前为本次会话存储。");
