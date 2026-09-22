@@ -7,6 +7,7 @@ import {
 } from "../scripts/learning-contract/validator.mjs";
 import {
   buildRepositoryLearningContractAudit,
+  buildRepositorySemanticFingerprints,
   createCoverageSummary,
 } from "../scripts/learning-contract/repository.mjs";
 import {
@@ -116,4 +117,11 @@ test("coverage summary distinguishes deterministic validity from semantic review
     state: 7,
     effects: 2,
   });
+});
+
+
+test("current first-20 semantic fingerprints are reproducible", async () => {
+  const fingerprints = await buildRepositorySemanticFingerprints();
+  assert.equal(Object.keys(fingerprints).length, 20);
+  console.log("LEARNING_CONTRACT_SEMANTIC_FINGERPRINTS=" + JSON.stringify(fingerprints));
 });
