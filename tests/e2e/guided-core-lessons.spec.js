@@ -13,7 +13,13 @@ const SINGLE_LEARNING_FLOW_GUIDED_IDS = new Set([
   "state-snapshot-queue",
   "immutable-state",
   "render-commit",
+  "state-dry",
+  "controlled-uncontrolled",
+  "lifting-state-up",
   "preserving-resetting-state",
+  "state-reducer",
+  "context-propagation",
+  "use-reduce-with-context",
   "not-need-effect",
   "lifecycle-of-reactive-effects",
 ]);
