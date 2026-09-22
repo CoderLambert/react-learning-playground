@@ -31,12 +31,6 @@ async function openUseEffect(page) {
   return page.locator("[data-learning-flow='single']");
 }
 
-async function openUseRef(page) {
-  await loadApp(page);
-  await openDemo(page, "useRef 引用与 DOM 控制");
-  return page.locator("[data-learning-flow='single']");
-}
-
 async function openListsAndKey(page) {
   await loadApp(page);
   await openDemo(page, "列表渲染与 key 身份");
@@ -290,54 +284,6 @@ test("Batch D useRef completes State-vs-Ref code transfer", async ({ page }) => 
 
   await expect(page.getByText("本轮评测已完成", { exact: true })).toBeVisible();
   await expect(flow.getByText("本节验证完成", { exact: true })).toBeVisible();
-});
-
-test("Batch D useRef exposes source-backed State vs Ref transfer", async ({ page }) => {
-  const flow = await openUseRef(page);
-
-  await expect(flow).toHaveAttribute("data-learning-unit", "use-ref");
-  await expect(flow).toHaveAttribute("data-learning-stage", "understand");
-  await expect(flow).toContainText("State drives render / Ref preserves silent mutable handles");
-  const evidence = flow.locator("[data-learning-code-evidence-item='timer-handle-vs-visible-state']");
-  await expect(evidence).toContainText("timerIdRef");
-  await expect(evidence.locator("[data-code-highlighted='true']")).toBeVisible();
-
-  await flow.locator(".single-learning-flow__stages button").filter({ hasText: "实践" }).click();
-  await page.getByRole("button", { name: "开始实践" }).click();
-  await page.getByRole("radio", { name: /写 ref\.current 不会请求 React 重新 render/ }).check();
-  await page.getByRole("button", { name: "提交 prediction" }).click();
-  await page.getByRole("button", { name: "我已运行并观察结果" }).click();
-  await page.getByRole("textbox", { name: "你的 explanation" }).fill(
-    "可见 UI 事实属于 State；Ref 适合保存跨 render 的 DOM 或 interval handle，写 current 本身不会请求 render。",
-  );
-  await page.getByRole("button", { name: "保存 explanation，继续 practice" }).click();
-
-  const practice = page.locator("[data-guided-practice-kind='patch-choice']");
-  const practiceCode = practice.locator("[data-guided-practice-code-context]");
-  await expect(practiceCode).toContainText("countRef.current += 1");
-  await expect(practiceCode.locator("[data-code-highlighted='true']")).toBeVisible();
-  await practice.locator("input[value='visible-count-state']").check();
-  await page.getByRole("button", { name: "提交 practice，查看 review" }).click();
-  await expect(page.locator("[data-guided-practice-outcome='correct']")).toBeVisible();
-
-  await flow.locator(".single-learning-flow__stages button").filter({ hasText: "验证" }).click();
-  await page.getByRole("button", { name: "开始测试" }).click();
-
-  await page.getByRole("radio", { name: /State，因为更新需要请求新的 render/ }).check();
-  await page.getByRole("button", { name: "提交答案" }).click();
-  await page.getByRole("button", { name: /下一题/ }).click();
-
-  await page.getByRole("radio", { name: /写 ref\.current 本身不进入 React render 调度/ }).check();
-  await page.getByRole("button", { name: "提交答案" }).click();
-  await page.getByRole("button", { name: /下一题/ }).click();
-
-  await page.getByRole("radio", { name: /DOM ref 在对应节点 commit 后才可靠/ }).check();
-  await page.getByRole("button", { name: "提交答案" }).click();
-  await page.getByRole("button", { name: /下一题/ }).click();
-
-  const transfer = page.locator("[data-assessment-code-context]");
-  await expect(transfer).toContainText("countRef.current += 1");
-  await expect(transfer.locator("[data-code-highlighted='true']")).toBeVisible();
 });
 
 test("Batch D useEffect completes external-sync source-to-patch-to-transfer verification", async ({ page }) => {
