@@ -10,6 +10,7 @@ import {
   findDuplicateValues,
   validateLearningContractSnapshot,
 } from "./validator.mjs";
+import { fingerprintLearningContractSnapshot } from "./semanticReview.mjs";
 
 const DEMO_REGISTRY_URL = new URL("../../src/demos/index.js", import.meta.url);
 const FLOW_REGISTRY_URL = new URL("../../src/learning-flow/learningFlowRegistry.js", import.meta.url);
@@ -216,6 +217,19 @@ async function inspectRuntimeBoundary() {
 
 function countIssues(units, key) {
   return units.reduce((total, unit) => total + unit[key].length, 0);
+}
+
+export async function buildRepositorySemanticFingerprints() {
+  const { entries } = await loadDemoRegistry();
+  const first20 = entries.slice(0, 20);
+  const fingerprints = {};
+
+  for (const entry of first20) {
+    const snapshot = await createRepositorySnapshot(entry);
+    fingerprints[entry.id] = fingerprintLearningContractSnapshot(snapshot);
+  }
+
+  return Object.freeze(fingerprints);
 }
 
 export async function buildRepositoryLearningContractAudit() {
