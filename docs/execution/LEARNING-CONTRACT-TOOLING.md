@@ -10,6 +10,7 @@ These tools validate that contract against the existing authoritative authoring 
 npm run lessons:validate
 npm run lessons:audit
 npm run lessons:coverage
+npm run lessons:fingerprints
 ```
 
 ### `lessons:validate`
@@ -38,6 +39,14 @@ Prints compact coverage:
 - Practice kinds;
 - first-20 categories.
 
+### `lessons:fingerprints`
+
+Prints the current first-20 semantic fingerprints.
+
+This command is inspection-only. It never writes or approves the review baseline.
+
+Use it only after an explicit semantic review when preparing a reviewed baseline update. Copying the output into the baseline merely to make CI green is prohibited by migration governance.
+
 ## Source of truth
 
 The repository adapter derives lesson scope from `src/demos/index.js` and reads the existing:
@@ -57,17 +66,13 @@ This guard exists because Batch D exposed a real failure mode where duplicate ob
 
 ## Semantic review
 
-The five #315 representative lessons are currently marked semantically reviewed:
+#317 completed the first-20 semantic audit and records one reviewed fingerprint per in-scope lesson.
 
-- `props`;
-- `state-snapshot-queue`;
-- `preserving-resetting-state`;
-- `render-commit`;
-- `use-effect-correct-usage`.
+A lesson is semantically current only when its live fingerprint matches that reviewed fingerprint.
 
-The other first-20 lessons intentionally remain `REVIEW_REQUIRED` until #317 performs the canary/full audit.
+If Flow objective/scope, Concept authoring, referenced source excerpts, Guided authoring, or canonical Verify authoring changes, the fingerprint changes and the lesson returns to `REVIEW_REQUIRED`.
 
-Do not auto-rewrite content to clear semantic review.
+Do not auto-rewrite content or blindly update fingerprints to clear semantic review.
 
 ## #317 handoff
 

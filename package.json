@@ -12,6 +12,7 @@
     "lessons:validate": "node scripts/learning-contract-cli.mjs validate",
     "lessons:audit": "node scripts/learning-contract-cli.mjs audit",
     "lessons:coverage": "node scripts/learning-contract-cli.mjs coverage",
+    "lessons:fingerprints": "node scripts/learning-contract-cli.mjs fingerprints",
     "lint": "oxlint",
     "preview": "vite preview",
     "test:content": "node --test tests/content-contract.test.mjs",
