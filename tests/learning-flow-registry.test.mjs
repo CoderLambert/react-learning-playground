@@ -26,6 +26,8 @@ const CURRENT_VNEXT_IDS = [
   "state-reducer",
   "context-propagation",
   "use-reduce-with-context",
+  "use-ref",
+  "use-effect-correct-usage",
 ];
 
 test("single learning flow registry includes the current VNext rollout while preserving existing migrated lessons", () => {
@@ -75,7 +77,7 @@ test("single learning flow registry includes the current VNext rollout while pre
     assert.equal(isSingleLearningFlowUnit(learningUnitId), true);
   }
 
-  assert.equal(isSingleLearningFlowUnit("use-ref"), false);
-  assert.equal(getSingleLearningFlowDefinition("use-ref"), null);
+  assert.equal(isSingleLearningFlowUnit("event-vs-effect"), false);
+  assert.equal(getSingleLearningFlowDefinition("event-vs-effect"), null);
   assert.equal(new Set(SINGLE_LEARNING_FLOW_UNIT_IDS).size, SINGLE_LEARNING_FLOW_UNIT_IDS.length);
 });
