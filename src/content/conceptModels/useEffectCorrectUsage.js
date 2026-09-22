@@ -111,7 +111,7 @@ export const USE_EFFECT_CORRECT_USAGE_MODEL = {
       diagnosis: "如果动作由这次明确用户交互导致，Event Handler 能直接表达因果；绕进 Effect 反而把原因隐藏成 State 变化。",
       counterEvidence: "本课边界说明 Effect 面向外部同步，不是所有业务命令的统一入口。",
       experiment: "比较“按钮点击立即 POST”与“组件存在期间订阅 socket”两者为什么运行。",
-      evidenceRefs: [{ kind: "source", fileName: "UseEffectCorrectUsageDemo.jsx", startLine: 84, endLine: 90 }],
+      evidenceRefs: [{ kind: "source", fileName: "UseEffectCorrectUsageDemo.jsx", startLine: 67, endLine: 75 }],
     },
   },
 };
