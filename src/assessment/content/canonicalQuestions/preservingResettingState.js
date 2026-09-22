@@ -56,8 +56,18 @@ export const PRESERVING_RESETTING_STATE_QUESTIONS = Object.freeze([
     learningUnitId: "preserving-resetting-state",
     difficulty: "hard",
     conceptTags: ["identity-boundary", "key", "state-ownership"],
+    revision: 2,
+    updatedAt: "2026-09-22T05:30:00.000Z",
+    catalogVersion: "2026-09-22-batch-c-vnext",
     content: {
       prompt: "WorkspaceShell 保存展开面板和滚动位置，InvoiceEditor 保存当前 customer 的未提交草稿。切换 customer 时只应丢弃编辑器草稿。哪种 identity 设计最准确？",
+      codeContext: {
+        label: "陌生代码 · CustomerWorkspace.jsx",
+        language: "jsx",
+        code: `<WorkspaceShell>
+  <InvoiceEditor customer={customer} />
+</WorkspaceShell>`,
+      },
       options: [
         { id: "key-editor", text: "保留 WorkspaceShell identity，只给 InvoiceEditor 使用稳定 customer.id 作为 key" },
         { id: "key-shell", text: "给 WorkspaceShell 使用 customer.id 作为 key，让整个工作区和编辑器一起重建" },
