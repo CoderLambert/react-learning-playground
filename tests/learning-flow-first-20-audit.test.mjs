@@ -38,6 +38,18 @@ const ALLOWED_POST_20_FLOW_IDS = [
   "not-need-effect",
 ];
 
+async function readAuthoringSource(fileName) {
+  const candidateDirs = ["../src/demos/", "../src/components/"];
+  for (const directory of candidateDirs) {
+    try {
+      return await readFile(new URL(`${directory}${fileName}`, import.meta.url), "utf8");
+    } catch (error) {
+      if (error?.code !== "ENOENT") throw error;
+    }
+  }
+  assert.fail(`source-backed authoring file not found: ${fileName}`);
+}
+
 async function authoritativeDemoIds() {
   const registrySource = await readFile(new URL("../src/demos/index.js", import.meta.url), "utf8");
   const demosStart = registrySource.indexOf("export const demos = [");
@@ -74,7 +86,7 @@ test("the authoritative first 20 demos all satisfy the VNext cross-surface contr
       assert.ok(Number.isInteger(ref.startLine) && ref.startLine >= 1);
       assert.ok(Number.isInteger(ref.endLine) && ref.endLine >= ref.startLine);
 
-      const source = await readFile(new URL(`../src/demos/${ref.fileName}`, import.meta.url), "utf8");
+      const source = await readAuthoringSource(ref.fileName);
       const lineCount = source.split("\n").length;
       assert.ok(
         ref.startLine <= lineCount && ref.endLine <= lineCount,
