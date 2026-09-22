@@ -1,10 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import {
-  AUTHORING_BASELINE_SHA,
-  buildLearningContractBaselineReport,
-} from "../scripts/audit-learning-contract-baseline.mjs";
+import { buildLearningContractBaselineReport } from "../scripts/audit-learning-contract-baseline.mjs";
 
 test("Learning Contract baseline inventory derives the first 20 from authoritative authoring surfaces", async () => {
   const report = await buildLearningContractBaselineReport();
