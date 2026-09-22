@@ -1,6 +1,4 @@
 import { readFile } from "node:fs/promises";
-import { pathToFileURL } from "node:url";
-
 import { REPRESENTATIVE_PILOT } from "../audit-learning-contract-baseline.mjs";
 import { getSingleLearningFlowDefinition } from "../../src/learning-flow/learningFlowRegistry.js";
 import { getConceptModelForLearningUnit } from "../../src/content/conceptModels.js";
