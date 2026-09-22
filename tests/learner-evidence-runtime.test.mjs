@@ -120,6 +120,7 @@ test("Learner Evidence runtime canary reads Assessment and Guided owners through
     indexedDb: undefined,
     clock: createFixedClock("2026-09-22T11:00:00.000Z"),
     idFactory: (prefix) => prefix + "-evidence-" + (++id),
+    evidenceResolver: () => true,
   });
   const { session } = await seedAssessment(assessmentRuntime, "props");
 
