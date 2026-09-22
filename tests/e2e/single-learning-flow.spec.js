@@ -217,6 +217,63 @@ test("Batch C State Dry completes source-to-patch-to-transfer verification", asy
   await expect(flow.getByText("本节验证完成", { exact: true })).toBeVisible();
 });
 
+test("Batch C State Dry completes minimal-facts code transfer", async ({ page }) => {
+  const flow = await openStateDry(page);
+
+  await expect(flow).toHaveAttribute("data-learning-unit", "state-dry");
+  await expect(flow).toHaveAttribute("data-learning-stage", "understand");
+  await expect(flow).toContainText("Independent facts → Derive the rest → Smaller valid state space");
+  const evidence = flow.locator("[data-learning-code-evidence-item='derived-vs-stored-name']");
+  await expect(evidence).toContainText("storedFullName");
+  await expect(evidence).toContainText("derivedFullName");
+  await expect(evidence.locator("[data-code-highlighted='true']")).toBeVisible();
+
+  await flow.locator(".single-learning-flow__stages button").filter({ hasText: "实践" }).click();
+  await page.getByRole("button", { name: "开始实践" }).click();
+  await page.getByRole("radio", { name: /storedFullName 可以过期/ }).check();
+  await page.getByRole("button", { name: "提交 prediction" }).click();
+  await page.getByRole("button", { name: "我已运行并观察结果" }).click();
+  await page.getByRole("textbox", { name: "你的 explanation" }).fill(
+    "能从当前 State 完整推出的值不是独立事实；额外保存副本会新增 React 不会自动维护的同步不变量。",
+  );
+  await page.getByRole("button", { name: "保存 explanation，继续 practice" }).click();
+
+  const practice = page.locator("[data-guided-practice-kind='patch-choice']");
+  await expect(practice.locator("[data-guided-practice-code-context]")).toContainText("setFullName");
+  await expect(practice.locator("[data-guided-practice-code-context] [data-code-highlighted='true']")).toBeVisible();
+  await practice.locator("input[value='derive-in-render']").check();
+  await page.getByRole("button", { name: "提交 practice，查看 review" }).click();
+  await expect(page.locator("[data-guided-practice-outcome='correct']")).toBeVisible();
+
+  await flow.locator(".single-learning-flow__stages button").filter({ hasText: "验证" }).click();
+  await page.getByRole("button", { name: "开始测试" }).click();
+
+  await page.getByRole("radio", { name: /在 render 中直接派生 fullName/ }).check();
+  await page.getByRole("button", { name: "提交答案" }).click();
+  await page.getByRole("button", { name: /下一题/ }).click();
+
+  await page.getByRole("radio", { name: /status 只枚举合法阶段/ }).check();
+  await page.getByRole("button", { name: "提交答案" }).click();
+  await page.getByRole("button", { name: /下一题/ }).click();
+
+  await page.getByRole("radio", { name: /selectedId 是独立选择事实/ }).check();
+  await page.getByRole("button", { name: "提交答案" }).click();
+  await page.getByRole("button", { name: /下一题/ }).click();
+
+  const transfer = page.locator("[data-assessment-code-context]");
+  await expect(transfer).toContainText("setTotal(price * quantity)");
+  await expect(transfer.locator("[data-code-highlighted='true']")).toBeVisible();
+  await page.getByRole("radio", { name: /移除 total State/ }).check();
+  await page.getByRole("button", { name: "提交答案" }).click();
+  await page.getByRole("button", { name: /下一题/ }).click();
+
+  await page.getByRole("radio", { name: /保存无法从其他当前输入完整推出的独立事实/ }).check();
+  await page.getByRole("button", { name: "提交答案" }).click();
+
+  await expect(page.getByText("本轮评测已完成", { exact: true })).toBeVisible();
+  await expect(flow.getByText("本节验证完成", { exact: true })).toBeVisible();
+});
+
 test("Lists and Key exposes one deep Understand Practice Verify journey instead of parallel learning modes", async ({ page }) => {
   const flow = await openListsAndKey(page);
 
