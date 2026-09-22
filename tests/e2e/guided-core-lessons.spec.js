@@ -13,7 +13,13 @@ const SINGLE_LEARNING_FLOW_GUIDED_IDS = new Set([
   "state-snapshot-queue",
   "immutable-state",
   "render-commit",
+  "state-dry",
+  "controlled-uncontrolled",
+  "lifting-state-up",
   "preserving-resetting-state",
+  "state-reducer",
+  "context-propagation",
+  "use-reduce-with-context",
   "not-need-effect",
   "lifecycle-of-reactive-effects",
 ]);
@@ -107,6 +113,9 @@ test("Preserve and Reset Practice V2 places the reset at the narrow identity bou
   await expect(chats.nth(1)).toHaveValue("");
 
   await acknowledgeAndExplain(page, "State 绑定组件身份；只应在业务身份真正变化的子树上改变 key。");
+  const preserveCode = page.locator("[data-guided-practice-code-context]");
+  await expect(preserveCode).toContainText("InvoiceEditor customer={customer}");
+  await expect(preserveCode.locator("[data-code-highlighted='true']")).toBeVisible();
   await submitPatch(page, "key-editor-by-customer");
   await expect(page.locator("[data-guided-review-practice]")).toContainText("key={customer.id}");
 });

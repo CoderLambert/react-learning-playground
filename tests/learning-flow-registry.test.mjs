@@ -19,6 +19,13 @@ const CURRENT_VNEXT_IDS = [
   "state-snapshot-queue",
   "immutable-state",
   "render-commit",
+  "state-dry",
+  "controlled-uncontrolled",
+  "lifting-state-up",
+  "preserving-resetting-state",
+  "state-reducer",
+  "context-propagation",
+  "use-reduce-with-context",
 ];
 
 test("single learning flow registry includes the current VNext rollout while preserving existing migrated lessons", () => {
@@ -68,7 +75,7 @@ test("single learning flow registry includes the current VNext rollout while pre
     assert.equal(isSingleLearningFlowUnit(learningUnitId), true);
   }
 
-  assert.equal(isSingleLearningFlowUnit("state-dry"), false);
-  assert.equal(getSingleLearningFlowDefinition("state-dry"), null);
+  assert.equal(isSingleLearningFlowUnit("use-ref"), false);
+  assert.equal(getSingleLearningFlowDefinition("use-ref"), null);
   assert.equal(new Set(SINGLE_LEARNING_FLOW_UNIT_IDS).size, SINGLE_LEARNING_FLOW_UNIT_IDS.length);
 });
