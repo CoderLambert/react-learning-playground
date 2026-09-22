@@ -1,6 +1,6 @@
 # Learning Authoring Contract V1 — Candidate
 
-Status: **CANDIDATE — freeze only after the #315 representative pilot is green**
+Status: **FROZEN — 2026-09-22, for #313 / #316 / #317 execution**
 
 Contract id: `learning-authoring-contract/v1`
 
@@ -255,13 +255,23 @@ Before freeze, revise this candidate if:
 
 After a material revision, rerun all five pilots.
 
-## Freeze rule
+## Freeze evidence
 
-This document remains **CANDIDATE** until:
+Candidate validation head:
 
-- the representative deterministic pilot test is green;
-- required repository CI is green;
-- browser regression is green;
-- no repeated workaround was introduced.
+- PR #322 candidate head: `83abd36534695d0dba04e104e1549903ce913fac`;
+- representative deterministic pilot: PASS;
+- React Learning Verify: PASS;
+- Workbench Integration Verify: PASS;
+- repeated structural workaround: none;
+- new product runtime branch / registry / DSL: none.
 
-After that evidence exists, update this document to `FROZEN` in the same #315 change set and rerun required CI before merge.
+Decision: **FREEZE `learning-authoring-contract/v1` for the remainder of #313.**
+
+From this point through #316 and #317:
+
+- tooling may implement these invariants;
+- audit findings may classify content/data/tool defects;
+- the contract must not be silently widened or weakened.
+
+If a true Contract Gap is discovered, stop rollout, explicitly reopen the contract decision, revise the contract, and rerun the representative pilot before continuing.
