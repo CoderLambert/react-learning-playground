@@ -17,7 +17,10 @@ const VNEXT_CODE_TRANSFER_UNIT_IDS = new Set([
   "conditional-rendering",
   "rendering-lists-key",
   "prop-drilling",
+  "event-propagation",
   "state-snapshot-queue",
+  "immutable-state",
+  "render-commit",
 ]);
 
 test("every Single Learning Flow unit has complete lesson-owned authoring assets", () => {

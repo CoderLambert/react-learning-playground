@@ -7,7 +7,7 @@ import {
   isSingleLearningFlowUnit,
 } from "../src/learning-flow/learningFlowRegistry.js";
 
-const BATCH_A_VNEXT_IDS = [
+const CURRENT_VNEXT_IDS = [
   "component-jsx-pure-render",
   "props",
   "children",
@@ -15,10 +15,14 @@ const BATCH_A_VNEXT_IDS = [
   "conditional-rendering",
   "rendering-lists-key",
   "prop-drilling",
+  "event-propagation",
+  "state-snapshot-queue",
+  "immutable-state",
+  "render-commit",
 ];
 
-test("single learning flow registry includes Batch A while preserving the existing migrated lessons", () => {
-  for (const learningUnitId of BATCH_A_VNEXT_IDS) {
+test("single learning flow registry includes the current VNext rollout while preserving existing migrated lessons", () => {
+  for (const learningUnitId of CURRENT_VNEXT_IDS) {
     const flow = getSingleLearningFlowDefinition(learningUnitId);
     assert.equal(flow.learningUnitId, learningUnitId);
     assert.equal(flow.conceptModel.learningUnitId, learningUnitId);
@@ -64,7 +68,7 @@ test("single learning flow registry includes Batch A while preserving the existi
     assert.equal(isSingleLearningFlowUnit(learningUnitId), true);
   }
 
-  assert.equal(isSingleLearningFlowUnit("immutable-state"), false);
-  assert.equal(getSingleLearningFlowDefinition("immutable-state"), null);
+  assert.equal(isSingleLearningFlowUnit("state-dry"), false);
+  assert.equal(getSingleLearningFlowDefinition("state-dry"), null);
   assert.equal(new Set(SINGLE_LEARNING_FLOW_UNIT_IDS).size, SINGLE_LEARNING_FLOW_UNIT_IDS.length);
 });

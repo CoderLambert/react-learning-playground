@@ -22,7 +22,10 @@ const TARGET_LEARNING_UNIT_IDS = [
   "conditional-rendering",
   "rendering-lists-key",
   "prop-drilling",
+  "event-propagation",
   "state-snapshot-queue",
+  "immutable-state",
+  "render-commit",
   "preserving-resetting-state",
   "not-need-effect",
   "lifecycle-of-reactive-effects",
@@ -36,7 +39,10 @@ const CODE_CONTEXT_LEARNING_UNIT_IDS = new Set([
   "conditional-rendering",
   "rendering-lists-key",
   "prop-drilling",
+  "event-propagation",
   "state-snapshot-queue",
+  "immutable-state",
+  "render-commit",
 ]);
 
 const FROZEN_EXPECTED_PRACTICE = {
@@ -75,10 +81,31 @@ const FROZEN_EXPECTED_PRACTICE = {
     kind: GUIDED_RESPONSE_KINDS.PATCH_CHOICE,
     expectedOptionId: "compose-avatar-from-page",
   },
+  "event-propagation": {
+    predict: "bubble-still-runs",
+    kind: GUIDED_RESPONSE_KINDS.PATCH_CHOICE,
+    expectedOptionId: "stop-propagation-only",
+  },
   "state-snapshot-queue": {
     predict: "count-1",
     kind: GUIDED_RESPONSE_KINDS.PATCH_CHOICE,
     expectedOptionId: "functional-updaters",
+  },
+  "immutable-state": {
+    predict: "can-skip-and-corrupt",
+    kind: GUIDED_RESPONSE_KINDS.PATCH_CHOICE,
+    expectedOptionId: "map-copy-item",
+  },
+  "render-commit": {
+    predict: "render-without-count-mutation",
+    kind: GUIDED_RESPONSE_KINDS.ORDERED_SEQUENCE,
+    expectedOrder: [
+      "click-event",
+      "state-update",
+      "render-next-ui",
+      "commit-change",
+      "browser-paint",
+    ],
   },
   "preserving-resetting-state": {
     predict: "draft-preserved",
@@ -110,7 +137,10 @@ const FROZEN_EXPERIMENT_ACTIONS = {
   "conditional-rendering": "switch-four-conditional-states",
   "rendering-lists-key": "compare-index-and-stable-key",
   "prop-drilling": "compare-props-composition-context",
+  "event-propagation": "compare-propagation-and-default-behavior",
   "state-snapshot-queue": "replace-three-times",
+  "immutable-state": "compare-state-mutation-and-copy",
+  "render-commit": "compare-render-and-dom-mutation",
   "preserving-resetting-state": "compare-preserved-and-keyed-chat",
   "not-need-effect": "exercise-render-event-identity-boundaries",
   "lifecycle-of-reactive-effects": "observe-room-resynchronization",
@@ -232,7 +262,7 @@ test("all currently migrated Guided definitions are available, frozen, and follo
 });
 
 test("lookup returns an explicit no-guided state for an unconfigured unit", () => {
-  for (const learningUnitId of ["not-configured", "immutable-state", "render-vs-dom-update"]) {
+  for (const learningUnitId of ["not-configured", "state-dry", "render-vs-dom-update"]) {
     assert.equal(hasGuidedActivity(learningUnitId), false);
     assert.equal(getGuidedActivityDefinition(learningUnitId), null);
     assert.deepEqual(getGuidedActivity(learningUnitId), {

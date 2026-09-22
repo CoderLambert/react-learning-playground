@@ -7,6 +7,12 @@ async function openComponentPureRender(page) {
   return page.locator("[data-learning-flow='single']");
 }
 
+async function openImmutableState(page) {
+  await loadApp(page);
+  await openDemo(page, "对象 / 数组 State 不可变更新");
+  return page.locator("[data-learning-flow='single']");
+}
+
 async function openListsAndKey(page) {
   await loadApp(page);
   await openDemo(page, "列表渲染与 key 身份");
@@ -86,6 +92,62 @@ test("Batch A Component pure render completes the VNext code-transfer journey", 
   await page.getByRole("button", { name: /下一题/ }).click();
 
   await page.getByRole("radio", { name: /render 先计算元素描述/ }).check();
+  await page.getByRole("button", { name: "提交答案" }).click();
+
+  await expect(page.getByText("本轮评测已完成", { exact: true })).toBeVisible();
+  await expect(flow.getByText("本节验证完成", { exact: true })).toBeVisible();
+});
+
+test("Batch B Immutable State completes source-to-patch-to-transfer verification", async ({ page }) => {
+  const flow = await openImmutableState(page);
+
+  await expect(flow).toHaveAttribute("data-learning-unit", "immutable-state");
+  await expect(flow).toHaveAttribute("data-learning-stage", "understand");
+  await expect(flow).toContainText("Read current snapshot → Copy changed path → Submit next value");
+  const evidence = flow.locator("[data-learning-code-evidence-item='same-reference-vs-copy']");
+  await expect(evidence).toContainText("mutationProbe.city");
+  await expect(evidence.locator("[data-code-highlighted='true']")).toBeVisible();
+
+  await flow.locator(".single-learning-flow__stages button").filter({ hasText: "实践" }).click();
+  await page.getByRole("button", { name: "开始实践" }).click();
+  await page.getByRole("radio", { name: /React 可能跳过这次更新/ }).check();
+  await page.getByRole("button", { name: "提交 prediction" }).click();
+  await page.getByRole("button", { name: "我已运行并观察结果" }).click();
+  await page.getByRole("textbox", { name: "你的 explanation" }).fill(
+    "数组 spread 只复制容器；元素对象仍共享引用，所以修改元素会污染旧 snapshot。",
+  );
+  await page.getByRole("button", { name: "保存 explanation，继续 practice" }).click();
+
+  const practice = page.locator("[data-guided-practice-kind='patch-choice']");
+  await expect(practice.locator("[data-guided-practice-code-context]")).toContainText("next[0].done");
+  await expect(practice.locator("[data-guided-practice-code-context] [data-code-highlighted='true']")).toBeVisible();
+  await practice.locator("input[value='map-copy-item']").check();
+  await page.getByRole("button", { name: "提交 practice，查看 review" }).click();
+  await expect(page.locator("[data-guided-practice-outcome='correct']")).toBeVisible();
+
+  await flow.locator(".single-learning-flow__stages button").filter({ hasText: "验证" }).click();
+  await page.getByRole("button", { name: "开始测试" }).click();
+
+  await page.getByRole("radio", { name: /把当前值当只读 snapshot/ }).check();
+  await page.getByRole("button", { name: "提交答案" }).click();
+  await page.getByRole("button", { name: /下一题/ }).click();
+
+  await page.getByRole("radio", { name: /true；数组被复制了/ }).check();
+  await page.getByRole("button", { name: "提交答案" }).click();
+  await page.getByRole("button", { name: /下一题/ }).click();
+
+  const transfer = page.locator("[data-assessment-code-context]");
+  await expect(transfer).toContainText("next[0].done");
+  await expect(transfer.locator("[data-code-highlighted='true']")).toBeVisible();
+  await page.getByRole("radio", { name: /next 是新数组/ }).check();
+  await page.getByRole("button", { name: "提交答案" }).click();
+  await page.getByRole("button", { name: /下一题/ }).click();
+
+  await page.getByRole("radio", { name: /变化节点到顶层的每一层/ }).check();
+  await page.getByRole("button", { name: "提交答案" }).click();
+  await page.getByRole("button", { name: /下一题/ }).click();
+
+  await page.getByRole("radio", { name: /旧 State 对象本身已经被改写/ }).check();
   await page.getByRole("button", { name: "提交答案" }).click();
 
   await expect(page.getByText("本轮评测已完成", { exact: true })).toBeVisible();
