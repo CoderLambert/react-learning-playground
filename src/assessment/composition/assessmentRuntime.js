@@ -5,6 +5,8 @@ import {
   createIndexedDbAssessmentRepository,
   MemoryAssessmentRepository,
 } from "../infrastructure/index.js";
+import { assertAssessmentSession } from "../domain/assessmentSession.js";
+import { assertAttempt } from "../domain/attempt.js";
 import { createAssessmentQueryStore } from "../store/AssessmentQueryStore.js";
 
 let activeAssessmentRuntime = null;
@@ -52,6 +54,28 @@ export async function createAssessmentRuntime({
     evidenceResolver,
   });
   const capabilities = Object.freeze(createAssessmentCapabilities({ assessmentService: service }));
+  const evidenceSource = Object.freeze({
+    async read({ learningUnitId }) {
+      const sessions = await repository.listSessions({ learningUnitId });
+      const orderedSessions = [...sessions].sort((left, right) => (
+        String(left.startedAt).localeCompare(String(right.startedAt))
+        || String(left.id).localeCompare(String(right.id))
+      ));
+
+      return Promise.all(orderedSessions.map(async (session) => {
+        assertAssessmentSession(session);
+        const attempts = await repository.listAttempts({ sessionId: session.id });
+        attempts.forEach(assertAttempt);
+        return Object.freeze({
+          session,
+          attempts: Object.freeze([...attempts].sort((left, right) => (
+            String(left.submittedAt).localeCompare(String(right.submittedAt))
+            || String(left.id).localeCompare(String(right.id))
+          ))),
+        });
+      }));
+    },
+  });
   const sessionLifecycle = Object.freeze({
     async start({ learningUnitId, questionRecords }) {
       return service.startSession({
@@ -98,6 +122,7 @@ export async function createAssessmentRuntime({
     queryStore,
     service,
     capabilities,
+    evidenceSource,
     sessionLifecycle,
   });
   if (generation === assessmentRuntimeGeneration) {

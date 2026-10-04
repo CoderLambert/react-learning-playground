@@ -1,8 +1,9 @@
 # Learner Evidence V1
 
-**Status:** candidate until #327 merges  
+**Status:** FROZEN by #327 / PR #330  
 **Contract id:** `learner-evidence-v1`  
-**Source baseline:** #326 / `main @ 93f325c1f0803ec86da5c75e19bfb097a5a36bea`
+**Source baseline:** #326 / `main @ 93f325c1f0803ec86da5c75e19bfb097a5a36bea`  
+**Production contract module:** `src/learning-evidence/contract.js`
 
 Learner Evidence V1 is a **read-only normalized projection** over facts already owned by Assessment and Guided.
 
