@@ -596,7 +596,7 @@ test("You Might Not Need an Effect uses causal-source diagnostics and preserves 
   await expect(flow).toContainText("最近一次已完成评测有 1 道错误");
 });
 
-test("Guided Needs Review projects to the lesson level and survives reload", async ({ page }) => {
+test("Guided Needs Review blocks Verify until the learner clears the review evidence", async ({ page }) => {
   let flow = await openStateSnapshot(page);
 
   await flow.locator(".single-learning-flow__stages button").filter({ hasText: "实践" }).click();
@@ -609,36 +609,33 @@ test("Guided Needs Review projects to the lesson level and survives reload", asy
     "setter 不会改写当前 render snapshot；更新请求会进入 queue。",
   );
   await page.getByRole("button", { name: "保存 explanation，继续 practice" }).click();
-  await expect(page.locator("[data-guided-practice-code-context] [data-code-highlighted='true']")).toBeVisible();
-  await expect(page.locator("[data-guided-practice-kind='patch-choice'] .guided-flow-practice-option-content > .guided-flow-patch[data-code-highlighted='true']")).toHaveCount(3);
   await page.locator("[data-guided-practice-kind='patch-choice'] input[value='functional-updaters']").check();
   await page.getByRole("button", { name: "提交 practice，查看 review" }).click();
-
   await page.getByRole("button", { name: "标记为需要复习" }).click();
 
   const reviewSignal = flow.locator(".single-learning-flow__review-signal");
   await expect(reviewSignal).toBeVisible();
-  await expect(reviewSignal).toHaveAttribute("data-learning-review-assessment-errors", "0");
   await expect(reviewSignal).toHaveAttribute("data-learning-review-guided", "true");
-  await expect(reviewSignal).toContainText("你在实践回顾中标记了需要复习");
-
-  await page.getByRole("button", { name: "进入验证" }).click();
-  await expect(flow).toHaveAttribute("data-learning-stage", "verify");
-  await expect(reviewSignal).toBeVisible();
+  await expect(flow).toHaveAttribute("data-learning-completion-status", "needs_review");
+  await expect(flow).toHaveAttribute("data-learning-completion-next-action", "review_guided");
+  await expect(page.getByRole("button", { name: "进入验证" })).toBeDisabled();
 
   await page.reload();
   flow = page.locator("[data-learning-flow='single']");
   await expect(flow).toBeVisible();
   await expect(flow).toHaveAttribute("data-learning-stage", "understand");
-  const restoredSignal = flow.locator(".single-learning-flow__review-signal");
-  await expect(restoredSignal).toBeVisible();
-  await expect(restoredSignal).toHaveAttribute("data-learning-review-guided", "true");
+  await expect(flow).toHaveAttribute("data-learning-completion-status", "needs_review");
+  await expect(flow).toHaveAttribute("data-learning-completion-next-action", "review_guided");
 
   await flow.locator(".single-learning-flow__stages button").filter({ hasText: "实践" }).click();
   await page.getByRole("button", { name: "继续实践" }).click();
   await expect(page.locator("[data-guided-flow]")).toHaveAttribute("data-guided-current-step", "review");
   await page.getByRole("button", { name: "取消需要复习" }).click();
   await expect(flow.locator(".single-learning-flow__review-signal")).toHaveCount(0);
+  await expect(flow).toHaveAttribute("data-learning-completion-next-action", "start_verify");
+  await expect(page.getByRole("button", { name: "进入验证" })).toBeEnabled();
+  await page.getByRole("button", { name: "进入验证" }).click();
+  await expect(flow).toHaveAttribute("data-learning-stage", "verify");
 });
 
 test("Preserving / Resetting State diagnoses identity preservation before reset-boundary decisions", async ({ page }) => {

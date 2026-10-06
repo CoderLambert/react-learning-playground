@@ -173,10 +173,24 @@ async function inspectRuntimeBoundary() {
   const errors = [];
   const source = await readFile(SINGLE_FLOW_URL, "utf8");
 
-  if (!source.includes('verificationSession?.status === "completed"')) {
+  if (!source.includes("completion?.status === LEARNING_COMPLETION_STATUS.COMPLETE")) {
     errors.push(globalIssue(
       "COMPLETION_GATE_CHANGED",
-      "SingleLearningFlow no longer exposes completion from a completed verification session",
+      "SingleLearningFlow no longer exposes closure from the frozen Learning Completion decision",
+      "SingleLearningFlow",
+    ));
+  }
+  if (!source.includes("data-learning-completion-next-action")) {
+    errors.push(globalIssue(
+      "COMPLETION_NEXT_ACTION_MISSING",
+      "SingleLearningFlow no longer exposes the deterministic Completion nextAction",
+      "SingleLearningFlow",
+    ));
+  }
+  if (source.includes('verificationSession?.status === "completed"')) {
+    errors.push(globalIssue(
+      "LEGACY_COMPLETION_GATE_PRESENT",
+      "SingleLearningFlow still owns lesson closure through Assessment lifecycle state",
       "SingleLearningFlow",
     ));
   }

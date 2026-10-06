@@ -93,5 +93,6 @@ export function useAssessmentApplication({ learningUnitId, learningUnitsById }) 
       initializationError,
     },
     commands: controller?.commands ?? null,
+    evidenceSource: runtime?.evidenceSource ?? null,
   };
 }

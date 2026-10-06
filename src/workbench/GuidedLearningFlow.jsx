@@ -321,6 +321,7 @@ export function GuidedLearningFlow({
   onAskAi,
   onContinue,
   onNeedsReviewChange,
+  onEvidenceChange,
   canContinue = false,
   presentation = "guided",
   continueLabel,
@@ -345,6 +346,18 @@ export function GuidedLearningFlow({
     if (!isCurrentActivity || typeof onNeedsReviewChange !== "function") return;
     onNeedsReviewChange(state.needsReview === true);
   }, [isCurrentActivity, onNeedsReviewChange, state.needsReview]);
+
+  useEffect(() => {
+    if (!isCurrentActivity || typeof onEvidenceChange !== "function") return;
+    onEvidenceChange();
+  }, [
+    isCurrentActivity,
+    onEvidenceChange,
+    state.completionState,
+    state.needsReview,
+    state.practiceResponse,
+    state.stepIndex,
+  ]);
 
   if (!definition || !learningUnit || definition.learningUnitId !== learningUnit.id || !isCurrentActivity) {
     return null;

@@ -8,7 +8,7 @@ import {
   LEARNING_COMPLETION_STATUS,
   LearningCompletionContractError,
   evaluateLearningCompletionCandidate,
-} from "../scripts/learning-completion/contract.mjs";
+} from "../src/learning-completion/contract.js";
 
 function guidedSlice({
   status = "completed",

@@ -1,5 +1,6 @@
 import { LEARNING_FLOW_STAGES } from "./learningFlowRegistry.js";
 import { createLearningReviewProjection } from "./learningReviewProjection.js";
+import { LEARNING_COMPLETION_NEXT_ACTION, LEARNING_COMPLETION_STATUS } from "../learning-completion/public.js";
 import { HighlightedCode } from "../components/HighlightedCode.jsx";
 import { resolveLearningSourceExcerpt } from "./sourceEvidence.js";
 import "./SingleLearningFlow.css";
@@ -151,7 +152,10 @@ export function SingleLearningFlow({
   onOpenSource,
   onOpenAi,
   onContinue,
-  verificationSession = null,
+  onRetryVerify,
+  completion = null,
+  completionLoading = false,
+  completionError = null,
   assessmentReview = null,
   guidedNeedsReview = false,
 }) {
@@ -159,7 +163,9 @@ export function SingleLearningFlow({
     assessmentReview,
     guidedNeedsReview,
   });
-  const needsReview = reviewProjection.needsReview;
+  const needsReview = reviewProjection.needsReview
+    || completion?.status === LEARNING_COMPLETION_STATUS.NEEDS_REVIEW;
+  const completionAction = completion?.nextAction ?? null;
   const currentStage = STAGE_ITEMS.find((item) => item.id === stage) ?? STAGE_ITEMS[0];
 
   if (!learningUnit || !definition || definition.learningUnitId !== learningUnit.id) return null;
@@ -170,6 +176,8 @@ export function SingleLearningFlow({
       data-learning-flow="single"
       data-learning-unit={learningUnit.id}
       data-learning-stage={currentStage.id}
+      data-learning-completion-status={completion?.status ?? (completionLoading ? "loading" : "unavailable")}
+      data-learning-completion-next-action={completionAction ?? ""}
       aria-labelledby="single-learning-flow-title"
     >
       <header className="single-learning-flow__header">
@@ -201,6 +209,15 @@ export function SingleLearningFlow({
           <strong>当前任务：</strong>
           <span>{definition.stageHints?.[currentStage.id]}</span>
         </div>
+
+        {completionError && (
+          <div className="single-learning-flow__review-signal" role="alert" data-learning-completion-error>
+            <div>
+              <strong>完成状态暂不可用</strong>
+              <span>{completionError}</span>
+            </div>
+          </div>
+        )}
 
         {needsReview && (
           <div
@@ -309,28 +326,86 @@ export function SingleLearningFlow({
 
           {renderVerify?.()}
 
-          {verificationSession?.status === "completed" && (
-            <div className="single-learning-flow__completion">
+          {completionLoading && (
+            <p className="single-learning-flow__next-action" role="status" data-learning-completion-loading>
+              正在核对本节学习证据…
+            </p>
+          )}
+
+          {completion?.status === LEARNING_COMPLETION_STATUS.COMPLETE && completion.canContinue && (
+            <div className="single-learning-flow__completion" data-learning-completion-decision="continue">
               <div>
-                <strong>{needsReview ? "本节已验证，但还有需要复习的点" : "本节验证完成"}</strong>
-                <p>
-                  {needsReview
-                    ? "先根据错误反馈回到证据，再决定是否继续。"
-                    : "当前验证没有发现错误，可以继续下一知识点；需要时也可以随时回顾本节证据。"}
-                </p>
+                <strong>本节验证完成</strong>
+                <p>实践与验证所需证据均已满足，可以继续下一知识点；需要时也可以随时回顾本节证据。</p>
               </div>
               <div className="single-learning-flow__completion-actions">
-                {needsReview && (
-                  <button type="button" className="btn btn-outline" onClick={() => onStageChange?.(LEARNING_FLOW_STAGES.UNDERSTAND)}>
-                    回顾证据
-                  </button>
-                )}
                 <button type="button" className="btn btn-primary" onClick={onContinue}>
                   下一知识点 →
                 </button>
               </div>
             </div>
           )}
+
+          {completion?.status === LEARNING_COMPLETION_STATUS.NEEDS_REVIEW && (
+            <div className="single-learning-flow__completion" data-learning-completion-decision={completionAction}>
+              <div>
+                <strong>本节还需要处理一项学习证据</strong>
+                <p>
+                  {completionAction === LEARNING_COMPLETION_NEXT_ACTION.RETRY_VERIFY
+                    ? "当前正式验证仍有错误证据；本地纠正不会覆盖原始结果，请开启新一轮验证。"
+                    : completionAction === LEARNING_COMPLETION_NEXT_ACTION.REVIEW_GUIDED
+                      ? "实践证据已正确，但你仍保留了需要复习标记；先回到实践回顾再继续。"
+                      : "实践证据尚未满足当前闭环，请先回到实践重试。"}
+                </p>
+              </div>
+              <div className="single-learning-flow__completion-actions">
+                {completionAction === LEARNING_COMPLETION_NEXT_ACTION.RETRY_VERIFY ? (
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={onRetryVerify}
+                    disabled={typeof onRetryVerify !== "function"}
+                  >
+                    重新验证
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={() => onStageChange?.(LEARNING_FLOW_STAGES.PRACTICE)}
+                  >
+                    返回实践
+                  </button>
+                )}
+                <button type="button" className="btn btn-outline" onClick={() => onStageChange?.(LEARNING_FLOW_STAGES.UNDERSTAND)}>
+                  回顾证据
+                </button>
+              </div>
+            </div>
+          )}
+
+          {completion && completion.status !== LEARNING_COMPLETION_STATUS.COMPLETE
+            && completion.status !== LEARNING_COMPLETION_STATUS.NEEDS_REVIEW
+            && [
+              LEARNING_COMPLETION_NEXT_ACTION.START_PRACTICE,
+              LEARNING_COMPLETION_NEXT_ACTION.RESUME_PRACTICE,
+            ].includes(completionAction) && (
+              <div className="single-learning-flow__completion" data-learning-completion-decision={completionAction}>
+                <div>
+                  <strong>先完成实践证据</strong>
+                  <p>验证可以浏览，但本节闭环仍需要先完成当前实践。</p>
+                </div>
+                <div className="single-learning-flow__completion-actions">
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={() => onStageChange?.(LEARNING_FLOW_STAGES.PRACTICE)}
+                  >
+                    返回实践
+                  </button>
+                </div>
+              </div>
+            )}
         </div>
       )}
     </section>

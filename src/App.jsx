@@ -26,6 +26,8 @@ import {
 } from "./learning-flow/learningFlowRegistry.js";
 import { SingleLearningFlow } from "./learning-flow/SingleLearningFlow.jsx";
 import { useGuidedReviewSignal } from "./learning-flow/useGuidedReviewSignal.js";
+import { useLearningCompletion } from "./learning-flow/useLearningCompletion.js";
+import { LEARNING_COMPLETION_NEXT_ACTION } from "./learning-completion/public.js";
 import { prepareGuidedAiHandoff } from "./app/guidedAiHandoff.js";
 import { enrichLearningUnitSourceSemantics } from "./source/semanticSources";
 import { WorkbenchNavigation } from "./workbench/WorkbenchNavigation";
@@ -115,6 +117,23 @@ export default function App() {
     learningUnitId: currentLearningFlow ? currentLearningUnit?.id ?? null : null,
     activeSessionId: completedLearningFlowSessionId,
   });
+  const learningCompletionRefreshKey = [
+    learningFlowStage,
+    assessmentView.session?.id ?? "no-session",
+    assessmentView.session?.status ?? "no-status",
+    guidedReviewSignal.needsReview ? "guided-review" : "guided-clean",
+  ].join(":");
+  const learningCompletion = useLearningCompletion({
+    learningUnitId: currentLearningFlow ? currentLearningUnit?.id ?? null : null,
+    assessmentSource: assessment.evidenceSource,
+    refreshKey: learningCompletionRefreshKey,
+  });
+  const guidedCanEnterVerify = [
+    LEARNING_COMPLETION_NEXT_ACTION.START_VERIFY,
+    LEARNING_COMPLETION_NEXT_ACTION.RESUME_VERIFY,
+    LEARNING_COMPLETION_NEXT_ACTION.RETRY_VERIFY,
+    LEARNING_COMPLETION_NEXT_ACTION.CONTINUE,
+  ].includes(learningCompletion.decision?.nextAction);
 
   const aiAssessmentIntegration = useMemo(
     () => assessmentView.integrationCapabilities
@@ -757,7 +776,8 @@ export default function App() {
                         return true;
                       }}
                       onNeedsReviewChange={guidedReviewSignal.setNeedsReview}
-                      canContinue
+                      onEvidenceChange={learningCompletion.refresh}
+                      canContinue={guidedCanEnterVerify}
                       presentation="practice"
                       continueLabel="进入验证"
                     />
@@ -767,7 +787,12 @@ export default function App() {
                   onOpenSource={handleLearningFlowOpenSource}
                   onOpenAi={handleLearningFlowOpenAi}
                   onContinue={handleGuidedContinue}
-                  verificationSession={assessmentView.session}
+                  onRetryVerify={assessmentCommands && assessmentView.canonicalQuestions.length
+                    ? assessmentCommands.startCanonical
+                    : undefined}
+                  completion={learningCompletion.decision}
+                  completionLoading={learningCompletion.loading}
+                  completionError={learningCompletion.error}
                   assessmentReview={learningFlowReview}
                   guidedNeedsReview={guidedReviewSignal.needsReview}
                 />

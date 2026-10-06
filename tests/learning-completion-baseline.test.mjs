@@ -85,7 +85,7 @@ for (const learningUnitId of ["props", "render-commit"]) {
   });
 }
 
-test("lesson Review remains advisory and independent from the Verify completion gate", async () => {
+test("historical Review projection remains presentation-only after Completion owns closure", async () => {
   const clean = createLearningReviewProjection();
   const assessment = createLearningReviewProjection({
     assessmentReview: { review: { incorrectCount: 1 } },
@@ -101,20 +101,21 @@ test("lesson Review remains advisory and independent from the Verify completion 
     "utf8",
   );
 
-  assert.match(flowSource, /verificationSession\?\.status === "completed"/);
-  assert.match(flowSource, /本节已验证，但还有需要复习的点/);
+  assert.doesNotMatch(flowSource, /verificationSession\?\.status === "completed"/);
+  assert.match(flowSource, /completion\?\.status === LEARNING_COMPLETION_STATUS\.COMPLETE/);
+  assert.match(flowSource, /data-learning-completion-next-action/);
   assert.match(flowSource, /onClick=\{onContinue\}/);
-  assert.doesNotMatch(flowSource, /disabled=\{needsReview\}/);
 });
 
-test("Single Learning Flow currently allows Guided Review to enter Verify without a correctness gate", async () => {
+test("Single Learning Flow gates the Practice-to-Verify action through Completion", async () => {
   const appSource = await readFile(new URL("../src/App.jsx", import.meta.url), "utf8");
 
   assert.match(
     appSource,
-    /onContinue=\{\(\) => \{\s*onComplete\?\.\(\);\s*return true;\s*\}\}/,
+    /guidedCanEnterVerify = \[/,
   );
-  assert.match(appSource, /canContinue\s*\n\s*presentation="practice"/);
+  assert.match(appSource, /canContinue=\{guidedCanEnterVerify\}/);
+  assert.match(appSource, /onEvidenceChange=\{learningCompletion\.refresh\}/);
   assert.match(appSource, /continueLabel="进入验证"/);
 });
 
